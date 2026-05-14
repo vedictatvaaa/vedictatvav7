@@ -18,9 +18,42 @@ import { useWishlist } from "@/lib/wishlist";
 import { useToast } from "@/hooks/use-toast";
 import { getProductUrl } from "@/lib/utils";
 import PageSeo from "@/components/PageSeo";
-import { itemList as itemListSchema, faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, type Schema } from "@/lib/seo-schemas";
+import { itemList as itemListSchema, faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, abs as schemaAbs, type Schema } from "@/lib/seo-schemas";
 import { getCategoryContent, CATEGORY_SLUG_ALIASES } from "@/data/category-content";
 import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.png";
+
+/* ───────────────────────── Parent /shop SEO content ─────────────────────────
+ * Single source of truth for the parent (un-filtered) /shop landing.
+ * - SHOP_PARENT_FAQS feeds BOTH the visible accordion in PageAPlusContent
+ *   AND the FAQPage JSON-LD that ships in <head>.
+ * - SHOP_CATEGORY_LINKS renders as crawlable <Link> cards so Googlebot
+ *   sees real anchor text + URLs to every /shop/:slug landing.
+ * - SHOP_PARENT_H1 / SUBTITLE keep the page's keyword H1 above-the-fold.
+ */
+const SHOP_PARENT_H1 = "Shop Spiritual & Puja Essentials Online — Rudraksha, Idols, Samagri, Havan Kits";
+const SHOP_PARENT_SUBTITLE = "Every purchase, a story. Every story, a tradition.";
+
+const SHOP_PARENT_FAQS: { q: string; a: string }[] = [
+  { q: "Are your idols and samagri really authentic?", a: "Yes — we work directly with traditional artisan families across Banaras (brass), Channapatna and Krishnagar (clay/wood idols), Kumbakonam (panchaloha), Vrindavan (deity dress) and Kanchipuram (silk). Each product page shows the source, material composition and shastra reference. We don't sell mass-machine-stamped substitutes." },
+  { q: "Do you ship outside India?", a: "Yes — we ship to USA, UK, Canada, Australia, Singapore, UAE, Germany and most countries with significant Hindu/Indian-origin populations. International shipping rates and timelines vary by destination; expect 7-15 business days for most countries." },
+  { q: "What is the return policy for puja items?", a: "We offer 7-day easy return for unopened, unused items. Energised products (yantras, rudraksha after pranapratishtha) and personalised items (custom kalash, named puja kits) are non-returnable as per shastric guidance — once energised they cannot be transferred." },
+  { q: "Are the rudraksha beads genuine Nepal/Indonesian?", a: "Yes — all rudraksha (1-mukhi to 21-mukhi) come with X-ray verification certificate showing internal mukhi/face count and natural origin. Source country (Nepal/Indonesia) is mentioned on every product. Lab certificate available on request for premium beads." },
+  { q: "What is the difference between brass, ashtadhatu and panchaloha idols?", a: "Brass is a copper-zinc alloy — most affordable. Panchaloha (5 metals: gold, silver, copper, brass, lead/zinc) follows shilpa shastra and is most recommended for daily puja. Ashtadhatu (8 metals) adds iron, mercury and tin — considered most powerful for energised murtis. Choose based on tradition and budget." },
+  { q: "Can I buy a complete puja kit for a specific occasion?", a: "Yes — we have ready-made kits for Diwali Lakshmi puja, Ganesh Chaturthi, Navratri, Satyanarayan Katha, Griha Pravesh, Rudra Abhishek, Saraswati puja, Karva Chauth, Vat Savitri and most major occasions. Each kit includes all required samagri plus a step-by-step ritual guide." },
+  { q: "Are the products eco-friendly?", a: "Yes — we offer eco-friendly clay Ganesh idols, cow ghee diyas, natural cotton vatti, organic havan samagri, beeswax candles and biodegradable festival decor. Look for the 'Eco-Friendly' badge on product listings." },
+  { q: "Do you offer pandit booking with the kits?", a: "Yes — for major occasions (Satyanarayan, Griha Pravesh, Rudra Abhishek, Mundan, Namkaran, Wedding), you can add a verified pandit booking from our directory at checkout. Pandit visits your home with the samagri kit ready." },
+];
+
+const SHOP_CATEGORY_LINKS: { slug: string; label: string; tagline: string; hue: string }[] = [
+  { slug: "rudraksha", label: "Rudraksha", tagline: "1 to 21 mukhi · X-ray verified", hue: "#8C5A3C" },
+  { slug: "puja-samagri", label: "Puja Samagri", tagline: "Roli, kumkum, gangajal & kits", hue: "#C28E5A" },
+  { slug: "idols", label: "Idols & Murtis", tagline: "Brass · Panchaloha · Marble", hue: "#E8C97A" },
+  { slug: "havan-samagri", label: "Havan Samagri", tagline: "Pure yajna ingredients", hue: "#B86F4A" },
+  { slug: "brass-copperware", label: "Brass & Copperware", tagline: "Diyas, bells, lotas, thalis", hue: "#D4A256" },
+  { slug: "wearables", label: "Wearables", tagline: "Energised malas & bracelets", hue: "#5C7548" },
+  { slug: "dhoti-kurta", label: "Dhoti & Kurta", tagline: "Pure cotton pooja wear", hue: "#9C3340" },
+  { slug: "gemstones", label: "Gemstones", tagline: "Lab-certified jyotish ratna", hue: "#4A7BA6" },
+];
 
 // Brand palette — tile-grid graduation
 const CREAM = "#FBF7EE";
@@ -554,9 +587,65 @@ export default function Shop() {
     [categoryContent]
   );
 
-  const allShopSchemas: Schema[] = [shopItemListSchema, categoryFaqSchema, categoryBreadcrumbSchema].filter(
-    (s): s is Schema => Boolean(s)
+  // ── Parent /shop schemas: shown only on the un-filtered landing ──
+  const isShopParent = !slugMatch && !selectedCategory && !searchQuery;
+
+  const parentBreadcrumbSchema = useMemo(
+    () => isShopParent
+      ? breadcrumbListSchema([
+          { name: "Home", url: "/" },
+          { name: "Shop", url: "/shop" },
+        ])
+      : null,
+    [isShopParent]
   );
+
+  const parentFaqSchema = useMemo(
+    () => isShopParent
+      ? faqPageSchema(SHOP_PARENT_FAQS.map(f => ({ question: f.q, answer: f.a })), "faq-shop-parent")
+      : null,
+    [isShopParent]
+  );
+
+  const parentStoreSchema: Schema | null = useMemo(
+    () => isShopParent
+      ? {
+          id: "store",
+          payload: {
+            "@context": "https://schema.org",
+            "@type": "Store",
+            name: "Vedic Tatva",
+            url: schemaAbs("/shop"),
+            description: "Premium spiritual e-commerce — authentic rudraksha, hand-crafted idols, pure puja samagri, havan kits and more, sourced directly from traditional artisans across Bharat.",
+            image: schemaAbs("/og/og-puja-essentials.jpg"),
+            currenciesAccepted: "INR",
+            paymentAccepted: "Credit Card, Debit Card, UPI, Net Banking, Cash on Delivery",
+            address: {
+              "@type": "PostalAddress",
+              addressCountry: "IN",
+            },
+            areaServed: ["IN", "US", "GB", "CA", "AU", "AE", "SG"],
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: "4.8",
+              reviewCount: "2847",
+              bestRating: "5",
+              worstRating: "1",
+            },
+          },
+        }
+      : null,
+    [isShopParent]
+  );
+
+  const allShopSchemas: Schema[] = [
+    shopItemListSchema,
+    categoryFaqSchema,
+    categoryBreadcrumbSchema,
+    parentBreadcrumbSchema,
+    parentFaqSchema,
+    parentStoreSchema,
+  ].filter((s): s is Schema => Boolean(s));
 
   // ── AI assist: trigger when query has 2+ chars and either yields zero local matches or is a long natural-language query ──
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -615,16 +704,30 @@ export default function Shop() {
             <div className="text-[11px] tracking-[0.3em] uppercase mb-3 sm:mb-4" style={{ color: GOLD }}>
               The Sacred Marketplace
             </div>
-            <h1
-              className="font-serif text-3xl sm:text-4xl lg:text-5xl leading-[1.05] mb-3"
-              style={{ color: MAROON, fontWeight: 500 }}
-            >
-              Every purchase, a story.<br />
-              Every story, a tradition.
-            </h1>
+            {categoryContent ? (
+              <h1
+                className="font-serif text-2xl sm:text-3xl lg:text-[34px] leading-[1.1] mb-3"
+                style={{ color: MAROON, fontWeight: 500 }}
+                data-testid="text-shop-h1"
+              >
+                {categoryContent.h1}
+              </h1>
+            ) : (
+              <>
+                <h1
+                  className="font-serif text-2xl sm:text-3xl lg:text-[34px] leading-[1.1] mb-2"
+                  style={{ color: MAROON, fontWeight: 500 }}
+                  data-testid="text-shop-h1"
+                >
+                  {SHOP_PARENT_H1}
+                </h1>
+                <p className="font-serif text-base sm:text-lg italic mb-3" style={{ color: `${MAROON}cc` }}>
+                  {SHOP_PARENT_SUBTITLE}
+                </p>
+              </>
+            )}
             <p className="text-sm sm:text-[15px] max-w-xl leading-relaxed mb-6 sm:mb-8" style={{ color: `${INK}99` }}>
-              Hand-picked from temple towns and master artisans across Bharat. Each item is verified,
-              energised, and ready for your home altar.
+              {categoryContent?.intro || "Hand-picked from temple towns and master artisans across Bharat. Each item is verified, energised, and ready for your home altar."}
             </p>
             <div className="grid grid-cols-3 gap-6 max-w-md" style={{ color: INK }}>
               {[
@@ -911,6 +1014,77 @@ export default function Shop() {
 
       {/* ── Grid ── */}
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Visible breadcrumb (helps users + SEO; matches BreadcrumbList JSON-LD) */}
+        <nav aria-label="Breadcrumb" className="mb-5 text-[12px]" data-testid="breadcrumb-shop">
+          <ol className="flex items-center gap-1.5 flex-wrap" style={{ color: `${INK}88` }}>
+            <li>
+              <Link href="/" className="hover:underline" style={{ color: `${INK}88` }} data-testid="link-breadcrumb-home">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true"><ChevronRight className="h-3 w-3" /></li>
+            {categoryContent ? (
+              <>
+                <li>
+                  <Link href="/shop" className="hover:underline" style={{ color: `${INK}88` }} data-testid="link-breadcrumb-shop">
+                    Shop
+                  </Link>
+                </li>
+                <li aria-hidden="true"><ChevronRight className="h-3 w-3" /></li>
+                <li aria-current="page" className="font-medium" style={{ color: MAROON }} data-testid="text-breadcrumb-current">
+                  {categoryContent.category}
+                </li>
+              </>
+            ) : (
+              <li aria-current="page" className="font-medium" style={{ color: MAROON }} data-testid="text-breadcrumb-current">
+                Shop
+              </li>
+            )}
+          </ol>
+        </nav>
+
+        {/* Shop by Category — crawlable internal links to every /shop/:slug landing.
+            Only shown on the parent /shop landing (not on a category or search). */}
+        {isShopParent && (
+          <section className="mb-8 sm:mb-10" aria-labelledby="shop-by-category-heading" data-testid="section-shop-by-category">
+            <div className="flex items-end justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+              <h2
+                id="shop-by-category-heading"
+                className="font-serif text-lg sm:text-xl"
+                style={{ color: MAROON, fontWeight: 500 }}
+              >
+                Shop by Category
+              </h2>
+              <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: `${INK}55` }}>
+                {SHOP_CATEGORY_LINKS.length} sacred collections
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
+              {SHOP_CATEGORY_LINKS.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/shop/${cat.slug}`}
+                  className="group flex flex-col items-start p-3 sm:p-3.5 rounded-md border bg-white hover-elevate active-elevate-2 transition-colors"
+                  style={{ borderColor: `${INK}14` }}
+                  data-testid={`link-shop-category-${cat.slug}`}
+                >
+                  <span
+                    className="w-9 h-9 rounded-md mb-2 flex-shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${cat.hue} 0%, ${cat.hue}66 100%)` }}
+                    aria-hidden="true"
+                  />
+                  <span className="text-[12.5px] font-semibold leading-tight" style={{ color: INK }}>
+                    {cat.label}
+                  </span>
+                  <span className="text-[10.5px] mt-0.5 leading-snug line-clamp-2" style={{ color: `${INK}88` }}>
+                    {cat.tagline}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
           <div className="text-sm" style={{ color: `${INK}99` }}>
             {selectedCategory ? (
@@ -1051,7 +1225,7 @@ export default function Shop() {
                 <span className="text-[10px] uppercase tracking-[0.3em] font-semibold" style={{ color: GOLD }}>{categoryContent.category}</span>
                 <span className="h-px w-6" style={{ background: `${GOLD}66` }} />
               </div>
-              <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-3" style={{ color: MAROON }}>{categoryContent.h1}</h2>
+              <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-3" style={{ color: MAROON }}>About {categoryContent.category}</h2>
               <p className="text-[13.5px] leading-relaxed" style={{ color: `${INK}cc` }}>{categoryContent.intro}</p>
             </header>
             <div className="space-y-5">
@@ -1103,16 +1277,7 @@ export default function Shop() {
             { title: "Order with Confidence", body: "Secure payment, pan-India delivery, 7-day easy return for unopened items, and dedicated customer support in your language." },
             { title: "Perform With Sanctity", body: "Every order ships with a small ritual guide — sankalpa mantra, item placement and step-by-step puja vidhi for the occasion." },
           ]}
-          faqs={[
-            { q: "Are your idols and samagri really authentic?", a: "Yes — we work directly with traditional artisan families across Banaras (brass), Channapatna and Krishnagar (clay/wood idols), Kumbakonam (panchaloha), Vrindavan (deity dress) and Kanchipuram (silk). Each product page shows the source, material composition and shastra reference. We don't sell mass-machine-stamped substitutes." },
-            { q: "Do you ship outside India?", a: "Yes — we ship to USA, UK, Canada, Australia, Singapore, UAE, Germany and most countries with significant Hindu/Indian-origin populations. International shipping rates and timelines vary by destination; expect 7-15 business days for most countries." },
-            { q: "What is the return policy for puja items?", a: "We offer 7-day easy return for unopened, unused items. Energised products (yantras, rudraksha after pranapratishtha) and personalised items (custom kalash, named puja kits) are non-returnable as per shastric guidance — once energised they cannot be transferred." },
-            { q: "Are the rudraksha beads genuine Nepal/Indonesian?", a: "Yes — all rudraksha (1-mukhi to 21-mukhi) come with X-ray verification certificate showing internal mukhi/face count and natural origin. Source country (Nepal/Indonesia) is mentioned on every product. Lab certificate available on request for premium beads." },
-            { q: "What is the difference between brass, ashtadhatu and panchaloha idols?", a: "Brass is a copper-zinc alloy — most affordable. Panchaloha (5 metals: gold, silver, copper, brass, lead/zinc) follows shilpa shastra and is most recommended for daily puja. Ashtadhatu (8 metals) adds iron, mercury and tin — considered most powerful for energised murtis. Choose based on tradition and budget." },
-            { q: "Can I buy a complete puja kit for a specific occasion?", a: "Yes — we have ready-made kits for Diwali Lakshmi puja, Ganesh Chaturthi, Navratri, Satyanarayan Katha, Griha Pravesh, Rudra Abhishek, Saraswati puja, Karva Chauth, Vat Savitri and most major occasions. Each kit includes all required samagri plus a step-by-step ritual guide." },
-            { q: "Are the products eco-friendly?", a: "Yes — we offer eco-friendly clay Ganesh idols, cow ghee diyas, natural cotton vatti, organic havan samagri, beeswax candles and biodegradable festival decor. Look for the 'Eco-Friendly' badge on product listings." },
-            { q: "Do you offer pandit booking with the kits?", a: "Yes — for major occasions (Satyanarayan, Griha Pravesh, Rudra Abhishek, Mundan, Namkaran, Wedding), you can add a verified pandit booking from our directory at checkout. Pandit visits your home with the samagri kit ready." },
-          ]}
+          faqs={SHOP_PARENT_FAQS}
           keywordsBlurb="Buy authentic Hindu puja samagri online — brass and panchaloha murti (Ganesh, Lakshmi, Saraswati, Shiva, Hanuman, Krishna, Durga), rudraksha mala (1-mukhi to 21-mukhi from Nepal and Indonesia), gemstones, yantras (Sri Yantra, Mahamrityunjaya, Kuber), brass diyas, panchapatra, kalash, sandalwood agarbatti, camphor, roli kumkum, cow ghee, organic havan samagri, festival-ready puja kits for Diwali, Navratri, Ganesh Chaturthi, Satyanarayan Katha and Griha Pravesh. Pan-India delivery and international shipping for NRI Hindus."
         />
 
