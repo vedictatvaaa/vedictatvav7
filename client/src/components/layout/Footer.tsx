@@ -309,6 +309,20 @@ export default function Footer() {
             </p>
           </div>
 
+          {/* SEO services strip — keyword-loaded one-liner anchoring the
+              homepage's H1/title cluster at the bottom of every page.
+              Plain text (no links) so it functions purely as a thematic
+              footer caption Google can index without bloating the
+              link graph. */}
+          <div className="border-t border-white/[0.05] pt-5 pb-1">
+            <p
+              className="text-[11.5px] sm:text-xs text-white/50 leading-relaxed text-center"
+              data-testid="text-footer-seo-services"
+            >
+              Buy Puja Samagri Online &nbsp;•&nbsp; Online Puja Booking &nbsp;•&nbsp; Book Panditji &nbsp;•&nbsp; Astrology Consultation &nbsp;•&nbsp; Hindu Ritual Services &nbsp;•&nbsp; Festival Puja Kits
+            </p>
+          </div>
+
           {/* Policies + bottom bar */}
           <div className="border-t border-white/[0.05] py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">

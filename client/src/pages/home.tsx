@@ -542,6 +542,29 @@ export default function Home() {
 
       </section>
 
+      {/* Conversion tagline strip — sits flush under the hero so every
+          visitor sees the trust + scope statement before scrolling. Lives
+          here (not inside the rotating hero) so it never animates away
+          and Google indexes one stable, keyword-rich line of body copy
+          right after the H1/hero block. */}
+      <section
+        aria-label="Vedic Tatva conversion tagline"
+        className="relative bg-gradient-to-r from-[#5A1F22] via-[#3A0F12] to-[#5A1F22] border-y border-[#D4AF37]/30"
+        data-testid="section-conversion-tagline"
+      >
+        <div className="container mx-auto px-4 py-3 md:py-4 text-center">
+          <p
+            className="text-[#f5d76e] font-serif text-[15px] sm:text-base md:text-lg leading-snug tracking-wide"
+            data-testid="text-conversion-tagline"
+          >
+            India's Trusted Platform for{" "}
+            <span className="text-white font-semibold">Puja Samagri</span>,{" "}
+            <span className="text-white font-semibold">Online Puja Booking</span> &{" "}
+            <span className="text-white font-semibold">Panditji Services</span>
+          </p>
+        </div>
+      </section>
+
       {/* Four Pillars of Vedic Tatva — slim category banner.
           Each card opens a deep, SEO-rich landing hub that absorbs all
           related sub-services (e.g. Pandit & Puja → Book Pandit, Book Puja,
