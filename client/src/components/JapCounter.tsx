@@ -641,6 +641,51 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [celebration, setCelebration] = useState<{ malaNumber: number; target: number; mantraLabel: string; mantraId: string; ts: number } | null>(null);
   const [celebrationExiting, setCelebrationExiting] = useState(false);
   const [ashirvad, setAshirvad] = useState<{ mantraLabel: string; mantraId: string; ts: number } | null>(null);
+
+  // — Full-mala bloom: timestamp of the most recent mala completion;
+  //   the orb fires a gold radial flash + slow pulse for ~2.4s when
+  //   this changes. Distinct from the existing CelebrationOverlay so
+  //   the bloom can play even after the user dismisses the overlay.
+  const [fullMalaBloom, setFullMalaBloom] = useState<number | null>(null);
+
+  // — Sankalpa (today's intention): a short line the devotee writes
+  //   before chanting. Persists per-day under STORAGE_PREFIX:sankalpa.
+  //   The storage key combines ownerKey + today's date so it auto-resets
+  //   at midnight and never leaks between owners. We track sankalpaKey
+  //   in state and re-hydrate from localStorage whenever it changes —
+  //   this prevents stale text from being written into a new owner /
+  //   new day's slot when the component is reused across identities.
+  const [sankalpaKey, setSankalpaKey] = useState(`${STORAGE_PREFIX}:sankalpa:${ownerKey}:${today()}`);
+  const [sankalpaToday, setSankalpaToday] = useState<string>(() => {
+    try { return localStorage.getItem(sankalpaKey) || ""; }
+    catch { return ""; }
+  });
+  // When ownerKey changes, recompute the storage key + reload its value.
+  useEffect(() => {
+    const nextKey = `${STORAGE_PREFIX}:sankalpa:${ownerKey}:${today()}`;
+    setSankalpaKey((cur) => (cur === nextKey ? cur : nextKey));
+    try { setSankalpaToday(localStorage.getItem(nextKey) || ""); }
+    catch { setSankalpaToday(""); }
+  }, [ownerKey]);
+  // Watch for date rollover (every 60s — cheap; the only thing it does
+  // is swap the storage key when today() changes).
+  useEffect(() => {
+    const id = setInterval(() => {
+      const nextKey = `${STORAGE_PREFIX}:sankalpa:${ownerKey}:${today()}`;
+      setSankalpaKey((cur) => {
+        if (cur === nextKey) return cur;
+        try { setSankalpaToday(localStorage.getItem(nextKey) || ""); }
+        catch { setSankalpaToday(""); }
+        return nextKey;
+      });
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [ownerKey]);
+  // Persist on text change — always under the *current* key, never a
+  // stale one (sankalpaKey is rebuilt on owner/day change above).
+  useEffect(() => {
+    try { localStorage.setItem(sankalpaKey, sankalpaToday); } catch {}
+  }, [sankalpaToday, sankalpaKey]);
   useEffect(() => { bellPlayer.setEnabled(soundOn); }, [soundOn]);
 
   // — Lotus petals: tiny petal motes that drift up from the mala on
@@ -1145,6 +1190,90 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     });
   }, [target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick]);
 
+  // — Undo last tap. Long-press the orb (~600ms) and the existing Undo
+  //   button both call this. Handles four cases:
+  //     1. Holding at target (108): drop to 107, uncredit the mala.
+  //     2. At bead 1 of a new mala with prior malas: step back to 108
+  //        of the previous mala (mala count stays — that one is real).
+  //     3. Mid-mala (count > 1): simple decrement.
+  //     4. count === 0 with prior malas: peel one mala back to 107.
+  //   Also rolls back the streak credit when today's tap count zeros
+  //   out (mirroring the original undo logic).
+  const undoLastTap = useCallback(() => {
+    setPersist((prev) => {
+      if (prev.total <= 0) return prev;
+      let count = prev.count;
+      let malas = prev.malas;
+      let todayMalas = prev.todayMalas;
+      if (prev.count >= target) {
+        count = target - 1;
+        malas = Math.max(0, malas - 1);
+        todayMalas = Math.max(0, todayMalas - 1);
+      } else if (prev.count <= 1 && prev.malas > 0) {
+        // Bead 0 or 1 of a new mala with prior malas → display the prior
+        // mala's 108. The mala is still completed; we only re-show it.
+        count = target;
+      } else if (prev.count > 0) {
+        count = prev.count - 1;
+      } else if (prev.malas > 0) {
+        // count === 0 and never wrapped to a new mala (no prior 1-tap).
+        // Peel a full mala back so undo always has somewhere to go.
+        count = target - 1;
+        malas = Math.max(0, malas - 1);
+        todayMalas = Math.max(0, todayMalas - 1);
+      } else {
+        return prev;
+      }
+      const nextTodayCount = Math.max(0, prev.todayCount - 1);
+      // Roll back today's streak credit if undo zeroes out today's
+      // activity — same rule as the original Undo button.
+      let streak = prev.streak;
+      let lastDay = prev.lastDay;
+      if (nextTodayCount === 0 && prev.todayCount > 0) {
+        streak = Math.max(0, prev.streak - 1);
+        lastDay = streak === 0 ? null : yesterday();
+      }
+      return {
+        ...prev,
+        count, malas, todayMalas,
+        todayCount: nextTodayCount,
+        total: Math.max(0, prev.total - 1),
+        streak, lastDay,
+      };
+    });
+    // Cancel any pending mala-complete celebration if we just undid the
+    // 108-bead tap — the celebration was scheduled but the mala is no
+    // longer complete.
+    setCelebration(null);
+    setFullMalaBloom(null);
+  }, [target]);
+
+  // Long-press detection on the orb. We track a timer + a "fired" flag.
+  // If the user holds for 600ms, undo fires and the upcoming click is
+  // suppressed. A normal tap (release before 600ms) clears the timer
+  // and the click handler runs as before.
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const handleOrbPointerDown = useCallback(() => {
+    longPressFiredRef.current = false;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
+      undoLastTap();
+      vibrate([20, 30, 20], vibrationOn);
+      if (soundOn) bellPlayer.tap(0);
+    }, 600);
+  }, [undoLastTap, vibrationOn, soundOn]);
+  const handleOrbPointerEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  }, []);
+
   // Tap dispatcher used by the main mala press button. When auto-chant is
   // armed but not yet running, the first tap kicks off the loop. Otherwise
   // it falls through to the normal manual tap.
@@ -1166,6 +1295,17 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     }
     tap();
   }, [autoMode, soundOn, mantra.id, toast, tap]);
+
+  // Full-mala bloom trigger — when a mala completes (celebration is
+  // set by the tap/auto-chant paths), light up the orb with the gold
+  // radial flash + slow pulse for 2.4s. Independent of the Tathastu
+  // overlay so the bloom plays even if the user dismisses early.
+  useEffect(() => {
+    if (!celebration) return;
+    setFullMalaBloom(celebration.ts);
+    const id = setTimeout(() => setFullMalaBloom(null), 2400);
+    return () => clearTimeout(id);
+  }, [celebration]);
 
   // Mala completion → Tathastu blessing. The old celebration fanfare
   // overlay was retired (it competed with the divine ashirvad for the
@@ -1428,6 +1568,30 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         )}
       </header>
 
+      {/* Sankalpa — today's intention. One short line, persisted per day.
+          Sits between the title and the orb so the devotee names what
+          they're chanting for before the first bead. Empty by default;
+          collapses gracefully on mobile. */}
+      <div className="mx-auto w-full max-w-md px-2">
+        <label
+          htmlFor={`sankalpa-${ownerKey}`}
+          className="block text-[10px] uppercase tracking-[0.22em] text-[#6D2B35]/65 font-bold mb-1 text-center"
+        >
+          Today I chant for
+        </label>
+        <input
+          id={`sankalpa-${ownerKey}`}
+          type="text"
+          value={sankalpaToday}
+          onChange={(e) => setSankalpaToday(e.target.value.slice(0, 80))}
+          placeholder="peace · gratitude · a loved one's healing…"
+          maxLength={80}
+          className="w-full rounded-md border border-[#D4AF37]/35 bg-[#FFFAEC] px-3 py-1.5 text-sm text-[#4a1a22] text-center placeholder:text-[#5a4a3a]/40 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/45 focus:border-[#D4AF37]/55"
+          data-testid="input-sankalpa"
+          aria-label="Today's intention for chanting"
+        />
+      </div>
+
       {fullscreen && (
         <FullscreenOverlay
           mantra={mantra}
@@ -1630,10 +1794,22 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
               />
               <button
                 type="button"
-                onClick={handleTapOrAutoStart}
+                onClick={() => {
+                  // Suppress the synthetic click that follows a long-press
+                  // (PointerDown → 600ms timer → undo → PointerUp → click).
+                  if (longPressFiredRef.current) {
+                    longPressFiredRef.current = false;
+                    return;
+                  }
+                  handleTapOrAutoStart();
+                }}
+                onPointerDown={handleOrbPointerDown}
+                onPointerUp={handleOrbPointerEnd}
+                onPointerLeave={handleOrbPointerEnd}
+                onPointerCancel={handleOrbPointerEnd}
                 disabled={autoChanting || (audioLocked && syncTapsToAudio)}
                 aria-busy={(autoChanting || (audioLocked && syncTapsToAudio)) || undefined}
-                className={`absolute inset-7 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
+                className={`absolute inset-7 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
                 aria-label={autoMode && !autoChanting ? "Tap to start auto-chant" : autoChanting ? "Auto-chant is playing — press Stop to chant manually" : (audioLocked && syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa")}
                 data-testid="btn-tap"
               >
@@ -1684,6 +1860,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   accent={getMantraTheme(mantra.id).accent}
                 />
               )}
+              {/* Full-mala bloom — bigger gold flash when 108 closes. */}
+              {fullMalaBloom !== null && (
+                <FullMalaBloom key={`fullbloom-${fullMalaBloom}`} />
+              )}
               {/* Lotus petals drifting up from each tap. */}
               {petals.map((pp) => (
                 <LotusPetal key={pp.id} x={pp.x} color={getMantraTheme(mantra.id).accent} />
@@ -1700,7 +1880,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 ? "Listening to the mantra… next press will unlock when the chant finishes."
                 : audioLocked
                 ? "Chant is playing — keep tapping at your own pace."
-                : "Tap the mala (or press Space) to count one japa"}
+                : "Tap the mala (or press Space) to count one japa · Hold to undo"}
             </div>
 
             <div className="mt-3 flex items-center gap-2 flex-wrap justify-center">
@@ -2261,14 +2441,26 @@ function MalaGarland({
         </g>
       );
     } else {
+      // Filled beads render slightly larger with a soft accent halo
+      // so the mala visibly "fills" as the count climbs — turning the
+      // ring of dots into a real progress arc. Unfilled beads stay
+      // small and faint.
       beads.push(
-        <circle
-          key={i}
-          cx={cx} cy={cy} r={beadR}
-          fill={isFilled ? fillColor : restColor}
-          opacity={isFilled ? 1 : 0.6}
-          style={{ transition: "fill 0.25s ease, opacity 0.25s ease" }}
-        />
+        <g key={i} style={{ transition: "opacity 0.25s ease" }}>
+          {isFilled && (
+            <circle
+              cx={cx} cy={cy} r={beadR + 1.6}
+              fill={fillColor}
+              opacity="0.32"
+            />
+          )}
+          <circle
+            cx={cx} cy={cy} r={isFilled ? beadR + 0.6 : beadR}
+            fill={isFilled ? fillColor : restColor}
+            opacity={isFilled ? 1 : 0.55}
+            style={{ transition: "fill 0.25s ease, opacity 0.25s ease, r 0.25s ease" }}
+          />
+        </g>
       );
     }
   }
@@ -2356,6 +2548,30 @@ function MilestoneBloom({ accent }: { accent: string }) {
           height: "85%",
           background: `radial-gradient(circle, ${accent}55 0%, ${accent}22 40%, transparent 75%)`,
           boxShadow: `0 0 60px ${accent}55`,
+        }}
+      />
+    </div>
+  );
+}
+
+// FullMalaBloom — fires once when a 108 mala closes. Larger, longer,
+// and gold-rich (regardless of mantra accent) so completing the mala
+// visibly outranks the 27/54/81 quarter-mala milestone blooms.
+function FullMalaBloom() {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none flex items-center justify-center animate-japa-full-mala-bloom"
+      aria-hidden="true"
+      data-testid="bloom-full-mala"
+    >
+      <div
+        className="rounded-full"
+        style={{
+          width: "100%",
+          height: "100%",
+          background:
+            "radial-gradient(circle, rgba(212,175,55,0.65) 0%, rgba(212,175,55,0.32) 35%, rgba(212,175,55,0.10) 60%, transparent 80%)",
+          boxShadow: "0 0 90px rgba(212,175,55,0.55)",
         }}
       />
     </div>

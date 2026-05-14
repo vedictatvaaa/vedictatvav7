@@ -436,9 +436,36 @@
   will-change: transform, opacity;
 }
 
+/* Full-mala completion bloom — gold radial flash that swells out
+   from the orb when a 108 mala closes. Bigger / longer than the
+   quarter-mala milestone bloom so 108 feels meaningfully different. */
+@keyframes japa-full-mala-bloom {
+  0%   { opacity: 0;   transform: scale(0.55); }
+  18%  { opacity: 1;   transform: scale(1.08); }
+  100% { opacity: 0;   transform: scale(1.85); }
+}
+.animate-japa-full-mala-bloom {
+  animation: japa-full-mala-bloom 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Slow gold pulse on the orb itself for the few seconds following
+   mala completion. Subtle ring breathing so the orb visibly "rests"
+   after the work is done. */
+@keyframes japa-full-mala-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55); }
+  60%  { box-shadow: 0 0 0 24px rgba(212, 175, 55, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+.animate-japa-full-mala-pulse {
+  animation: japa-full-mala-pulse 2.4s ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-japa-breath,
   .animate-japa-lotus,
   .animate-japa-milestone,
-  .animate-japa-orb-enter { animation: none; }
+  .animate-japa-orb-enter,
+  .animate-japa-full-mala-bloom,
+  .animate-japa-full-mala-pulse { animation: none; }
 }
