@@ -20,6 +20,9 @@ import { getProductUrl } from "@/lib/utils";
 import PageSeo from "@/components/PageSeo";
 import { itemList as itemListSchema, faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, abs as schemaAbs, type Schema } from "@/lib/seo-schemas";
 import { getCategoryContent, CATEGORY_SLUG_ALIASES } from "@/data/category-content";
+import { getCategoryTheme } from "@/data/category-themes";
+import CategoryHeroThemed from "@/components/CategoryHeroThemed";
+import CategoryAdvisor from "@/components/CategoryAdvisor";
 import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.png";
 
 /* ───────────────────────── Parent /shop SEO content ─────────────────────────
@@ -444,6 +447,7 @@ export default function Shop() {
   const resolvedSlug = rawSlug ? (CATEGORY_SLUG_ALIASES[rawSlug] || rawSlug) : undefined;
   const slugPreset = resolvedSlug ? SHOP_SLUG_PRESETS[resolvedSlug] : undefined;
   const categoryContent = getCategoryContent(rawSlug);
+  const categoryTheme = getCategoryTheme(resolvedSlug);
 
   const urlCategory = urlParamsState.get("category") || slugPreset?.category || null;
   const urlSearch = urlParamsState.get("search") || slugPreset?.search || "";
@@ -697,7 +701,18 @@ export default function Shop() {
         schemas={allShopSchemas}
       />
 
-      {/* ── Editorial banner (replaces big hero) ── */}
+      {/* ── Themed category hero (when on /shop/<one-of-8-slugs>) ── */}
+      {categoryTheme && categoryContent && (
+        <CategoryHeroThemed
+          theme={categoryTheme}
+          h1={categoryContent.h1}
+          intro={categoryContent.intro}
+          productCount={allProducts?.filter(p => p.category === categoryTheme.label || p.category === categoryContent.category).length}
+        />
+      )}
+
+      {/* ── Editorial banner (parent /shop or non-themed slugs) ── */}
+      {!categoryTheme && (
       <section className="border-b" style={{ borderColor: `${INK}11`, background: CREAM_DEEP }} data-testid="hero-shop">
         <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-14 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           <div className="lg:col-span-7 order-2 lg:order-1">
@@ -767,6 +782,7 @@ export default function Shop() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Search bar ── */}
       <div className="border-b" style={{ borderColor: `${INK}11`, background: CREAM }}>
@@ -1165,6 +1181,11 @@ export default function Shop() {
               <ProductRow key={p.id} product={p} />
             ))}
           </div>
+        )}
+
+        {/* Themed AI advisor (one of 8 category slugs) */}
+        {categoryTheme && (
+          <CategoryAdvisor slug={categoryTheme.slug} theme={categoryTheme} />
         )}
 
         {/* AI-recommended additional products */}
