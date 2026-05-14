@@ -1,7 +1,22 @@
 import { Link } from "wouter";
-import { Crown, Star, Shield, Sparkles, Check, ArrowRight, Heart, BookOpen, Video, Gift, Users } from "lucide-react";
+import { Crown, Star, Shield, Sparkles, Check, ArrowRight, Heart, BookOpen, Video, Gift, Users, ChevronRight } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
+import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
+import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
+
+const MEMBERSHIP_H1 = "Vedic Tatva Prime Membership — Premium Spiritual Subscription";
+
+const MEMBERSHIP_FAQS = [
+  { q: "Is membership available right now?", a: "Membership tiers (Devotee, Sadhaka, Premium) are listed as Coming Soon. Most of Vedic Tatva is already free — kundli, daily rashifal, panchang, kundli matching, baby names, palm reading, kathas streaming and scripture search require no membership. You can join the waitlist on the plan card." },
+  { q: "Will I lose my free access when membership launches?", a: "No — every feature currently free will remain free. Membership tiers add premium-only benefits (offline downloads, deeper kundli sections, priority booking, samagri box) on top, without removing existing functionality." },
+  { q: "What is currently free vs what will be in membership?", a: "Free today: full Janam Kundli, daily/weekly/monthly rashifal, panchang, 36-point kundli matching, baby names, AI palm reading, Vastu compass, muhurat finder, scripture search and katha streaming. Planned for membership: ad-free + offline kathas, deeper dasha analysis, priority astrologer/pandit booking, samagri box, live acharya webinars." },
+  { q: "When will paid memberships launch?", a: "We're rolling membership out in phases — Devotee tier first (digital-only benefits), then Sadhaka and Premium (with monthly samagri box). Join the waitlist by tapping any Coming Soon plan card and we'll email you the moment it opens." },
+  { q: "Will membership pricing be transparent?", a: "Yes — we plan transparent monthly and annual pricing with no hidden charges. Annual is expected to offer meaningful savings vs monthly, and one-click cancellation will be available from your dashboard." },
+  { q: "Will members get discounts on shop and consultations?", a: "Planned — yes. Members are expected to receive a percentage discount on shop purchases and a member rate on astrologer/pandit consultations. Exact percentages will be confirmed at launch." },
+  { q: "Is there a lifetime membership planned?", a: "We are exploring a lifetime tier for committed devotees and families, but it is not confirmed yet. We'll announce timing and pricing on the membership page when finalised." },
+  { q: "Will NRI devotees be supported?", a: "Yes — digital benefits (kathas, kundli, scriptures, webinars, priority booking) work globally. For physical samagri box delivery, we plan quarterly shipping options to USA, UK, Canada, Australia, Singapore and UAE." },
+];
 
 const plans = [
   {
@@ -73,6 +88,35 @@ const benefits = [
 export default function Membership() {
   return (
     <div className="w-full pb-20 bg-white min-h-screen">
+      <PageSeo
+        title="Vedic Tatva Prime — Premium Spiritual Membership for Devotees & NRI Families"
+        description="Vedic Tatva Prime — premium spiritual membership with priority pandit & astrologer booking, ad-free unlimited katha streaming (Sundarkand, Hanuman Chalisa, Bhagavad Gita), deeper Janam Kundli analysis, monthly puja samagri box, member-only festival kits and live acharya webinars. Most core tools remain free."
+        keywords="vedic tatva membership, hindu spiritual subscription, premium puja membership, ad-free hindu kathas, offline kundli download, priority pandit booking, monthly puja samagri box, vedic prime membership, sadhaka premium plan, lifetime spiritual membership, nri hindu membership"
+        canonical="/membership"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Membership", url: abs("/membership") },
+          ]),
+          faqPageSchema(MEMBERSHIP_FAQS.map(f => ({ question: f.q, answer: f.a })), "membership-faq"),
+          serviceSchema({
+            name: "Vedic Tatva Prime Membership",
+            description: "Premium spiritual subscription with priority pandit & astrologer booking, ad-free katha streaming, deeper kundli, monthly samagri box and live acharya webinars.",
+            url: abs("/membership"),
+            providerName: "Vedic Tatva",
+            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+          }),
+        ]}
+      />
+      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold">Membership</li>
+        </ol>
+      </nav>
       {/* Slim hero — solid maroon, no gradient, no faded ॐ */}
       <section className="bg-[#6D2B35] border-b border-[#D4AF37]/30 text-white">
         <div className="container mx-auto px-4 py-12 sm:py-16 text-center">
@@ -83,11 +127,11 @@ export default function Membership() {
             </span>
             <span className="h-px w-8 bg-[#D4AF37]/60" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif mb-3 font-semibold tracking-tight" data-testid="text-membership-title">
-            Elevate Your <span className="text-[#D4AF37]">Spiritual Journey</span>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-3 font-semibold tracking-tight" data-testid="text-membership-title">
+            {MEMBERSHIP_H1}
           </h1>
           <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-[15px] leading-relaxed">
-            Join our sacred community and unlock exclusive benefits, divine blessings, and premium spiritual services
+            Join our sacred community and unlock exclusive benefits, divine blessings, and premium spiritual services.
           </p>
         </div>
       </section>
@@ -238,16 +282,7 @@ export default function Membership() {
             { title: "Activate When Live", body: "Once your chosen tier launches, premium features unlock immediately on payment — no migration friction." },
             { title: "Cancel Anytime", body: "Membership will be one-click cancellable from your dashboard. No long-term lock-in is planned." },
           ]}
-          faqs={[
-            { q: "Is membership available right now?", a: "Membership tiers (Devotee, Sadhaka, Premium) are listed as Coming Soon. Most of Vedic Tatva is already free — kundli, daily rashifal, panchang, kundli matching, baby names, palm reading, kathas streaming and scripture search require no membership. You can join the waitlist on the plan card." },
-            { q: "Will I lose my free access when membership launches?", a: "No — every feature currently free will remain free. Membership tiers add premium-only benefits (offline downloads, deeper kundli sections, priority booking, samagri box) on top, without removing existing functionality." },
-            { q: "What is currently free vs what will be in membership?", a: "Free today: full Janam Kundli, daily/weekly/monthly rashifal, panchang, 36-point kundli matching, baby names, AI palm reading, Vastu compass, muhurat finder, scripture search and katha streaming. Planned for membership: ad-free + offline kathas, deeper dasha analysis, priority astrologer/pandit booking, samagri box, live acharya webinars." },
-            { q: "When will paid memberships launch?", a: "We're rolling membership out in phases — Devotee tier first (digital-only benefits), then Sadhaka and Premium (with monthly samagri box). Join the waitlist by tapping any Coming Soon plan card and we'll email you the moment it opens." },
-            { q: "Will membership pricing be transparent?", a: "Yes — we plan transparent monthly and annual pricing with no hidden charges. Annual is expected to offer meaningful savings vs monthly, and one-click cancellation will be available from your dashboard." },
-            { q: "Will members get discounts on shop and consultations?", a: "Planned — yes. Members are expected to receive a percentage discount on shop purchases and a member rate on astrologer/pandit consultations. Exact percentages will be confirmed at launch." },
-            { q: "Is there a lifetime membership planned?", a: "We are exploring a lifetime tier for committed devotees and families, but it is not confirmed yet. We'll announce timing and pricing on the membership page when finalised." },
-            { q: "Will NRI devotees be supported?", a: "Yes — digital benefits (kathas, kundli, scriptures, webinars, priority booking) work globally. For physical samagri box delivery, we plan quarterly shipping options to USA, UK, Canada, Australia, Singapore and UAE." },
-          ]}
+          faqs={MEMBERSHIP_FAQS}
           keywordsBlurb="Vedic Tatva membership — planned premium tiers (Devotee, Sadhaka, Premium) to unlock unlimited ad-free Hindu katha streaming and offline download (Sundarkand, Hanuman Chalisa, Bhagavad Gita, Vishnu Sahasranama, Ramcharitmanas), deeper Janam Kundli analysis (Vimshottari Antardasha, Yogini Dasha, Ashtakavarga, divisional charts), priority booking with verified astrologers and pandits, monthly puja samagri box, member-only Diwali and Navratri festival kits, and live monthly Jyotish and Vedanta webinars by traditional acharyas. Most core tools (kundli, rashifal, panchang, kundli matching, baby names, palm reading, scripture search) remain free for everyone."
         />
       </div>

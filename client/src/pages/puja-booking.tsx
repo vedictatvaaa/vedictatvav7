@@ -13,6 +13,22 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { RelatedServicesSection } from "@/components/RelatedServices";
 import { PageHero } from "@/components/ui/section-primitives";
+import { Link } from "wouter";
+import { ChevronRight } from "lucide-react";
+import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
+
+const PUJA_PARENT_H1 = "Book Pandit Online for Puja at Home — Verified Vedic Pandits, Authentic Vidhi";
+
+const PUJA_FAQS = [
+  { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
+  { q: "What are the most common pujas booked?", a: "Griha Pravesh (housewarming), Satyanarayan Katha, Lakshmi Puja (Diwali), Ganesh Sthapana (Ganesh Chaturthi), Navagraha Shanti, Rudra Abhishek, Sundarkand Path, Wedding ceremonies, Mundan, Namkaran, and shradh/pind daan." },
+  { q: "Are the pandits really verified?", a: "Yes — every pandit goes through document verification (Sanskrit qualification certificates, parampara/lineage proof), in-person interview, scriptural knowledge test and customer reference check. Reviews and ratings from past clients are visible on every profile." },
+  { q: "What is included in the puja booking price?", a: "The price includes pandit dakshina, travel within city, full vidhi performance and digital sankalp certificate. Samagri (puja items) is optional add-on — you can either order our fresh kit or arrange your own." },
+  { q: "Can the pandit perform puja in my regional language?", a: "Yes — beyond Sanskrit (which is mandatory for mantras), pandits explain the vidhi and katha in your language. We have pandits fluent in Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi and Odia." },
+  { q: "How do I choose the right muhurat for my puja?", a: "Our system auto-suggests shubh muhurat based on your puja type, date and city — Abhijit muhurat, Brahma muhurat, or specific tithi-based windows. For complex ceremonies (wedding, griha pravesh), you can book a separate muhurat consultation first." },
+  { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 48 hours before puja. Cancellations within 48 hours are subject to a small dakshina fee for the pandit's reserved time." },
+  { q: "Is online puja booking available outside India?", a: "Yes — for NRIs, we offer two options: (1) book a pandit for puja at your family's home in India and join via video call, or (2) book a virtual puja where the pandit performs on your behalf at a sacred temple." },
+];
 
 const BOOKING_PROMISES = [
   "Verified pandit matched to your puja type",
@@ -127,11 +143,32 @@ export default function PujaBooking() {
         canonical="/puja"
         ogType="website"
         twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Book a Puja", url: abs("/puja") },
+          ]),
+          faqPageSchema(PUJA_FAQS.map(f => ({ question: f.q, answer: f.a })), "puja-faq"),
+          serviceSchema({
+            name: "Online Pandit Booking for Puja at Home",
+            description: "Book a verified Vedic pandit online for Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti and 50+ ceremonies. All samagri included, transparent pricing, shubh muhurat suggestions.",
+            url: abs("/puja"),
+            providerName: "Vedic Tatva",
+            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+          }),
+        ]}
       />
+      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold">Book a Puja</li>
+        </ol>
+      </nav>
       <PageHero
         eyebrow="Puja Booking"
-        title="Book a puja"
-        subtitle="Schedule a home or online puja with verified pandits."
+        title={PUJA_PARENT_H1}
+        subtitle="Schedule a home or online puja with verified pandits — authentic vidhi, all samagri included, transparent pricing."
         variant="maroon"
         testId="hero-puja-booking"
       >
@@ -380,16 +417,7 @@ export default function PujaBooking() {
             { title: "Select Pandit & Language", body: "Browse verified pandits by tradition, language and reviews. Pick the one whose parampara matches your family." },
             { title: "Confirm & Pay", body: "Pay securely via UPI/card. Pandit confirms within 2 hours. Optional samagri kit delivered the day before." },
           ]}
-          faqs={[
-            { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
-            { q: "What are the most common pujas booked?", a: "Griha Pravesh (housewarming), Satyanarayan Katha, Lakshmi Puja (Diwali), Ganesh Sthapana (Ganesh Chaturthi), Navagraha Shanti, Rudra Abhishek, Sundarkand Path, Wedding ceremonies, Mundan, Namkaran, and shradh/pind daan." },
-            { q: "Are the pandits really verified?", a: "Yes — every pandit goes through document verification (Sanskrit qualification certificates, parampara/lineage proof), in-person interview, scriptural knowledge test and customer reference check. Reviews and ratings from past clients are visible on every profile." },
-            { q: "What is included in the puja booking price?", a: "The price includes pandit dakshina, travel within city, full vidhi performance and digital sankalp certificate. Samagri (puja items) is optional add-on — you can either order our fresh kit or arrange your own." },
-            { q: "Can the pandit perform puja in my regional language?", a: "Yes — beyond Sanskrit (which is mandatory for mantras), pandits explain the vidhi and katha in your language. We have pandits fluent in Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Malayalam, Punjabi and Odia." },
-            { q: "How do I choose the right muhurat for my puja?", a: "Our system auto-suggests shubh muhurat based on your puja type, date and city — Abhijit muhurat, Brahma muhurat, or specific tithi-based windows. For complex ceremonies (wedding, griha pravesh), you can book a separate muhurat consultation first." },
-            { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 48 hours before puja. Cancellations within 48 hours are subject to a small dakshina fee for the pandit's reserved time." },
-            { q: "Is online puja booking available outside India?", a: "Yes — for NRIs, we offer two options: (1) book a pandit for puja at your family's home in India and join via video call, or (2) book a virtual puja where the pandit performs on your behalf at a sacred temple." },
-          ]}
+          faqs={PUJA_FAQS}
           keywordsBlurb="Book pandit online for puja at home — Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti, Mundan, Namkaran, Wedding ceremonies and shradh. Verified Vedic pandits in Mumbai, Delhi, Bengaluru, Pune, Hyderabad, Chennai, Kolkata, Ahmedabad, Jaipur, Lucknow and 75+ cities. Pandits available in Hindi, English, Sanskrit, Tamil, Telugu, Kannada, Marathi, Gujarati, Bengali. All puja samagri delivery included. Transparent pricing, shubh muhurat suggestions, online booking with secure payment."
         />
 

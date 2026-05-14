@@ -1,15 +1,30 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Star, Languages, Award, Search, Crown, ChevronDown, ArrowUpDown, MessageSquare, X, Loader2, Send, Clock, Sparkles, ExternalLink, Navigation, Filter, ShieldCheck, Heart as HeartIcon, Globe, Video, ArrowRight, Building2, Flame, BellRing, Check, IndianRupee, MessageCircle } from "lucide-react";
+import { MapPin, Star, Languages, Award, Search, Crown, ChevronDown, ChevronRight, ArrowUpDown, MessageSquare, X, Loader2, Send, Clock, Sparkles, ExternalLink, Navigation, Filter, ShieldCheck, Heart as HeartIcon, Globe, Video, ArrowRight, Building2, Flame, BellRing, Check, IndianRupee, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RelatedServicesSection } from "@/components/RelatedServices";
 import PageAPlusContent from "@/components/PageAPlusContent";
+import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
 import type { Pandit, PanditReview } from "@shared/schema";
+
+const PANDIT_DIR_H1 = "Book a Verified Vedic Pandit Near You — Same-Day Puja, Transparent Pricing";
+
+const PANDIT_FAQS = [
+  { q: "How do I book a pandit online?", a: "Browse verified pandits by city and ceremony, pick your preferred shubh muhurat date, and complete booking with secure payment. Confirmation arrives within minutes — usually with a WhatsApp message from your pandit." },
+  { q: "Are the pandits really verified?", a: "Yes. Every pandit on Vedic Tatva is identity-verified (Aadhaar + photo), scripture-trained (Veda / Karmakand certification), and rated by past clients. We display their experience, languages, and ceremony specialisations transparently." },
+  { q: "Can I book a pandit for same-day puja?", a: "Yes. Many pandits accept same-day bookings subject to availability. Use the 'Available Today' filter on the listing to instantly see pandits free for booking right now." },
+  { q: "What ceremonies do your pandits perform?", a: "Satyanarayan Puja, Griha Pravesh, Wedding (Vivah), Mundan, Namkaran, Rudrabhishek, Navagraha Shanti, Shradh, Vastu Shanti, Ganesh Puja, Lakshmi Puja, Saraswati Puja, Kaal Sarp Dosh Nivaran and 50+ other ceremonies." },
+  { q: "Will the pandit bring the puja samagri?", a: "You can choose to add a complete pre-checked samagri kit to your booking at checkout — delivered to your home before the puja. Or arrange your own using the checklist we share." },
+  { q: "What about dakshina? Is it included in the fee?", a: "The booking fee covers the pandit's professional services. Dakshina (a traditional offering) is given separately as per your wish — we share suggested ranges based on the ceremony." },
+  { q: "Can the pandit perform puja in my language?", a: "Yes. Filter pandits by language — Sanskrit, Hindi, Marathi, Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Punjabi, Odia and more — to ensure the rituals are explained in your preferred tongue." },
+  { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 24 hours before the ceremony. Cancellations get a full refund up to 48 hours prior. Read our refund policy for full details." },
+];
 
 type PanditWithDistance = Pandit & { distance: number | null };
 
@@ -105,9 +120,38 @@ function CityChooser() {
 
   return (
     <div className="w-full pb-20 bg-white">
+      <PageSeo
+        title="Book a Verified Vedic Pandit Online — Same-Day Puja Booking | Vedic Tatva"
+        description="Book a verified Vedic pandit online for Satyanarayan Puja, Griha Pravesh, Wedding, Rudrabhishek, Mundan, Namkaran, Navagraha Shanti and 50+ ceremonies across Delhi NCR, Mumbai, Bengaluru, Pune, Chennai, Kolkata, Hyderabad and 75+ Indian cities. Same-day booking, transparent dakshina, multi-language pandits (Sanskrit, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada). 100% identity-verified, scripture-trained Brahmin pandits."
+        keywords="book pandit online, pandit near me, verified pandit booking, brahmin pandit, satyanarayan puja pandit, griha pravesh pandit, wedding pandit, rudrabhishek pandit, mundan pandit, namkaran pandit, navagraha shanti, same-day pandit, sanskrit pandit, hindi pandit, tamil pandit, marathi pandit, telugu pandit, bengali pandit, gujarati pandit, pandit in delhi, pandit in mumbai, pandit in bangalore, pandit in pune, pandit in chennai, pandit in hyderabad, pandit in kolkata"
+        canonical="/pandits"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Verified Pandits", url: abs("/pandits") },
+          ]),
+          faqPageSchema(PANDIT_FAQS.map(f => ({ question: f.q, answer: f.a })), "pandit-dir-faq"),
+          serviceSchema({
+            name: "Verified Vedic Pandit Booking",
+            description: "Book identity-verified, scripture-trained Vedic pandits across 75+ Indian cities for Satyanarayan, Griha Pravesh, Wedding, Rudrabhishek and 50+ ceremonies. Same-day booking, transparent pricing, multi-language support.",
+            url: abs("/pandits"),
+            providerName: "Vedic Tatva",
+            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+          }),
+        ]}
+      />
+      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold">Verified Pandits</li>
+        </ol>
+      </nav>
       <SlimHero
         eyebrow="Verified Pandit Bookings"
-        title="Book a Pandit Near You"
+        title={PANDIT_DIR_H1}
         subtitle="Choose your city to see verified, local Tirth Purohits and Karmakandi Brahmins for every ritual."
       >
         <p className="text-white/50 text-xs mt-2">
@@ -429,6 +473,38 @@ function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: strin
 
   return (
     <div className="w-full pb-20 bg-white">
+      <PageSeo
+        title={`Verified Vedic Pandits in ${cityLabel} — Same-Day Puja Booking | Vedic Tatva`}
+        description={`Book a verified Vedic pandit in ${cityLabel} for Satyanarayan Puja, Griha Pravesh, Wedding, Rudrabhishek, Mundan, Namkaran, Navagraha Shanti and 50+ ceremonies. Same-day booking, transparent pricing, multi-language pandits (Sanskrit, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati). Identity-verified, scripture-trained Brahmin pandits with reviews.`}
+        keywords={`pandit in ${cityLabel.toLowerCase()}, ${cityLabel.toLowerCase()} pandit booking, verified pandit ${cityLabel.toLowerCase()}, same-day pandit, satyanarayan puja, griha pravesh, wedding pandit, rudrabhishek, brahmin pandit ${cityLabel.toLowerCase()}`}
+        canonical={`/pandits?city=${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}`}
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Verified Pandits", url: abs("/pandits") },
+            { name: cityLabel, url: abs(`/pandits?city=${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}`) },
+          ]),
+          faqPageSchema(PANDIT_FAQS.map(f => ({ question: f.q, answer: f.a })), `pandit-${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}-faq`),
+          serviceSchema({
+            name: `Verified Vedic Pandit Booking in ${cityLabel}`,
+            description: `Identity-verified, scripture-trained Vedic pandits available in ${cityLabel} for Satyanarayan, Griha Pravesh, Wedding, Rudrabhishek and 50+ ceremonies. Same-day booking with transparent pricing.`,
+            url: abs(`/pandits?city=${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}`),
+            providerName: "Vedic Tatva",
+            areaServed: [cityLabel, "IN"],
+          }),
+        ]}
+      />
+      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li><Link href="/pandits" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-pandits">Verified Pandits</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold">{cityLabel}</li>
+        </ol>
+      </nav>
       {/* Slim hero with search */}
       <div className="bg-[#6D2B35] border-b border-[#D4AF37]/30">
         <div className="container mx-auto px-4 py-12 sm:py-16 text-center">
@@ -440,7 +516,7 @@ function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: strin
             <ChevronDown className="w-3 h-3 rotate-90" /> All Cities
           </Link>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-white mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
-            Verified Pandits in {cityLabel}
+            Verified Vedic Pandits in {cityLabel} — Same-Day Booking
           </h1>
           <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-[15px] mb-7 leading-relaxed">
             Connect with experienced, verified priests near you for authentic rituals and ceremonies.
@@ -1064,16 +1140,7 @@ function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: strin
           { title: "Confirm Date & Muhurat", body: "Pick from suggested shubh muhurat dates — or share your own preferred slot." },
           { title: "Sit Back & Receive", body: "Pandit arrives with samagri checklist. Pay securely, receive prasad blessings, leave a review." },
         ]}
-        faqs={[
-          { q: "How do I book a pandit online?", a: "Browse verified pandits by city and ceremony, pick your preferred shubh muhurat date, and complete booking with secure payment. Confirmation arrives within minutes — usually with a WhatsApp message from your pandit." },
-          { q: "Are the pandits really verified?", a: "Yes. Every pandit on Vedic Tatva is identity-verified (Aadhaar + photo), scripture-trained (Veda / Karmakand certification), and rated by past clients. We display their experience, languages, and ceremony specialisations transparently." },
-          { q: "Can I book a pandit for same-day puja?", a: "Yes. Many pandits accept same-day bookings subject to availability. Use the 'Available Today' filter on the listing to instantly see pandits free for booking right now." },
-          { q: "What ceremonies do your pandits perform?", a: "Satyanarayan Puja, Griha Pravesh, Wedding (Vivah), Mundan, Namkaran, Rudrabhishek, Navagraha Shanti, Shradh, Vastu Shanti, Ganesh Puja, Lakshmi Puja, Saraswati Puja, Kaal Sarp Dosh Nivaran and 50+ other ceremonies." },
-          { q: "Will the pandit bring the puja samagri?", a: "You can choose to add a complete pre-checked samagri kit to your booking at checkout — delivered to your home before the puja. Or arrange your own using the checklist we share." },
-          { q: "What about dakshina? Is it included in the fee?", a: "The booking fee covers the pandit's professional services. Dakshina (a traditional offering) is given separately as per your wish — we share suggested ranges based on the ceremony." },
-          { q: "Can the pandit perform puja in my language?", a: "Yes. Filter pandits by language — Sanskrit, Hindi, Marathi, Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Punjabi, Odia and more — to ensure the rituals are explained in your preferred tongue." },
-          { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 24 hours before the ceremony. Cancellations get a full refund up to 48 hours prior. Read our refund policy for full details." },
-        ]}
+        faqs={PANDIT_FAQS}
         keywordsBlurb="Book pandit online for Satyanarayan Puja, Griha Pravesh puja, wedding ceremony, mundan sanskar, Rudrabhishek, Navagraha Shanti, Vastu Shanti and more across Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, Jaipur and 75+ cities. Verified Brahmin pandits, transparent pricing, same-day pandit booking available."
       />
 

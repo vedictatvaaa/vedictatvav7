@@ -35,10 +35,22 @@ import {
 import PageAPlusContent from "@/components/PageAPlusContent";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+const BECOME_PANDIT_FAQS = [
+  { q: "Who can become a Vedic Tatva pandit?", a: "Traditional pandits and purohits trained in any recognised sampradaya (Smartha, Madhva, Shri Vaishnava, Gaudiya, Shaiva, Shakta and others) who actively perform sevas — Satyanarayan, Griha Pravesh, Rudra Abhishek, Navagraha shanti, weddings, samskaras, antyeshti and more. Both full-time professional pandits and respected community purohits are welcome to apply." },
+  { q: "Is there any joining fee?", a: "No — applying and listing your profile is free for verified pandits. Any platform service fee on bookings is explained transparently during onboarding before you go live, so there are no surprises." },
+  { q: "How does verification work?", a: "After you submit the form, our team contacts you (typically within a few working days) to discuss your background, sampradaya and the sevas you offer. The goal is to confirm authenticity and protect both devotees and your own reputation — not to test ritual knowledge." },
+  { q: "Will I be forced to perform sevas I'm not comfortable with?", a: "Never. You list only the sevas you actively perform and feel qualified for. Devotees see exactly what you offer — and you can accept or decline any individual booking based on your sampradaya rules, availability or personal judgement." },
+  { q: "How do online (virtual) sevas work?", a: "For virtual puja, the devotee joins a live video call (often with their family abroad). You perform the sankalpa with their gotra/nakshatra, conduct the puja and offer the prasad-equivalent. Many NRIs prefer this for Pitru Paksha, Shradh and occasions when they cannot travel home." },
+  { q: "How is dakshina handled?", a: "Devotees pay through the platform at the time of booking. Once the seva is completed, your share is settled to you — the exact settlement schedule and platform service fee are explained transparently during onboarding before you go live, so you can decide if it works for you." },
+  { q: "Can I serve devotees in languages other than Hindi?", a: "Absolutely — we encourage it. Specify the languages you serve in (Hindi, Sanskrit, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Odia, Assamese and others) so devotees can filter pandits by language. This is especially valued by NRI and inter-state families." },
+  { q: "What support is available after I join?", a: "Onboarding help in your preferred language, assistance setting up your profile and seva list, ongoing support for booking issues, and guidance on improving your visibility. Festival weeks have extra support hours so you can focus on the sevas." },
+];
 import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -177,9 +189,34 @@ export default function BecomePandit() {
   return (
     <div className="w-full overflow-x-hidden" style={{ background: C.warmWhite }}>
       <PageSeo
-        title="Become a Pandit | Vedic Tatva — Join India's Digital Dharma Movement"
-        description="Join Vedic Tatva — India's most trusted digital dharma platform for Pandits. Get verified, accept bookings across India and abroad, use powerful Vedic tools, and grow your spiritual practice with the dignity it deserves."
+        title="Become a Verified Pandit on Vedic Tatva — Earn ₹50,000+/mo Serving Devotees Online"
+        description="Join Vedic Tatva — India's most trusted digital dharma platform for Pandits. Get verified, accept bookings across India and abroad (USA, UK, Canada, Australia, Singapore, UAE), use powerful Vedic tools, and grow your spiritual practice with the dignity it deserves. Free to apply, transparent service fee, multi-language support."
+        keywords="become a pandit, pandit registration, register as pandit online, verified pandit platform, hindu priest jobs, purohit registration, sanskrit pandit jobs, brahmin priest opportunity, pandit earn money online, pandit sign up, list as pandit, online puja platform for pandits, pandit work from home, NRI pandit booking, samskrit purohit jobs"
+        canonical="/become-pandit"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Become a Pandit", url: abs("/become-pandit") },
+          ]),
+          faqPageSchema(BECOME_PANDIT_FAQS.map(f => ({ question: f.q, answer: f.a })), "become-pandit-faq"),
+          serviceSchema({
+            name: "Pandit Registration & Verification on Vedic Tatva",
+            description: "Free registration for traditional Vedic pandits and purohits — get verified, accept bookings across India and abroad, manage profile and seva list, receive transparent settlement.",
+            url: abs("/become-pandit"),
+            providerName: "Vedic Tatva",
+            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+          }),
+        ]}
       />
+      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
+          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold">Become a Pandit</li>
+        </ol>
+      </nav>
 
       <Hero onApply={scrollToId("apply")} onDemo={scrollToId("demo")} />
       <LiveTrustBar />
@@ -226,16 +263,7 @@ export default function BecomePandit() {
             { title: "Go Live & Receive Enquiries", body: "Once your profile is approved, devotees can find you, view your sevas and request bookings. You confirm or decline based on your availability." },
             { title: "Perform With Sanctity", body: "Conduct the seva as you normally would. Booking, payment and follow-up are handled through the platform — you focus on the ritual." },
           ]}
-          faqs={[
-            { q: "Who can become a Vedic Tatva pandit?", a: "Traditional pandits and purohits trained in any recognised sampradaya (Smartha, Madhva, Shri Vaishnava, Gaudiya, Shaiva, Shakta and others) who actively perform sevas — Satyanarayan, Griha Pravesh, Rudra Abhishek, Navagraha shanti, weddings, samskaras, antyeshti and more. Both full-time professional pandits and respected community purohits are welcome to apply." },
-            { q: "Is there any joining fee?", a: "No — applying and listing your profile is free for verified pandits. Any platform service fee on bookings is explained transparently during onboarding before you go live, so there are no surprises." },
-            { q: "How does verification work?", a: "After you submit the form, our team contacts you (typically within a few working days) to discuss your background, sampradaya and the sevas you offer. The goal is to confirm authenticity and protect both devotees and your own reputation — not to test ritual knowledge." },
-            { q: "Will I be forced to perform sevas I'm not comfortable with?", a: "Never. You list only the sevas you actively perform and feel qualified for. Devotees see exactly what you offer — and you can accept or decline any individual booking based on your sampradaya rules, availability or personal judgement." },
-            { q: "How do online (virtual) sevas work?", a: "For virtual puja, the devotee joins a live video call (often with their family abroad). You perform the sankalpa with their gotra/nakshatra, conduct the puja and offer the prasad-equivalent. Many NRIs prefer this for Pitru Paksha, Shradh and occasions when they cannot travel home." },
-            { q: "How is dakshina handled?", a: "Devotees pay through the platform at the time of booking. Once the seva is completed, your share is settled to you — the exact settlement schedule and platform service fee are explained transparently during onboarding before you go live, so you can decide if it works for you." },
-            { q: "Can I serve devotees in languages other than Hindi?", a: "Absolutely — we encourage it. Specify the languages you serve in (Hindi, Sanskrit, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, Gujarati, Punjabi, Odia, Assamese and others) so devotees can filter pandits by language. This is especially valued by NRI and inter-state families." },
-            { q: "What support is available after I join?", a: "Onboarding help in your preferred language, assistance setting up your profile and seva list, ongoing support for booking issues, and guidance on improving your visibility. Festival weeks have extra support hours so you can focus on the sevas." },
-          ]}
+          faqs={BECOME_PANDIT_FAQS}
           keywordsBlurb="Vedic Tatva welcomes traditional pandits and purohits to list the sevas they perform — including Satyanarayan Katha, Griha Pravesh, Rudra Abhishek, Mahamrityunjaya Jaap, Navagraha Shanti, Mundan, Namkaran, Annaprashan, Upanayana, Hindu wedding (vivaha), Antyeshti, Pitru Paksha Shradh and Tarpan. Pandits across major Indian cities (Delhi, Mumbai, Bangalore, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, Jaipur, Varanasi, Lucknow) and serving Hindu families abroad (USA, UK, Canada, Australia, Singapore, UAE) are welcome to apply. Verified pandit badge, multi-language support (Hindi, Sanskrit, Tamil, Telugu, Kannada, Malayalam, Marathi, Bengali, Gujarati and more), and a transparent booking workflow."
         />
       </div>
