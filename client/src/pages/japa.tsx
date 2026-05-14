@@ -273,8 +273,8 @@ export default function JapaPage() {
                 <div className="px-2 sm:px-6 py-3 sm:py-8 max-w-3xl mx-auto space-y-3 text-[#2c2c2c]">
                   <JapCounter
                     ownerKey="public"
-                    title="Begin Your Sādhanā"
-                    subtitle="Tap the orb each time you complete one mantra. Lock the screen to avoid stray taps."
+                    title="Mantra Japa Counter"
+                    subtitle="Pick a sacred mantra and tap the orb for each repetition. Bell + vibration on every full mala. Streak saved privately on this device."
                   />
                   {/* Sadhana stats — restored from previous page. Collapsed
                       by default so the counter stays the visual anchor; the
@@ -304,27 +304,9 @@ export default function JapaPage() {
           </div>
         </section>
 
-        {/* Page heading — sits directly under the orb so the counter is
-            the first visual on page open while the H1 + intro stay on the
-            page for SEO and screen-reader landmarks. */}
-        <header className="px-4 sm:px-5 text-center">
-          <div className="max-w-xl mx-auto">
-            <p className="text-[10px] sm:text-[11px] tracking-[0.28em] uppercase text-[#D4AF37]/80 mb-2">
-              Mantra · Sadhana · Streak
-            </p>
-            <h1
-              className="text-[20px] leading-tight sm:text-3xl font-bold tracking-tight text-[#FBF7EE] mb-2"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-              data-testid="text-japa-headline"
-            >
-              Mantra Japa Counter
-            </h1>
-            <p className="text-[12.5px] sm:text-sm text-[#FBF7EE]/70 leading-relaxed">
-              Pick a sacred mantra and tap the orb for each repetition.
-              Bell + vibration on every full mala. Streak saved privately on this device.
-            </p>
-          </div>
-        </header>
+        {/* The page-level title + intro were promoted INTO the counter
+            (above the orb) per UX redesign — a single H1 lives there now
+            and serves as both the section heading and SEO landmark. */}
 
         {/* Zone 3 — Popular mantras (horizontal pill scroll, miniature) */}
         <section className="px-0 sm:px-5" aria-labelledby="japa-popular-h2">

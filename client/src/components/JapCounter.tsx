@@ -919,14 +919,20 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       const newStreak = isNewDay
         ? (prev.lastDay === yest ? prev.streak + 1 : 1)
         : (prev.streak === 0 ? 1 : prev.streak);
-      let count = prev.count + 1;
+      // Display semantics: when the previous tap landed on the full mala
+      // (count === target), the visible "108" lingered. The next tap is
+      // bead 1 of the next mala — no extra mala credit (already credited
+      // when we hit target). Otherwise increment, and on hitting target
+      // we hold the count at target so the user actually sees "108".
+      const wasAtTarget = prev.count >= target;
+      let count = wasAtTarget ? 1 : prev.count + 1;
       let malas = prev.malas;
       let todayMalas = isNewDay ? 0 : prev.todayMalas;
       let todayCount = (isNewDay ? 0 : prev.todayCount) + 1;
-      if (count >= target) {
+      if (!wasAtTarget && count >= target) {
         malas += 1;
         todayMalas += 1;
-        count = 0;
+        count = target;
       }
       return {
         ...prev,
@@ -1114,15 +1120,19 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         ? (prev.lastDay === yest ? prev.streak + 1 : 1)
         : (prev.streak === 0 ? 1 : prev.streak);
 
-      let count = prev.count + 1;
+      // Same display rule as the manual tap path — hold the visible
+      // count at target on completion so "108" is shown, then next tap
+      // is bead 1 of the next mala (no double-credit).
+      const wasAtTarget = prev.count >= target;
+      let count = wasAtTarget ? 1 : prev.count + 1;
       let malas = prev.malas;
       let todayMalas = isNewDay ? 0 : prev.todayMalas;
       let todayCount = (isNewDay ? 0 : prev.todayCount) + 1;
 
-      if (count >= target) {
+      if (!wasAtTarget && count >= target) {
         malas += 1;
         todayMalas += 1;
-        count = 0;
+        count = target;
       }
 
       return {
@@ -1399,80 +1409,24 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           onDismiss={() => setAshirvad(null)}
         />
       )}
-      {/* Header — wraps below sm so the title gets the full card width
-          and the action cluster (quick icons + Focus mode) drops to row 2
-          as one unit. Above sm everything fits on a single row. */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="h-10 w-10 rounded-md bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center shrink-0">
-          <Music2 className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1 min-[420px]:flex-1 basis-[calc(100%-3.25rem)] sm:basis-0">
-          <h2 className="text-xl md:text-2xl font-serif font-bold text-[#4a1a22]">{title}</h2>
-          {subtitle && <p className="text-xs text-[#5a4a3a]/70">{subtitle}</p>}
-        </div>
-        {/* Action cluster — quick mantra actions + Focus mode. Wrapped together
-            so on mobile they drop to row 2 as one block, right-aligned. */}
-        <div className="flex items-center gap-2 ml-auto sm:ml-0">
-        {/* Quick mantra actions — favourite, set as daily, share. Icon-only to keep the header tidy. */}
-        <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            variant={isFav ? "default" : "ghost"}
-            onClick={toggleFavorite}
-            className={isFav ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : "text-[#6D2B35]"}
-            aria-pressed={isFav}
-            aria-label={isFav ? "Remove from favourites" : "Add to favourites"}
-            title={isFav ? "Favourited" : "Favourite"}
-            data-testid="btn-favorite"
-          >
-            <Heart className={`h-4 w-4 ${isFav ? "fill-current" : ""}`} />
-          </Button>
-          <Button
-            size="icon"
-            variant={isDaily ? "default" : "ghost"}
-            onClick={toggleDailyRitual}
-            className={isDaily ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : "text-[#6D2B35]"}
-            aria-pressed={isDaily}
-            aria-label={isDaily ? "Clear daily ritual" : "Set as daily ritual"}
-            title={isDaily ? "Daily ritual" : "Set as daily"}
-            data-testid="btn-daily-ritual"
-          >
-            <CalendarCheck className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={shareMantra}
-            className="text-[#6D2B35]"
-            aria-label="Share this mantra"
-            title="Share"
-            data-testid="btn-share-mantra"
-          >
-            <Share2 className="h-4 w-4" />
-          </Button>
-        </div>
-        {/* Focus mode toggle — labelled clearly so the user knows
-            exactly what tapping it does (full-screen sacred space, only
-            the mala + count). The caption underneath is the second layer
-            of transparency: it tells you how to leave before you enter. */}
-        <div className="flex flex-col items-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => { void enterFullscreen(); }}
-            className="border-[#6D2B35]/30 bg-transparent text-[#6D2B35] hover:text-[#6D2B35]"
-            data-testid="btn-enter-fullscreen"
-            aria-label="Enter focus mode — fullscreen, distraction-free chanting"
-            title="Enter focus mode — only the mala and count, no distractions. Press Esc or tap × to exit."
-          >
-            <Maximize2 className="h-3.5 w-3.5 mr-1.5" />Focus mode
-          </Button>
-          <span className="hidden sm:block text-[10px] text-[#5a4a3a]/60 mt-1 leading-none">
-            Distraction-free · Esc to exit
-          </span>
-        </div>
-        </div>
-      </div>
+      {/* Header — replaces the previous "Begin Your Sādhanā" + Focus mode
+          + favourite/daily/share cluster with a single, calm centered
+          title block. The page H1 was promoted up here as the SEO heading,
+          and Focus mode + the per-mantra quick actions were retired in
+          favour of the orb being the sole hero. */}
+      <header className="text-center px-2 pt-1 pb-1">
+        <h1
+          className="text-2xl sm:text-3xl font-serif font-bold text-[#4a1a22] tracking-tight"
+          data-testid="text-counter-h1"
+        >
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-1 text-[12.5px] sm:text-sm text-[#5a4a3a]/75 leading-relaxed max-w-md mx-auto">
+            {subtitle}
+          </p>
+        )}
+      </header>
 
       {fullscreen && (
         <FullscreenOverlay
