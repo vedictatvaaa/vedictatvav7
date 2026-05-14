@@ -5,15 +5,15 @@ import { CATEGORY_THEMES, ORDERED_THEME_SLUGS } from "@/data/category-themes";
 import { CATEGORY_CONTENT } from "@/data/category-content";
 import type { Product } from "@shared/schema";
 
-// Representative image per themed category — pulled from existing assets.
-import rudrakshaImg from "@assets/generated_images/shiva-mahamrityunjaya.png";
-import pujaSamagriImg from "@assets/generated_images/puja_basket_icon.png";
-import idolsImg from "@assets/generated_images/ganesha-deity.png";
-import havanImg from "@assets/generated_images/hawan-kund-icon.png";
-import brassImg from "@assets/generated_images/kalash_icon.png";
-import wearablesImg from "@assets/generated_images/krishna-flute-deity.png";
-import dhotiImg from "@assets/generated_images/puja_peela_vastra.png";
-import gemstonesImg from "@assets/generated_images/mahalakshmi-deity.png";
+// Purpose-generated category hero images — one per themed vertical, 4:3 aspect.
+import rudrakshaImg from "@assets/generated_images/cat-rudraksha.png";
+import pujaSamagriImg from "@assets/generated_images/cat-puja-samagri.png";
+import idolsImg from "@assets/generated_images/cat-idols.png";
+import havanImg from "@assets/generated_images/cat-havan-samagri.png";
+import brassImg from "@assets/generated_images/cat-brass-copperware.png";
+import wearablesImg from "@assets/generated_images/cat-wearables.png";
+import dhotiImg from "@assets/generated_images/cat-dhoti-kurta.png";
+import gemstonesImg from "@assets/generated_images/cat-gemstones.png";
 
 const CATEGORY_IMAGE: Record<string, string> = {
   "rudraksha": rudrakshaImg,
@@ -106,16 +106,16 @@ export default function ShopByCategory({ products }: Props) {
                   >
                     {theme.motifEmoji}
                   </div>
-                  {/* Representative image */}
+                  {/* Representative image — purpose-shot for each category, fills the card */}
                   {img && (
                     <img
                       src={img}
-                      alt={`${theme.label} category`}
+                      alt={`${theme.label} — ${theme.tagline}`}
                       width={400}
                       height={300}
                       loading="lazy"
                       decoding="async"
-                      className="absolute inset-0 w-full h-full object-contain p-4 sm:p-5 transition-transform duration-500 group-hover:scale-[1.04]"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                     />
                   )}
                   {/* Bottom scrim for label readability */}

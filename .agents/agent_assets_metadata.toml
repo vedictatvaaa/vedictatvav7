@@ -1374,6 +1374,54 @@ uri = "file://attached_assets/generated_images/krishna-vasudeva-deity.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "78CPmCL-Pi6DGudU6ybSR"
+uri = "file://attached_assets/generated_images/cat-rudraksha.png"
+type = "image"
+title = "rudraksha cluster"
+
+[[generated]]
+id = "QL3vPiZfYkPAfqFaeqxhR"
+uri = "file://attached_assets/generated_images/cat-puja-samagri.png"
+type = "image"
+title = "puja samagri thali"
+
+[[generated]]
+id = "lZAhSLdYVJ7j5RqeUsb4K"
+uri = "file://attached_assets/generated_images/cat-idols.png"
+type = "image"
+title = "brass idols trio"
+
+[[generated]]
+id = "03EIRHMiedSLoqpm9HXC8"
+uri = "file://attached_assets/generated_images/cat-havan-samagri.png"
+type = "image"
+title = "havan samagri kund"
+
+[[generated]]
+id = "PZsCeamho4um_KtxcZnzE"
+uri = "file://attached_assets/generated_images/cat-brass-copperware.png"
+type = "image"
+title = "brass copperware set"
+
+[[generated]]
+id = "ooglCtm5BBOJQHV1sti_9"
+uri = "file://attached_assets/generated_images/cat-wearables.png"
+type = "image"
+title = "mala bracelet wearables"
+
+[[generated]]
+id = "IBfqOgOZKUekXq9rTplyZ"
+uri = "file://attached_assets/generated_images/cat-dhoti-kurta.png"
+type = "image"
+title = "dhoti kurta folded"
+
+[[generated]]
+id = "29_2DCG8Qmg0-PGiLuOsi"
+uri = "file://attached_assets/generated_images/cat-gemstones.png"
+type = "image"
+title = "certified gemstones"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
