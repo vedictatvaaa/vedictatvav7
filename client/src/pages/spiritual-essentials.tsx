@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, ChevronDown, ShieldCheck, Award, Truck, Heart, Sparkles, Flame, Leaf } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import PageAPlusContent from "@/components/PageAPlusContent";
+import HubTopPicks from "@/components/HubTopPicks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CATEGORY_THEMES, ORDERED_THEME_SLUGS, type CategoryTheme } from "@/data/category-themes";
@@ -185,6 +186,9 @@ export default function SpiritualEssentials() {
           ))}
         </div>
       </section>
+
+      {/* Curator's Top Picks — 1 product per themed vertical, restores click-through */}
+      <HubTopPicks />
 
       {/* AI advisor highlight strip */}
       <section className="bg-gradient-to-br from-[#FAF1DC] via-[#F5E6C9] to-[#F0D8B0] py-12 sm:py-16">

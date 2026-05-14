@@ -23,6 +23,8 @@ import { getCategoryContent, CATEGORY_SLUG_ALIASES } from "@/data/category-conte
 import { getCategoryTheme } from "@/data/category-themes";
 import CategoryHeroThemed from "@/components/CategoryHeroThemed";
 import CategoryAdvisor from "@/components/CategoryAdvisor";
+import CategoryAPlusThemed from "@/components/CategoryAPlusThemed";
+import CategoryCrossSell from "@/components/CategoryCrossSell";
 import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.png";
 
 /* ───────────────────────── Parent /shop SEO content ─────────────────────────
@@ -1237,8 +1239,18 @@ export default function Shop() {
           ))}
         </div>
 
-        {/* Category content (intro / sections / FAQs) */}
-        {categoryContent && (
+        {/* Themed A+ content (one of 8 themed slugs) */}
+        {categoryTheme && categoryContent && (
+          <CategoryAPlusThemed theme={categoryTheme} content={categoryContent} />
+        )}
+
+        {/* Cross-sell to the other 7 themed verticals */}
+        {categoryTheme && (
+          <CategoryCrossSell currentSlug={categoryTheme.slug} />
+        )}
+
+        {/* Generic category content (parent /shop or non-themed slugs only) */}
+        {!categoryTheme && categoryContent && (
           <section className="mt-14 max-w-4xl mx-auto" data-testid={`category-content-${categoryContent.slug}`}>
             <header className="text-center mb-8">
               <div className="inline-flex items-center justify-center gap-2.5 mb-3">
