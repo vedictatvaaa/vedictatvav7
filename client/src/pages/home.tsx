@@ -51,7 +51,7 @@ const heroSlides: HeroSlide[] = [
     title1: "Where Spirituality",
     title2: "Meets ",
     title2Highlight: "Technology",
-    subtitle: "Shop sacred essentials. Book verified pandits. Experience authentic rituals — all in one place.",
+    subtitle: "Shop puja essentials. Book verified pandits. Experience authentic rituals — all in one place.",
     cta1: { label: "Shop Now", href: "/shop", icon: ShoppingBag },
     cta2: { label: "Book Pandit", href: "/pandits", icon: UserCheck },
   },
@@ -95,7 +95,7 @@ const heroSlides: HeroSlide[] = [
     src: heroEssentialsImg,
     alt: "Authentic puja samagri spread with brass idol and rudraksha",
     mobilePosition: "center center",
-    tagline: "SHOP SACRED ESSENTIALS",
+    tagline: "SHOP PUJA ESSENTIALS",
     title1: "Authentic Samagri,",
     title2: "Sourced With ",
     title2Highlight: "Care",
@@ -327,7 +327,7 @@ export default function Home() {
   // Four pillars of the platform — each links to a deep, SEO-rich landing
   // hub that absorbs all related sub-services. Pandit & Puja covers Book
   // Pandit, Book Puja, Pind Daan & Virtual Puja. Astrology covers Free
-  // Kundli, Zodiac, Panchang & Muhurat. Sacred Essentials covers samagri,
+  // Kundli, Zodiac, Panchang & Muhurat. Puja Essentials covers samagri,
   // rudraksha, gemstones & yantras. Tirth Yatra covers all Hindu
   // pilgrimages (Char Dham, Jyotirlingas, Shakti Peeths, Vaishno Devi).
   const featuredCtas = [
@@ -344,7 +344,7 @@ export default function Home() {
       href: "/astrology",
     },
     {
-      label: "Sacred Essentials",
+      label: "Puja Essentials",
       sub: "Rudraksha, gemstones, samagri, yantras",
       icon: Gem,
       href: "/spiritual-essentials",
@@ -1863,7 +1863,7 @@ function TabbedShop({
             <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
           </div>
           <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-4" data-testid="text-tabbed-shop-heading">
-            Sacred essentials, <span className="saffron-shimmer italic font-semibold">picked for you</span>
+            Puja essentials, <span className="saffron-shimmer italic font-semibold">picked for you</span>
           </h2>
 
           <div className="inline-flex items-center bg-white rounded-md border border-[#D4AF37]/25 p-1 gap-1 flex-wrap">

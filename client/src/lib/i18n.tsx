@@ -180,7 +180,7 @@ const translations: Record<Language, TranslationKeys> = {
       title1: "Where Spirituality",
       title2: "Meets",
       title2Highlight: "Technology",
-      subtitle: "Shop sacred essentials. Book verified pandits. Experience authentic rituals — all in one place.",
+      subtitle: "Shop puja essentials. Book verified pandits. Experience authentic rituals — all in one place.",
       shopNow: "Shop Now",
       bookPandit: "Book Pandit",
       rating: "4.9/5",
@@ -213,7 +213,7 @@ const translations: Record<Language, TranslationKeys> = {
     },
     products: {
       sectionTag: "Handpicked for You",
-      heading: "Sacred Essentials Crafted with Purity",
+      heading: "Puja Essentials Crafted with Purity",
       subheading: "Best-selling spiritual products trusted by thousands of devotees across India",
       addToCart: "Add to Cart",
       viewAll: "View All Products",
