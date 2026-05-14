@@ -197,6 +197,7 @@ const Blog = lazy(() => import("@/pages/blog"));
 const BlogPostPage = lazy(() => import("@/pages/blog-post"));
 const ServiceLanding = lazy(() => import("@/pages/service-landing"));
 const PujaCity = lazy(() => import("@/pages/puja-city"));
+const SeoLanding = lazy(() => import("@/pages/seo-landing"));
 import { AuthProvider } from "@/lib/auth";
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { CurrencyProvider } from "@/lib/currency";
@@ -617,6 +618,17 @@ function Router() {
         }>
         <Switch>
           <Route path="/" component={Home} />
+          {/* SEO keyword landing pages (top-level URLs for organic ranking) */}
+          <Route path="/online-puja-booking">{() => <SeoLanding slug="online-puja-booking" />}</Route>
+          <Route path="/satyanarayan-puja">{() => <SeoLanding slug="satyanarayan-puja" />}</Route>
+          <Route path="/rudrabhishek-puja">{() => <SeoLanding slug="rudrabhishek-puja" />}</Route>
+          <Route path="/navratri-puja">{() => <SeoLanding slug="navratri-puja" />}</Route>
+          <Route path="/pandit-in-delhi">{() => <SeoLanding slug="pandit-in-delhi" />}</Route>
+          <Route path="/pandit-in-mumbai">{() => <SeoLanding slug="pandit-in-mumbai" />}</Route>
+          <Route path="/pandit-in-bangalore">{() => <SeoLanding slug="pandit-in-bangalore" />}</Route>
+          <Route path="/navratri-puja-vidhi">{() => <SeoLanding slug="navratri-puja-vidhi" />}</Route>
+          <Route path="/lakshmi-puja-benefits">{() => <SeoLanding slug="lakshmi-puja-benefits" />}</Route>
+          <Route path="/griha-pravesh-muhurat">{() => <SeoLanding slug="griha-pravesh-muhurat" />}</Route>
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
           <Route path="/shop" component={Shop} />
