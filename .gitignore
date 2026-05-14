@@ -23,3 +23,9 @@ downloads/
 attached_assets/
 artifacts/
 uploads/
+
+# Local-only directories (kept on VPS, not in git)
+downloads/
+attached_assets/
+artifacts/
+uploads/
