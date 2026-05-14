@@ -25,6 +25,7 @@ import CategoryHeroThemed from "@/components/CategoryHeroThemed";
 import CategoryAdvisor from "@/components/CategoryAdvisor";
 import CategoryAPlusThemed from "@/components/CategoryAPlusThemed";
 import CategoryCrossSell from "@/components/CategoryCrossSell";
+import ShopByCategory from "@/components/ShopByCategory";
 import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.png";
 
 /* ───────────────────────── Parent /shop SEO content ─────────────────────────
@@ -784,6 +785,11 @@ export default function Shop() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* ── Shop by Category (parent /shop only, no active search) ── */}
+      {!categoryTheme && !searchQuery && (
+        <ShopByCategory products={allProducts} />
       )}
 
       {/* ── Search bar ── */}
