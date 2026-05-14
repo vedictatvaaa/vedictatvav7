@@ -1,0 +1,1537 @@
+uploads = []
+
+[[generated]]
+id = "4RT9znwbJWO62WaieeJN-"
+uri = "file://attached_assets/rudraksha/1-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "V3bTbOGilLQcH4yN6i8Xg"
+uri = "file://attached_assets/rudraksha/2-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "flFZG-0Lir40e3zE4k8pX"
+uri = "file://attached_assets/rudraksha/3-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "btuM1o88pJnE18_SK19I3"
+uri = "file://attached_assets/rudraksha/5-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "WKHoiO5O2wsNaoC6dDqW_"
+uri = "file://attached_assets/rudraksha/6-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-4EnxHC8SLDJkfa2YqKAf"
+uri = "file://attached_assets/rudraksha/7-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5StR5_mcd5vcprfhfoJIW"
+uri = "file://attached_assets/rudraksha/8-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nLGNupWmrQulT7x6mkqhh"
+uri = "file://attached_assets/rudraksha/9-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "YLg9iymaHraPAzvkFP_oO"
+uri = "file://attached_assets/rudraksha/10-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "haPaldhe9wX7P9FeY5EBB"
+uri = "file://attached_assets/rudraksha/11-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "pB0d72mlgpbABr7bk-X4c"
+uri = "file://attached_assets/rudraksha/12-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "rSLJf7A-WashKSZ9xikA9"
+uri = "file://attached_assets/rudraksha/13-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KqifF-7yvlMh_LFbfEzaO"
+uri = "file://attached_assets/rudraksha/14-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TzYrXE5M_S7iK7KoOSi-2"
+uri = "file://attached_assets/rudraksha/gauri-shankar.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "U9Lmb_4ukgMvS_4hmrNWV"
+uri = "file://attached_assets/rudraksha/ganesh.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iGQx67C4FruO52XzhwkSR"
+uri = "file://attached_assets/rudraksha/4-mukhi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "42GTbHwstFJBxOqSraFQn"
+uri = "file://attached_assets/generated_images/puja_flowers_thali.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "0_4uZxAw_ZJjwzwN1iPCp"
+uri = "file://attached_assets/pandits/pandit_01.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "cPF4iv-t1TQr5yHGPPhsl"
+uri = "file://attached_assets/pandits/pandit_02.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xl9OLtRwqj5w5GkjIF08-"
+uri = "file://attached_assets/pandits/pandit_03.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "sWs9rrEvbT3VwBEwu2mkb"
+uri = "file://attached_assets/pandits/pandit_04.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5Mn4oISOI_JAcf5nruXa4"
+uri = "file://attached_assets/pandits/pandit_05.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "zoyftYhNGU5aJT1GzL42D"
+uri = "file://attached_assets/pandits/pandit_06.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "YlQmD6qQv35oghuLBoVaL"
+uri = "file://attached_assets/pandits/pandit_07.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "g2Vqu6z-wd2ux86P-N6Yr"
+uri = "file://attached_assets/pandits/pandit_08.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GtghQNaqvEw1dqKDP23tU"
+uri = "file://artifacts/mockup-sandbox/public/images/cream-hero.png"
+type = "image"
+title = "Serene temple setup with diyas"
+
+[[generated]]
+id = "jBH0uT4awKuDNPG6Nho0O"
+uri = "file://artifacts/mockup-sandbox/public/images/cream-banner.png"
+type = "image"
+title = "Akshaya Tritiya gold and marigold"
+
+[[generated]]
+id = "GGg9rV8Q5AfVd1bH_vbEJ"
+uri = "file://artifacts/mockup-sandbox/public/images/cream-product-1.png"
+type = "image"
+title = "Brass Panchmukhi Diya product"
+
+[[generated]]
+id = "vuT4QrWh3rRMMFjI3QVnx"
+uri = "file://artifacts/mockup-sandbox/public/images/cream-pandit-1.png"
+type = "image"
+title = "Traditional Pandit portrait"
+
+[[generated]]
+id = "Utk7I65kkzUHPZ7kM--AT"
+uri = "file://artifacts/mockup-sandbox/public/images/hero-sandstone.png"
+type = "image"
+title = "Hero brass items on sandstone"
+
+[[generated]]
+id = "SqFQDcMTyvm2Is1g-I6Ts"
+uri = "file://artifacts/mockup-sandbox/public/images/banner-sandstone.png"
+type = "image"
+title = "Banner brass kalash on stone"
+
+[[generated]]
+id = "kih_wV0E0-VNcIsNLf7Yl"
+uri = "file://artifacts/mockup-sandbox/public/images/product-diya.png"
+type = "image"
+title = "Brass panchmukhi diya product"
+
+[[generated]]
+id = "dPMxWfqBwYvgYZWpGvnXW"
+uri = "file://artifacts/mockup-sandbox/public/images/product-incense.png"
+type = "image"
+title = "Sandalwood agarbatti product"
+
+[[generated]]
+id = "Cl21KXChkyIbnXnrgQlO9"
+uri = "file://artifacts/mockup-sandbox/public/images/pandit-1.png"
+type = "image"
+title = "Portrait of serene Indian pandit"
+
+[[generated]]
+id = "vX_laJ--k7XvkkWJL4fCc"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-hero.png"
+type = "image"
+title = "Minimal temple hero image"
+
+[[generated]]
+id = "9XjSd17YtU6XFBV0BxHmy"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-banner.png"
+type = "image"
+title = "Akshaya Tritiya banner image"
+
+[[generated]]
+id = "4TRJiW9PKjx8FAJIpORUo"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-pandit-1.png"
+type = "image"
+title = "Portrait of a serene pandit"
+
+[[generated]]
+id = "o1dR3-0eqhNqrmf0a-NLB"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-product-diya.png"
+type = "image"
+title = "Brass panchmukhi diya product"
+
+[[generated]]
+id = "8B3TtepPU7EnOH-gReLes"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-product-agarbatti.png"
+type = "image"
+title = "Sandalwood agarbatti product"
+
+[[generated]]
+id = "t2ydrWq7R_rpEG_SBqVLS"
+uri = "file://artifacts/mockup-sandbox/public/images/ivory-product-ganesh.png"
+type = "image"
+title = "Marble Ganesh idol product"
+
+[[generated]]
+id = "INSehFePTUqf1ML5pl_tO"
+uri = "file://artifacts/mockup-sandbox/public/images/mandir-ivory-hero.png"
+type = "image"
+title = "Traditional Hindu temple altar hero"
+
+[[generated]]
+id = "InhjQN0vJo42w5Gbx247w"
+uri = "file://artifacts/mockup-sandbox/public/images/mandir-ivory-banner.png"
+type = "image"
+title = "Akshaya Tritiya festive setup"
+
+[[generated]]
+id = "9vTETDxOQFRMtLnzxVZWg"
+uri = "file://artifacts/mockup-sandbox/public/images/mandir-ivory-product-brass.png"
+type = "image"
+title = "Brass puja thali product"
+
+[[generated]]
+id = "U4Romw8qYTGQ2FRCqjTEW"
+uri = "file://artifacts/mockup-sandbox/public/images/mandir-ivory-pandit.png"
+type = "image"
+title = "Traditional Hindu pandit portrait"
+
+[[generated]]
+id = "Wnx-_MGv79wFIcK18-eYX"
+uri = "file://artifacts/mockup-sandbox/public/images/heritage-cream-hero.png"
+type = "image"
+title = "Hindu mandir interior with lamps"
+
+[[generated]]
+id = "t4tscSVhOjzR3gwMqG3qP"
+uri = "file://artifacts/mockup-sandbox/public/images/heritage-cream-banner.png"
+type = "image"
+title = "Akshaya Tritiya brass kalash"
+
+[[generated]]
+id = "OjGhi6nBP6Veh1mPJPG_Q"
+uri = "file://artifacts/mockup-sandbox/public/images/heritage-cream-product.png"
+type = "image"
+title = "Brass diya on thali"
+
+[[generated]]
+id = "uSBzTI12TprwgBaGDZS-1"
+uri = "file://artifacts/mockup-sandbox/public/images/sandstone-hero.png"
+type = "image"
+title = "Warm softly lit mandir hero"
+
+[[generated]]
+id = "sdTW4p2_RaWuSMK-behps"
+uri = "file://artifacts/mockup-sandbox/public/images/sandstone-banner.png"
+type = "image"
+title = "Akshaya Tritiya gold coins puja"
+
+[[generated]]
+id = "P078FXKP3_j2VufQdH-3l"
+uri = "file://artifacts/mockup-sandbox/public/images/sandstone-product-thali.png"
+type = "image"
+title = "Brass puja thali with flowers"
+
+[[generated]]
+id = "hoPb5cgXal_HziRZkXm8f"
+uri = "file://artifacts/mockup-sandbox/public/images/sandstone-pandit.png"
+type = "image"
+title = "Hindu pandit in traditional attire"
+
+[[generated]]
+id = "pN6DZ8w2lkPgGwfRxLmOV"
+uri = "file://artifacts/mockup-sandbox/public/images/marigold-forest-hero.png"
+type = "image"
+title = "Marigold and forest green hero"
+
+[[generated]]
+id = "zkLbJYi4NuKkn84ip9iQ3"
+uri = "file://artifacts/mockup-sandbox/public/images/marigold-forest-banner.png"
+type = "image"
+title = "Marigold festival banner"
+
+[[generated]]
+id = "hJO3-obTYf_T716OytW52"
+uri = "file://artifacts/mockup-sandbox/public/images/marigold-forest-product.png"
+type = "image"
+title = "Marigold brass thali product"
+
+[[generated]]
+id = "QTk8kirMC5mOld7qrKcjG"
+uri = "file://artifacts/mockup-sandbox/public/images/marigold-forest-pandit.png"
+type = "image"
+title = "Pandit portrait forest green"
+
+[[generated]]
+id = "erxSu5WrKPBCfrDZ3Nlmc"
+uri = "file://artifacts/mockup-sandbox/public/images/krishna-blue-hero.png"
+type = "image"
+title = "Hero image Krishna theme"
+
+[[generated]]
+id = "L4dZNPbcqO2qZTUY5wVik"
+uri = "file://artifacts/mockup-sandbox/public/images/krishna-blue-banner.png"
+type = "image"
+title = "Festival banner peacock motif"
+
+[[generated]]
+id = "THhQ2UOdBsn7RXg_JLkT5"
+uri = "file://artifacts/mockup-sandbox/public/images/krishna-blue-product.png"
+type = "image"
+title = "Brass diya on tulsi"
+
+[[generated]]
+id = "JbJWWr3wHYTFNcYjTSBKu"
+uri = "file://artifacts/mockup-sandbox/public/images/lotus-pink-hero.png"
+type = "image"
+title = "Dusk lit lotus altar hero"
+
+[[generated]]
+id = "GrCxpBpOhfbeSovw6z1-F"
+uri = "file://artifacts/mockup-sandbox/public/images/lotus-pink-banner.png"
+type = "image"
+title = "Akshaya Tritiya gold and lotus"
+
+[[generated]]
+id = "UOUy7Ld-j1MPCzqbBgwdY"
+uri = "file://artifacts/mockup-sandbox/public/images/lotus-pink-product.png"
+type = "image"
+title = "Brass lakshmi idol product"
+
+[[generated]]
+id = "mL3NpH-A-veWFNl6zt6bK"
+uri = "file://artifacts/mockup-sandbox/public/images/lotus-pink-pandit.png"
+type = "image"
+title = "Serene pandit portrait"
+
+[[generated]]
+id = "uF50NfWRW4H8V0HRvGlQB"
+uri = "file://client/public/nav-icons/home.png"
+type = "image"
+title = "mandir 3d icon"
+
+[[generated]]
+id = "VDcbY35Z3AOVykAwu-zOb"
+uri = "file://client/public/nav-icons/calendar.png"
+type = "image"
+title = "panchang 3d icon"
+
+[[generated]]
+id = "yn7JKjPBPKtGI-lyuUbjf"
+uri = "file://client/public/nav-icons/shop.png"
+type = "image"
+title = "treasure chest 3d icon"
+
+[[generated]]
+id = "JJEp7zPq8Ad3REa9q2F8f"
+uri = "file://client/public/nav-icons/puja.png"
+type = "image"
+title = "havan 3d icon"
+
+[[generated]]
+id = "6zEDgaE1rnpC5S8Fp7LYF"
+uri = "file://client/public/nav-icons/pandit.png"
+type = "image"
+title = "bearded face cutout"
+
+[[generated]]
+id = "_h1wUdMrebdz72MsqPCN1"
+uri = "file://attached_assets/generated_images/hawan-kund-hero.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "IJfcWQ5hOqBaiF7xJbUYE"
+uri = "file://attached_assets/generated_images/hawan-kund-icon.png"
+type = "image"
+title = "hawan kund icon"
+
+[[generated]]
+id = "3piyemV8TRd1WdNs4l2iD"
+uri = "file://attached_assets/generated_images/terracotta-diya-icon.png"
+type = "image"
+title = "terracotta diya icon"
+
+[[generated]]
+id = "R6KqWF8kNkeM6HJvoZqQ2"
+uri = "file://attached_assets/generated_images/incense-flowers-icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "7LHgMMA5nTfc39DEbCbRR"
+uri = "file://attached_assets/mala_images/indonesian_rudraksha.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "RlTCt2C-FPfcIylJRyTw-"
+uri = "file://attached_assets/mala_images/nepali_rudraksha.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "qLQf_7wWmU9Q98wQVP6ZB"
+uri = "file://attached_assets/mala_images/black_rudraksha.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "SxUR3y-CBSiT9nAGOTxnF"
+uri = "file://attached_assets/mala_images/karungali.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1hIXCb2_1w4BvEU_j7Iko"
+uri = "file://attached_assets/mala_images/karungali_silver.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "mymzeJwdV6XxhowqdriGO"
+uri = "file://attached_assets/mala_images/navratna.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VGaKcJr8QsVs6_TxjWZiY"
+uri = "file://attached_assets/mala_images/australian_sandalwood.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Hn_L0odeEZFHCIplrCCsK"
+uri = "file://attached_assets/mala_images/mysore_sandalwood.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "itQZIay1OfTp9EnE8iH8n"
+uri = "file://attached_assets/mala_images/red_sandalwood.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "CgSomgpdbeaQytA-Ilo6G"
+uri = "file://attached_assets/mala_images/rosewood.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "9C5TQDJo8cYAow8hFQ12m"
+uri = "file://attached_assets/mala_images/sphatik_plain.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Uuex9gCBm8uqtn7SjF8rG"
+uri = "file://attached_assets/mala_images/sphatik_diamond.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1ZlH0BFh41B-qFj78_DJj"
+uri = "file://attached_assets/mala_images/haldi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "L5tsLdCSITv6HdZs8i0YL"
+uri = "file://attached_assets/mala_images/vaijyanti.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "4VVdtQfbrWnrkN1MxmJC3"
+uri = "file://attached_assets/mala_images/kadamba.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "daFGBE0iLa4tMsHtBUF2L"
+uri = "file://attached_assets/mala_images/tulsi_round.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "24MBC8xQ6QLEAQgky-OLg"
+uri = "file://attached_assets/mala_images/tulsi_chawpatey.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xCeopdqQuQ1mbJ3I4ARb5"
+uri = "file://attached_assets/mala_images/tulsi_chawpatey_red.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-MyQj4owY1VZgR4Asai8J"
+uri = "file://attached_assets/mala_images/tulsi_cut.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oY_9IUNMl2fKLTy644x6s"
+uri = "file://attached_assets/mala_images/tulsi_braided.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "aLxOD6Sjqw2NP88uFZZR7"
+uri = "file://attached_assets/dhoti_kurta/white_set_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "w8THdX9sDaaegimctqi2X"
+uri = "file://attached_assets/dhoti_kurta/white_set_angle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "s1a3tqP4gjP4ypZ8AdKPm"
+uri = "file://attached_assets/dhoti_kurta/white_set_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xtS5ly3Kn8gA07S5S_wz9"
+uri = "file://attached_assets/dhoti_kurta/saffron_set_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "EQ4p7Pq8kIcnWaboQYEWz"
+uri = "file://attached_assets/dhoti_kurta/saffron_set_angle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8Ytiez57CuXgPTIvtjTry"
+uri = "file://attached_assets/dhoti_kurta/saffron_set_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JPKod5bwDWkFwjHIPX-9Y"
+uri = "file://attached_assets/dhoti_kurta/gamusa_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "vgZDqfwzS-URkxVF0R3xr"
+uri = "file://attached_assets/dhoti_kurta/gamusa_stack.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "RfF-avfTWx2kuS8tmgcWh"
+uri = "file://attached_assets/dhoti_kurta/gamcha_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "l9MGEk86-XzvvYsebygug"
+uri = "file://attached_assets/dhoti_kurta/gamcha_stack.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8df7C6KGrQcskhm4v2uUv"
+uri = "file://attached_assets/dhoti_kurta/gamusa_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "9VUShdtwLh0MvlKaD1ggJ"
+uri = "file://attached_assets/dhoti_kurta/gamcha_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "lMNGsQE7tsvIpuKk1DESC"
+uri = "file://attached_assets/dhoti_kurta/vest_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1n_pGKCQTrpUeVh4qDXoq"
+uri = "file://attached_assets/dhoti_kurta/vest_stack.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oUudDjlfKYyJBxkSs_X_p"
+uri = "file://attached_assets/dhoti_kurta/vest_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "quss32MjR9equfbWdp-5e"
+uri = "file://attached_assets/havan_samagri/copper_kund_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8NsfzUNKBhd2Fo1cFFhQ4"
+uri = "file://attached_assets/havan_samagri/copper_kund_angle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "M2O7IfyblotuNcS-_7myL"
+uri = "file://attached_assets/havan_samagri/copper_kund_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "sNl2SEqchWLBEmgYZp-tM"
+uri = "file://attached_assets/havan_samagri/aluminum_kund_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dUvmH8QLJBuoGSNQs6F1e"
+uri = "file://attached_assets/havan_samagri/aluminum_kund_angle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5mpAmwzB4VyiWLZ2sb7ed"
+uri = "file://attached_assets/havan_samagri/aluminum_kund_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LbZs8KgPalrafRBJ56X-O"
+uri = "file://attached_assets/havan_samagri/chammach_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MS6VGz8OYDL2uVwsJMlPn"
+uri = "file://attached_assets/havan_samagri/chammach_angle.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "res3qYvaI5jsvm_KdA5CT"
+uri = "file://attached_assets/havan_samagri/chammach_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "HBu-Z8POJ45IuHTTafNZF"
+uri = "file://attached_assets/havan_samagri/mango_wood_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_SEx9bu_qkfowr7S6rE6F"
+uri = "file://attached_assets/havan_samagri/mango_wood_stack.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LekVarapYzEEZ0qExaVkQ"
+uri = "file://attached_assets/havan_samagri/mango_wood_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "oPMQFtbZE6lCsYE0sccOi"
+uri = "file://attached_assets/havan_samagri/samagri_front.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nxAJMZ7_HuiPGq9TOhRSR"
+uri = "file://attached_assets/havan_samagri/samagri_bowl.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1TS9zigwqIaCMtavl2099"
+uri = "file://attached_assets/havan_samagri/samagri_detail.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "uNbPNkRBUF8lmodd6y3IQ"
+uri = "file://attached_assets/brass_copperware/pooja_ghanti.png"
+type = "image"
+title = "brass pooja ghanti bell"
+
+[[generated]]
+id = "PdOZ1p4gHsW9deStHptFy"
+uri = "file://attached_assets/brass_copperware/mandir_ghanta.png"
+type = "image"
+title = "large temple ghanta"
+
+[[generated]]
+id = "wXRar5zNJwD_wTgdKRw74"
+uri = "file://attached_assets/brass_copperware/zinc_bell.png"
+type = "image"
+title = "decorative zinc bell"
+
+[[generated]]
+id = "3_rXqJFNsTFmep8rz59SV"
+uri = "file://attached_assets/brass_copperware/akhand_jot.png"
+type = "image"
+title = "akhand jot brass diya"
+
+[[generated]]
+id = "_drl-WKg8_Pj1puPYXyj_"
+uri = "file://attached_assets/brass_copperware/screw_jot.png"
+type = "image"
+title = "screw jot diya"
+
+[[generated]]
+id = "K8FZ2-X7-xLqAzWwQdw0K"
+uri = "file://attached_assets/brass_copperware/standing_diya.png"
+type = "image"
+title = "tall standing diya"
+
+[[generated]]
+id = "tmquLCm61dyoheSHG0p41"
+uri = "file://attached_assets/brass_copperware/decorative_diyas.png"
+type = "image"
+title = "brass diya collection"
+
+[[generated]]
+id = "o2UJpeAY03Y769Io5PWsC"
+uri = "file://attached_assets/brass_copperware/laxmi_deepak.png"
+type = "image"
+title = "laxmi deepak diya"
+
+[[generated]]
+id = "0ResoogrHJucv9EljPdMx"
+uri = "file://attached_assets/brass_copperware/kuber_set.png"
+type = "image"
+title = "kuber deepak set"
+
+[[generated]]
+id = "afVkVIrXgvku-2fB1oZp1"
+uri = "file://attached_assets/brass_copperware/brass_tortoise.png"
+type = "image"
+title = "brass vastu tortoise"
+
+[[generated]]
+id = "6Irq5rIQngJ7WU8YFSDmW"
+uri = "file://attached_assets/brass_copperware/copper_bottle.png"
+type = "image"
+title = "copper water bottle"
+
+[[generated]]
+id = "mWJBiA3VK0zDA97D4jVhm"
+uri = "file://attached_assets/brass_copperware/lota_collection.png"
+type = "image"
+title = "brass copper lota set"
+
+[[generated]]
+id = "yj3Fe1OtwveDQoeB8puDT"
+uri = "file://attached_assets/brass_copperware/panchpatra_set.png"
+type = "image"
+title = "panchpatra aachmani set"
+
+[[generated]]
+id = "WTEQGQB80XIolWPTJre7Q"
+uri = "file://attached_assets/brass_copperware/brass_thali.png"
+type = "image"
+title = "brass pooja thali"
+
+[[generated]]
+id = "sm_QiKMpmwloSeXUEYd1E"
+uri = "file://attached_assets/brass_copperware/kanha_bhog_set.png"
+type = "image"
+title = "kanha bhog set"
+
+[[generated]]
+id = "Dz33x62rqdjdajQUjPBCj"
+uri = "file://attached_assets/brass_copperware/aarti_dhoopia.png"
+type = "image"
+title = "panch aarti dhoopia"
+
+[[generated]]
+id = "9k4eVX-jgR-AnaimGvbpt"
+uri = "file://attached_assets/brass_copperware/agarbatti_stand.png"
+type = "image"
+title = "agarbatti dhoop stand"
+
+[[generated]]
+id = "Ng2IgRNOjxqbRxug8ngJo"
+uri = "file://attached_assets/brass_copperware/kansa_katori.png"
+type = "image"
+title = "kansa bronze katori set"
+
+[[generated]]
+id = "HAr-anr8M69LlIjlG2ITA"
+uri = "file://attached_assets/brass_copperware/hawan_chammach.png"
+type = "image"
+title = "brass hawan chammach"
+
+[[generated]]
+id = "oRRfO3qiq14WKlYuFASol"
+uri = "file://attached_assets/brass_copperware/brass_trishul.png"
+type = "image"
+title = "brass trishul trident"
+
+[[generated]]
+id = "8QGMpVI72mYnma_p8KwNJ"
+uri = "file://attached_assets/brass_copperware/shivling_jalheri.png"
+type = "image"
+title = "shivling jalheri set"
+
+[[generated]]
+id = "zAv3re0xcvYx9Y7PtCZV_"
+uri = "file://attached_assets/brass_copperware/pooja_storage.png"
+type = "image"
+title = "pooja storage box bhagone"
+
+[[generated]]
+id = "XPPVW0KCOiA0_nTpWcIYb"
+uri = "file://attached_assets/brass_copperware/brass_decor.png"
+type = "image"
+title = "brass decor items gada"
+
+[[generated]]
+id = "qa_P7tfYCfIbVDVjfqKTh"
+uri = "file://attached_assets/category_cards/brass_copperware.png"
+type = "image"
+title = "brass copperware category card"
+
+[[generated]]
+id = "A5sBt-JKtamdFiemoTUcp"
+uri = "file://attached_assets/generated_images/puja_janeu.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "fvgZx-wWvDZGnex4TPgPo"
+uri = "file://attached_assets/generated_images/puja_mouli.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "NZeYYUNwBZbAUc83T4A3H"
+uri = "file://attached_assets/generated_images/puja_gangajal.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Ng5d48UEOYv8XrtNDIQsr"
+uri = "file://attached_assets/generated_images/puja_laddu_gopal_vastra.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "DAW7ejTI3WRrxKsrI1TCy"
+uri = "file://attached_assets/generated_images/puja_chowki_cloth.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "cTLzWMo8Mj1JC6vyvyllN"
+uri = "file://attached_assets/generated_images/puja_terracotta_diya_100.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5Tuj3udrIasG4CYTw4XSp"
+uri = "file://attached_assets/generated_images/puja_peela_vastra.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "LSvp8YPQzGkThncdiB-Hb"
+uri = "file://attached_assets/generated_images/puja_long_batti.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AXXIdGv-ePewbddsoBtjQ"
+uri = "file://attached_assets/generated_images/puja_short_batti.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "plOShjzTovQ-oOMh2iG3b"
+uri = "file://attached_assets/generated_images/puja_kesar_chandan.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "reaiIyGgQtePwcnRwM1x0"
+uri = "file://attached_assets/generated_images/puja_white_chandan.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "4tHp8AhQ5cYTLi-JIXF9i"
+uri = "file://attached_assets/generated_images/puja_chandan_powder.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2GIyBlsQrxvuTZPPue-uS"
+uri = "file://attached_assets/generated_images/puja_chowki_small.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "IWhnYkHFEEd-6yojhyo3x"
+uri = "file://attached_assets/generated_images/puja_gomti_chakra.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "zCI95YMRxQReghb6x6OA-"
+uri = "file://attached_assets/generated_images/puja_betel_nuts.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jrFza5YyhxWMWoppyfVK-"
+uri = "file://attached_assets/generated_images/puja_phool_batti.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "OHM7GRt1wdi6Poy5amVLs"
+uri = "file://attached_assets/category_cards/puja_samagri.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "nqqc8FgFZQX8ulNSsVd77"
+uri = "file://attached_assets/generated_images/pandit-icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "x6CwMvZKJ6q8wyY3ZjVpF"
+uri = "file://attached_assets/generated_images/temple-3d-icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "F7EKMQe6xiEVK5P8ODZLM"
+uri = "file://attached_assets/generated_images/kedarnath-3d-icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "QVuaI3Dl7Ej47yWg7Juuo"
+uri = "file://attached_assets/generated_images/idols/ganesh.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "IpIJ8ZHaW_HBbTgV2-r9f"
+uri = "file://attached_assets/generated_images/idols/lakshmi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KXUE1k0HX8Ln8JHjcm-kn"
+uri = "file://attached_assets/generated_images/idols/saraswati.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "7c-8O0ojD4z-HZkTSo_zy"
+uri = "file://attached_assets/generated_images/idols/durga.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Yc1iliQEpNL3OMmWWwZ90"
+uri = "file://attached_assets/generated_images/idols/krishna.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "hR3rRozH34EnIPdn_Hais"
+uri = "file://attached_assets/generated_images/idols/radha-krishna.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "pFwLho4zpJx-zyLShLOem"
+uri = "file://attached_assets/generated_images/idols/shiva.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KCmkGORySxftkzr8OEr_4"
+uri = "file://attached_assets/generated_images/idols/hanuman.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "XA9XLbHYCPrODmSSP9fVT"
+uri = "file://attached_assets/generated_images/idols/ram.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1-VNU-o2zkgm9c-RZQDtT"
+uri = "file://attached_assets/generated_images/idols/vishnu.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Uqp2xjqWPFBfluP1IwxS5"
+uri = "file://attached_assets/generated_images/idols/kuber.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jKBJdV9ST_2xsDe2sPnHi"
+uri = "file://attached_assets/generated_images/idols/surya.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "wCf2Z7p69F1XpUTwh_Ixd"
+uri = "file://attached_assets/generated_images/idols/kartikeya.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "rMBfIfJHB1q6nD6bP9d_o"
+uri = "file://attached_assets/generated_images/idols/parvati.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MU0pw1REeXCsSNB6BVqw6"
+uri = "file://attached_assets/generated_images/idols/kali.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "p0q940YZs87GZspjNqYOy"
+uri = "file://attached_assets/generated_images/idols/annapurna.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "QPMh_NUmeqxlqg91iIN8T"
+uri = "file://attached_assets/generated_images/idols/tirupati-balaji.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Zaz2TYlwm70Xmbj3q-1am"
+uri = "file://attached_assets/generated_images/idols/sai-baba.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "rvho9a-wOXLElc3US9Vav"
+uri = "file://attached_assets/generated_images/idols/nandi.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "u3RdCZb3xB94VSxBFejYC"
+uri = "file://attached_assets/generated_images/idols/garuda.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Cr883LvH5MltU5oQoD6Be"
+uri = "file://attached_assets/generated_images/idols/dattatreya.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GWvcJTPxYwqmP3Seto0wA"
+uri = "file://attached_assets/generated_images/idols/shiv-mahaparivar-set.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2N6VZMWBmJHefknAvfEPc"
+uri = "file://attached_assets/generated_images/idols/laxmi-ganesh-set.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TMiHdOLrEl0KzYfzpqh_9"
+uri = "file://client/public/whatsapp-preview.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kSlGFlm6sG_hF_UQ1xUDl"
+uri = "file://client/src/assets/images/hero-scene-brand.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jNbjmLt576v0YgFjhuGgR"
+uri = "file://client/src/assets/images/hero-scene-tirth-yatra.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "0YU3NhuPl8POtk1e_3nuy"
+uri = "file://client/src/assets/images/hero-scene-char-dham.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "iX38tEtHpcAbuUOyHH5Hw"
+uri = "file://client/src/assets/images/hero-scene-pind-daan.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "EQmzF-AB59kn7TzEDguDv"
+uri = "file://client/src/assets/images/hero-scene-essentials.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "fJouH8Li09xvqU3rbr-ze"
+uri = "file://client/src/assets/images/hero-scene-astrology.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "H9QAegm02NywerNAVAvBP"
+uri = "file://attached_assets/generated_images/bhandara_seva_hero.png"
+type = "image"
+title = "bhandara seva hero"
+
+[[generated]]
+id = "VgfZ08AM6lFKR67MLBcRW"
+uri = "file://attached_assets/generated_images/puja_basket_icon_raw.png"
+type = "image"
+title = "puja basket icon"
+
+[[generated]]
+id = "yPTgZUIiFzm3fxFjqcZQo"
+uri = "file://attached_assets/generated_images/kalash_icon.png"
+type = "image"
+title = "kalash icon transparent"
+
+[[generated]]
+id = "m8UdjFvXucpKeGINfidWd"
+uri = "file://client/src/assets/images/gaya-vishnupad-temple.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ljeq04X563u1yUjNfLJec"
+uri = "file://client/src/assets/images/gaya-phalgu-ritual.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "crgbTPNWPZDr_x0lcziEq"
+uri = "file://client/src/assets/images/gaya-akshayavat.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kDaL7rD06rQVxs2UakTHK"
+uri = "file://client/src/assets/images/gaya-hero-portrait.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2MmzUtawlaLTjb4pgTAFB"
+uri = "file://client/src/assets/images/gaya-hero-banner.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "C9GaES_o2GE4cJWkyZykj"
+uri = "file://client/src/assets/images/kashi-hero-banner.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "tqc6uhtiX1_oZpke2R61u"
+uri = "file://client/src/assets/images/kashi-manikarnika.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "KBl72paX7Fc8Pg6C7C4lT"
+uri = "file://client/src/assets/images/kashi-pishachmochan.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "NzsyyxUe2jDFoRJdXHD4z"
+uri = "file://client/src/assets/images/kashi-vishwanath.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "2RI8oQkTLtu_pVJ3i7d66"
+uri = "file://client/src/assets/images/haridwar-hero-banner.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ev4GS_ZiPbamgOW_uZ9KO"
+uri = "file://client/src/assets/images/haridwar-har-ki-pauri.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "RC4uaRyLp8RpioY_Geex3"
+uri = "file://client/src/assets/images/haridwar-narayani-shila.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dol8Hql5mLlrovCg1NcHo"
+uri = "file://client/src/assets/images/haridwar-daksh-mahadev.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "54dEdDAikxmgOE2DOxq-N"
+uri = "file://client/src/assets/images/pind-daan-hub-collage.png"
+type = "image"
+title = "pind daan triptych collage gaya kashi haridwar"
+
+[[generated]]
+id = "NQ9u8QizxxAzHBkAVEwCo"
+uri = "file://attached_assets/generated_images/shop-hero-family-puja.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dhM-IA_VaYbP1VXlzaa6c"
+uri = "file://client/public/og/og-pandit-registration.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Fppfsk5KHvJh0VDJJsvqA"
+uri = "file://client/public/og/og-puja-essentials.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "4IaXr59w2yEr0iVbGtxAs"
+uri = "file://client/public/og/og-pandit-booking.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "FxlY5j2d93CGf0FbfKUPv"
+uri = "file://client/public/og/og-prime-services.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "q1ExIrg-wRIRV3-fk7Vsq"
+uri = "file://attached_assets/generated_images/shiva-mahamrityunjaya.png"
+type = "image"
+title = "shiva mahamrityunjaya"
+
+[[generated]]
+id = "6b1mEfgXkCrz5at0toKkU"
+uri = "file://attached_assets/generated_images/shiva-blessing-hand.png"
+type = "image"
+title = "shiva blessing hand abhaya"
+
+[[generated]]
+id = "t-zxPDySgCln8ylF6IFtA"
+uri = "file://attached_assets/generated_images/krishna-flute-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "QWi93SiXpAB-4u0mQlVdn"
+uri = "file://attached_assets/generated_images/vishnu-narayana-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "dFh-fg9psLr4aJDjqHSbA"
+uri = "file://attached_assets/generated_images/ganesha-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Pw5szhAxBpEUCGbAZVlKL"
+uri = "file://attached_assets/generated_images/surya-gayatri-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Ibk2um56B84JyZPCsS9ia"
+uri = "file://attached_assets/generated_images/durga-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "OdFziRI7IB8gWAa_Y7EQV"
+uri = "file://attached_assets/generated_images/saraswati-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "12TUbYQIUVBdkQdhSUQ1A"
+uri = "file://attached_assets/generated_images/mahalakshmi-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JI8s7U8zmpKoFybrJIGc8"
+uri = "file://attached_assets/generated_images/hanuman-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "fEQeaYVdFa4sQdT_giHKA"
+uri = "file://attached_assets/generated_images/radha-krishna-deity.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Z4VsR_jJT0If5GEZ-u38r"
+uri = "file://attached_assets/generated_images/krishna-vasudeva-deity.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "Rag2C7b6isNN5227ufVP1"
+uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
+type = "image"
+title = "white cotton sacred thread janeu hindu"
+
+[[outputs]]
+id = "HR2ndl7tWArTCnEGATRRW"
+uri = "file://attached_assets/stock_images/mouli-kalava-sacred-red-puja-thread.jpg"
+type = "image"
+title = "red yellow sacred thread kalava hindu"
+
+[[outputs]]
+id = "mOpq4SNn0pUOUuv_zngQU"
+uri = "file://attached_assets/stock_images/gangajal-holy-water-from-river-ganga.jpg"
+type = "image"
+title = "ganga river holy water bottle hindu"
+
+[[outputs]]
+id = "R-GWqkugsTyQXyb532RvB"
+uri = "file://attached_assets/stock_images/laddu-gopal-vastra-poshak-multi-colour-variation.jpg"
+type = "image"
+title = "krishna idol clothing colourful silk"
+
+[[outputs]]
+id = "EU92-awJNwAp9f7ampFtk"
+uri = "file://attached_assets/stock_images/chowki-cloth-puja-altar-cover.jpg"
+type = "image"
+title = "red silk cloth golden border indian"
+
+[[outputs]]
+id = "vpdBzWHOr4tce9jCOnxYv"
+uri = "file://attached_assets/stock_images/terracotta-diya-pack-of-100.jpg"
+type = "image"
+title = "terracotta clay diya diwali"
+
+[[outputs]]
+id = "3ULwvJaJOzuVxfrNz_wEM"
+uri = "file://attached_assets/stock_images/peela-vastra-yellow-puja-cloth.jpg"
+type = "image"
+title = "yellow folded cotton cloth indian"
+
+[[outputs]]
+id = "CVvA3V1JVrguHs9O0F_WA"
+uri = "file://attached_assets/stock_images/long-cotton-batti-puja-diya-wicks.jpg"
+type = "image"
+title = "cotton wick diya thread bundle"
+
+[[outputs]]
+id = "skrRTDzmQzOJS8OwOdpIV"
+uri = "file://attached_assets/stock_images/short-batti-cotton-wicks-for-diya.jpg"
+type = "image"
+title = "cotton wicks small puja"
+
+[[outputs]]
+id = "tchLAz9LwjNQWlFPyhtlH"
+uri = "file://attached_assets/stock_images/kesar-chandan-tilak-saffron-sandalwood-paste.jpg"
+type = "image"
+title = "saffron paste brass bowl indian"
+
+[[outputs]]
+id = "4-5qFdgnh521n2e2xS0AS"
+uri = "file://attached_assets/stock_images/white-chandan-tilak-pure-sandalwood-paste.jpg"
+type = "image"
+title = "sandalwood paste brass bowl"
+
+[[outputs]]
+id = "pKewhGBSbqEQpSYaGikc6"
+uri = "file://attached_assets/stock_images/chandan-powder-pure-sandalwood-powder.jpg"
+type = "image"
+title = "sandalwood powder bowl"
+
+[[outputs]]
+id = "Dv7sDJPLwMZUDrxBTzxvx"
+uri = "file://attached_assets/stock_images/pooja-chowki-small-wooden-altar-stand.jpg"
+type = "image"
+title = "small wooden stool altar wood"
+
+[[outputs]]
+id = "nKuF6hAdYZKyZ1q-tROy7"
+uri = "file://attached_assets/stock_images/gomti-chakra-pack-of-13-pieces.jpg"
+type = "image"
+title = "white spiral shell stones"
+
+[[outputs]]
+id = "T7oS7pqId5UWkNN5GWnPj"
+uri = "file://attached_assets/stock_images/beetal-betel-nuts-for-puja-pack-of-12.jpg"
+type = "image"
+title = "betel nut supari brown whole"
+
+[[outputs]]
+id = "bsqbYRTd_jtS8Ku_rzc2g"
+uri = "file://attached_assets/stock_images/cotton-phool-batti-flower-shaped-diya-wicks.jpg"
+type = "image"
+title = "cotton wicks flower lotus puja"
+
+[[outputs]]
+id = "Z_nN0QexxhkcCnQl5jTQ6"
+uri = "file://downloads/Vedic-Tatva-V5-GitHub.zip"
+type = "unspecified"
+title = "Vedic Tatva V5 — GitHub Deploy (lean, 94 MB)"
+
+[[outputs]]
+id = "FXUlfQSiFZQZr5ZifjkY1"
+uri = "file://downloads/Vedic-Tatva-V5-Source.zip"
+type = "unspecified"
+title = "Vedic Tatva V5 — Full Source Code (870 MB)"
+
+[[outputs]]
+id = "Ts2XwE1DDj91AJjyCXGEG"
+uri = "file://downloads/Vedic-Tatva-V5-ReadyToDeploy.zip"
+type = "unspecified"
+title = "Vedic Tatva V5 — Ready to Deploy (905 MB, includes build)"
+
+[[outputs]]
+id = "pbDZjuJpHMJvh_etNC_BI"
+uri = "file://downloads/vedictatva-source.tar.gz"
+type = "unspecified"
+title = "Vedic Tatva — Full Source Code (94 MB)"
+
+[[outputs]]
+id = "5858fu5fIkkwTDIxip-wo"
+uri = "file://downloads/VPS_DEPLOYMENT.md"
+type = "text"
+title = "VPS Deployment Guide (step-by-step)"
+
+[[outputs]]
+id = "kPCwYzJRCwAS8hNX9iZNJ"
+uri = "file://demo-kundli.pdf"
+type = "pdf"
+title = "Vedic Tatva Premium Kundli (Demo) — 69 pages, AES-encrypted (password 15081990)"
+
+[[outputs]]
+id = "eWQfwq1yFdoRm-kj-y1TT"
+uri = "file://client/public/og/og-pandit-registration.jpg"
+type = "image"
+title = "WhatsApp share card — Pandit Registration"
+
+[[outputs]]
+id = "ojRIRxCd2H3mQ57VgtCW0"
+uri = "file://client/public/og/og-puja-essentials.jpg"
+type = "image"
+title = "WhatsApp share card — Puja Essentials shopping"
+
+[[outputs]]
+id = "UiI-2FVOUbRg6-iCKw3u9"
+uri = "file://client/public/og/og-pandit-booking.jpg"
+type = "image"
+title = "WhatsApp share card — Pandit / Puja Booking"
+
+[[outputs]]
+id = "IDx0ToxhLACLsrVhBW9Ro"
+uri = "file://client/public/og/og-prime-services.jpg"
+type = "image"
+title = "WhatsApp share card — Prime Services / flagship"
+
+[[outputs]]
+id = "SWPsHJZl1mRXQPAT5XWOw"
+uri = "file://attached_assets/generated_images/shiva-blessing-hand.png"
+type = "image"
+title = "Shiva's blessing hand — abhaya mudra"

@@ -1,0 +1,5 @@
+attached_assets/Mala_Catalogue_By_Tejvij_And_Sons_1776667904079.pdf filter=lfs diff=lfs merge=lfs -text
+attached_assets/Mala_Catalogue_By_Tejvij_And_Sons_compressed_1776668301094.pdf filter=lfs diff=lfs merge=lfs -text
+downloads/Vedic-Tatva-V5-GitHub.zip filter=lfs diff=lfs merge=lfs -text
+downloads/Vedic-Tatva-V5-ReadyToDeploy.zip filter=lfs diff=lfs merge=lfs -text
+downloads/Vedic-Tatva-V5-Source.zip filter=lfs diff=lfs merge=lfs -text

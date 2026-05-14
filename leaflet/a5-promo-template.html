@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vedic Tatva A5 Promo Leaflet</title>
+    <style>
+      @page {
+        size: A5 portrait;
+        margin: 0;
+      }
+      html, body {
+        width: 148mm;
+        height: 210mm;
+        margin: 0;
+        padding: 0;
+        background: #f8f2e6;
+        font-family: Inter, Arial, sans-serif;
+        color: #3b241f;
+      }
+      .sheet {
+        width: 148mm;
+        height: 210mm;
+        box-sizing: border-box;
+        padding: 10mm;
+        background:
+          radial-gradient(circle at top right, rgba(212, 175, 55, 0.16), transparent 35%),
+          linear-gradient(180deg, #fbf7ee 0%, #f5eddc 100%);
+        position: relative;
+        overflow: hidden;
+      }
+      .sheet + .sheet {
+        page-break-before: always;
+      }
+      .border {
+        position: absolute;
+        inset: 6mm;
+        border: 1px solid rgba(109, 43, 53, 0.18);
+        pointer-events: none;
+      }
+      .brand {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .brand h1 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 26px;
+        line-height: 1;
+        color: #6d2b35;
+      }
+      .brand .tag {
+        margin-top: 4px;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #8a6a2a;
+        font-weight: 700;
+      }
+      .pill {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #6d2b35;
+        color: #f7e9bf;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+      .hero {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.54);
+        border: 1px solid rgba(212, 175, 55, 0.24);
+      }
+      .hero h2 {
+        margin: 0 0 5px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 19px;
+        color: #2f1a16;
+      }
+      .hero p {
+        margin: 0;
+        font-size: 10.5px;
+        line-height: 1.55;
+        color: #5a4a3a;
+      }
+      .grid {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 8px;
+      }
+      .panel {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(109, 43, 53, 0.12);
+        border-radius: 12px;
+        padding: 10px;
+      }
+      .panel h3 {
+        margin: 0 0 7px;
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #6d2b35;
+      }
+      ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+      li {
+        margin: 0 0 5px;
+        font-size: 10px;
+        line-height: 1.45;
+        color: #4a3a2f;
+      }
+      .qr {
+        margin-top: 4px;
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 12px;
+        border: 2px dashed rgba(109, 43, 53, 0.25);
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(45deg, rgba(212, 175, 55, 0.06) 25%, transparent 25%) 0 0 / 12px 12px,
+          linear-gradient(-45deg, rgba(212, 175, 55, 0.06) 25%, transparent 25%) 0 0 / 12px 12px,
+          #fff;
+      }
+      .qr-inner {
+        text-align: center;
+        padding: 12px;
+      }
+      .qr-box {
+        width: 46mm;
+        height: 46mm;
+        border-radius: 10px;
+        background: #f7f7f7;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        display: grid;
+        place-items: center;
+        margin: 0 auto 8px;
+        overflow: hidden;
+      }
+      .qr-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .qr-inner strong {
+        display: block;
+        font-size: 11px;
+        color: #6d2b35;
+        margin-bottom: 4px;
+      }
+      .qr-inner span {
+        display: block;
+        font-size: 9.5px;
+        line-height: 1.45;
+        color: #5a4a3a;
+      }
+      .prompts {
+        margin-top: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .prompt {
+        padding: 7px 8px;
+        border-radius: 10px;
+        background: #fbf7ee;
+        border: 1px solid rgba(212, 175, 55, 0.18);
+        font-size: 10px;
+        line-height: 1.4;
+      }
+      .prompt b {
+        color: #6d2b35;
+      }
+      .footer {
+        position: absolute;
+        left: 10mm;
+        right: 10mm;
+        bottom: 10mm;
+        padding-top: 7px;
+        border-top: 1px solid rgba(109, 43, 53, 0.14);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-end;
+      }
+      .contact {
+        font-size: 9.5px;
+        line-height: 1.55;
+        color: #5a4a3a;
+      }
+      .contact b {
+        color: #6d2b35;
+      }
+      .cta {
+        text-align: right;
+        font-size: 9.5px;
+        line-height: 1.45;
+        color: #5a4a3a;
+      }
+      .cta strong {
+        display: block;
+        color: #6d2b35;
+        font-size: 10px;
+      }
+      .offer {
+        margin-top: 8px;
+        padding: 9px 10px;
+        border-radius: 12px;
+        background: #6d2b35;
+        color: #f7e9bf;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+      .offer b {
+        color: #fff4cf;
+      }
+      .step-grid {
+        margin-top: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .step {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 7px 8px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(109, 43, 53, 0.12);
+        font-size: 10px;
+        line-height: 1.4;
+      }
+      .step strong {
+        min-width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #d4af37;
+        color: #2f1a16;
+        display: inline-grid;
+        place-items: center;
+        font-size: 9px;
+        font-weight: 800;
+        flex: none;
+      }
+      .small {
+        font-size: 9px;
+        line-height: 1.5;
+        color: #5a4a3a;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet">
+      <div class="border"></div>
+      <div class="brand">
+        <div>
+          <div class="pill">Premium Spiritual Store & Services</div>
+          <h1>Vedic Tatva</h1>
+          <div class="tag">Sacred Living · Authentic Puja · Verified Pandits</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill" style="background:#d4af37;color:#2f1a16;">Shop & Book</div>
+        </div>
+      </div>
+
+      <section class="hero">
+        <h2>Your complete spiritual companion</h2>
+        <p>
+          Authentic puja samagri, verified pandit bookings, online puja services, Vedic astrology,
+          pilgrimage support, and premium sacred products — all in one trusted place.
+        </p>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h3>What we offer</h3>
+          <ul>
+            <li>Verified Pandit booking for home puja, griha pravesh, katha, and special rituals</li>
+            <li>Online puja services with complete vidhi and live support</li>
+            <li>Authentic spiritual essentials: rudraksha, malas, yantras, brassware, samagri</li>
+            <li>AI kundli, Vedic astrology, panchang, and shubh muhurat guidance</li>
+            <li>Pilgrimage and yatra support for sacred journeys</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3>Scan to visit</h3>
+          <div class="qr">
+            <div class="qr-inner">
+              <div class="qr-box">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&amp;data=https%3A%2F%2Fvedictatva.com" alt="Vedic Tatva website QR code" />
+              </div>
+              <strong>Scan for offers, booking & catalogue</strong>
+              <span>Place your website QR here:<br />vedictatva.com</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="prompts">
+        <div class="prompt"><b>For every occasion:</b> Griha Pravesh, Satyanarayan Katha, Rudrabhishek, Mundan, Annaprashan, and more.</div>
+        <div class="prompt"><b>For your home:</b> Pure puja samagri, brass diya, idols, malas, rudraksha, and sacred essentials.</div>
+        <div class="prompt"><b>For your family:</b> Book trusted pandits and get spiritual guidance with care and authenticity.</div>
+      </section>
+
+      <div class="footer">
+        <div class="contact">
+          <b>Website:</b> vedictatva.com<br />
+          <b>Email:</b> ecom@vedictatva.com<br />
+          <b>WhatsApp:</b> +91 84478 44702
+        </div>
+        <div class="cta">
+          <strong>Open now for special discounts</strong>
+          Hand this leaflet with every product parcel.
+        </div>
+      </div>
+    </main>
+    <main class="sheet">
+      <div class="border"></div>
+      <div class="brand">
+        <div>
+          <div class="pill">How to Use</div>
+          <h1>Scan. Book. Begin.</h1>
+          <div class="tag">Simple steps for every customer</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pill" style="background:#d4af37;color:#2f1a16;">Back Side</div>
+        </div>
+      </div>
+
+      <section class="hero">
+        <h2>Designed for product parcels and order inserts</h2>
+        <p>
+          This side explains what to do after scanning the QR and gives customers a quick reason to return.
+        </p>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h3>Customer journey</h3>
+          <div class="step-grid">
+            <div class="step"><strong>1</strong><span>Scan the QR code to open vedictatva.com on your phone.</span></div>
+            <div class="step"><strong>2</strong><span>Explore sacred products, pandit booking, puja, astrology, and yatra services.</span></div>
+            <div class="step"><strong>3</strong><span>Use the website to place your next order or book a ritual with confidence.</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Promotional message</h3>
+          <div class="offer">
+            <b>Special offer for scanned visitors:</b><br />
+            Add a coupon code, free shipping threshold, or booking discount here.
+          </div>
+          <div class="small" style="margin-top:8px;">
+            Suggested line:<br />
+            <b>“Thank you for choosing Vedic Tatva — your trusted spiritual companion.”</b>
+          </div>
+        </div>
+      </section>
+
+      <section class="prompts">
+        <div class="prompt"><b>Suggested parcel insert line:</b> “For authentic puja essentials and verified Vedic services, visit vedictatva.com.”</div>
+        <div class="prompt"><b>Best QR placement:</b> Keep the QR at least 46 mm wide and test it with WhatsApp camera before printing.</div>
+        <div class="prompt"><b>Printing note:</b> Use thick matte paper for a premium spiritual feel and better durability.</div>
+      </section>
+
+      <div class="footer">
+        <div class="contact">
+          <b>Website:</b> vedictatva.com<br />
+          <b>Instagram:</b> @vedictatva<br />
+          <b>Support:</b> ecom@vedictatva.com
+        </div>
+        <div class="cta">
+          <strong>Print both sides</strong>
+          Front = brand + QR, Back = customer actions + offer.
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

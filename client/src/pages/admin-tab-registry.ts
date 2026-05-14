@@ -1,0 +1,54 @@
+import {
+  TrendingUp, ShoppingCart, Package, Users, Calendar, Star, RotateCcw, Tag,
+  CalendarClock, HandHeart, Heart, Search, Globe, BarChart3, Settings, Truck,
+  Shield, Lock, Eye, BellRing, Trophy, Inbox, AlertTriangle, FileText, Megaphone,
+  Mail, Rocket, Sparkles, Database, Wallet, Share2, Crown, Music, Code2,
+} from "lucide-react";
+import type { TabId, TabSection } from "./admin-shared";
+
+export type TabDef = { id: TabId; label: string; icon: typeof TrendingUp; section: TabSection };
+
+export const TABS: TabDef[] = [
+  { id: "dashboard",       label: "Dashboard",        icon: TrendingUp,    section: "Overview" },
+  { id: "analytics",       label: "Analytics",        icon: BarChart3,     section: "Overview" },
+  { id: "products",        label: "Products",         icon: Package,       section: "Catalog" },
+  { id: "inventory",       label: "Inventory Health", icon: AlertTriangle, section: "Catalog" },
+  { id: "bestsellers",     label: "Bestsellers",      icon: Trophy,        section: "Catalog" },
+  { id: "merchant",        label: "Merchant Center",  icon: Globe,         section: "Catalog" },
+  { id: "aplus",           label: "A+ Listings",      icon: FileText,      section: "Catalog" },
+  { id: "orders",          label: "Orders",           icon: ShoppingCart,  section: "Orders & Bookings" },
+  { id: "abandoned-carts", label: "Abandoned Carts",  icon: Inbox,         section: "Orders & Bookings" },
+  { id: "returns",         label: "Returns",          icon: RotateCcw,     section: "Orders & Bookings" },
+  { id: "subscriptions",   label: "Subscriptions",    icon: CalendarClock, section: "Orders & Bookings" },
+  { id: "bookings",        label: "Bookings",         icon: Calendar,      section: "Orders & Bookings" },
+  { id: "customers",       label: "Customers",        icon: Users,         section: "People" },
+  { id: "pandits",         label: "Pandits",          icon: Users,         section: "People" },
+  { id: "pandit-apps",     label: "Pandit Apps",      icon: FileText,      section: "People" },
+  { id: "pandit-payouts",  label: "Pandit Payouts",   icon: Wallet,        section: "People" },
+  { id: "pandit-affiliate", label: "Pandit Affiliate", icon: Share2,       section: "People" },
+  { id: "pandit-memberships", label: "Pandit Memberships", icon: Crown,    section: "People" },
+  { id: "astrologers",     label: "Astrologers",      icon: Star,          section: "People" },
+  { id: "matrimony",       label: "Matrimony",        icon: Heart,         section: "People" },
+  { id: "reviews",         label: "Reviews",          icon: Star,          section: "Marketing" },
+  { id: "coupons",         label: "Coupons",          icon: Tag,           section: "Marketing" },
+  { id: "donations",       label: "Donations",        icon: HandHeart,     section: "Marketing" },
+  { id: "social-proof",    label: "Social Proof",     icon: Eye,           section: "Marketing" },
+  { id: "sales-popups",    label: "Sales Popups",     icon: Megaphone,     section: "Marketing" },
+  { id: "blog",            label: "Blog",             icon: FileText,      section: "Marketing" },
+  { id: "email-marketing", label: "Email Marketing",  icon: Mail,          section: "Marketing" },
+  { id: "mantras",         label: "Mantras & Chants", icon: Music,         section: "Marketing" },
+  { id: "seo",             label: "SEO Manager",      icon: Search,        section: "System" },
+  { id: "site-settings",   label: "Site Settings",    icon: Settings,      section: "System" },
+  { id: "integrations",    label: "Integrations",     icon: Truck,         section: "System" },
+  { id: "notifications",   label: "Notifications",    icon: BellRing,      section: "System" },
+  { id: "security",        label: "Security",         icon: Shield,        section: "System" },
+  { id: "audit-log",       label: "Audit Log",        icon: Lock,          section: "System" },
+  { id: "deploy",          label: "Deploy",           icon: Rocket,        section: "System" },
+  { id: "ai-assistant",    label: "AI Assistant",     icon: Sparkles,      section: "System" },
+  { id: "ai-coder",        label: "AI Coder",         icon: Code2,         section: "System" },
+  { id: "backups",         label: "Backups",          icon: Database,      section: "System" },
+];
+
+export const TAB_SECTIONS: TabSection[] = [
+  "Overview", "Catalog", "Orders & Bookings", "People", "Marketing", "System",
+];

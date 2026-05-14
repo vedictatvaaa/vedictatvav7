@@ -1,0 +1,1987 @@
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Star, Calendar, ShoppingBag, Sparkles, UserCheck, Heart, ScrollText, MapPin, HandHeart, Flame, CheckCircle, Shield, Globe, IndianRupee, Search, BookOpen, Video, TrendingUp, MapPinned, Brain, Hand, Baby, CalendarDays, Trophy, MessageCircle, Gamepad2, Scale, Leaf, RotateCcw, Compass, HeartHandshake, Gem, Sun, Moon, Droplets, ChevronDown, ChevronUp, Palette, Hash, Navigation, Lightbulb, CircleDot, ThumbsUp, ThumbsDown, Clock, X, Shirt, Map, Calculator, Music2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RecommendedForYou } from "@/components/RecommendedForYou";
+import { JoinAsPanditSection } from "@/components/JoinAsPanditSection";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Product } from "@shared/schema";
+import { useCart } from "@/lib/cart";
+import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+import { getProductUrl } from "@/lib/utils";
+import { getDisplayRating } from "@/lib/displayRating";
+import { optImg, optImgSrcSet } from "@/lib/optImg";
+import PageSeo from "@/components/PageSeo";
+import { itemList as itemListSchemaBuilder } from "@/lib/seo-schemas";
+// Hero scenes live under /attached_assets so /api/img can serve responsive variants.
+const heroBrandImg = "/attached_assets/heroes/hero-scene-brand.png";
+const heroTirthYatraImg = "/attached_assets/heroes/hero-scene-tirth-yatra.png";
+const heroCharDhamImg = "/attached_assets/heroes/hero-scene-char-dham.png";
+const heroPindDaanImg = "/attached_assets/heroes/hero-scene-pind-daan.png";
+const heroEssentialsImg = "/attached_assets/heroes/hero-scene-essentials.png";
+const heroAstrologyImg = "/attached_assets/heroes/hero-scene-astrology.png";
+import bhandaraSevaImg from "@assets/generated_images/bhandara_seva_hero.png";
+
+type HeroCta = { label: string; href: string; icon: any };
+type HeroSlide = {
+  src: string;
+  alt: string;
+  mobilePosition: string;
+  tagline: string;
+  title1: string;
+  title2: string;
+  title2Highlight: string;
+  subtitle: string;
+  cta1: HeroCta;
+  cta2: HeroCta;
+};
+
+const heroSlides: HeroSlide[] = [
+  {
+    src: heroBrandImg,
+    alt: "Sacred Puja Ceremony with Pandit",
+    mobilePosition: "75% center",
+    tagline: "VEDIC TATVA",
+    title1: "Where Spirituality",
+    title2: "Meets ",
+    title2Highlight: "Technology",
+    subtitle: "Shop sacred essentials. Book verified pandits. Experience authentic rituals — all in one place.",
+    cta1: { label: "Shop Now", href: "/shop", icon: ShoppingBag },
+    cta2: { label: "Book Pandit", href: "/pandits", icon: UserCheck },
+  },
+  {
+    src: heroTirthYatraImg,
+    alt: "Evening Ganga Aarti at Varanasi",
+    mobilePosition: "center center",
+    tagline: "SACRED PILGRIMAGE",
+    title1: "Walk the Sacred",
+    title2: "Land of ",
+    title2Highlight: "Bharat",
+    subtitle: "Curated Tirth Yatras to Char Dham, Kashi, Ayodhya & 18 more dhams — verified pandits, end-to-end care.",
+    cta1: { label: "Explore Yatras", href: "/tirth-yatra", icon: Map },
+    cta2: { label: "Free Yatra (NGO)", href: "/tirth-yatra", icon: HandHeart },
+  },
+  {
+    src: heroCharDhamImg,
+    alt: "Kedarnath Temple amid Himalayan peaks",
+    mobilePosition: "center center",
+    tagline: "CHAR DHAM YATRA 2026",
+    title1: "Reach Kedarnath",
+    title2: "With ",
+    title2Highlight: "Devotion",
+    subtitle: "Helicopter packages, group yatras & verified pandits for your Char Dham journey through the Himalayas.",
+    cta1: { label: "Plan Char Dham", href: "/tirth-yatra/char-dham-yatra", icon: MapPinned },
+    cta2: { label: "Kedarnath Yatra", href: "/tirth-yatra/kedarnath-yatra", icon: Map },
+  },
+  {
+    src: heroPindDaanImg,
+    alt: "Pind Daan ritual at Falgu river in Gaya",
+    mobilePosition: "center center",
+    tagline: "PIND DAAN AT GAYA",
+    title1: "Honour Your",
+    title2: "",
+    title2Highlight: "Ancestors",
+    subtitle: "Authentic Pind Daan at Gaya, Tribeni Ghat & Haridwar — performed by verified Acharyas with complete vidhi.",
+    cta1: { label: "Book Pind Daan", href: "/pind-daan", icon: HandHeart },
+    cta2: { label: "Pitru Tithi Calculator", href: "/tools/tithi-calculator", icon: Calculator },
+  },
+  {
+    src: heroEssentialsImg,
+    alt: "Authentic puja samagri spread with brass idol and rudraksha",
+    mobilePosition: "center center",
+    tagline: "SHOP SACRED ESSENTIALS",
+    title1: "Authentic Samagri,",
+    title2: "Sourced With ",
+    title2Highlight: "Care",
+    subtitle: "Premium puja kits, brass idols, gemstones & malas — handpicked from sacred sources across India.",
+    cta1: { label: "Shop Now", href: "/shop", icon: ShoppingBag },
+    cta2: { label: "Browse Idols", href: "/spiritual-essentials", icon: Gem },
+  },
+  {
+    src: heroAstrologyImg,
+    alt: "Vedic astrology rashi chakra and cosmic elements",
+    mobilePosition: "center center",
+    tagline: "COSMIC GUIDANCE",
+    title1: "Daily Wisdom,",
+    title2: "Cosmic ",
+    title2Highlight: "Clarity",
+    subtitle: "Free AI Kundli, daily Panchang & expert astrologers — your personal guide to dharma & remedies.",
+    cta1: { label: "Free Kundli", href: "/ai-kundli", icon: Star },
+    cta2: { label: "Talk Astrologer", href: "/astrology", icon: Sparkles },
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Compact Pitru Tithi & Annual Shradh Calculator — embedded on the home page.
+// Captures date + city + tradition and routes to the full /tools/tithi-calculator
+// with prefilled query params so the user lands on the result instantly.
+// ---------------------------------------------------------------------------
+
+function HeroBackground({ current, setCurrent }: { current: number; setCurrent: (i: number) => void }) {
+  return (
+    <>
+      <div className="absolute inset-0">
+        {heroSlides.map((slide, i) => (
+          <img
+            key={slide.alt}
+            src={optImg(slide.src, 1080)}
+            srcSet={optImgSrcSet(slide.src, [320, 480, 768, 1080, 1440])}
+            sizes="100vw"
+            alt={slide.alt}
+            width={1440}
+            height={810}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding={i === 0 ? "sync" : "async"}
+            fetchPriority={i === 0 ? "high" : "low"}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+              i === current ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ objectPosition: slide.mobilePosition }}
+          />
+        ))}
+      </div>
+
+      {/* Slide indicator dots */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
+        {heroSlides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={`transition-all duration-300 rounded-full ${
+              i === current ? "w-6 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
+            }`}
+            data-testid={`hero-dot-${i}`}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function HeroStat({ icon: Icon, value, label }: { icon: any; value: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 md:gap-2 min-w-0" data-testid={`hero-stat-${label.toLowerCase()}`}>
+      <Icon className="h-3.5 w-3.5 md:h-4 md:w-4 text-[#D4AF37] flex-shrink-0" />
+      <div className="min-w-0">
+        <div className="text-xs md:text-sm font-bold text-white leading-tight truncate">{value}</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/70 md:text-white/55 leading-tight truncate">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function DiyaGlow({ className }: { className?: string }) {
+  return (
+    <div className={`absolute pointer-events-none ${className}`}>
+      <motion.div
+        className="relative"
+        animate={{ scale: [1, 1.05, 1], opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <div className="w-3 h-3 bg-[#D4AF37] rounded-full" />
+        <div className="absolute inset-0 w-3 h-3 bg-[#D4AF37] rounded-full blur-md" />
+        <motion.div
+          className="absolute -inset-2 bg-[#D4AF37]/20 rounded-full blur-xl"
+          animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+        />
+        <motion.div
+          className="absolute -inset-4 bg-orange-400/10 rounded-full blur-2xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+        />
+      </motion.div>
+    </div>
+  );
+}
+
+const testimonialReviews = [
+  { name: "Priya Sharma", city: "Delhi", category: "Product Review", rating: 5, text: "The Rudraksha Mala I ordered was absolutely genuine. Packaging was premium and delivery was on time. Will definitely order again!", avatar: "PS" },
+  { name: "Rajesh Iyer", city: "Chennai", category: "Puja Booking", rating: 5, text: "Booked Satyanarayan Puja for our new home. The pandit was very knowledgeable and performed every ritual with utmost devotion. Highly recommend.", avatar: "RI" },
+  { name: "Meera Patel", city: "Ahmedabad", category: "Astrology", rating: 5, text: "My Kundli consultation was incredibly accurate. The astrologer explained everything patiently and gave practical remedies. Very impressed!", avatar: "MP" },
+  { name: "Ankit Gupta", city: "Lucknow", category: "Product Review", rating: 5, text: "Ordered the Havan Samagri and Camphor tablets — both were pure and aromatic. The quality is far better than what's available locally.", avatar: "AG" },
+  { name: "Sunita Reddy", city: "Hyderabad", category: "Puja Booking", rating: 4, text: "Griha Pravesh puja was conducted beautifully. The entire process from booking to completion was smooth and hassle-free.", avatar: "SR" },
+  { name: "Vikram Singh", city: "Jaipur", category: "Astrology", rating: 5, text: "Got my matchmaking report done here. Very detailed analysis with clear explanations. The astrologer was patient and thorough.", avatar: "VS" },
+  { name: "Deepa Nair", city: "Kochi", category: "Product Review", rating: 5, text: "Brass Puja Thali set exceeded my expectations. The craftsmanship is beautiful and the quality feels very premium. Great value for money.", avatar: "DN" },
+  { name: "Sanjay Tiwari", city: "Varanasi", category: "Puja Booking", rating: 5, text: "Booked Rudrabhishek puja online — the pandit arrived on time and the whole experience was deeply spiritual. Very professional service.", avatar: "ST" },
+  { name: "Kavita Joshi", city: "Pune", category: "Astrology", rating: 5, text: "The AI Kundli report was surprisingly detailed and accurate. It matched perfectly with what my family astrologer had told me years ago!", avatar: "KJ" },
+];
+
+function TestimonialsCarousel() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const totalCards = testimonialReviews.length;
+  const visibleDesktop = 3;
+  const maxIndex = totalCards - visibleDesktop;
+
+  useEffect(() => {
+    if (isPaused) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isPaused, maxIndex]);
+
+  return (
+    <section className="py-12 md:py-16 bg-white border-t border-[#D4AF37]/15" data-testid="section-testimonials">
+      <div className="container mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="text-center mb-10 md:mb-14">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+            <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Real Stories</span>
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+          </div>
+          <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-testimonials-heading">
+            What Our <span className="italic font-semibold saffron-shimmer">Community Says</span>
+          </h2>
+          <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 max-w-md mx-auto">Trusted by thousands of families across India</p>
+        </motion.div>
+
+        <div
+          className="relative overflow-hidden max-w-5xl mx-auto"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
+        >
+          <div
+            className="flex transition-transform duration-700 ease-in-out"
+            style={{ transform: `translateX(-${currentIndex * (100 / visibleDesktop)}%)` }}
+          >
+            {testimonialReviews.map((review, i) => (
+              <div
+                key={review.name}
+                className="w-full md:w-1/3 flex-shrink-0 px-2 md:px-2.5"
+                data-testid={`testimonial-${i}`}
+              >
+                <div className="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-[#6D2B35]/5 h-full flex flex-col">
+                  <div className="flex items-center gap-1 mb-3">
+                    {[...Array(review.rating)].map((_, j) => (
+                      <Star key={j} className="h-3.5 w-3.5 text-[#D4AF37] fill-[#D4AF37]" />
+                    ))}
+                    {review.rating < 5 && [...Array(5 - review.rating)].map((_, j) => (
+                      <Star key={`e${j}`} className="h-3.5 w-3.5 text-[#D4AF37]/20" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-[#5a4a3a]/70 leading-relaxed mb-4 flex-1">{review.text}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#6D2B35]/10 flex items-center justify-center text-xs font-semibold text-[#6D2B35]">
+                        {review.avatar}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-[#6D2B35]">{review.name}</p>
+                        <p className="text-[11px] text-[#5a4a3a]/40">{review.city}</p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wider text-[#D4AF37] font-medium bg-[#D4AF37]/5 px-2.5 py-1 rounded-full">{review.category}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-1.5 mt-6">
+          {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIndex(i)}
+              className={`transition-all duration-300 rounded-full ${
+                i === currentIndex
+                  ? "w-6 h-2 bg-[#D4AF37]"
+                  : "w-2 h-2 bg-[#6D2B35]/15 hover:bg-[#6D2B35]/30"
+              }`}
+              data-testid={`testimonial-dot-${i}`}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function Home() {
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+  const { t } = useI18n();
+  const { data: ratingsAgg } = useQuery<Record<number, { avg: number; count: number }>>({
+    queryKey: ["/api/reviews/aggregate"],
+    staleTime: 60_000,
+  });
+
+  const { data: products, isLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+    queryFn: () => fetch("/api/products").then(r => r.json()),
+  });
+
+  const [neevModalOpen, setNeevModalOpen] = useState(false);
+
+  // Four pillars of the platform — each links to a deep, SEO-rich landing
+  // hub that absorbs all related sub-services. Pandit & Puja covers Book
+  // Pandit, Book Puja, Pind Daan & Virtual Puja. Astrology covers Free
+  // Kundli, Zodiac, Panchang & Muhurat. Sacred Essentials covers samagri,
+  // rudraksha, gemstones & yantras. Tirth Yatra covers all Hindu
+  // pilgrimages (Char Dham, Jyotirlingas, Shakti Peeths, Vaishno Devi).
+  const featuredCtas = [
+    {
+      label: "Pandit & Puja",
+      sub: "Verified pandits, puja at home, pind daan",
+      icon: Flame,
+      href: "/puja",
+    },
+    {
+      label: "Astrology",
+      sub: "Kundli, rashifal, muhurat, panchang",
+      icon: Star,
+      href: "/astrology",
+    },
+    {
+      label: "Sacred Essentials",
+      sub: "Rudraksha, gemstones, samagri, yantras",
+      icon: Gem,
+      href: "/spiritual-essentials",
+    },
+    {
+      label: "Tirth Yatra",
+      sub: "Char Dham, Jyotirlingas, Vaishno Devi",
+      icon: Map,
+      href: "/tirth-yatra",
+    },
+  ];
+
+  const { data: bestsellers } = useQuery<Product[]>({ queryKey: ["/api/bestsellers"] });
+  const featuredProducts = useMemo(() => {
+    if (bestsellers && bestsellers.length > 0) return bestsellers;
+    if (!products) return [];
+    return [...products]
+      .filter(p => p.stock > 0)
+      .sort((a, b) => (b.salesCount ?? 0) - (a.salesCount ?? 0))
+      .slice(0, 6);
+  }, [bestsellers, products]);
+
+  // ItemList JSON-LD for featured products (homepage SEO)
+  const homeItemListSchema = useMemo(() => {
+    if (!products || products.length === 0) return null;
+    const source = (bestsellers && bestsellers.length > 0)
+      ? bestsellers
+      : [...products].filter(p => p.stock > 0).sort((a, b) => (b.salesCount ?? 0) - (a.salesCount ?? 0));
+    const featured = source.slice(0, 12);
+    if (featured.length === 0) return null;
+    return itemListSchemaBuilder({
+      name: "Popular Spiritual Products",
+      items: featured.map((p) => ({ name: p.name, url: getProductUrl(p.id, p.name), image: p.image })),
+    });
+  }, [products, bestsellers]);
+
+  // Hero scene rotation — each background pairs with its own headline + CTAs
+  const [heroIdx, setHeroIdx] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroIdx((prev) => (prev + 1) % heroSlides.length);
+    }, 6500);
+    return () => clearInterval(timer);
+  }, []);
+  const scene = heroSlides[heroIdx];
+  const Cta1Icon = scene.cta1.icon;
+  const Cta2Icon = scene.cta2.icon;
+
+  return (
+    <div className="w-full">
+      <PageSeo
+        title="Vedic Tatva — Sacred Living, Authentic Puja, Pandits & Pilgrimages"
+        description="Book verified pandits, perform puja online, shop authentic spiritual essentials, and plan sacred pilgrimages. Vedic wisdom for modern devotees, delivered worldwide."
+        canonical="/"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={homeItemListSchema ? [homeItemListSchema] : []}
+      />
+      {/* Hero Section */}
+      <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
+        {/* Full-bleed rotating background images */}
+        <HeroBackground current={heroIdx} setCurrent={setHeroIdx} />
+
+        {/* Dark wash for legibility (matches Heros guideline regardless of theme) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/80 via-transparent to-transparent" />
+
+        {/* Single subtle gold glow accent (replaces 7 diyas, mandala ring & sanskrit overlay) */}
+        <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />
+
+        {/* Centered vignette so centered text reads well over any photo on every viewport */}
+        <div className="absolute inset-0 bg-[#1a0a0e]/45 md:bg-[#1a0a0e]/35 pointer-events-none" />
+
+        <div className="relative z-10 container mx-auto px-4 pt-6 md:pt-8 pb-20 md:pb-24">
+          <div className="max-w-2xl mx-auto text-center">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={heroIdx}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* Eyebrow */}
+                <div className="flex items-center justify-center mb-3 md:mb-4">
+                  <span className="text-[#D4AF37] text-[11px] sm:text-xs uppercase tracking-[0.3em] font-semibold" data-testid="text-hero-tagline">
+                    {scene.tagline}
+                  </span>
+                </div>
+
+                {/* Headline */}
+                <h1
+                  className="font-serif text-white text-[2.35rem] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
+                  data-testid="text-hero-headline"
+                >
+                  <span className="block">{scene.title1}</span>
+                  <span className="block">
+                    {scene.title2}
+                    <span className="text-[#D4AF37]">{scene.title2Highlight}</span>
+                  </span>
+                </h1>
+
+                {/* Subtitle */}
+                <p
+                  className="mt-5 md:mt-6 text-[17px] sm:text-lg md:text-xl text-white/80 leading-relaxed max-w-xl mx-auto font-light"
+                  data-testid="text-hero-subtext"
+                >
+                  {scene.subtitle}
+                </p>
+
+                {/* CTAs */}
+                <div className="mt-7 md:mt-9 flex flex-row justify-center gap-2 sm:gap-3">
+                  <Link href={scene.cta1.href} className="flex-1 sm:flex-none">
+                    <Button
+                      className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-4 sm:px-6 font-semibold"
+                      data-testid="btn-hero-cta1"
+                    >
+                      <Cta1Icon className="h-4 w-4 mr-2" />
+                      {scene.cta1.label}
+                    </Button>
+                  </Link>
+                  <Link href={scene.cta2.href} className="flex-1 sm:flex-none">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto bg-white/5 backdrop-blur-sm border-white/30 text-white hover:bg-white/10 rounded-md px-4 sm:px-6 font-semibold"
+                      data-testid="btn-hero-cta2"
+                    >
+                      <Cta2Icon className="h-4 w-4 mr-2" />
+                      {scene.cta2.label}
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Trust strip */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              className="mt-8 md:mt-10 pt-4 md:pt-5 border-t border-white/15"
+            >
+              <div className="grid grid-cols-4 gap-x-2 md:gap-x-4 gap-y-2 max-w-2xl mx-auto justify-items-center">
+                <HeroStat icon={Star} value={t.hero.rating} label="Rated" />
+                <HeroStat icon={Heart} value="10K+" label="Families" />
+                <HeroStat icon={UserCheck} value="500+" label="Pandits" />
+                <HeroStat icon={Shield} value="100%" label="Authentic" />
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+      </section>
+
+      {/* Four Pillars of Vedic Tatva — slim category banner.
+          Each card opens a deep, SEO-rich landing hub that absorbs all
+          related sub-services (e.g. Pandit & Puja → Book Pandit, Book Puja,
+          Pind Daan, Virtual Puja). Uniform gold grid, 2-col mobile / 4-col
+          desktop. Sits directly under the hero so users see the four
+          primary categories first. */}
+      <section
+        className="relative overflow-hidden bg-white border-t border-[#D4AF37]/15"
+        data-testid="section-services"
+      >
+        <div className="relative w-full">
+          {/* Content — slim padding, white background to match the
+              SpiritualSnapshot above and TabbedShop below. */}
+          <div className="relative z-10 container mx-auto px-4 py-6 md:py-8">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              className="text-center max-w-2xl mx-auto"
+            >
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Four Pillars of Vedic Tatva</span>
+                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+              </div>
+              <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight" data-testid="text-services-heading">
+                Your complete Sanatan
+                <span className="italic font-semibold saffron-shimmer ml-2 md:ml-3">sadhana</span>
+              </h2>
+            </motion.div>
+
+            {/* Four uniform gold cards — each opens a deep, SEO-rich
+                category landing page. 2-up on mobile, 4-across on desktop. */}
+            <div className="mt-4 md:mt-5 max-w-5xl mx-auto">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {featuredCtas.map((cta, i) => {
+                  const Icon = cta.icon;
+                  return (
+                    <motion.div
+                      key={cta.label}
+                      initial={{ opacity: 0, y: 12 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.1 + i * 0.08, duration: 0.45 }}
+                    >
+                      <Link
+                        href={cta.href}
+                        className="group flex flex-col items-center text-center gap-1.5 rounded-lg text-white px-2 py-3 md:px-3 md:py-3.5 h-full transition-colors hover-elevate active-elevate-2 shadow-md shadow-[#4a1a22]/20 border border-[#D4AF37]/30"
+                        style={{ background: "linear-gradient(135deg, #4a1a22 0%, #6D2B35 30%, #8B3A47 50%, #6D2B35 70%, #4a1a22 100%)" }}
+                        data-testid={`cta-featured-${i}`}
+                      >
+                        <div className="shrink-0 w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
+                          <Icon className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#D4AF37]" strokeWidth={1.8} />
+                        </div>
+                        <div className="font-serif font-bold text-[13px] md:text-[14px] leading-tight">{cta.label}</div>
+                        <div className="text-[10.5px] md:text-[11px] text-white/75 leading-snug line-clamp-2">{cta.sub}</div>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Today's Spiritual Snapshot — slim daily strip, follows the
+          Four Pillars so the daily panchang/sunrise data sits between
+          the categories and the shop. */}
+      <SpiritualSnapshot />
+
+      {/* Tabbed Shop — Popular + Trending Near You + New Arrivals (Handpicked) */}
+      <TabbedShop
+        featuredProducts={featuredProducts}
+        allProducts={products}
+        isLoading={isLoading}
+        ratingsAgg={ratingsAgg}
+        addToCart={addToCart}
+        toast={toast}
+        viewAllLabel={t.products.viewAll}
+        addToCartLabel={t.products.addToCart}
+        sectionTag={t.products.sectionTag}
+      />
+
+      {/* Bhandara Seva Banner — every purchase contributes to community feast */}
+      <section
+        className="relative overflow-hidden"
+        data-testid="section-bhandara-seva"
+      >
+        <div className="relative w-full h-[420px] md:h-[480px] lg:h-[520px]">
+          {/* Background photo */}
+          <img
+            src={optImg(bhandaraSevaImg, 1080)}
+            srcSet={optImgSrcSet(bhandaraSevaImg, [320, 480, 768, 1080, 1440])}
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            alt="Devotees serving bhandara — community feast at a temple"
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            decoding="async"
+            data-testid="img-bhandara-seva"
+          />
+          {/* Dark wash for text legibility */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(20,11,16,0.55) 0%, rgba(20,11,16,0.65) 50%, rgba(20,11,16,0.85) 100%)",
+            }}
+            aria-hidden="true"
+          />
+          {/* Subtle gold radial halo behind text */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at 50% 55%, rgba(212,175,55,0.18) 0%, transparent 55%)",
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Content */}
+          <div className="relative z-10 h-full flex items-center justify-center px-6">
+            <div className="max-w-3xl text-center text-white">
+              {/* Icon */}
+              <div className="flex justify-center mb-5">
+                <div className="w-12 h-12 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 backdrop-blur-sm flex items-center justify-center">
+                  <HandHeart className="w-6 h-6 text-[#D4AF37]" />
+                </div>
+              </div>
+
+              {/* Eyebrow */}
+              <p
+                className="text-[10px] md:text-[11px] uppercase tracking-[0.4em] font-semibold text-[#D4AF37] mb-4"
+                data-testid="text-bhandara-eyebrow"
+              >
+                Seva &mdash; Greater Purpose
+              </p>
+
+              {/* Heading */}
+              <h2
+                className="font-serif text-3xl md:text-4xl lg:text-5xl font-semibold leading-tight mb-5"
+                data-testid="text-bhandara-heading"
+              >
+                Devotion that goes <span className="italic text-[#D4AF37]">beyond your home</span>
+              </h2>
+
+              {/* Body */}
+              <p
+                className="text-[14px] md:text-[15px] leading-relaxed text-white/85 max-w-2xl mx-auto mb-6"
+                data-testid="text-bhandara-body"
+              >
+                With every purchase at Vedic Tatva, your order helps us serve bhandara &mdash;
+                sharing food, care and blessings with others.
+              </p>
+
+              {/* Tagline */}
+              <p
+                className="font-serif italic text-base md:text-lg text-[#D4AF37] mb-7"
+                data-testid="text-bhandara-tagline"
+              >
+                Pure essentials. Greater purpose.
+              </p>
+
+              {/* Impact chip */}
+              <div className="flex justify-center">
+                <div
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4AF37]/40 bg-white/5 backdrop-blur-sm"
+                  data-testid="chip-bhandara-impact"
+                >
+                  <Flame className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span className="text-[12px] md:text-[13px] font-medium tracking-wide text-white">
+                    <span className="font-semibold text-[#D4AF37]" data-testid="text-meals-count">3,809</span>
+                    {" "}meals served this year
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI-Personalized Recommendations (DISABLED — keeps homepage to 7 lean sections) */}
+      {false && <RecommendedForYou limit={8} />}
+
+      {false && (<>
+      {/* Featured Products — Handpicked for You (REMOVED — merged into TabbedShop above) */}
+      <section className="py-10 md:py-14 bg-[#FAFAF7]">
+        <div className="container mx-auto px-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-8 md:mb-10">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+              <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">{t.products.sectionTag}</span>
+              <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+            </div>
+            <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-2" data-testid="text-popular-heading">
+              {t.products.heading}
+            </h2>
+            <p className="text-[13px] text-[#5a4a3a]/55 max-w-md mx-auto">{t.products.subheading}</p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+            {isLoading ? Array(10).fill(0).map((_, i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="aspect-square rounded-lg" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            )) : featuredProducts.map((product, idx) => {
+              const isSellingFast = idx < 2;
+              const hasMrp = !!product.mrp && product.mrp > product.price;
+              const savingsPct = hasMrp ? Math.round(((product.mrp! - product.price) / product.mrp!) * 100) : 0;
+              const showSocialProof = !!(product.salesCount && product.salesCount > 0);
+              const rating = getDisplayRating(product.id, ratingsAgg?.[product.id] ?? null);
+              const primaryAlt = (product.imageAlts && product.imageAlts[0]) || `${product.name} – ${product.category} | Vedic Tatva`;
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.08, duration: 0.5 }}
+                  className="group"
+                >
+                  <div className="bg-white rounded-lg overflow-hidden border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 transition-colors flex flex-col h-full" data-testid={`card-product-${product.id}`}>
+                    <Link href={getProductUrl(product.id, product.name)} className="block">
+                      <div className="aspect-square bg-[#F7F2E7] overflow-hidden relative p-3 sm:p-4">
+                        <img
+                          src={optImg(product.image, 480)}
+                          srcSet={optImgSrcSet(product.image, [320, 480, 768, 1080])}
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                          alt={primaryAlt}
+                          loading="lazy"
+                          decoding="async"
+                          width={600}
+                          height={600}
+                          className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-500"
+                          data-testid={`img-product-${product.id}`}
+                        />
+                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                          {isSellingFast && (
+                            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md" data-testid={`badge-selling-fast-${product.id}`}>
+                              <Flame className="h-2.5 w-2.5" />
+                              Hot
+                            </span>
+                          )}
+                          {product.badge && (
+                            <span className="bg-white/90 backdrop-blur text-[#6D2B35] text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md border border-[#D4AF37]/20">
+                              {product.badge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <Button size="icon" variant="secondary" className="rounded-md h-7 w-7 bg-white/95 hover:bg-white border border-[#D4AF37]/20"><Heart className="h-3 w-3 text-[#6D2B35]" /></Button>
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div className="p-3 flex-1 flex flex-col">
+                      <Link href={getProductUrl(product.id, product.name)}>
+                        <h3 className="font-serif text-[13px] sm:text-sm text-[#6D2B35] font-semibold leading-snug mb-1 line-clamp-2 group-hover:text-[#D4AF37] transition-colors min-h-[2.4em]" data-testid={`text-product-name-${product.id}`}>
+                          {product.name}
+                        </h3>
+                      </Link>
+
+                      {product.brand && (
+                        <p className="text-[10px] text-[#5a4a3a]/55 mb-1 line-clamp-1" data-testid={`text-brand-${product.id}`}>
+                          {product.brand}
+                        </p>
+                      )}
+
+                      <Link href={`${getProductUrl(product.id, product.name)}#reviews`}>
+                        <div className="inline-flex items-center gap-1 mb-1.5 hover:opacity-80 transition-opacity" data-testid={`rating-chip-${product.id}`}
+                          aria-label={`Rated ${rating.avg.toFixed(1)} out of 5 from ${rating.count.toLocaleString("en-IN")} ratings`}
+                        >
+                          <Star className="h-3 w-3 fill-[#D4AF37] text-[#D4AF37]" aria-hidden="true" />
+                          <span className="text-[11px] font-semibold text-[#5a4a3a]">{rating.avg.toFixed(1)}</span>
+                          <span className="text-[10px] text-[#5a4a3a]/55">({rating.count.toLocaleString("en-IN")})</span>
+                        </div>
+                      </Link>
+
+                      <div className="flex items-baseline gap-1.5 mb-1 flex-wrap">
+                        <span className="font-bold text-[15px] sm:text-base text-[#5a4a3a]">₹{product.price.toLocaleString("en-IN")}</span>
+                        {hasMrp && (
+                          <>
+                            <span className="text-[11px] text-[#5a4a3a]/45 line-through" data-testid={`text-mrp-${product.id}`}>
+                              ₹{product.mrp!.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-[10px] font-semibold text-emerald-700" data-testid={`text-savings-${product.id}`}>
+                              {savingsPct}% off
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="min-h-[14px] mb-2">
+                        {product.stock > 0 && product.stock <= 10 ? (
+                          <span className="text-[10px] font-semibold text-orange-700" data-testid={`text-low-stock-${product.id}`}>
+                            Only {product.stock} left
+                          </span>
+                        ) : showSocialProof ? (
+                          <span className="text-[10px] text-[#5a4a3a]/55" data-testid={`text-bought-${product.id}`}>
+                            {product.salesCount!.toLocaleString("en-IN")} bought this month
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="mt-auto w-full rounded-md bg-[#6D2B35] hover:bg-[#5a2430] text-white text-[12px] h-8 font-semibold"
+                        data-testid={`btn-add-product-${product.id}`}
+                        onClick={() => { addToCart(product); toast({ title: "Added to cart", description: `${product.name} has been added to your cart.` }); }}
+                      >
+                        <ShoppingBag className="h-3 w-3 mr-1" />
+                        {t.products.addToCart}
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div className="text-center mt-8">
+            <Link href="/spiritual-essentials">
+              <Button
+                variant="outline"
+                className="rounded-md px-6 h-9 border-[#6D2B35]/25 text-[#6D2B35] hover:bg-[#6D2B35] hover:text-white text-[13px] font-semibold"
+                data-testid="link-view-all"
+              >
+                {t.products.viewAll} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Daily Vrat & Spiritual Guidance */}
+      <DailyRecommendations />
+      </>)}
+
+      {false && (<>
+      {/* Trending in Your City — Hyper-Local (REMOVED — merged into TabbedShop) */}
+      <TrendingInCity products={products} />
+
+      {/* Why Vedic Tatva (REMOVED — moved to /about) */}
+      <section className="py-10 md:py-14 bg-white" data-testid="section-why-vedic-tatva">
+        <div className="container mx-auto px-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-8 md:mb-10 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2.5 mb-3">
+              <span className="h-px w-6 bg-[#D4AF37]" />
+              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Built on Trust</span>
+              <span className="h-px w-6 bg-[#D4AF37]" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-2" data-testid="text-why-heading">Why Vedic Tatva?</h2>
+            <p className="text-[13px] text-[#5a4a3a]/60 leading-relaxed">Sourced with care. Verified with rigor. Secured end-to-end — so you focus on what matters: your faith.</p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-[#D4AF37]/15 rounded-lg overflow-hidden border border-[#D4AF37]/15 max-w-6xl mx-auto">
+            {[
+              { icon: UserCheck, title: "Verified Pandits", desc: "Background-checked & qualified" },
+              { icon: Shield, title: "Authentic Products", desc: "Lab-tested ritual essentials" },
+              { icon: CheckCircle, title: "Secure Payments", desc: "Encrypted & protected" },
+              { icon: Globe, title: "Pan-India Service", desc: "Delivering to 500+ cities" },
+              { icon: IndianRupee, title: "Transparent Pricing", desc: "No hidden fees, ever" },
+              { icon: RotateCcw, title: "30-Day Returns", desc: "Hassle-free return policy" },
+            ].map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05, duration: 0.4 }}
+                className="bg-white px-4 py-5 flex flex-col items-start text-left hover:bg-[#FBF7EE] transition-colors"
+                data-testid={`trust-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <div className="w-8 h-8 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/20 flex items-center justify-center mb-2.5">
+                  <item.icon className="h-4 w-4 text-[#6D2B35]" strokeWidth={1.8} />
+                </div>
+                <h4 className="font-semibold text-[13px] text-[#6D2B35] mb-0.5 leading-tight">{item.title}</h4>
+                <p className="text-[11px] text-[#5a4a3a]/55 leading-snug">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.3, duration: 0.5 }} className="mt-8 max-w-3xl mx-auto">
+            <figure className="relative px-6 md:px-10">
+              <span className="absolute left-0 top-0 font-serif text-5xl md:text-6xl text-[#D4AF37]/30 leading-none select-none" aria-hidden="true">"</span>
+              <blockquote className="text-[13px] md:text-sm text-[#5a4a3a]/75 leading-relaxed italic text-center">
+                At Vedic Tatva, we believe spirituality should be accessible, authentic, and trustworthy. Every pandit is personally verified, every product is ethically sourced, and every ritual is performed with the sanctity it deserves.
+              </blockquote>
+              <span className="absolute right-0 bottom-0 font-serif text-5xl md:text-6xl text-[#D4AF37]/30 leading-none select-none" aria-hidden="true">"</span>
+              <figcaption className="flex items-center justify-center gap-2 mt-3">
+                <span className="h-px w-5 bg-[#D4AF37]/40" />
+                <span className="text-[10px] text-[#D4AF37] uppercase tracking-[0.3em] font-semibold">The Vedic Tatva Promise</span>
+                <span className="h-px w-5 bg-[#D4AF37]/40" />
+              </figcaption>
+            </figure>
+          </motion.div>
+        </div>
+      </section>
+
+      </>)}
+
+      {/* Book a Pandit */}
+      <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-center max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative order-2 lg:order-1"
+            >
+              <div className="aspect-[4/3] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative">
+                <img
+                  src={optImg(heroBrandImg, 768)}
+                  srcSet={optImgSrcSet(heroBrandImg, [320, 480, 768, 1080])}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  alt="Sacred Puja Ceremony"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/70 via-[#1a0a0e]/10 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 flex-wrap">
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
+                    <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
+                    <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
+                  </div>
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 border border-[#D4AF37]/20">
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
+                  </div>
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
+                    <Shield className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="space-y-5 order-1 lg:order-2"
+            >
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                  <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
+                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                </div>
+                <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
+                  Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
+                </h2>
+                <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
+                  Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
+                </p>
+              </div>
+
+              {/* City search bar — slim, rounded-md */}
+              <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
+                <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Enter your city…"
+                  className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
+                  data-testid="input-pandit-city"
+                />
+                <Link href="/pandits">
+                  <Button
+                    size="sm"
+                    className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
+                    data-testid="btn-search-pandit"
+                  >
+                    Search
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Popular city chips */}
+              <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
+                <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
+                {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
+                  <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+                    <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
+                      {c}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <Link href="/pandits">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
+                    Browse all pandits <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {false && (<>
+      {/* Puja Booking 3-step (REMOVED — moved to /puja-booking page) */}
+      <section className="py-10 md:py-14 bg-white" data-testid="section-puja-booking">
+        <div className="container mx-auto px-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-8 md:mb-10 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2.5 mb-3">
+              <span className="h-px w-6 bg-[#D4AF37]" />
+              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Simple & Sacred</span>
+              <span className="h-px w-6 bg-[#D4AF37]" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-2" data-testid="text-puja-heading">Book your puja in 3 simple steps</h2>
+            <p className="text-[13px] text-[#5a4a3a]/60 leading-relaxed">No complexity, no confusion — a seamless ceremony from selection to completion.</p>
+          </motion.div>
+
+          <div className="relative max-w-4xl mx-auto mb-8">
+            {/* Hairline connector behind cards */}
+            <div className="hidden md:block absolute top-1/2 left-12 right-12 h-px bg-[#D4AF37]/20 -translate-y-1/2" aria-hidden="true" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 relative">
+              {[
+                { step: "01", title: "Select Puja", desc: "Satyanarayan, Griha Pravesh, Navgraha Shanti and more", icon: ScrollText },
+                { step: "02", title: "Choose Date", desc: "Pick an auspicious muhurat or a date that suits your family", icon: Calendar },
+                { step: "03", title: "Confirm Booking", desc: "Pay securely and get instant confirmation with pandit details", icon: CheckCircle },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.step}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  className="relative bg-white rounded-lg border border-[#D4AF37]/20 hover:border-[#D4AF37]/45 transition-colors p-4 md:p-5"
+                  data-testid={`step-${item.step}`}
+                >
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <div className="w-8 h-8 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                      <item.icon className="h-4 w-4 text-[#6D2B35]" strokeWidth={1.8} />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37]">Step {item.step}</span>
+                  </div>
+                  <h3 className="font-serif text-base font-semibold text-[#6D2B35] mb-1 leading-tight">{item.title}</h3>
+                  <p className="text-[12px] text-[#5a4a3a]/60 leading-relaxed">{item.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link href="/puja">
+              <Button
+                className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-6 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
+                data-testid="btn-schedule-puja"
+              >
+                <Calendar className="h-4 w-4" />
+                Schedule a puja
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      </>)}
+
+      {/* Astrology Section — wide horizontal banner: emblem left, content right */}
+      <section
+        id="vedic-astrology"
+        className="py-10 md:py-12 relative overflow-hidden text-white scroll-mt-24"
+        style={{ background: "radial-gradient(ellipse at 50% 50%, #2a1820 0%, #1a1015 55%, #140b10 100%)" }}
+        data-testid="section-astrology"
+      >
+        {/* Calm starfield */}
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle, #D4AF37 0.5px, transparent 0.5px)", backgroundSize: "44px 44px" }}
+          aria-hidden="true"
+        />
+        {/* Wide gold halo */}
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1100px] h-[420px] rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, rgba(212,175,55,0.18) 0%, rgba(212,175,55,0.06) 45%, transparent 75%)" }}
+          aria-hidden="true"
+        />
+        {/* Hairline gold rules */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/45 to-transparent" aria-hidden="true" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/45 to-transparent" aria-hidden="true" />
+
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.55 }}
+            className="max-w-6xl mx-auto"
+          >
+            {/* Wide glassy banner card */}
+            <div
+              className="relative rounded-2xl border border-[#D4AF37]/25 px-5 py-6 sm:px-8 sm:py-7 md:px-10 md:py-8 backdrop-blur-sm"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(212,175,55,0.06) 0%, rgba(255,255,255,0.02) 50%, rgba(212,175,55,0.04) 100%)",
+                boxShadow:
+                  "0 0 60px -10px rgba(212,175,55,0.25), inset 0 1px 0 rgba(212,175,55,0.18)",
+              }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-[auto,1fr,auto] gap-6 md:gap-8 items-center">
+                {/* Left: Vedic zodiac wheel emblem */}
+                <div className="flex justify-center md:justify-start" aria-hidden="true">
+                  <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0">
+                    <div
+                      className="absolute -inset-3 rounded-full"
+                      style={{ background: "radial-gradient(circle, rgba(212,175,55,0.32) 0%, transparent 70%)" }}
+                    />
+                    <svg
+                      className="absolute inset-0 w-full h-full text-[#D4AF37]/65 ambient-zodiac-rotate"
+                      viewBox="0 0 100 100"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="0.6"
+                    >
+                      <circle cx="50" cy="50" r="46" />
+                      <circle cx="50" cy="50" r="36" strokeOpacity="0.55" />
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const angle = (i * 30 * Math.PI) / 180;
+                        const x1 = 50 + Math.cos(angle) * 36;
+                        const y1 = 50 + Math.sin(angle) * 36;
+                        const x2 = 50 + Math.cos(angle) * 46;
+                        const y2 = 50 + Math.sin(angle) * 46;
+                        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
+                      })}
+                      {Array.from({ length: 12 }).map((_, i) => {
+                        const angle = (i * 30 * Math.PI) / 180;
+                        const cx = 50 + Math.cos(angle) * 46;
+                        const cy = 50 + Math.sin(angle) * 46;
+                        return <circle key={`p-${i}`} cx={cx} cy={cy} r="1" fill="currentColor" stroke="none" />;
+                      })}
+                    </svg>
+                    <div className="absolute inset-4 rounded-full border border-[#D4AF37]/35" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Sparkles className="h-7 w-7 md:h-8 md:w-8 text-[#D4AF37]" strokeWidth={1.4} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle: text content */}
+                <div className="text-center md:text-left min-w-0">
+                  <div className="flex items-center justify-center md:justify-start gap-2.5 mb-2">
+                    <span className="h-px w-7 bg-gradient-to-r from-transparent to-[#D4AF37]/70" />
+                    <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold">Vedic Astrology</span>
+                  </div>
+
+                  <h2
+                    className="text-2xl md:text-3xl lg:text-[2rem] font-serif font-semibold mb-2 leading-[1.15] tracking-tight"
+                    data-testid="text-astrology-heading"
+                  >
+                    Unlock guidance through{" "}
+                    <span className="text-[#D4AF37] whitespace-nowrap">Vedic astrology</span>
+                  </h2>
+
+                  <p className="text-sm text-white/80 mb-3 leading-relaxed max-w-xl mx-auto md:mx-0">
+                    Personalized Kundli reports, expert consultations and deep cosmic insights from experienced Vedic astrologers.
+                  </p>
+
+                  {/* Trust chips inline with text on desktop */}
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5">
+                    {[
+                      { icon: BookOpen, label: "Kundli Report" },
+                      { icon: HeartHandshake, label: "Match-Making" },
+                      { icon: Sun, label: "Daily Horoscope" },
+                      { icon: CheckCircle, label: "Certified Astrologers" },
+                    ].map(({ icon: Icon, label }) => (
+                      <span
+                        key={label}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#D4AF37]/30 bg-white/[0.05] text-white/85 text-[11px]"
+                      >
+                        <Icon className="h-3 w-3 text-[#D4AF37]" />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: CTAs */}
+                <div className="flex flex-col sm:flex-row md:flex-col items-stretch justify-center gap-2 md:min-w-[180px]">
+                  <Link href="/astrology" className="flex-1 md:flex-none">
+                    <Button
+                      className="w-full bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 shadow-[0_0_30px_-8px_rgba(212,175,55,0.7)] border border-[#D4AF37]"
+                      data-testid="btn-generate-kundli"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      Generate Kundli
+                    </Button>
+                  </Link>
+                  <Link href="/astrology" className="flex-1 md:flex-none">
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#D4AF37]/40 bg-white/5 text-white font-semibold gap-2 backdrop-blur-sm"
+                      data-testid="btn-book-consultation"
+                    >
+                      <Video className="h-4 w-4" />
+                      Book Consultation
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Join as a Panditji — earnings calculator + value props + apply CTA.
+          Sits before testimonials so prospective karmkandi pandits see the
+          income proof point right after the customer-facing services. */}
+      <JoinAsPanditSection />
+
+      {/* Testimonials */}
+      <TestimonialsCarousel />
+
+      {false && (<>
+      {/* Stats Bar (REMOVED — moved to /about full + footer micro-strip) */}
+      <section className="py-8 md:py-10 bg-[#6D2B35] text-white relative" data-testid="section-stats-bar">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-lg overflow-hidden border border-[#D4AF37]/20 max-w-5xl mx-auto">
+            {[
+              { value: "500+", label: "Verified Pandits" },
+              { value: "10k+", label: "Happy Families" },
+              { value: "50+", label: "Puja Types" },
+              { value: "100%", label: "Authentic Products" },
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05, duration: 0.4 }}
+                className="bg-[#6D2B35] px-4 py-4 md:py-5 text-center"
+                data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <div className="text-[#D4AF37] text-2xl md:text-3xl font-serif font-semibold leading-none mb-1">{stat.value}</div>
+                <p className="text-white/65 text-[11px] md:text-xs uppercase tracking-[0.15em] font-semibold">{stat.label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA (REMOVED — homepage now ends at Testimonials) */}
+      <section className="py-10 md:py-14 bg-white relative" data-testid="section-final-cta">
+        <div className="container mx-auto px-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2.5 mb-3">
+              <span className="h-px w-6 bg-[#D4AF37]" />
+              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Begin Today</span>
+              <span className="h-px w-6 bg-[#D4AF37]" />
+            </div>
+
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif font-semibold text-[#6D2B35] mb-2 leading-tight" data-testid="text-final-cta-heading">
+              Begin your sacred journey today
+            </h2>
+            <p className="text-[13px] text-[#5a4a3a]/65 mb-6 max-w-md mx-auto leading-relaxed">
+              Authentic spiritual products, verified pandits and divine experiences — all in one place.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-2.5">
+              <Link href="/shop">
+                <Button
+                  className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-5 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
+                  data-testid="btn-final-shop"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Shop now
+                </Button>
+              </Link>
+              <Link href="/pandits">
+                <Button
+                  variant="outline"
+                  className="border-[#6D2B35]/25 bg-white text-[#6D2B35] hover:bg-[#FBF7EE] rounded-md px-5 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
+                  data-testid="btn-final-pandit"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Book a pandit
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+      </>)}
+
+      {neevModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNeevModalOpen(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden z-10"
+            data-testid="neev-basics-modal"
+          >
+            <div className="relative bg-gradient-to-br from-[#2d5016] via-[#3a6b1e] to-[#4a8526] p-6 pb-8 text-center">
+              <button
+                onClick={() => setNeevModalOpen(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                data-testid="btn-close-neev-modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="inline-flex items-center gap-2 bg-white/15 rounded-full px-4 py-1.5 mb-4">
+                <Leaf className="w-4 h-4 text-[#90EE90]" />
+                <span className="text-[11px] uppercase tracking-[0.2em] font-medium text-white/90">Neev Basics</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-serif text-white mb-2">{t.neevModal.heading}</h3>
+              <p className="text-white/70 text-sm">{t.neevModal.subtitle}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-center text-sm text-[#5a4a3a]/70 mb-4">
+                {t.neevModal.tagline}
+              </p>
+
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { name: t.neevModal.innerwears, desc: t.neevModal.innerwearsDesc, icon: Shirt },
+                  { name: t.neevModal.kurtaSets, desc: t.neevModal.kurtaSetsDesc, icon: Sparkles },
+                  { name: t.neevModal.dhotiCollection, desc: t.neevModal.dhotiDesc, icon: Gem },
+                ].map((item, i) => (
+                  <div key={i} className="text-center p-3 rounded-2xl bg-[#F5F0E6]/60 border border-[#D4AF37]/10 hover:border-[#D4AF37]/30 transition-colors">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#2d5016]/10 to-[#4a8526]/10 flex items-center justify-center mx-auto mb-2.5">
+                      <item.icon className="w-5 h-5 text-[#2d5016]" />
+                    </div>
+                    <h4 className="text-xs font-semibold text-[#6D2B35] mb-1 leading-tight">{item.name}</h4>
+                    <p className="text-[9px] text-[#5a4a3a]/50 leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-gradient-to-r from-[#F5F0E6] to-[#ede6d8] rounded-2xl p-4 text-center border border-[#D4AF37]/15">
+                <p className="text-xs text-[#6D2B35] font-medium mb-1">{t.neevModal.whyTitle}</p>
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[10px] text-[#5a4a3a]/60">
+                  <span>{t.neevModal.doubleCombedCotton}</span>
+                  <span>{t.neevModal.noSynthetic}</span>
+                  <span>{t.neevModal.skinFriendly}</span>
+                  <span>{t.neevModal.madeInIndia}</span>
+                  <span>{t.neevModal.premiumStitching}</span>
+                  <span>{t.neevModal.traditionalDesigns}</span>
+                </div>
+              </div>
+
+              <div className="text-center pt-2">
+                <div className="inline-flex items-center gap-2 bg-[#D4AF37]/10 rounded-full px-5 py-2.5">
+                  <div className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
+                  <span className="text-xs font-medium text-[#6D2B35]">{t.neevModal.launchingSoon}</span>
+                </div>
+                <p className="text-[10px] text-[#5a4a3a]/40 mt-2">{t.neevModal.followUs}</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DailyRecommendation {
+  day: string;
+  deity: string;
+  tithi: string;
+  color: string;
+  luckyGem: string;
+  luckyNumber: string | number;
+  luckyDirection: string;
+  vrat: string;
+  vratBenefit: string;
+  mantra: string;
+  mantraTranslation: string;
+  spiritualTip: string;
+  remedies: { title: string; description?: string; productLink?: string; type?: string }[];
+  dosDonts: { dos: string[]; donts: string[] };
+  serviceHints: { title: string; description?: string; link: string; linkLabel?: string; icon?: string }[];
+}
+
+interface PanchangSummary {
+  tithi?: string;
+  nakshatra?: string;
+  yoga?: string;
+  karana?: string;
+  vaar?: string;
+  [k: string]: unknown;
+}
+
+export function DailyRecommendations({ defaultExpanded = false }: { defaultExpanded?: boolean } = {}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const { data, isLoading } = useQuery<DailyRecommendation>({
+    queryKey: ["/api/daily-recommendations"],
+    queryFn: () => fetch("/api/daily-recommendations").then(r => r.json()),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const iconMap: Record<string, typeof Sparkles> = {
+    brain: Brain, flame: Flame, sparkles: Sparkles, user: UserCheck,
+    shopping: ShoppingBag, compass: Compass, hand: Hand, baby: Baby,
+    heart: HandHeart, book: BookOpen,
+  };
+
+  if (isLoading) {
+    return (
+      <section className="py-12 bg-gradient-to-b from-[#FDF8F0] to-white">
+        <div className="container mx-auto px-4">
+          <Skeleton className="h-8 w-64 mx-auto mb-4" />
+          <Skeleton className="h-4 w-80 mx-auto mb-8" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><Skeleton className="h-40" /><Skeleton className="h-40" /><Skeleton className="h-40" /></div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-daily-recommendations">
+      <div className="container mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-6 max-w-3xl mx-auto">
+          <div className="flex items-center justify-center gap-2.5 mb-3">
+            <span className="h-px w-6 bg-[#D4AF37]" />
+            <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Today's Spiritual Guidance</span>
+            <span className="h-px w-6 bg-[#D4AF37]" />
+          </div>
+          <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-3" data-testid="text-daily-heading">
+            {data.day} — Day of {data.deity}
+          </h2>
+
+          {/* Compact info strip */}
+          <div className="inline-flex items-stretch flex-wrap justify-center bg-white rounded-md border border-[#D4AF37]/20 overflow-hidden divide-x divide-[#D4AF37]/15">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#5a4a3a]"><CalendarDays className="h-3 w-3 text-[#D4AF37]" /> {data.tithi}</span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#5a4a3a]"><Palette className="h-3 w-3 text-[#D4AF37]" /> Wear {data.color}</span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#5a4a3a]"><Gem className="h-3 w-3 text-[#D4AF37]" /> {data.luckyGem}</span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#5a4a3a]"><Hash className="h-3 w-3 text-[#D4AF37]" /> Lucky {data.luckyNumber}</span>
+            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-[#5a4a3a]"><Navigation className="h-3 w-3 text-[#D4AF37]" /> {data.luckyDirection}</span>
+          </div>
+        </motion.div>
+
+        {/* Vrat pill + toggle */}
+        <div className="flex items-center justify-center gap-3 flex-wrap mb-6">
+          <div className="inline-flex items-center gap-2 bg-white rounded-md px-3 py-1.5 border border-[#D4AF37]/20">
+            <Sun className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span className="font-serif text-[13px] text-[#6D2B35] font-semibold">{data.vrat}</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold uppercase tracking-wider">Today</span>
+          </div>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors"
+            data-testid="btn-toggle-guidance-details"
+          >
+            {expanded ? "Hide details" : "View mantras, remedies & more"}
+            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {expanded && (
+          <div className="max-w-4xl mx-auto space-y-4">
+            {/* Vrat mantra block */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+              <div className="bg-white rounded-lg border border-[#D4AF37]/15 p-4 md:p-5">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="shrink-0 w-9 h-9 rounded-md bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
+                    <Sun className="w-4 h-4 text-[#D4AF37]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h3 className="font-serif text-base text-[#6D2B35] font-semibold">{data.vrat}</h3>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold uppercase tracking-wider">Recommended</span>
+                    </div>
+                    <p className="text-[12.5px] text-[#5a4a3a]/65 leading-relaxed">{data.vratBenefit}</p>
+                  </div>
+                </div>
+                <div className="bg-[#FBF7EE] rounded-md p-3 border border-[#D4AF37]/10">
+                  <p className="font-serif text-base md:text-lg text-[#6D2B35] mb-0.5 leading-snug">{data.mantra}</p>
+                  <p className="text-[11px] text-[#5a4a3a]/60 italic">{data.mantraTranslation}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Spiritual insight strip */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.35 }}>
+              <div className="bg-[#6D2B35] rounded-lg p-4 md:p-5 text-white">
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <h4 className="font-semibold text-[11px] uppercase tracking-wider mb-1 text-[#D4AF37]">Spiritual Insight</h4>
+                    <p className="text-[13px] text-white/85 leading-relaxed">{data.spiritualTip}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Remedies grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {data.remedies.map((remedy, i) => {
+                const tone = remedy.type === "ritual"
+                  ? { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-100" }
+                  : remedy.type === "gemstone"
+                  ? { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100" }
+                  : { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100" };
+                return (
+                  <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 + i * 0.06, duration: 0.35 }}>
+                    <div className="bg-white rounded-lg p-4 border border-[#D4AF37]/15 h-full" data-testid={`remedy-card-${i}`}>
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center mb-2 ${tone.bg} ${tone.text} border ${tone.border}`}>
+                        {remedy.type === "ritual" ? <Flame className="w-3.5 h-3.5" /> :
+                         remedy.type === "gemstone" ? <Gem className="w-3.5 h-3.5" /> :
+                         <HandHeart className="w-3.5 h-3.5" />}
+                      </div>
+                      <h4 className="font-semibold text-[13px] text-[#6D2B35] mb-1">{remedy.title}</h4>
+                      <p className="text-[11.5px] text-[#5a4a3a]/60 leading-relaxed">{remedy.description}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Do's & Don'ts side by side */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-white rounded-lg p-4 border border-emerald-200/60">
+                  <h4 className="font-semibold text-emerald-800 text-[11px] uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
+                    <ThumbsUp className="w-3.5 h-3.5" /> Do's
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {data.dosDonts.dos.map((item: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-[12px] text-[#5a4a3a]">
+                        <CheckCircle className="w-3 h-3 shrink-0 mt-0.5 text-emerald-600" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-white rounded-lg p-4 border border-red-200/60">
+                  <h4 className="font-semibold text-red-800 text-[11px] uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
+                    <ThumbsDown className="w-3.5 h-3.5" /> Don'ts
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {data.dosDonts.donts.map((item: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-[12px] text-[#5a4a3a]">
+                        <CircleDot className="w-3 h-3 shrink-0 mt-0.5 text-red-600" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Explore deeper service hints */}
+            <div>
+              <div className="flex items-center gap-2.5 mb-3">
+                <span className="h-px flex-1 bg-[#D4AF37]/20" />
+                <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Explore Deeper</span>
+                <span className="h-px flex-1 bg-[#D4AF37]/20" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {data.serviceHints.map((hint, i) => {
+                  const Icon = iconMap[hint.icon ?? ""] || Sparkles;
+                  return (
+                    <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.06 }}>
+                      <Link href={hint.link}>
+                        <div className="group cursor-pointer bg-white rounded-lg p-4 border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 transition-colors h-full flex flex-col" data-testid={`service-hint-${i}`}>
+                          <div className="w-8 h-8 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/20 flex items-center justify-center mb-2.5 group-hover:bg-[#D4AF37]/10 transition-colors">
+                            <Icon className="w-4 h-4 text-[#6D2B35]" />
+                          </div>
+                          <h4 className="font-semibold text-[13px] text-[#6D2B35] mb-1">{hint.title}</h4>
+                          <p className="text-[11.5px] text-[#5a4a3a]/60 leading-relaxed mb-2.5 flex-1">{hint.description}</p>
+                          <span className="text-[12px] font-semibold text-[#D4AF37] inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                            {hint.linkLabel} <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TrendingInCity({ products }: { products: Product[] | undefined }) {
+  const [city, setCity] = useState("Your City");
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  useEffect(() => {
+    const fallbackCities = ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Guwahati", "Varanasi", "Indore", "Bhopal", "Patna"];
+
+    const setFallback = () => {
+      setCity(fallbackCities[Math.floor(Math.random() * fallbackCities.length)]);
+      setLocationLoading(false);
+    };
+
+    if (!navigator.geolocation) {
+      setFallback();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+            { headers: { "Accept-Language": "en", "User-Agent": "VedicTatva/1.0 (https://vedictatva.com)" } }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const detectedCity =
+              data.address?.city ||
+              data.address?.town ||
+              data.address?.village ||
+              data.address?.state_district ||
+              data.address?.state;
+            if (detectedCity) {
+              setCity(detectedCity);
+            } else {
+              setFallback();
+            }
+          } else {
+            setFallback();
+          }
+        } catch {
+          setFallback();
+        }
+        setLocationLoading(false);
+      },
+      () => {
+        setFallback();
+      },
+      { timeout: 5000, maximumAge: 600000 }
+    );
+  }, []);
+
+  const trendingProducts = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    return [...products]
+      .filter((p) => p.stock > 0)
+      .sort((a, b) => b.salesCount - a.salesCount)
+      .slice(0, 4);
+  }, [products]);
+
+  if (trendingProducts.length === 0) return null;
+
+  return (
+    <section className="py-10 md:py-14 bg-white" data-testid="section-trending">
+      <div className="container mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6 md:mb-8 max-w-6xl mx-auto">
+          <div>
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="h-px w-6 bg-[#D4AF37]" />
+              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Hyper-Local</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-1" data-testid="text-trending-heading">
+              Trending in {locationLoading ? (
+                <span className="inline-block w-24 h-7 bg-[#D4AF37]/20 rounded-md animate-pulse align-middle" />
+              ) : (
+                <span className="text-[#D4AF37]">{city}</span>
+              )}
+            </h2>
+            <p className="text-[12px] text-[#5a4a3a]/55 inline-flex items-center gap-1.5">
+              <MapPinned className="h-3 w-3 text-[#D4AF37]" />
+              {locationLoading ? "Detecting your location…" : "Most purchased this week in your area"}
+            </p>
+          </div>
+          <Link href="/spiritual-essentials" className="hidden md:inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="link-trending-view-all">
+            View all <ArrowRight className="w-3 h-3" />
+          </Link>
+        </motion.div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-6xl mx-auto">
+          {trendingProducts.map((product, i) => (
+            <motion.div
+              key={product.id}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.06, duration: 0.4 }}
+              data-testid={`trending-product-${product.id}`}
+            >
+              <Link href={getProductUrl(product.id, product.name)}>
+                <div className="group cursor-pointer rounded-lg border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 transition-colors overflow-hidden bg-white">
+                  <div className="aspect-square overflow-hidden bg-[#F7F2E7] relative">
+                    <img src={optImg(product.image, 480)} srcSet={optImgSrcSet(product.image, [320, 480, 768, 1080])} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" alt={product.name} loading="lazy" decoding="async" width={600} height={600} className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500" />
+                    <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-md px-1.5 py-0.5 border border-emerald-100">
+                      <TrendingUp className="h-2.5 w-2.5 text-emerald-600" />
+                      <span className="text-[9px] font-semibold text-emerald-700 uppercase tracking-wider">Trending</span>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h4 className="text-[13px] font-serif font-semibold text-[#6D2B35] mb-1.5 line-clamp-1 group-hover:text-[#D4AF37] transition-colors">{product.name}</h4>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[14px] font-bold text-[#5a4a3a]">₹{product.price.toLocaleString("en-IN")}</span>
+                      <span className="text-[10px] text-[#5a4a3a]/55">{product.salesCount}+ bought</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SpiritualSnapshot() {
+  const { data, isLoading } = useQuery<DailyRecommendation>({
+    queryKey: ["/api/daily-recommendations"],
+    queryFn: () => fetch("/api/daily-recommendations").then(r => r.json()),
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: panchang } = useQuery<PanchangSummary>({
+    queryKey: ["/api/panchang"],
+    queryFn: () => fetch("/api/panchang").then(r => r.json()),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  if (isLoading || !data) {
+    return (
+      <section className="py-12 md:py-16 bg-white border-t border-[#D4AF37]/15" data-testid="section-spiritual-snapshot">
+        <div className="container mx-auto px-4">
+          <Skeleton className="h-20 max-w-3xl mx-auto rounded-md" />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-12 md:py-16 bg-white border-t border-[#D4AF37]/15" data-testid="section-spiritual-snapshot">
+      <div className="container mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+            <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Today's Spiritual Snapshot</span>
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+          </div>
+          <h2 className="text-center font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-4" data-testid="text-snapshot-heading">
+            {data.day} — <span className="italic font-semibold saffron-shimmer">Day of {data.deity}</span>
+          </h2>
+
+          <div className="bg-white rounded-md border border-[#D4AF37]/25 p-3 md:p-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-[#5a4a3a]">
+            {panchang?.tithi && (
+              <span className="inline-flex items-center gap-1.5" data-testid="snapshot-tithi"><CalendarDays className="h-3.5 w-3.5 text-[#D4AF37]" /> Tithi: <span className="font-semibold text-[#6D2B35]">{panchang.tithi}</span></span>
+            )}
+            {panchang?.nakshatra && (
+              <span className="inline-flex items-center gap-1.5" data-testid="snapshot-nakshatra"><Star className="h-3.5 w-3.5 text-[#D4AF37]" /> Nakshatra: <span className="font-semibold text-[#6D2B35]">{panchang.nakshatra}</span></span>
+            )}
+            <span className="inline-flex items-center gap-1.5" data-testid="snapshot-vrat"><Sun className="h-3.5 w-3.5 text-[#D4AF37]" /> Vrat: <span className="font-semibold text-[#6D2B35]">{data.vrat}</span></span>
+            {data.remedies?.[0]?.title && (
+              <span className="inline-flex items-center gap-1.5" data-testid="snapshot-remedy"><Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" /> Remedy: <span className="font-semibold text-[#6D2B35]">{data.remedies[0].title}</span></span>
+            )}
+            <Link href="/panchang-calendar">
+              <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="link-snapshot-panchang">
+                Open panchang <ArrowRight className="h-3 w-3" />
+              </span>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function TabbedShop({
+  featuredProducts,
+  allProducts,
+  isLoading,
+  ratingsAgg,
+  addToCart,
+  toast,
+  viewAllLabel,
+  addToCartLabel,
+  sectionTag,
+}: {
+  featuredProducts: Product[];
+  allProducts: Product[] | undefined;
+  isLoading: boolean;
+  ratingsAgg: Record<number, { avg: number; count: number }> | undefined;
+  addToCart: (p: Product) => void;
+  toast: ReturnType<typeof useToast>["toast"];
+  viewAllLabel: string;
+  addToCartLabel: string;
+  sectionTag: string;
+}) {
+  const [tab, setTab] = useState<"popular" | "trending" | "new">("popular");
+  const [city, setCity] = useState("Your City");
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  useEffect(() => {
+    const fallbackCities = ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow"];
+    const setFallback = () => {
+      setCity(fallbackCities[Math.floor(Math.random() * fallbackCities.length)]);
+      setLocationLoading(false);
+    };
+    if (!navigator.geolocation) { setFallback(); return; }
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+            { headers: { "Accept-Language": "en", "User-Agent": "VedicTatva/1.0 (https://vedictatva.com)" } }
+          );
+          if (res.ok) {
+            const d = await res.json();
+            const detected = d.address?.city || d.address?.town || d.address?.village || d.address?.state_district || d.address?.state;
+            if (detected) setCity(detected); else setFallback();
+          } else { setFallback(); }
+        } catch { setFallback(); }
+        setLocationLoading(false);
+      },
+      () => setFallback(),
+      { timeout: 5000, maximumAge: 600000 }
+    );
+  }, []);
+
+  const trendingProducts = useMemo(() => {
+    if (!allProducts || allProducts.length === 0) return [];
+    return [...allProducts].filter((p) => p.stock > 0).sort((a, b) => (b.salesCount ?? 0) - (a.salesCount ?? 0)).slice(0, 10);
+  }, [allProducts]);
+
+  const newArrivals = useMemo(() => {
+    if (!allProducts || allProducts.length === 0) return [];
+    return [...allProducts]
+      .filter((p) => p.stock > 0)
+      .sort((a, b) => b.id - a.id)
+      .slice(0, 10);
+  }, [allProducts]);
+
+  const productsToShow =
+    tab === "trending" ? trendingProducts :
+    tab === "new" ? newArrivals :
+    featuredProducts;
+
+  return (
+    <section className="py-12 md:py-16 bg-[#FBF7EE] border-t border-[#D4AF37]/15" data-testid="section-tabbed-shop">
+      <div className="container mx-auto px-4">
+        <motion.div initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="text-center mb-6">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+            <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">{sectionTag}</span>
+            <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+          </div>
+          <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-4" data-testid="text-tabbed-shop-heading">
+            Sacred essentials, <span className="saffron-shimmer italic font-semibold">picked for you</span>
+          </h2>
+
+          <div className="inline-flex items-center bg-white rounded-md border border-[#D4AF37]/25 p-1 gap-1 flex-wrap">
+            <button
+              onClick={() => setTab("popular")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "popular" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
+              data-testid="tab-popular"
+            >
+              <Sparkles className="h-3 w-3" />
+              Popular
+            </button>
+            <button
+              onClick={() => setTab("trending")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "trending" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
+              data-testid="tab-trending"
+            >
+              <TrendingUp className="h-3 w-3" />
+              Trending Near You{locationLoading ? "" : ` · ${city}`}
+            </button>
+            <button
+              onClick={() => setTab("new")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "new" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
+              data-testid="tab-new-arrivals"
+            >
+              <Star className="h-3 w-3" />
+              New Arrivals
+            </button>
+          </div>
+        </motion.div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+          {isLoading ? Array(10).fill(0).map((_, i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="aspect-square rounded-lg" />
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          )) : productsToShow.map((product, idx) => {
+            const hasMrp = !!product.mrp && product.mrp > product.price;
+            const savingsPct = hasMrp ? Math.round(((product.mrp! - product.price) / product.mrp!) * 100) : 0;
+            const rating = getDisplayRating(product.id, ratingsAgg?.[product.id] ?? null);
+            const primaryAlt = (product.imageAlts && product.imageAlts[0]) || `${product.name} – ${product.category} | Vedic Tatva`;
+            return (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: idx * 0.04, duration: 0.4 }}
+                className="group"
+              >
+                <div className="bg-white rounded-lg overflow-hidden border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 transition-colors flex flex-col h-full" data-testid={`card-tabbed-product-${product.id}`}>
+                  <Link href={getProductUrl(product.id, product.name)} className="block">
+                    <div className="aspect-square bg-[#F7F2E7] overflow-hidden relative p-3">
+                      <img src={optImg(product.image, 480)} srcSet={optImgSrcSet(product.image, [320, 480, 768, 1080])} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" alt={primaryAlt} loading="lazy" decoding="async" width={600} height={600} className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-500" />
+                      {tab === "trending" && (
+                        <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-md px-1.5 py-0.5 border border-emerald-100">
+                          <TrendingUp className="h-2.5 w-2.5 text-emerald-600" />
+                          <span className="text-[9px] font-semibold text-emerald-700 uppercase tracking-wider">Trending</span>
+                        </span>
+                      )}
+                      {tab === "new" && (
+                        <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-md px-1.5 py-0.5 border border-[#D4AF37]/30">
+                          <Star className="h-2.5 w-2.5 text-[#D4AF37]" />
+                          <span className="text-[9px] font-semibold text-[#6D2B35] uppercase tracking-wider">New</span>
+                        </span>
+                      )}
+                      {tab === "popular" && product.badge && (
+                        <span className="absolute top-2 left-2 bg-white/90 backdrop-blur text-[#6D2B35] text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md border border-[#D4AF37]/20">
+                          {product.badge}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <Link href={getProductUrl(product.id, product.name)}>
+                      <h3 className="font-serif text-[13px] text-[#6D2B35] font-semibold leading-snug mb-1 line-clamp-2 group-hover:text-[#D4AF37] transition-colors min-h-[2.4em]">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    <div className="inline-flex items-center gap-1 mb-1.5">
+                      <Star className="h-3 w-3 fill-[#D4AF37] text-[#D4AF37]" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-[#5a4a3a]">{rating.avg.toFixed(1)}</span>
+                      <span className="text-[10px] text-[#5a4a3a]/55">({rating.count.toLocaleString("en-IN")})</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5 mb-2 flex-wrap">
+                      <span className="font-bold text-[15px] text-[#5a4a3a]">₹{product.price.toLocaleString("en-IN")}</span>
+                      {hasMrp && (
+                        <>
+                          <span className="text-[11px] text-[#5a4a3a]/45 line-through">₹{product.mrp!.toLocaleString("en-IN")}</span>
+                          <span className="text-[10px] font-semibold text-emerald-700">{savingsPct}% off</span>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      className="mt-auto w-full rounded-md bg-[#6D2B35] hover:bg-[#5a2430] text-white text-[12px] h-8 font-semibold"
+                      data-testid={`btn-add-tabbed-${product.id}`}
+                      onClick={() => { addToCart(product); toast({ title: "Added to cart", description: `${product.name} has been added to your cart.` }); }}
+                    >
+                      <ShoppingBag className="h-3 w-3 mr-1" />
+                      {addToCartLabel}
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="text-center mt-8">
+          <Link href="/spiritual-essentials">
+            <Button variant="outline" className="rounded-md px-6 h-9 border-[#6D2B35]/25 text-[#6D2B35] hover:bg-[#6D2B35] hover:text-white text-[13px] font-semibold" data-testid="link-tabbed-view-all">
+              {viewAllLabel} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}

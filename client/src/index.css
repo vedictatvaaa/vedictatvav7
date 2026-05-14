@@ -1,0 +1,431 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --font-sans: 'Inter', sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+}
+
+:root {
+  /* Beige background: #F5F0E6 */
+  --background: 40 33% 96%;
+  /* Dark Maroon text: #2B1115 */
+  --foreground: 350 43% 12%;
+  
+  /* White cards for contrast */
+  --card: 0 0% 100%;
+  --card-foreground: 350 43% 12%;
+  
+  --popover: 0 0% 100%;
+  --popover-foreground: 350 43% 12%;
+  
+  /* Maroon Primary: #6D2B35 */
+  --primary: 350 43% 30%;
+  --primary-foreground: 40 33% 96%;
+  
+  /* Gold Secondary: #D4AF37 */
+  --secondary: 46 65% 52%;
+  --secondary-foreground: 350 43% 12%;
+  
+  /* Muted beige */
+  --muted: 40 20% 90%;
+  --muted-foreground: 350 20% 40%;
+  
+  /* Accent light gold/beige */
+  --accent: 46 40% 90%;
+  --accent-foreground: 350 43% 30%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --border: 40 20% 85%;
+  --input: 40 20% 85%;
+  --ring: 46 65% 52%;
+  
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark mode isn't explicitly required but adding soft dark theme just in case */
+  --background: 350 43% 8%;
+  --foreground: 40 33% 96%;
+  
+  --card: 350 43% 12%;
+  --card-foreground: 40 33% 96%;
+  
+  --popover: 350 43% 12%;
+  --popover-foreground: 40 33% 96%;
+  
+  --primary: 46 65% 52%;
+  --primary-foreground: 350 43% 12%;
+  
+  --secondary: 350 43% 30%;
+  --secondary-foreground: 40 33% 96%;
+  
+  --muted: 350 20% 20%;
+  --muted-foreground: 40 20% 70%;
+  
+  --accent: 350 30% 20%;
+  --accent-foreground: 46 65% 52%;
+  
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 40 33% 96%;
+  
+  --border: 350 20% 20%;
+  --input: 350 20% 20%;
+  --ring: 46 65% 52%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-foreground selection:bg-secondary/30;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+/* Custom utilities for elegant design */
+.glass-effect {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm;
+}
+.dark .glass-effect {
+  @apply bg-black/40 border-white/10;
+}
+
+.gold-gradient-text {
+  @apply bg-gradient-to-r from-[#D4AF37] to-[#B38B22] bg-clip-text text-transparent;
+}
+
+.subtle-shadow {
+  box-shadow: 0 4px 20px -2px rgba(109, 43, 53, 0.05);
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 60s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes float-petal {
+  0%   { transform: translateY(0)    rotate(0deg);   opacity: 0; }
+  10%  { opacity: var(--petal-op, 0.18); }
+  90%  { opacity: var(--petal-op, 0.18); }
+  100% { transform: translateY(90px) rotate(160deg); opacity: 0; }
+}
+.animate-float-petal {
+  animation-name: float-petal;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Incense smoke wisps for Puja Samagri category icon */
+.vt-smoke {
+  position: absolute;
+  left: 50%;
+  bottom: 38%;
+  width: 14%;
+  height: 14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.18) 45%, rgba(255,255,255,0) 75%);
+  filter: blur(6px);
+  opacity: 0;
+  transform: translate(-50%, 0) scale(0.6);
+  animation: vt-smoke-rise 4s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+.vt-smoke-1 { animation-delay: 0s;   margin-left: -8%; }
+.vt-smoke-2 { animation-delay: 1.2s;                  }
+.vt-smoke-3 { animation-delay: 2.4s; margin-left:  8%; }
+
+@keyframes vt-smoke-rise {
+  0%   { opacity: 0;    transform: translate(-50%, 0)     scale(0.5); }
+  20%  { opacity: 0.55;                                                }
+  60%  { opacity: 0.35;                                                }
+  100% { opacity: 0;    transform: translate(-50%, -120%) scale(1.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-smoke { animation: none; opacity: 0; }
+}
+
+/* === Ambient sacred backdrop (falling flowers, bel patra, sunbeams) === */
+.ambient-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0.7;
+  /* Promote to its own compositor layer so the falling-flower animation
+     never invalidates the page paint flow during scroll/INP measurement. */
+  contain: strict;
+  transform: translateZ(0);
+}
+
+.ambient-backdrop > * {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
+/* === Whole flowers — flutter, breathe, vary pace === */
+.ambient-flower {
+  top: -12vh;
+  filter: drop-shadow(0 2px 4px rgba(80, 30, 20, 0.12));
+  animation-name: ambient-flower-fall;
+  animation-iteration-count: infinite;
+  /* Overall easing: slight ease-in-out so the loop feels natural, but per-stop
+     timing functions inside the keyframes do the real "pause & dip" work. */
+  animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  opacity: 0.65;
+}
+.ambient-flower-marigold { opacity: 0.65; }
+.ambient-flower-lotus    { opacity: 0.6; }
+.ambient-flower-hibiscus { opacity: 0.6; }
+.ambient-flower-champa   { opacity: 0.65; }
+.ambient-flower-jasmine  { opacity: 0.7; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05)); }
+.ambient-flower-rose     { opacity: 0.6; }
+
+/* Flutter (rotation reverses), breathing (scale 0.85↔1.1), variable speed
+   (per-stop ease-in / ease-out so flowers "catch air" then dip). */
+@keyframes ambient-flower-fall {
+  0%   { transform: translate(0, 0)         rotate(-14deg) scale(0.85); opacity: 0;    animation-timing-function: ease-in; }
+  6%   { opacity: 0.65; }
+  14%  { transform: translate(30px, 11vh)   rotate(10deg)  scale(1.02); animation-timing-function: ease-out; }
+  26%  { transform: translate(-26px, 26vh)  rotate(-18deg) scale(0.92); animation-timing-function: ease-in; }
+  40%  { transform: translate(38px, 42vh)   rotate(16deg)  scale(1.10); animation-timing-function: ease-out; }
+  55%  { transform: translate(-32px, 58vh)  rotate(-22deg) scale(0.90); animation-timing-function: ease-in; }
+  70%  { transform: translate(28px, 76vh)   rotate(20deg)  scale(1.06); animation-timing-function: ease-out; }
+  85%  { transform: translate(-18px, 94vh)  rotate(-12deg) scale(0.96); animation-timing-function: ease-in; opacity: 0.55; }
+  100% { transform: translate(22px, 118vh)  rotate(8deg)   scale(0.88); opacity: 0; }
+}
+
+/* === Bel patra — flutter & breathe like flowers, but slower === */
+.ambient-belpatra {
+  top: -12vh;
+  filter: drop-shadow(0 1px 3px rgba(40, 70, 30, 0.1));
+  animation-name: ambient-belpatra-fall;
+  animation-iteration-count: infinite;
+  animation-timing-function: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  opacity: 0.5;
+}
+@keyframes ambient-belpatra-fall {
+  0%   { transform: translate(0, 0)         rotate(-15deg) scale(0.92); opacity: 0;   animation-timing-function: ease-in; }
+  10%  { opacity: 0.55; }
+  25%  { transform: translate(-35px, 22vh)  rotate(20deg)  scale(1.05); animation-timing-function: ease-out; }
+  45%  { transform: translate(40px, 45vh)   rotate(-25deg) scale(0.95); animation-timing-function: ease-in; }
+  65%  { transform: translate(-45px, 70vh)  rotate(28deg)  scale(1.08); animation-timing-function: ease-out; }
+  85%  { transform: translate(30px, 92vh)   rotate(-15deg) scale(0.98); animation-timing-function: ease-in; opacity: 0.45; }
+  100% { transform: translate(50px, 118vh)  rotate(18deg)  scale(0.9);  opacity: 0; }
+}
+
+/* === Diagonal sunbeams — soft warm light shafts drifting horizontally === */
+.ambient-sunbeam {
+  position: absolute;
+  top: -10vh;
+  height: 110vh;
+  background: linear-gradient(
+    to right,
+    rgba(255, 218, 140, 0)    0%,
+    rgba(255, 218, 140, 0.12) 35%,
+    rgba(255, 232, 175, 0.26) 50%,
+    rgba(255, 218, 140, 0.12) 65%,
+    rgba(255, 218, 140, 0)    100%
+  );
+  filter: blur(8px);
+  transform: rotate(var(--sunbeam-angle, 18deg));
+  transform-origin: 50% 50%;
+  animation-name: ambient-sunbeam-drift;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  opacity: 0.55;
+  pointer-events: none;
+}
+@keyframes ambient-sunbeam-drift {
+  0%, 100% { transform: translateX(-60px) rotate(var(--sunbeam-angle, 18deg)); opacity: 0.45; }
+  50%      { transform: translateX(60px)  rotate(var(--sunbeam-angle, 18deg)); opacity: 0.7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-backdrop { display: none !important; }
+  .ambient-flower, .ambient-belpatra, .ambient-sunbeam { animation: none !important; opacity: 0 !important; }
+}
+
+@media (max-width: 640px) {
+  /* Mobile devices pay the biggest INP/CPU cost for the floral animation —
+     dim it heavily, skip the sunbeam wash entirely, and drop every second
+     flower/leaf so we ship roughly half the animated SVG nodes. The visual
+     density still reads as "gentle floral drift" but the compositor has
+     far less work per frame, which directly helps INP and battery. */
+  .ambient-backdrop { opacity: 0.35; }
+  .ambient-sunbeam { display: none; }
+  .ambient-flower:nth-child(2n),
+  .ambient-belpatra:nth-child(2n) { display: none; }
+}
+
+/* Slow rotating Vedic zodiac wheel */
+.ambient-zodiac-rotate {
+  animation: ambient-zodiac-rotate 60s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes ambient-zodiac-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient-zodiac-rotate { animation: none; }
+}
+
+
+/* Slow rotating Japa mala icon (mobile bottom nav) */
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow { animation: none; }
+}
+
+/* Animated gold shimmer on the Four Pillars heading accent word */
+.pillars-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    #b8901f 0%,
+    #D4AF37 25%,
+    #f3d774 50%,
+    #D4AF37 75%,
+    #b8901f 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: pillars-shimmer 5s linear infinite;
+}
+@keyframes pillars-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillars-shimmer { animation: none; }
+}
+
+/* Animated saffron shimmer for accent words */
+.saffron-shimmer {
+  display: inline-block;
+  background-image: linear-gradient(
+    100deg,
+    #c2410c 0%,
+    #FF9933 25%,
+    #fde68a 50%,
+    #FF9933 75%,
+    #c2410c 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: #FF9933;
+  -webkit-text-fill-color: transparent;
+  animation: saffron-shimmer 5s linear infinite;
+}
+@keyframes saffron-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saffron-shimmer { animation: none; color: #FF9933; -webkit-text-fill-color: #FF9933; }
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   JapCounter — sacred ambient micro-animations
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Slow 10-second breath cycle (≈4s in, 6s out) for the mala aura. */
+@keyframes japa-breath-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.32; }
+  40%      { transform: scale(1.045); opacity: 0.62; }
+}
+.animate-japa-breath {
+  animation: japa-breath-pulse 10s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+/* Lotus petal that drifts upward and fades on each tap. */
+@keyframes japa-lotus-drift {
+  0%   { opacity: 0;    transform: translate(-50%, 0)     scale(0.55) rotate(-6deg); }
+  18%  { opacity: 0.95; transform: translate(-50%, -16px) scale(1)    rotate(0deg); }
+  100% { opacity: 0;    transform: translate(-50%, -110px) scale(1.35) rotate(8deg); }
+}
+.animate-japa-lotus {
+  animation: japa-lotus-drift 2.2s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+/* Quarter-mala milestone bloom (27 / 54 / 81). */
+@keyframes japa-milestone-bloom {
+  0%   { opacity: 0;    transform: scale(0.62); }
+  22%  { opacity: 1;    transform: scale(1.02); }
+  100% { opacity: 0;    transform: scale(1.7); }
+}
+.animate-japa-milestone {
+  animation: japa-milestone-bloom 2s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-japa-breath,
+  .animate-japa-lotus,
+  .animate-japa-milestone { animation: none; }
+}

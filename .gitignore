@@ -1,0 +1,25 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+
+# Environment and secrets
+.env
+.env.*
+
+# Cache and local directories
+.cache/
+.local/
+.upm/
+
+# Database backups
+*.sql
+*.sql.gz
+backups/
+# Local-only directories (not in git, sync'd separately)
+downloads/
+attached_assets/
+artifacts/
+uploads/

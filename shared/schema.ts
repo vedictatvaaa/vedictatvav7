@@ -1,0 +1,1529 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, check, uniqueIndex } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  role: text("role").notNull().default("user"),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  password: text("password"),
+  googleId: text("google_id").unique(),
+  avatarUrl: text("avatar_url"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  phone: text("phone"),
+  city: text("city"),
+  gotra: text("gotra"),
+  birthDate: text("birth_date"),
+  birthTime: text("birth_time"),
+  birthCity: text("birth_city"),
+  twoFactorSecret: text("two_factor_secret"),
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
+  twoFactorMethod: text("two_factor_method").default("authenticator"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+  loyaltyPoints: integer("loyalty_points").notNull().default(0),
+  referralCode: text("referral_code").unique(),
+  referredByUserId: integer("referred_by_user_id"),
+  referralBonusPaid: boolean("referral_bonus_paid").notNull().default(false),
+});
+
+export const loyaltyTransactions = pgTable("loyalty_transactions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  delta: integer("delta").notNull(),
+  reason: text("reason").notNull(),
+  refType: text("ref_type"),
+  refId: text("ref_id"),
+  note: text("note"),
+  balanceAfter: integer("balance_after").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const adminSessions = pgTable("admin_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const products = pgTable("products", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: integer("price").notNull(),
+  mrp: integer("mrp"),
+  upcEan: text("upc_ean"),
+  brand: text("brand").default("Vedic Tatva"),
+  stock: integer("stock").notNull().default(50),
+  category: text("category").notNull(),
+  image: text("image").notNull(),
+  images: text("images").array(),
+  imageAlts: text("image_alts").array(),
+  badge: text("badge"),
+  salesCount: integer("sales_count").notNull().default(0),
+  highlights: text("highlights").array(),
+  features: text("features").array(),
+  richDescription: text("rich_description"),
+  aplusImages: text("aplus_images").array(),
+  aplusEnabled: boolean("aplus_enabled").notNull().default(false),
+  slug: text("slug"),
+  variationGroupId: text("variation_group_id"),
+  variationLabel: text("variation_label"),
+  variations: text("variations"),
+  gstPercent: integer("gst_percent").notNull().default(18),
+  hsnCode: text("hsn_code"),
+  costPrice: integer("cost_price"),
+  productType: text("product_type").notNull().default("product"),
+  seoFocusKeyword: text("seo_focus_keyword"),
+  seoFaq: jsonb("seo_faq"),
+  seoVideoUrl: text("seo_video_url"),
+});
+
+export const productReviews = pgTable("product_reviews", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  productId: integer("product_id").notNull(),
+  reviewerName: text("reviewer_name").notNull(),
+  reviewerCity: text("reviewer_city"),
+  rating: integer("rating").notNull().default(5),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  images: text("images").array(),
+  customerEmail: text("customer_email"),
+  verified: boolean("verified").notNull().default(false),
+  isBoosted: boolean("is_boosted").notNull().default(false),
+  helpful: integer("helpful").notNull().default(0),
+  status: text("status").notNull().default("approved"),
+  moderatedBy: text("moderated_by"),
+  moderatedAt: timestamp("moderated_at"),
+  rejectReason: text("reject_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reviewHelpfulVotes = pgTable("review_helpful_votes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  reviewId: integer("review_id").notNull(),
+  voterKey: text("voter_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  reviewVoterUniq: uniqueIndex("review_helpful_votes_review_voter_uniq").on(t.reviewId, t.voterKey),
+}));
+
+export const productQuestions = pgTable("product_questions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  productId: integer("product_id").notNull(),
+  askerName: text("asker_name").notNull(),
+  askerEmail: text("asker_email"),
+  question: text("question").notNull(),
+  answer: text("answer"),
+  answeredBy: text("answered_by"),
+  answeredAt: timestamp("answered_at"),
+  status: text("status").notNull().default("pending"),
+  helpful: integer("helpful").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const orders = pgTable("orders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  totalAmount: integer("total_amount").notNull(),
+  subtotal: integer("subtotal"),
+  gstAmount: integer("gst_amount"),
+  status: text("status").notNull().default("pending"),
+  items: jsonb("items").notNull(),
+  shippingAddress: text("shipping_address"),
+  billingAddress: text("billing_address"),
+  customerState: text("customer_state"),
+  paymentId: text("payment_id"),
+  paymentMethod: text("payment_method"),
+  couponCode: text("coupon_code"),
+  couponDiscount: integer("coupon_discount").default(0),
+  prepaidDiscount: integer("prepaid_discount").default(0),
+  shippingCharges: integer("shipping_charges").default(0),
+  codCharges: integer("cod_charges").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const invoices = pgTable("invoices", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id").notNull(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  financialYear: text("financial_year").notNull(),
+  sequenceNumber: integer("sequence_number").notNull(),
+  subtotal: integer("subtotal").notNull(),
+  cgstAmount: integer("cgst_amount").notNull().default(0),
+  sgstAmount: integer("sgst_amount").notNull().default(0),
+  igstAmount: integer("igst_amount").notNull().default(0),
+  totalGst: integer("total_gst").notNull(),
+  roundOff: integer("round_off").notNull().default(0),
+  grandTotal: integer("grand_total").notNull(),
+  customerState: text("customer_state"),
+  isIgst: boolean("is_igst").notNull().default(false),
+  pdfUrl: text("pdf_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dispatches = pgTable("dispatches", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id").notNull(),
+  courierName: text("courier_name"),
+  trackingNumber: text("tracking_number"),
+  waybill: text("waybill"),
+  dispatchLabelUrl: text("dispatch_label_url"),
+  dispatchDate: timestamp("dispatch_date").defaultNow(),
+  // Shiprocket integration fields. Populated when admin creates a shipment via
+  // the Shiprocket workflow; manual dispatches leave them null and the row
+  // continues to behave exactly as before.
+  shiprocketOrderId: text("shiprocket_order_id"),
+  shiprocketShipmentId: text("shiprocket_shipment_id"),
+  courierCompanyId: integer("courier_company_id"),
+  pickupScheduledDate: timestamp("pickup_scheduled_date"),
+  pickupTokenNumber: text("pickup_token_number"),
+  manifestUrl: text("manifest_url"),
+  shippingStatus: text("shipping_status"),
+  weightGrams: integer("weight_grams"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pandits = pgTable("pandits", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  specialization: text("specialization").notNull(),
+  languages: text("languages").notNull(),
+  experience: integer("experience").notNull(),
+  fees: integer("fees").notNull(),
+  rating: real("rating").notNull().default(4.5),
+  reviewCount: integer("review_count").notNull().default(0),
+  verified: boolean("verified").notNull().default(false),
+  image: text("image"),
+  phone: text("phone"),
+  email: text("email"),
+  bio: text("bio"),
+  education: text("education"),
+  createdAt: timestamp("created_at").defaultNow(),
+  boostType: text("boost_type"),
+  boostStartDate: timestamp("boost_start_date"),
+  boostEndDate: timestamp("boost_end_date"),
+  boostActive: boolean("boost_active").notNull().default(false),
+  slug: text("slug").unique(),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  serviceArea: text("service_area"),
+  regionalOrigin: text("regional_origin"),
+  availability: text("availability").default("available"),
+  passwordHash: text("password_hash"),
+  lastLoginAt: timestamp("last_login_at"),
+  commissionPct: integer("commission_pct").default(25),
+  tier: text("tier").notNull().default("free"), // free | silver | gold | guru_elite
+  // Optional UTC expiry for paid tiers. NULL = perpetual (legacy/admin set).
+  // Server treats expired rows as effectively "free" until renewal.
+  tierExpiresAt: timestamp("tier_expires_at"),
+  state: text("state"), // for gold-tier state-wide reach matching
+  // Pandit storefronts (Phase 2 affiliate program):
+  // commission % the pandit earns on referred shop product orders.
+  // Tier defaults: free=0, silver=8, gold=12, guru_elite=15.
+  // Stored per-pandit so admin can override on a case-by-case basis.
+  productCommissionPct: integer("product_commission_pct").default(0),
+  // Lifelong member id stamped automatically on account creation. Format
+  // VT-PND-<id padded to 5 digits>. Immutable once set.
+  membershipNo: text("membership_no").unique(),
+  // Admin-controlled flag. When true, the pandit can download/share their
+  // dual-sided business card from the dashboard. Defaults to true so any
+  // pandit (incl. seeded fixtures) gets immediate access; admin can revoke.
+  cardIssued: boolean("card_issued").notNull().default(true),
+  cardIssuedAt: timestamp("card_issued_at"),
+});
+
+export const panditSessions = pgTable("pandit_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const panditApplications = pgTable("pandit_applications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  city: text("city").notNull(),
+  serviceArea: text("service_area"),
+  regionalOrigin: text("regional_origin"),
+  gotra: text("gotra"),
+  parampara: text("parampara"),
+  vedaSpecialization: text("veda_specialization"),
+  yearsExperience: integer("years_experience").notNull(),
+  pujaTypes: text("puja_types").notNull(),
+  languages: text("languages").notNull(),
+  feeRangeMin: integer("fee_range_min").notNull(),
+  feeRangeMax: integer("fee_range_max").notNull(),
+  education: text("education"),
+  certificates: text("certificates"),
+  aadhaarLast4: text("aadhaar_last4"),
+  panMasked: text("pan_masked"),
+  sampleVideoUrl: text("sample_video_url"),
+  photo: text("photo"),
+  bio: text("bio"),
+  membership: text("membership").default("free"),
+  status: text("status").notNull().default("pending"),
+  adminNote: text("admin_note"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const franchiseApplications = pgTable("franchise_applications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fullName: text("full_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  city: text("city").notNull(),
+  state: text("state"),
+  pincode: text("pincode"),
+  model: text("model").notNull(),
+  investmentReady: text("investment_ready"),
+  occupation: text("occupation"),
+  hasShop: boolean("has_shop").notNull().default(false),
+  shopArea: text("shop_area"),
+  whyJoin: text("why_join"),
+  hearAbout: text("hear_about"),
+  status: text("status").notNull().default("new"),
+  adminNote: text("admin_note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const panditReviews = pgTable("pandit_reviews", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  reviewerName: text("reviewer_name").notNull(),
+  reviewerEmail: text("reviewer_email"),
+  reviewerCity: text("reviewer_city"),
+  rating: real("rating").notNull(),
+  comment: text("comment"),
+  serviceType: text("service_type"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const astrologers = pgTable("astrologers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  specialization: text("specialization").notNull(),
+  languages: text("languages").notNull(),
+  experience: integer("experience").notNull(),
+  fees: integer("fees").notNull(),
+  rating: real("rating").notNull().default(4.5),
+  reviewCount: integer("review_count").notNull().default(0),
+  verified: boolean("verified").notNull().default(false),
+  image: text("image"),
+  phone: text("phone"),
+  email: text("email"),
+  bio: text("bio"),
+  certification: text("certification"),
+  boostType: text("boost_type"),
+  boostStartDate: timestamp("boost_start_date"),
+  boostEndDate: timestamp("boost_end_date"),
+  boostActive: boolean("boost_active").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pujaBookings = pgTable("puja_bookings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  panditId: integer("pandit_id"),
+  pujaType: text("puja_type").notNull(),
+  mode: text("mode").notNull().default("offline"),
+  date: text("date").notNull(),
+  timeSlot: text("time_slot").notNull(),
+  location: text("location"),
+  contactName: text("contact_name").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  status: text("status").notNull().default("pending"),
+  totalAmount: integer("total_amount").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  confirmedTimeSlot: text("confirmed_time_slot"),
+  samagriList: jsonb("samagri_list"),
+  samagriSentAt: timestamp("samagri_sent_at"),
+  tipAmountInr: integer("tip_amount_inr").notNull().default(0),
+  tipPaidAt: timestamp("tip_paid_at"),
+  completedAt: timestamp("completed_at"),
+  declineReason: text("decline_reason"),
+  accessToken: text("access_token"),
+  needsReassignment: boolean("needs_reassignment").notNull().default(false),
+  reassignmentFlaggedAt: timestamp("reassignment_flagged_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const pujaBookingMessages = pgTable("puja_booking_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer("booking_id").notNull(),
+  senderType: text("sender_type").notNull(), // 'pandit' | 'customer' | 'system'
+  senderName: text("sender_name").notNull(),
+  message: text("message").notNull(),
+  attachmentUrl: text("attachment_url"),
+  readByCustomer: boolean("read_by_customer").notNull().default(false),
+  readByPandit: boolean("read_by_pandit").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertPujaBookingMessageSchema = createInsertSchema(pujaBookingMessages).omit({ id: true, createdAt: true, readByCustomer: true, readByPandit: true });
+export type PujaBookingMessage = typeof pujaBookingMessages.$inferSelect;
+export type InsertPujaBookingMessage = z.infer<typeof insertPujaBookingMessageSchema>;
+
+// Anonymous pre-booking chat between a logged-in user and a pandit.
+// Contact details (phone/email/URL) are sanitized server-side before insert.
+export const panditChats = pgTable("pandit_chats", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  userId: integer("user_id").notNull(),
+  userEmail: text("user_email").notNull(),
+  senderType: text("sender_type").notNull(), // 'user' | 'pandit' | 'system'
+  message: text("message").notNull(),
+  attachmentUrl: text("attachment_url"),
+  sanitized: boolean("sanitized").notNull().default(false),
+  readByUser: boolean("read_by_user").notNull().default(false),
+  readByPandit: boolean("read_by_pandit").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertPanditChatSchema = createInsertSchema(panditChats).omit({ id: true, createdAt: true, sanitized: true, readByUser: true, readByPandit: true });
+export type PanditChat = typeof panditChats.$inferSelect;
+export type InsertPanditChat = z.infer<typeof insertPanditChatSchema>;
+
+export const pujaTips = pgTable("puja_tips", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer("booking_id").notNull(),
+  panditId: integer("pandit_id").notNull(),
+  userId: integer("user_id"),
+  amountInr: integer("amount_inr").notNull(),
+  paymentMethod: text("payment_method").notNull().default("razorpay"),
+  paymentRef: text("payment_ref").unique(),
+  status: text("status").notNull().default("pending"), // pending|paid|failed
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type PujaTip = typeof pujaTips.$inferSelect;
+
+export const astrologyBookings = pgTable("astrology_bookings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  serviceType: text("service_type").notNull(),
+  fullName: text("full_name").notNull(),
+  birthDate: text("birth_date").notNull(),
+  birthTime: text("birth_time"),
+  birthCity: text("birth_city"),
+  partnerName: text("partner_name"),
+  partnerBirthDate: text("partner_birth_date"),
+  status: text("status").notNull().default("pending"),
+  totalAmount: integer("total_amount").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const socialProofSettings = pgTable("social_proof_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  realRatio: integer("real_ratio").notNull().default(60),
+  boostRatio: integer("boost_ratio").notNull().default(40),
+  viewMin: integer("view_min").notNull().default(12),
+  viewMax: integer("view_max").notNull().default(45),
+  salesBoostPercent: integer("sales_boost_percent").notNull().default(15),
+  urgencyEnabled: boolean("urgency_enabled").notNull().default(true),
+  enabled: boolean("enabled").notNull().default(true),
+});
+
+export const boostEvents = pgTable("boost_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  city: text("city").notNull(),
+  productId: integer("product_id"),
+  type: text("type").notNull(),
+});
+
+// FOMO sales-promotion popups. Admin creates a campaign with a window
+// (startsAt → endsAt), an optional coupon code, and a CTA. The frontend
+// fetches the currently-active one and shows a centered modal with a
+// live countdown. Frequency caps prevent annoying repeat shows.
+export const salesPopups = pgTable("sales_popups", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  couponCode: text("coupon_code"),
+  ctaLabel: text("cta_label").notNull().default("Shop Now"),
+  ctaUrl: text("cta_url").notNull().default("/products"),
+  startsAt: timestamp("starts_at").notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+  // Delay before showing on each visit, gives the page time to settle.
+  showAfterSeconds: integer("show_after_seconds").notNull().default(8),
+  // "session" = once per browser session, "daily" = once per calendar day,
+  // "always" = every visit (still capped to once per session in practice).
+  frequency: text("frequency").notNull().default("session"),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const siteSettings = pgTable("site_settings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  siteName: text("site_name").notNull().default("Vedic Tatva"),
+  tagline: text("tagline").notNull().default("Heritage of Nature Wellness & Purity"),
+  logoUrl: text("logo_url"),
+  heroImageUrl: text("hero_image_url"),
+  heroHeading: text("hero_heading").notNull().default("Vedic Tatva"),
+  heroSubheading: text("hero_subheading").notNull().default("Connecting you with divine wisdom and authentic spiritual practices."),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  whatsappNumber: text("whatsapp_number"),
+  socialInstagram: text("social_instagram"),
+  socialFacebook: text("social_facebook"),
+  socialYoutube: text("social_youtube"),
+  bestsellersMode: text("bestsellers_mode").notNull().default("auto"),
+  bestsellerProductIds: integer("bestseller_product_ids").array().notNull().default(sql`ARRAY[]::integer[]`),
+  bestsellersLimit: integer("bestsellers_limit").notNull().default(6),
+  // Appearance Studio — live theming applied at runtime via ThemeApplier.
+  // Colors are stored as hex (#rrggbb) and converted to HSL at inject time.
+  primaryColor: text("primary_color").notNull().default("#6D2B35"),
+  secondaryColor: text("secondary_color").notNull().default("#D4AF37"),
+  accentColor: text("accent_color").notNull().default("#E8D5A8"),
+  backgroundColor: text("background_color").notNull().default("#F5F0E6"),
+  foregroundColor: text("foreground_color").notNull().default("#2B1115"),
+  bodyFont: text("body_font").notNull().default("Inter"),
+  headingFont: text("heading_font").notNull().default("Playfair Display"),
+  faviconUrl: text("favicon_url"),
+  // Ambient floral backdrop (drifting marigold/lotus/jasmine SVGs). Off by
+  // default — admin can re-enable it from Site Settings → Appearance.
+  ambientFloralEnabled: boolean("ambient_floral_enabled").notNull().default(false),
+  // Light-weight analytics hooks surfaced by ThemeApplier when set.
+  googleAnalyticsId: text("google_analytics_id"),
+  facebookPixelId: text("facebook_pixel_id"),
+  // Tag Manager container (loads ALL tags you configure in the GTM UI — GA4,
+  // Ads, conversion pixels — without code changes).
+  gtmContainerId: text("gtm_container_id"),
+  // Raw content value from the Search Console "HTML tag" verification option.
+  gscVerification: text("gsc_verification"),
+  // Google Business Profile (GMB). URL used in Organization schema sameAs.
+  googleBusinessProfileUrl: text("google_business_profile_url"),
+  // Postal address for LocalBusiness JSON-LD. Optional — when streetAddress
+  // is missing we emit an Organization schema instead of LocalBusiness.
+  businessStreet: text("business_street"),
+  businessCity: text("business_city"),
+  businessRegion: text("business_region"),
+  businessPostalCode: text("business_postal_code"),
+  businessCountry: text("business_country").default("IN"),
+  // Last Merchant Center sync (push) result. Persisted so the admin tab
+  // shows the last attempt even after a page refresh.
+  lastMerchantSyncAt: timestamp("last_merchant_sync_at"),
+  lastMerchantSyncResult: jsonb("last_merchant_sync_result"),
+  // Site-wide promo ribbon (the slim maroon strip under the navbar).
+  // Admin can toggle the whole bar on/off, control how fast it auto-rotates,
+  // and edit the list of slides (icon/eyebrow/title/detail/cta/href) without
+  // a code change.
+  ribbonEnabled: boolean("ribbon_enabled").notNull().default(false),
+  ribbonRotationMs: integer("ribbon_rotation_ms").notNull().default(5000),
+  ribbonItems: jsonb("ribbon_items").notNull().default(sql`'[]'::jsonb`),
+  // When ON, every public HTML page navigation is redirected to the branded
+  // /offline.html outage page (with the Sacred Symbols mini-game). API
+  // routes, /admin and /offline.html itself are never affected. Useful
+  // during deploys, DB migrations, or any planned downtime.
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+});
+
+// Abandoned cart capture. The frontend POSTs here when a shopper enters
+// their email at checkout but does not complete the order. A background
+// scheduler emails them a recovery nudge after a configurable delay.
+export const abandonedCarts = pgTable("abandoned_carts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull(),
+  customerName: text("customer_name"),
+  cartTotal: integer("cart_total").notNull().default(0),
+  itemCount: integer("item_count").notNull().default(0),
+  items: jsonb("items").notNull().default(sql`'[]'::jsonb`),
+  recovered: boolean("recovered").notNull().default(false),
+  nudgeSentAt: timestamp("nudge_sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit({
+  id: true, createdAt: true, updatedAt: true, nudgeSentAt: true, recovered: true,
+});
+export type InsertAbandonedCart = z.infer<typeof insertAbandonedCartSchema>;
+export type AbandonedCart = typeof abandonedCarts.$inferSelect;
+
+export const coupons = pgTable("coupons", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  type: text("type").notNull().default("percentage"),
+  value: integer("value").notNull(),
+  minOrderAmount: integer("min_order_amount").notNull().default(0),
+  maxDiscount: integer("max_discount"),
+  maxUses: integer("max_uses"),
+  usedCount: integer("used_count").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const subscriptions = pgTable("subscriptions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone"),
+  productId: integer("product_id").notNull(),
+  productName: text("product_name").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  frequency: text("frequency").notNull().default("monthly"),
+  price: integer("price").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  pincode: text("pincode"),
+  status: text("status").notNull().default("active"),
+  nextDelivery: timestamp("next_delivery"),
+  lastDelivery: timestamp("last_delivery"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const orderLookupOtps = pgTable("order_lookup_otps", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull(),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertOrderLookupOtpSchema = createInsertSchema(orderLookupOtps).omit({ id: true, createdAt: true });
+export type InsertOrderLookupOtp = z.infer<typeof insertOrderLookupOtpSchema>;
+export type OrderLookupOtp = typeof orderLookupOtps.$inferSelect;
+
+export const returnTickets = pgTable("return_tickets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone"),
+  productName: text("product_name").notNull(),
+  reason: text("reason").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("pending"),
+  adminNotes: text("admin_notes"),
+  refundId: text("refund_id").unique(),
+  refundAmount: integer("refund_amount"),
+  refundStatus: text("refund_status"),
+  refundedAt: timestamp("refunded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const donations = pgTable("donations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  nameHindi: text("name_hindi"),
+  description: text("description").notNull(),
+  longDescription: text("long_description"),
+  image: text("image").notNull(),
+  category: text("category").notNull(),
+  suggestedAmounts: text("suggested_amounts").array(),
+  minAmount: integer("min_amount").notNull().default(101),
+  active: boolean("active").notNull().default(true),
+  benefitsText: text("benefits_text"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const donationOrders = pgTable("donation_orders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  donationId: integer("donation_id").notNull(),
+  donationName: text("donation_name").notNull(),
+  donorName: text("donor_name").notNull(),
+  donorEmail: text("donor_email").notNull(),
+  donorPhone: text("donor_phone"),
+  amount: integer("amount").notNull(),
+  gotra: text("gotra"),
+  dedicatedTo: text("dedicated_to"),
+  occasion: text("occasion"),
+  message: text("message"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const seoPages = pgTable("seo_pages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  pagePath: text("page_path").notNull().unique(),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  metaKeywords: text("meta_keywords"),
+  canonicalUrl: text("canonical_url"),
+  ogTitle: text("og_title"),
+  ogDescription: text("og_description"),
+  ogImage: text("og_image"),
+  ogType: text("og_type").default("website"),
+  twitterTitle: text("twitter_title"),
+  twitterDescription: text("twitter_description"),
+  twitterImage: text("twitter_image"),
+  robotsIndex: boolean("robots_index").notNull().default(true),
+  robotsFollow: boolean("robots_follow").notNull().default(true),
+  priority: real("priority").default(0.5),
+  changeFreq: text("change_freq").default("weekly"),
+  schemaMarkup: text("schema_markup"),
+  customHeadTags: text("custom_head_tags"),
+  h1Override: text("h1_override"),
+  breadcrumbLabel: text("breadcrumb_label"),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const seoRedirects = pgTable("seo_redirects", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  fromPath: text("from_path").notNull().unique(),
+  toPath: text("to_path").notNull(),
+  statusCode: integer("status_code").notNull().default(301),
+  hits: integer("hits").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const seoBacklinks = pgTable("seo_backlinks", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sourceUrl: text("source_url").notNull(),
+  targetPath: text("target_path").notNull(),
+  anchorText: text("anchor_text"),
+  domainAuthority: integer("domain_authority"),
+  linkType: text("link_type").default("dofollow"),
+  status: text("status").default("active"),
+  discoveredAt: timestamp("discovered_at").defaultNow(),
+  note: text("note"),
+});
+
+export const seoKeywordTargets = pgTable("seo_keyword_targets", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  keyword: text("keyword").notNull().unique(),
+  targetPath: text("target_path").notNull(),
+  intent: text("intent").notNull().default("transactional"),
+  priority: integer("priority").notNull().default(5),
+  cluster: text("cluster").notNull().default("general"),
+  language: text("language").notNull().default("en"),
+  status: text("status").notNull().default("active"),
+  lastOptimizedAt: timestamp("last_optimized_at"),
+  lastScore: integer("last_score"),
+  lastError: text("last_error"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const searchQueries = pgTable("search_queries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  query: text("query").notNull(),
+  normalized: text("normalized").notNull(),
+  resultCount: integer("result_count").notNull().default(0),
+  hits: integer("hits").notNull().default(1),
+  lastSeenAt: timestamp("last_seen_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const matrimonyProfiles = pgTable("matrimony_profiles", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  profileType: text("profile_type").notNull(),
+  fullName: text("full_name").notNull(),
+  gender: text("gender").notNull(),
+  dateOfBirth: text("date_of_birth").notNull(),
+  age: integer("age").notNull(),
+  height: text("height"),
+  weight: text("weight"),
+  complexion: text("complexion"),
+  gotra: text("gotra"),
+  manglik: text("manglik"),
+  religion: text("religion").notNull().default("Hindu"),
+  caste: text("caste"),
+  subCaste: text("sub_caste"),
+  motherTongue: text("mother_tongue"),
+  education: text("education").notNull(),
+  occupation: text("occupation").notNull(),
+  annualIncome: text("annual_income"),
+  employedIn: text("employed_in"),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  country: text("country").notNull().default("India"),
+  maritalStatus: text("marital_status").notNull().default("Never Married"),
+  diet: text("diet"),
+  smoking: text("smoking"),
+  drinking: text("drinking"),
+  aboutMe: text("about_me"),
+  familyType: text("family_type"),
+  familyStatus: text("family_status"),
+  fatherOccupation: text("father_occupation"),
+  motherOccupation: text("mother_occupation"),
+  siblings: text("siblings"),
+  partnerAgeMin: integer("partner_age_min"),
+  partnerAgeMax: integer("partner_age_max"),
+  partnerHeightMin: text("partner_height_min"),
+  partnerHeightMax: text("partner_height_max"),
+  partnerEducation: text("partner_education"),
+  partnerOccupation: text("partner_occupation"),
+  partnerCaste: text("partner_caste"),
+  partnerCity: text("partner_city"),
+  partnerExpectations: text("partner_expectations"),
+  contactName: text("contact_name").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  contactRelation: text("contact_relation"),
+  photo: text("photo"),
+  kundliDetails: text("kundli_details"),
+  birthTime: text("birth_time"),
+  birthPlace: text("birth_place"),
+  rashi: text("rashi"),
+  nakshatra: text("nakshatra"),
+  verified: boolean("verified").notNull().default(false),
+  approved: boolean("approved").notNull().default(false),
+  featured: boolean("featured").notNull().default(false),
+  status: text("status").notNull().default("pending"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Admin audit log — append-only trail of sensitive admin writes
+// (settings saves, refunds, ticket status changes, integration pings, etc.)
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  actor: text("actor"),          // masked admin token tail or username
+  action: text("action").notNull(),       // e.g. "site-settings.save"
+  target: text("target"),                 // e.g. "order:123" or "integration:razorpay"
+  details: jsonb("details"),              // structured context
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const newsletterSubscribers = pgTable("newsletter_subscribers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull().unique(),
+  language: text("language").notNull().default("en"),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Marketing email log — one row per attempted send. Used by the scheduler to
+// avoid sending duplicates (cart_1/2/3, welcome_1/2) and by admins to audit
+// broadcast deliverability.
+export const emailSends = pgTable("email_sends", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  recipientEmail: text("recipient_email").notNull(),
+  // 'abandoned_cart_1' | 'abandoned_cart_2' | 'abandoned_cart_3' |
+  // 'welcome_1' | 'welcome_2' | 'broadcast'
+  kind: text("kind").notNull(),
+  // For abandoned_cart_* this is the abandoned_carts.id; for welcome_* this
+  // is the newsletter_subscribers.id; for broadcast it's the campaign id.
+  relatedId: integer("related_id"),
+  scheduledFor: timestamp("scheduled_for"),
+  sentAt: timestamp("sent_at"),
+  status: text("status").notNull().default("queued"), // queued | sent | failed | skipped
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertEmailSendSchema = createInsertSchema(emailSends).omit({ id: true, createdAt: true });
+export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
+export type EmailSend = typeof emailSends.$inferSelect;
+
+// One-shot newsletter campaign blast.
+export const newsletterCampaigns = pgTable("newsletter_campaigns", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  subject: text("subject").notNull(),
+  previewText: text("preview_text"),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text"),
+  segment: text("segment").notNull().default("all"), // all | last_30_days | csv
+  recipientCount: integer("recipient_count").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failureCount: integer("failure_count").notNull().default(0),
+  status: text("status").notNull().default("draft"), // draft | sending | sent | failed
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  sentAt: timestamp("sent_at"),
+});
+export const insertNewsletterCampaignSchema = createInsertSchema(newsletterCampaigns).omit({
+  id: true, createdAt: true, sentAt: true, sentCount: true, failureCount: true, recipientCount: true, status: true,
+});
+export type InsertNewsletterCampaign = z.infer<typeof insertNewsletterCampaignSchema>;
+export type NewsletterCampaign = typeof newsletterCampaigns.$inferSelect;
+
+// Email-level unsubscribe (covers guest / cart-abandoner emails too — they
+// may not have a newsletter_subscribers row).
+export const emailUnsubscribes = pgTable("email_unsubscribes", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull().unique(),
+  source: text("source"), // which email/kind triggered the unsubscribe
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type EmailUnsubscribe = typeof emailUnsubscribes.$inferSelect;
+
+// =====================================================================
+// Notifications log + per-kind settings (Task #20: WhatsApp + SMS journey)
+// =====================================================================
+export const NOTIFICATION_CHANNELS = ["whatsapp", "sms", "email"] as const;
+export type NotificationChannel = typeof NOTIFICATION_CHANNELS[number];
+
+export const NOTIFICATION_KINDS = [
+  "payment_received",
+  "order_confirmed",
+  "order_shipped",
+  "out_for_delivery",
+  "delivered",
+  "refund_initiated",
+  "abandoned_cart_wa",
+  "review_request_2",
+  "test",
+] as const;
+export type NotificationKind = typeof NOTIFICATION_KINDS[number];
+
+export const NOTIFICATION_STATUSES = ["sent", "skipped", "failed"] as const;
+export type NotificationStatus = typeof NOTIFICATION_STATUSES[number];
+
+export const notificationLog = pgTable("notification_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id"),
+  recipientPhone: text("recipient_phone"),
+  recipientEmail: text("recipient_email"),
+  channel: text("channel").$type<NotificationChannel>().notNull(),
+  kind: text("kind").$type<NotificationKind>().notNull(),
+  status: text("status").$type<NotificationStatus>().notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  channelChk: check("notification_log_channel_chk", sql`${t.channel} IN ('whatsapp','sms','email')`),
+  statusChk: check("notification_log_status_chk", sql`${t.status} IN ('sent','skipped','failed')`),
+  kindChk: check("notification_log_kind_chk", sql`${t.kind} IN ('payment_received','order_confirmed','order_shipped','out_for_delivery','delivered','refund_initiated','abandoned_cart_wa','review_request_2','test')`),
+  // DB-level idempotency guards. Cooperate with ON CONFLICT DO NOTHING in the
+  // app so concurrent webhook retries cannot double-send for the same milestone.
+  orderKindSentUniq: uniqueIndex("notification_log_order_kind_sent_uniq")
+    .on(t.orderId, t.kind)
+    .where(sql`status = 'sent' AND order_id IS NOT NULL`),
+  phoneKindDayUniq: uniqueIndex("notification_log_phone_kind_day_uniq")
+    .on(t.recipientPhone, t.kind, sql`((created_at)::date)`)
+    .where(sql`status = 'sent' AND order_id IS NULL AND recipient_phone IS NOT NULL`),
+}));
+export const insertNotificationLogSchema = createInsertSchema(notificationLog).omit({ id: true, createdAt: true });
+export type InsertNotificationLog = z.infer<typeof insertNotificationLogSchema>;
+export type NotificationLog = typeof notificationLog.$inferSelect;
+
+export const notificationSettings = pgTable("notification_settings", {
+  id: integer("id").primaryKey().default(1),
+  paymentReceived: boolean("payment_received").notNull().default(true),
+  orderConfirmed: boolean("order_confirmed").notNull().default(true),
+  orderShipped: boolean("order_shipped").notNull().default(true),
+  outForDelivery: boolean("out_for_delivery").notNull().default(true),
+  delivered: boolean("delivered").notNull().default(true),
+  refundInitiated: boolean("refund_initiated").notNull().default(true),
+  abandonedCartWa: boolean("abandoned_cart_wa").notNull().default(true),
+  reviewRequest2: boolean("review_request_2").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+
+export const kathaStorage = pgTable("katha_storage", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  god: text("god").notNull(),
+  kathaTitle: text("katha_title").notNull(),
+  language: text("language").notNull(),
+  content: jsonb("content").notNull(),
+  audioData: text("audio_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users);
+export const insertKathaStorageSchema = createInsertSchema(kathaStorage);
+export const insertNewsletterSubscriberSchema = createInsertSchema(newsletterSubscribers).omit({ id: true, createdAt: true });
+export type InsertNewsletterSubscriber = z.infer<typeof insertNewsletterSubscriberSchema>;
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+export const insertProductSchema = createInsertSchema(products);
+export const insertProductReviewSchema = createInsertSchema(productReviews);
+export const insertProductQuestionSchema = createInsertSchema(productQuestions).omit({ id: true, createdAt: true, answeredAt: true });
+export type InsertProductQuestion = z.infer<typeof insertProductQuestionSchema>;
+export type ProductQuestion = typeof productQuestions.$inferSelect;
+export const insertOrderSchema = createInsertSchema(orders);
+export const insertPanditSchema = createInsertSchema(pandits);
+export const insertPanditReviewSchema = createInsertSchema(panditReviews);
+export const insertPanditApplicationSchema = createInsertSchema(panditApplications).omit({ id: true, status: true, adminNote: true, reviewedAt: true, createdAt: true });
+export const insertFranchiseApplicationSchema = createInsertSchema(franchiseApplications).omit({ id: true, status: true, adminNote: true, createdAt: true });
+export const insertPujaBookingSchema = createInsertSchema(pujaBookings);
+export const insertAstrologyBookingSchema = createInsertSchema(astrologyBookings);
+export const insertSocialProofSettingsSchema = createInsertSchema(socialProofSettings);
+export const insertBoostEventSchema = createInsertSchema(boostEvents);
+// Coerce ISO date strings from JSON requests into Date objects so the
+// drizzle-zod-generated schema accepts what the admin form actually sends.
+export const insertSalesPopupSchema = createInsertSchema(salesPopups, {
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+}).omit({ id: true, createdAt: true });
+// Promo ribbon slide — validated structure for the jsonb `ribbonItems` column.
+// href must be a relative path (starting with /) or an http(s) URL — this
+// blocks javascript:, data:, vbscript: and other dangerous URL schemes from
+// reaching the rendered <a href>.
+const safeHrefSchema = z.string().trim().min(1).max(500).refine(
+  (v) => /^\//.test(v) || /^https?:\/\//i.test(v),
+  { message: "Link must start with '/' or 'https://'" },
+);
+export const ribbonItemSchema = z.object({
+  id: z.string().trim().min(1).max(64),
+  iconName: z.string().trim().min(1).max(40),
+  eyebrow: z.string().max(60).default(""),
+  title: z.string().trim().min(1).max(200),
+  detail: z.string().max(300).default(""),
+  href: safeHrefSchema,
+  cta: z.string().max(40).default(""),
+});
+export type RibbonItem = z.infer<typeof ribbonItemSchema>;
+
+export const insertSiteSettingsSchema = createInsertSchema(siteSettings, {
+  ribbonItems: z.array(ribbonItemSchema).max(20).optional(),
+  ribbonRotationMs: z.number().int().min(1500).max(60000).optional(),
+  ribbonEnabled: z.boolean().optional(),
+  maintenanceMode: z.boolean().optional(),
+});
+export const insertAstrologerSchema = createInsertSchema(astrologers);
+export const insertCouponSchema = createInsertSchema(coupons);
+export const insertSubscriptionSchema = createInsertSchema(subscriptions);
+export const insertReturnTicketSchema = createInsertSchema(returnTickets);
+export const insertDonationSchema = createInsertSchema(donations);
+export const insertDonationOrderSchema = createInsertSchema(donationOrders);
+export const insertSeoPageSchema = createInsertSchema(seoPages);
+export const insertMatrimonyProfileSchema = createInsertSchema(matrimonyProfiles).omit({ id: true, createdAt: true });
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLogs).omit({ id: true, createdAt: true });
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({ id: true, createdAt: true });
+export const insertDispatchSchema = createInsertSchema(dispatches).omit({ id: true, createdAt: true });
+
+// Types
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertDispatch = z.infer<typeof insertDispatchSchema>;
+export type Dispatch = typeof dispatches.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof products.$inferSelect;
+export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
+export type ProductReview = typeof productReviews.$inferSelect;
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type Order = typeof orders.$inferSelect;
+export type InsertPandit = z.infer<typeof insertPanditSchema>;
+export type Pandit = typeof pandits.$inferSelect;
+export type InsertPanditReview = z.infer<typeof insertPanditReviewSchema>;
+export type PanditReview = typeof panditReviews.$inferSelect;
+export type InsertPanditApplication = z.infer<typeof insertPanditApplicationSchema>;
+export type PanditApplication = typeof panditApplications.$inferSelect;
+export type InsertFranchiseApplication = z.infer<typeof insertFranchiseApplicationSchema>;
+export type FranchiseApplication = typeof franchiseApplications.$inferSelect;
+export type InsertPujaBooking = z.infer<typeof insertPujaBookingSchema>;
+export type PujaBooking = typeof pujaBookings.$inferSelect;
+export type InsertAstrologyBooking = z.infer<typeof insertAstrologyBookingSchema>;
+export type AstrologyBooking = typeof astrologyBookings.$inferSelect;
+export type SocialProofSettings = typeof socialProofSettings.$inferSelect;
+export type InsertSocialProofSettings = z.infer<typeof insertSocialProofSettingsSchema>;
+export type BoostEvent = typeof boostEvents.$inferSelect;
+export type InsertBoostEvent = z.infer<typeof insertBoostEventSchema>;
+export type SalesPopup = typeof salesPopups.$inferSelect;
+export type InsertSalesPopup = z.infer<typeof insertSalesPopupSchema>;
+export type SiteSettings = typeof siteSettings.$inferSelect;
+export type InsertSiteSettings = z.infer<typeof insertSiteSettingsSchema>;
+export type Coupon = typeof coupons.$inferSelect;
+export type InsertCoupon = z.infer<typeof insertCouponSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type ReturnTicket = typeof returnTickets.$inferSelect;
+export type InsertReturnTicket = z.infer<typeof insertReturnTicketSchema>;
+export type Astrologer = typeof astrologers.$inferSelect;
+export type InsertAstrologer = z.infer<typeof insertAstrologerSchema>;
+export type Donation = typeof donations.$inferSelect;
+export type InsertDonation = z.infer<typeof insertDonationSchema>;
+export type DonationOrder = typeof donationOrders.$inferSelect;
+export type InsertDonationOrder = z.infer<typeof insertDonationOrderSchema>;
+export type SeoPage = typeof seoPages.$inferSelect;
+export type InsertSeoPage = z.infer<typeof insertSeoPageSchema>;
+export type MatrimonyProfile = typeof matrimonyProfiles.$inferSelect;
+export type InsertMatrimonyProfile = z.infer<typeof insertMatrimonyProfileSchema>;
+export type KathaStorageEntry = typeof kathaStorage.$inferSelect;
+export type InsertKathaStorage = z.infer<typeof insertKathaStorageSchema>;
+
+export const aiCache = pgTable("ai_cache", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  cacheType: text("cache_type").notNull(),
+  cacheKey: text("cache_key").notNull(),
+  data: jsonb("data").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AiCache = typeof aiCache.$inferSelect;
+
+// =====================================================================
+// Tirth Yatra (organized pilgrimage tours), Lucky Draw, Pilgrimage Card
+// =====================================================================
+
+export const tirthYatraTours = pgTable("tirth_yatra_tours", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  shortName: text("short_name"),
+  route: text("route").notNull(),
+  departureCity: text("departure_city").notNull().default("Delhi"),
+  durationDays: integer("duration_days").notNull(),
+  durationNights: integer("duration_nights").notNull(),
+  priceInr: integer("price_inr").notNull(),
+  mrpInr: integer("mrp_inr"),
+  groupSize: integer("group_size").notNull().default(20),
+  inclusions: text("inclusions").array(),
+  highlights: text("highlights").array(),
+  itinerary: jsonb("itinerary"),
+  heroImage: text("hero_image"),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  isFlagship: boolean("is_flagship").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertTirthYatraTourSchema = createInsertSchema(tirthYatraTours).omit({ id: true, createdAt: true });
+export type TirthYatraTour = typeof tirthYatraTours.$inferSelect;
+export type InsertTirthYatraTour = z.infer<typeof insertTirthYatraTourSchema>;
+
+export const tirthYatraInquiries = pgTable("tirth_yatra_inquiries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  tourId: integer("tour_id"),
+  tourSlug: text("tour_slug"),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  city: text("city"),
+  travelers: integer("travelers").notNull().default(1),
+  preferredMonth: text("preferred_month"),
+  message: text("message"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertTirthYatraInquirySchema = createInsertSchema(tirthYatraInquiries).omit({ id: true, status: true, createdAt: true });
+export type TirthYatraInquiry = typeof tirthYatraInquiries.$inferSelect;
+export type InsertTirthYatraInquiry = z.infer<typeof insertTirthYatraInquirySchema>;
+
+export const luckyDrawEntries = pgTable("lucky_draw_entries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  productSerial: text("product_serial").notNull(),
+  productName: text("product_name"),
+  orderId: text("order_id"),
+  preferredYatra: text("preferred_yatra"),
+  drawYear: integer("draw_year").notNull(),
+  status: text("status").notNull().default("entered"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertLuckyDrawEntrySchema = createInsertSchema(luckyDrawEntries).omit({ id: true, status: true, createdAt: true });
+export type LuckyDrawEntry = typeof luckyDrawEntries.$inferSelect;
+export type InsertLuckyDrawEntry = z.infer<typeof insertLuckyDrawEntrySchema>;
+
+export const pilgrimageCardApplications = pgTable("pilgrimage_card_applications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  city: text("city").notNull(),
+  age: integer("age"),
+  monthlySipInr: integer("monthly_sip_inr").notNull().default(10000),
+  totalCommitmentInr: integer("total_commitment_inr").notNull().default(600000),
+  preferredYatras: text("preferred_yatras").array(),
+  message: text("message"),
+  status: text("status").notNull().default("new"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertPilgrimageCardApplicationSchema = createInsertSchema(pilgrimageCardApplications).omit({ id: true, status: true, createdAt: true });
+export type PilgrimageCardApplication = typeof pilgrimageCardApplications.$inferSelect;
+export type InsertPilgrimageCardApplication = z.infer<typeof insertPilgrimageCardApplicationSchema>;
+
+// Premium PDF Kundli — paid Vedic birth-chart report delivered as PDF + email
+export const pdfKundliOrders = pgTable("pdf_kundli_orders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id"),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  gender: text("gender"),
+  birthDate: text("birth_date").notNull(), // YYYY-MM-DD
+  birthTime: text("birth_time").notNull(), // HH:MM
+  birthCity: text("birth_city").notNull(),
+  language: text("language").notNull().default("English"), // English / Hindi
+  amountPaise: integer("amount_paise").notNull().default(50100), // ₹501
+  currency: text("currency").notNull().default("INR"),
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  status: text("status").notNull().default("pending"), // pending | paid | generating | ready | sent | failed
+  pdfPath: text("pdf_path"),
+  errorMessage: text("error_message"),
+  // Unguessable token gating the download endpoint — protects PII (birth details) from order-id enumeration.
+  downloadToken: text("download_token").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+  paidAt: timestamp("paid_at"),
+  sentAt: timestamp("sent_at"),
+});
+export const insertPdfKundliOrderSchema = createInsertSchema(pdfKundliOrders).omit({
+  id: true, status: true, razorpayOrderId: true, razorpayPaymentId: true, pdfPath: true,
+  errorMessage: true, downloadToken: true, createdAt: true, paidAt: true, sentAt: true,
+});
+export type PdfKundliOrder = typeof pdfKundliOrders.$inferSelect;
+export type InsertPdfKundliOrder = z.infer<typeof insertPdfKundliOrderSchema>;
+
+// ===== Blog =====
+export const blogPosts = pgTable("blog_posts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt"),
+  body: text("body").notNull(),
+  coverImage: text("cover_image"),
+  category: text("category"),
+  tags: text("tags").array(),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  metaKeywords: text("meta_keywords"),
+  relatedShopUrl: text("related_shop_url"),
+  relatedShopLabel: text("related_shop_label"),
+  authorName: text("author_name").default("Vedic Tatva"),
+  readMinutes: integer("read_minutes").default(5),
+  viewCount: integer("view_count").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(true),
+  publishedAt: timestamp("published_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, viewCount: true });
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+
+// ===== Pitru / Ancestor reminder system =====
+// Saved ancestors whose Shradh tithi we will remind the signed-in user about each year.
+export const pitruAncestors = pgTable("pitru_ancestors", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  relation: text("relation").notNull(),               // father, mother, grandfather, etc.
+  gotra: text("gotra"),
+  // Departure (death) details — used to compute the annual Shradh tithi.
+  departureDate: text("departure_date").notNull(),    // YYYY-MM-DD local
+  departureTime: text("departure_time"),              // HH:MM 24h, optional (defaults to 12:00)
+  departurePlace: text("departure_place").notNull(),  // free-text city name
+  departureLat: real("departure_lat"),
+  departureLon: real("departure_lon"),
+  departureTz: text("departure_tz"),
+  // Computed at create time and refreshed when ancestor is edited.
+  tithiNumber: integer("tithi_number"),               // 1..30 (absolute, Shukla 1..15 / Krishna 16..30)
+  tithiName: text("tithi_name"),
+  paksha: text("paksha"),
+  nakshatraName: text("nakshatra_name"),
+  hinduMonth: text("hindu_month"),
+  // Which Shradh tradition the family observes — drives next-Shradh-date calc.
+  //  • "pitru-paksha"     — Ashvin Krishna Paksha (Sept-Oct), the dominant North Indian tradition.
+  //  • "pratisamvatsarik" — same tithi in the same lunar month of death (Bengali, Maithili, Marathi, many South).
+  shradhTradition: text("shradh_tradition").notNull().default("pitru-paksha"),
+  // Channels & notes
+  notifyWhatsapp: boolean("notify_whatsapp").notNull().default(true),
+  notifyEmail: boolean("notify_email").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertPitruAncestorSchema = createInsertSchema(pitruAncestors).omit({
+  id: true, createdAt: true, updatedAt: true,
+  tithiNumber: true, tithiName: true, paksha: true, nakshatraName: true, hinduMonth: true,
+});
+export type PitruAncestor = typeof pitruAncestors.$inferSelect;
+export type InsertPitruAncestor = z.infer<typeof insertPitruAncestorSchema>;
+
+// Idempotent record of every reminder dispatch for an ancestor + offset day.
+// Composite key (ancestorId, year, offsetDays) prevents duplicate sends.
+export const pitruReminderJobs = pgTable("pitru_reminder_jobs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  ancestorId: integer("ancestor_id").notNull(),
+  userId: integer("user_id").notNull(),
+  year: integer("year").notNull(),
+  offsetDays: integer("offset_days").notNull(),       // 7, 1, or 0
+  shradhDate: text("shradh_date").notNull(),          // YYYY-MM-DD of the Shradh
+  channel: text("channel").notNull(),                 // "whatsapp" | "email"
+  status: text("status").notNull().default("sent"),   // "sent" | "failed" | "skipped"
+  reason: text("reason"),                             // failure reason if any
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+}, (t) => ({
+  uniq: uniqueIndex("pitru_reminder_jobs_uniq").on(t.ancestorId, t.year, t.offsetDays, t.channel),
+}));
+export type PitruReminderJob = typeof pitruReminderJobs.$inferSelect;
+
+// =====================================================================
+// PHASE 1 — Dashboard foundation
+// Family Profiles: a user's saved family members so they don't re-key
+// gotra/birth details for every puja booking, kundli, etc.
+// =====================================================================
+export const familyMembers = pgTable("family_members", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  relation: text("relation").notNull(),         // self | spouse | son | daughter | father | mother | sibling | other
+  gender: text("gender"),                        // male | female | other
+  dateOfBirth: text("date_of_birth"),           // YYYY-MM-DD
+  timeOfBirth: text("time_of_birth"),           // HH:MM (24h)
+  placeOfBirth: text("place_of_birth"),
+  gotra: text("gotra"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true, updatedAt: true });
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
+
+// In-app notifications surfaced inside the User Dashboard inbox.
+// Distinct from `notification_log` which tracks outbound channel delivery
+// (whatsapp/sms/email). This table is a plain user-facing inbox.
+export const userNotifications = pgTable("user_notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  kind: text("kind").notNull(),         // booking_accepted | booking_declined | booking_completed | order_paid | order_shipped | order_delivered | refund_initiated | loyalty_earned | system
+  title: text("title").notNull(),
+  body: text("body"),
+  link: text("link"),                    // in-app deep link, e.g. /my-bookings, /order-history
+  meta: jsonb("meta"),                   // optional extra context (orderId, bookingId, …)
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({ id: true, createdAt: true, readAt: true });
+export type UserNotification = typeof userNotifications.$inferSelect;
+export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
+
+// Phase 2 — Pandit payout ledger. Admin-recorded payments to pandits.
+// Earnings (computed): completed-booking gross − commission + paid tips.
+// Pending balance = earnings − sum(payouts).
+export const panditPayouts = pgTable("pandit_payouts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  amountInr: integer("amount_inr").notNull(),
+  paidAt: timestamp("paid_at").notNull().defaultNow(),
+  method: text("method").notNull().default("upi"), // upi | bank | cash | other
+  reference: text("reference"),                     // UPI ref / UTR / cheque no
+  notes: text("notes"),
+  // IDs of pandit_referrals rows settled by this payout. Empty for legacy
+  // booking-earnings payouts created before the referral payout flow shipped.
+  referralIds: integer("referral_ids").array().notNull().default(sql`'{}'::integer[]`),
+  createdByAdminId: integer("created_by_admin_id"),
+  // Reversal trail (Task #70). When non-null, the payout was reversed by an
+  // admin (e.g. UPI bounce, sent to wrong VPA). The referral rows it settled
+  // are flipped back to 'approved' so they can be re-paid in the next batch.
+  reversedAt: timestamp("reversed_at"),
+  reverseReason: text("reverse_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const insertPanditPayoutSchema = createInsertSchema(panditPayouts).omit({ id: true, createdAt: true, reversedAt: true, reverseReason: true });
+export type PanditPayout = typeof panditPayouts.$inferSelect;
+export type InsertPanditPayout = z.infer<typeof insertPanditPayoutSchema>;
+
+// =====================================================================
+// Pandit storefronts at /p/<slug>
+// Each pandit gets a public landing page that sells:
+//   (a) their own services (existing puja booking)
+//   (b) a curated set of shop products with referral commission
+//   (c) a free digital QR card (download)
+//   (d) a ₹999 physical NFC/printed card (paid via Razorpay, shipped)
+// =====================================================================
+export const panditStorefronts = pgTable("pandit_storefronts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().unique(),
+  // Long-form bio shown on the public /p/<slug> page (markdown-lite plain text).
+  bio: text("bio"),
+  tagline: text("tagline"),
+  // Optional social links the pandit chooses to display.
+  whatsappNumber: text("whatsapp_number"),
+  youtubeUrl: text("youtube_url"),
+  instagramUrl: text("instagram_url"),
+  facebookUrl: text("facebook_url"),
+  websiteUrl: text("website_url"),
+  // Brand color override; defaults to maroon if null.
+  themeColor: text("theme_color"),
+  bannerImage: text("banner_image"),
+  // Curated list of product IDs the pandit features in their storefront shop.
+  productIds: integer("product_ids").array().notNull().default(sql`'{}'::integer[]`),
+  // Curated puja types (subset of services the pandit offers) shown above the
+  // generic "book any puja" CTA. Free-text array.
+  featuredPujas: text("featured_pujas").array().notNull().default(sql`'{}'::text[]`),
+  isPublished: boolean("is_published").notNull().default(true),
+  viewCount: integer("view_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertPanditStorefrontSchema = createInsertSchema(panditStorefronts).omit({ id: true, viewCount: true, createdAt: true, updatedAt: true });
+export type PanditStorefront = typeof panditStorefronts.$inferSelect;
+export type InsertPanditStorefront = z.infer<typeof insertPanditStorefrontSchema>;
+
+// Referral attribution ledger. One row per attributable order/booking.
+// kind = "order" (shop purchase) | "booking" (puja booking) | "donation".
+// Commission is computed at attribution time from the pandit's tier so a
+// later tier change doesn't retroactively rewrite history.
+export const panditReferrals = pgTable("pandit_referrals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  kind: text("kind").notNull(), // order | booking | donation
+  refId: integer("ref_id").notNull(), // FK into orders/pujaBookings/donationOrders
+  refEmail: text("ref_email"),
+  grossAmount: integer("gross_amount").notNull(),       // pre-commission rupees
+  commissionPct: integer("commission_pct").notNull(),   // captured at time of attribution
+  commissionAmount: integer("commission_amount").notNull(),
+  status: text("status").notNull().default("pending"),  // pending | approved | paid | rejected | reversed
+  paidAt: timestamp("paid_at"),
+  // FK into panditPayouts when the commission is settled. Null until paid.
+  payoutId: integer("payout_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  // Idempotency: a given (kind, refId) can only attribute commission once,
+  // even if a webhook retries or a checkout endpoint fires twice.
+  kindRefUniq: uniqueIndex("pandit_referrals_kind_ref_id_uniq").on(t.kind, t.refId),
+}));
+export const insertPanditReferralSchema = createInsertSchema(panditReferrals).omit({ id: true, createdAt: true, paidAt: true, payoutId: true });
+export type PanditReferral = typeof panditReferrals.$inferSelect;
+export type InsertPanditReferral = z.infer<typeof insertPanditReferralSchema>;
+
+// Physical-card orders. ₹999 default. Paid via Razorpay then shipped via
+// Shiprocket. Type "qr_only" = free digital card (no row written, just PDF).
+// "printed" = standard print card. "nfc" = NFC-tap card (premium tier).
+export const panditCardOrders = pgTable("pandit_card_orders", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  cardType: text("card_type").notNull().default("printed"), // printed | nfc
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: integer("unit_price").notNull().default(999),
+  totalAmount: integer("total_amount").notNull(),
+  shippingName: text("shipping_name").notNull(),
+  shippingPhone: text("shipping_phone").notNull(),
+  shippingAddress: text("shipping_address").notNull(),
+  shippingCity: text("shipping_city").notNull(),
+  shippingState: text("shipping_state").notNull(),
+  shippingPincode: text("shipping_pincode").notNull(),
+  // Razorpay payment fields (mirroring orders table conventions).
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  paymentStatus: text("payment_status").notNull().default("pending"), // pending | paid | failed | refunded
+  // Shiprocket fulfilment fields.
+  status: text("status").notNull().default("pending"), // pending | paid | printing | shipped | delivered | cancelled
+  shiprocketOrderId: text("shiprocket_order_id"),
+  shiprocketShipmentId: text("shiprocket_shipment_id"),
+  trackingNumber: text("tracking_number"),
+  trackingUrl: text("tracking_url"),
+  shiprocketError: text("shiprocket_error"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertPanditCardOrderSchema = createInsertSchema(panditCardOrders).omit({ id: true, createdAt: true, updatedAt: true });
+export type PanditCardOrder = typeof panditCardOrders.$inferSelect;
+export type InsertPanditCardOrder = z.infer<typeof insertPanditCardOrderSchema>;
+
+// Pandit tier upgrade purchases. Audit trail for Razorpay-paid tier
+// transitions. The pandits.tier flip happens on /verify success; this
+// row records who bought what, for how much, and which Razorpay txn it
+// was tied to. Never deleted — admin can refund via paymentStatus flip.
+export const panditMembershipPurchases = pgTable("pandit_membership_purchases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  fromTier: text("from_tier").notNull(),
+  toTier: text("to_tier").notNull(), // silver | gold | guru_elite
+  amount: integer("amount").notNull(), // INR rupees, full price paid
+  razorpayOrderId: text("razorpay_order_id"),
+  razorpayPaymentId: text("razorpay_payment_id"),
+  paymentStatus: text("payment_status").notNull().default("pending"), // pending | paid | failed | refunded
+  // Tier validity from purchase moment. We default to 365 days; admin
+  // can extend or revoke.
+  activatedAt: timestamp("activated_at"),
+  expiresAt: timestamp("expires_at"),
+  // Renewal-reminder bookkeeping. The daily sweep emails pandits once at
+  // T-14d, again at T-3d, and a final notice on the day of expiry; we
+  // record the latest stage so we never double-send.
+  lastReminderAt: timestamp("last_reminder_at"),
+  lastReminderStage: text("last_reminder_stage"), // 14d | 3d | expired
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const insertPanditMembershipPurchaseSchema = createInsertSchema(panditMembershipPurchases).omit({ id: true, createdAt: true });
+export type PanditMembershipPurchase = typeof panditMembershipPurchases.$inferSelect;
+export type InsertPanditMembershipPurchase = z.infer<typeof insertPanditMembershipPurchaseSchema>;
+
+// Admin-managed Jap Counter mantras + chant audio. The JapCounter ships
+// with 13 built-in PRESET_MANTRAS hardcoded in the component; this table
+// lets the admin extend that list at runtime — adding regional mantras,
+// festival-specific chants, or community submissions without a deploy.
+// Audio can be uploaded as an .mp3/.m4a/.ogg/.wav (multer → /uploads/
+// mantra-audio/...) OR pasted as an external URL. Marked isActive=false
+// to soft-hide without deleting.
+export const adminMantras = pgTable("admin_mantras", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  // URL-safe stable id used as the mantraId in localStorage so per-user
+  // counts persist across renames. Lowercase, hyphenated, unique.
+  slug: text("slug").notNull().unique(),
+  label: text("label").notNull(),
+  sanskrit: text("sanskrit"),
+  transliteration: text("transliteration"),
+  // Free-form short paragraph, surfaced in the JapCounter's "What does
+  // this mean?" disclosure for admin-added mantras.
+  meaning: text("meaning"),
+  deity: text("deity"),
+  // Loose grouping ("Shiva", "Devi", "Hanuman", "Festival" …) — purely
+  // informational for now; the counter UI groups by label order.
+  category: text("category"),
+  // Either a /uploads/mantra-audio/... path (uploaded via the admin
+  // upload route) OR a fully-qualified https URL to an external file.
+  // When non-empty, the JapCounter shows the play/pause control.
+  audioUrl: text("audio_url"),
+  audioMimeType: text("audio_mime_type"),
+  // Hex color used as the accent for the mantra card (defaults to gold
+  // when blank). e.g. #6D2B35.
+  accentColor: text("accent_color"),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertAdminMantraSchema = createInsertSchema(adminMantras).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type AdminMantra = typeof adminMantras.$inferSelect;
+export type InsertAdminMantra = z.infer<typeof insertAdminMantraSchema>;
+
+// =====================================================================
+// AI Coder — admin-facing in-house code generation tab.
+// One row per generation request. Stores the prompt, the files the
+// admin selected as context, and the diffs the model proposed. On
+// Apply, oldContents is snapshotted from disk before the new files
+// are written, enabling Rollback to restore byte-for-byte. Tier 1:
+// AI never edits the live filesystem itself — every write is gated
+// by a manual Apply click in the admin UI.
+// =====================================================================
+export const aiCoderSessions = pgTable("ai_coder_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  adminActor: text("admin_actor").notNull(), // last 6 of admin session token (mirrors audit log convention)
+  prompt: text("prompt").notNull(),
+  contextPaths: text("context_paths").array().notNull().default(sql`ARRAY[]::text[]`),
+  generatedFiles: jsonb("generated_files").notNull().default(sql`'[]'::jsonb`), // [{ path, newContent }]
+  oldContents: jsonb("old_contents").notNull().default(sql`'[]'::jsonb`),       // [{ path, oldContent }] snapshot at apply
+  summary: text("summary"),
+  model: text("model"),
+  status: text("status").notNull().default("proposed"), // proposed | applied | rejected | rolledback | error
+  errorMessage: text("error_message"),
+  tokenUsage: jsonb("token_usage"), // { prompt, completion, total }
+  createdAt: timestamp("created_at").defaultNow(),
+  appliedAt: timestamp("applied_at"),
+  rolledbackAt: timestamp("rolledback_at"),
+});
+export const insertAiCoderSessionSchema = createInsertSchema(aiCoderSessions).omit({
+  id: true, status: true, createdAt: true, appliedAt: true, rolledbackAt: true,
+});
+export type AiCoderSession = typeof aiCoderSessions.$inferSelect;
+export type InsertAiCoderSession = z.infer<typeof insertAiCoderSessionSchema>;

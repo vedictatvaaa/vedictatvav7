@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>We'll be back shortly · Vedic Tatva</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    :root{
+      --bg:#FBF7EE; --maroon:#6D2B35; --maroon-deep:#4A1C24;
+      --gold:#D4AF37; --gold-soft:#EAD9B7; --ink:#2B1115; --muted:#7A6864;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    a{color:var(--maroon);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{min-height:100dvh;display:flex;flex-direction:column}
+    header{background:var(--maroon);color:#FBF7EE;padding:18px 22px;
+      display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold)}
+    header .brand{font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:700;letter-spacing:.4px}
+    header .tag{color:var(--gold);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:600}
+    main{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px 56px}
+    .card{max-width:560px;width:100%;background:#fff;border:1px solid var(--gold-soft);
+      border-radius:8px;box-shadow:0 1px 2px rgba(45,17,21,.04);overflow:hidden;
+      padding:40px 32px;text-align:center;
+      background-image:radial-gradient(ellipse at 50% 0%,rgba(212,175,55,.18) 0%,transparent 60%)}
+    .om{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;
+      border-radius:50%;background:var(--bg);border:1px solid var(--gold);margin-bottom:18px}
+    .om svg{width:34px;height:34px;color:var(--maroon)}
+    h1{margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.25;color:var(--ink);font-weight:600}
+    .lead{margin:0 auto 8px;max-width:460px;color:var(--muted);font-size:15px;line-height:1.55}
+    .actions{display:flex;gap:10px;justify-content:center;margin:26px 0 0;flex-wrap:wrap}
+    .btn{appearance:none;border:0;cursor:pointer;font-weight:600;font-size:14px;
+      padding:11px 20px;border-radius:6px;transition:transform .08s ease, opacity .15s ease;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .btn:active{transform:translateY(1px)}
+    .btn-primary{background:var(--maroon);color:#FBF7EE}
+    .btn-primary:hover{background:var(--maroon-deep);text-decoration:none}
+    .btn-ghost{background:transparent;color:var(--maroon);border:1px solid var(--gold)}
+    .btn-ghost:hover{background:var(--bg);text-decoration:none}
+    footer{padding:18px 22px;border-top:1px solid var(--gold-soft);background:var(--bg);
+      color:var(--muted);font-size:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">Vedic Tatva</div>
+      <div class="tag">Sanatan Dharma</div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="om" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 36c0-7 5-12 12-12 5 0 9 3 9 8 0 4-3 7-7 7-3 0-5-2-5-5"/>
+            <path d="M28 44c4 4 10 4 14 0 3-3 4-7 2-11"/>
+            <circle cx="46" cy="20" r="2.2" fill="currentColor"/>
+            <path d="M40 14c2-3 6-3 8 0"/>
+          </svg>
+        </div>
+        <h1>You appear to be offline</h1>
+        <p class="lead">
+          We couldn't reach Vedic Tatva right now. Please check your internet
+          connection and try again.
+        </p>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="location.reload()" data-testid="button-retry">
+            Try again
+          </button>
+          <a class="btn btn-ghost" href="/" data-testid="link-home">Go to home</a>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <span>&copy; <span id="yr"></span> Vedic Tatva. All rights reserved.</span>
+      <span>Need help? <a href="mailto:ecom@vedictatva.com">ecom@vedictatva.com</a></span>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById('yr').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
