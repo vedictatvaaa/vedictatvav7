@@ -343,32 +343,53 @@ export default function JapaPage() {
               className="flex gap-2 overflow-x-auto px-4 sm:px-0 pb-2 -mx-0 snap-x snap-mandatory scrollbar-thin"
               data-testid="strip-popular-mantras"
             >
-              {popularMantras.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => showMantraDetail(m)}
-                  className="snap-start flex-shrink-0 group min-w-[150px] sm:min-w-[170px] text-left rounded-xl bg-[#1A0407]/70 hover:bg-[#1A0407]/90 active:bg-[#1A0407] border border-[#D4AF37]/20 hover:border-[#D4AF37]/45 transition-colors px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60"
-                  data-testid={`chip-mantra-${m.id}`}
-                  aria-label={`Preview ${m.label}`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Flame className="w-3 h-3 text-[#D4AF37]/80" />
-                    <span className="text-[10px] uppercase tracking-[0.16em] text-[#D4AF37]/75 truncate">
-                      {m.deity}
-                    </span>
-                  </div>
-                  <div className="text-[12.5px] font-semibold text-[#FBF7EE] leading-tight truncate">
-                    {m.label}
-                  </div>
-                  <div
-                    className="mt-1 text-[12px] text-[#FBF7EE]/65 truncate"
-                    style={{ fontFamily: "'Tiro Devanagari Sanskrit', serif" }}
+              {popularMantras.map((m) => {
+                // Each pill carries its own deity-accent stripe. The page
+                // visibly changes mood as the eye scans the strip — gold,
+                // saffron, maroon, white, green, blue — instead of a flat
+                // wall of identical chips.
+                const accent =
+                  m.color === "gold"    ? "#D4AF37" :
+                  m.color === "saffron" ? "#E89B3F" :
+                  m.color === "maroon"  ? "#A6404A" :
+                  m.color === "green"   ? "#5DA67A" :
+                  m.color === "blue"    ? "#5B7FB8" :
+                                          "#EFE3C8"; // white
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => showMantraDetail(m)}
+                    className="snap-start flex-shrink-0 group min-w-[150px] sm:min-w-[170px] text-left rounded-xl bg-[#1A0407]/70 hover:bg-[#1A0407]/90 active:bg-[#1A0407] border transition-colors px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60"
+                    style={{ borderColor: `${accent}55` }}
+                    data-testid={`chip-mantra-${m.id}`}
+                    aria-label={`Preview ${m.label}`}
                   >
-                    {m.devanagari}
-                  </div>
-                </button>
-              ))}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span
+                        className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: accent }}
+                        aria-hidden="true"
+                      />
+                      <span
+                        className="text-[10px] uppercase tracking-[0.16em] truncate"
+                        style={{ color: `${accent}cc` }}
+                      >
+                        {m.deity}
+                      </span>
+                    </div>
+                    <div className="text-[12.5px] font-semibold text-[#FBF7EE] leading-tight truncate">
+                      {m.label}
+                    </div>
+                    <div
+                      className="mt-1 text-[12px] text-[#FBF7EE]/65 truncate"
+                      style={{ fontFamily: "'Tiro Devanagari Sanskrit', serif" }}
+                    >
+                      {m.devanagari}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>

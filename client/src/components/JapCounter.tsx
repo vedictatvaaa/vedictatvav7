@@ -1639,7 +1639,30 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   <Shuffle className="h-4 w-4" />
                 </Button>
               </div>
-            <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE, maxWidth: "100%" }}>
+            <div className="relative shrink-0 animate-japa-orb-enter" style={{ width: RING_SIZE, height: RING_SIZE, maxWidth: "100%" }}>
+              {/* Devanagari watermark — large, very low opacity, sits behind
+                  the mala garland. Reinforces the active mantra subliminally
+                  and adds depth. Pointer-events disabled so it never blocks
+                  the tap target. Hidden when the orb is in the auto-chant
+                  prompt state to avoid clashing with the in-orb Sanskrit. */}
+              {mantra.sanskrit && !(autoMode && !autoChanting) && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+                  data-testid="orb-devanagari-watermark"
+                >
+                  <span
+                    className="text-[#6D2B35] opacity-[0.05] font-bold leading-none whitespace-nowrap select-none"
+                    style={{
+                      fontFamily: "'Tiro Devanagari Sanskrit', serif",
+                      fontSize: `${Math.round(RING_SIZE * 0.42)}px`,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {mantra.sanskrit.split(/\s+/)[0] || mantra.sanskrit}
+                  </span>
+                </div>
+              )}
               {/* 108-bead mala garland (with breath-pacing aura). */}
               <MalaGarland
                 count={persist.count}
@@ -1740,40 +1763,41 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   {formatDhyana(sessionTickMs)}
                 </Badge>
               )}
-            </div>
-
-            {/* Mantra meaning — expandable disclosure beneath the count.
-                Lets the devotee chant with understanding instead of by
-                rote. Collapsed by default; resets on mantra change. */}
-            {meaningInfo && (
-              <div className="mt-4 w-full max-w-md">
-                <button
+              {/* Mantra meaning — demoted from a full-width disclosure pill
+                  to a tiny (?) icon button beside the badges. Keeps the
+                  orb the visual centerpiece; meaning is one tap away. */}
+              {meaningInfo && (
+                <Button
                   type="button"
+                  size="icon"
+                  variant="ghost"
                   onClick={() => setShowMeaning((s) => !s)}
-                  className="w-full flex items-center justify-between gap-2 text-xs text-[#6D2B35]/80 hover-elevate active-elevate-2 rounded-md px-3 py-2 border border-[#D4AF37]/30 bg-[#FBF7EE]"
+                  className="h-9 w-9 rounded-full text-[#6D2B35]/70 hover:text-[#6D2B35]"
                   aria-expanded={showMeaning}
+                  aria-label={showMeaning ? "Hide mantra meaning" : "What does this mantra mean?"}
+                  title="What does this mantra mean?"
                   data-testid="btn-toggle-meaning"
                 >
-                  <span className="flex items-center gap-1.5">
-                    <Info className="h-3.5 w-3.5 text-[#6D2B35]/70" />
-                    <span className="uppercase tracking-wide font-bold">What does this mean?</span>
-                  </span>
-                  {showMeaning
-                    ? <ChevronUp className="h-3.5 w-3.5" />
-                    : <ChevronDown className="h-3.5 w-3.5" />}
-                </button>
-                {showMeaning && (
-                  <div className="mt-2 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] px-3 py-3 text-sm text-[#5a4a3a] leading-relaxed" data-testid="text-mantra-meaning">
-                    <p className="font-serif italic text-[#6D2B35]">
-                      {meaningInfo.meaning}
-                    </p>
-                    {meaningInfo.deity && (
-                      <p className="mt-2 text-xs text-[#5a4a3a]/80">
-                        <span className="font-bold uppercase tracking-wide text-[#6D2B35]/70">Deity · </span>
-                        {meaningInfo.deity}
-                      </p>
-                    )}
-                  </div>
+                  <Info className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+
+            {/* Inline meaning panel — opens directly from the (?) icon
+                above. Hidden by default; resets on mantra change. */}
+            {meaningInfo && showMeaning && (
+              <div
+                className="mt-3 w-full max-w-md rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] px-3 py-3 text-sm text-[#5a4a3a] leading-relaxed"
+                data-testid="text-mantra-meaning"
+              >
+                <p className="font-serif italic text-[#6D2B35]">
+                  {meaningInfo.meaning}
+                </p>
+                {meaningInfo.deity && (
+                  <p className="mt-2 text-xs text-[#5a4a3a]/80">
+                    <span className="font-bold uppercase tracking-wide text-[#6D2B35]/70">Deity · </span>
+                    {meaningInfo.deity}
+                  </p>
                 )}
               </div>
             )}

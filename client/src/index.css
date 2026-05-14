@@ -424,8 +424,21 @@
   will-change: transform, opacity;
 }
 
+/* Orb entrance — fade + scale-in on mount so the orb visibly "lands"
+   as the focal point of the page instead of just being there. */
+@keyframes japa-orb-enter {
+  0%   { opacity: 0; transform: scale(0.86); }
+  60%  { opacity: 1; transform: scale(1.015); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-japa-orb-enter {
+  animation: japa-orb-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-japa-breath,
   .animate-japa-lotus,
-  .animate-japa-milestone { animation: none; }
+  .animate-japa-milestone,
+  .animate-japa-orb-enter { animation: none; }
 }
