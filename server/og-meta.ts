@@ -143,11 +143,11 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
  * "every sacred need, one trusted app", with a scarcity hook to drive clicks.
  */
 export const FLAGSHIP_CARD: OgCard = {
-  title: "Book Puja Online, Hire Trusted Pandits & Shop Puja Essentials",
+  title: "Puja Samagri, Online Puja Booking & Panditji Services",
   description:
-    "Book Puja online, hire trusted Vedic Pandits & shop authentic puja samagri. AI Kundli & astrology. 50,000+ families · same-day slots across India.",
+    "Buy authentic puja samagri online, book experienced panditji for Hindu rituals, online puja services, astrology consultation, and festival puja booking across India.",
   image: "/og/og-prime-services.jpg",
-  alt: "Vedic Tatva — book puja online, verified pandits, authentic samagri and Vedic astrology",
+  alt: "Vedic Tatva — puja samagri online, online puja booking, verified panditji and Vedic astrology",
 };
 
 /**

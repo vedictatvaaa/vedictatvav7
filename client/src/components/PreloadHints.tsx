@@ -12,7 +12,10 @@ function preloadImageset(src: string, widths: number[]): string {
 }
 
 const STATIC_TABLE: Record<string, PreloadEntry> = {
-  "/":               { src: "/attached_assets/heroes/hero-scene-brand.png",      widths: [320, 480, 768, 1080, 1440] },
+  // Homepage LCP is now slide 1 of the rotating hero — "Shop Puja Samagri &
+  // Puja Essentials Online" — backed by hero-scene-essentials.png. Must stay
+  // in lockstep with `heroSlides[0].src` in client/src/pages/home.tsx.
+  "/":               { src: "/attached_assets/heroes/hero-scene-essentials.png", widths: [320, 480, 768, 1080, 1440] },
   "/shop":           { src: "/attached_assets/heroes/hero-scene-essentials.png", widths: [320, 480, 768, 1080, 1440] },
   "/pind-daan":      { src: "/attached_assets/heroes/hero-scene-pind-daan.png",  widths: [320, 480, 768, 1080, 1440] },
   "/tirth-yatra":    { src: "/attached_assets/heroes/hero-scene-tirth-yatra.png",widths: [320, 480, 768, 1080, 1440] },

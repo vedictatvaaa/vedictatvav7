@@ -171,6 +171,24 @@ export async function registerRoutes(
 
   const adminAuthMiddleware = sharedAdminAuth;
 
+  // ---- SEO alias 301 redirects ----
+  // Anchor URLs targeting the highest-intent commercial keyword clusters
+  // (per the SEO brief). Each is a permanent 301 to the canonical page so
+  // we don't fragment ranking signal across duplicate paths. Bots follow
+  // 301s and consolidate authority into the destination URL.
+  const SEO_ALIAS_REDIRECTS: Record<string, string> = {
+    "/puja-samagri": "/spiritual-essentials",
+    "/puja-essentials": "/spiritual-essentials",
+    "/puja-kits": "/spiritual-essentials",
+    "/book-panditji": "/pandits",
+    "/astrology-services": "/astrology",
+  };
+  app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
+    const dest = SEO_ALIAS_REDIRECTS[req.path];
+    if (!dest) return res.status(404).end();
+    res.redirect(301, dest);
+  });
+
   // ---- Maintenance mode ----
   // When site_settings.maintenance_mode is ON, every public HTML page
   // navigation is redirected to /offline.html so visitors land on the

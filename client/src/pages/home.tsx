@@ -42,11 +42,24 @@ type HeroSlide = {
   cta2: HeroCta;
 };
 
-// 5 hero sliders — one per business vertical. Each title acts as an H2 supporting
-// the master homepage H1 ("Online Puja Booking, Book Pandit Online & Puja Samagri
-// Services"), giving Google a keyword-loaded support cluster per scene without
-// stealing H1 priority.
+// 5 hero sliders — one per business vertical, ordered Samagri-first per the
+// SEO commercial-intent priority (puja samagri → puja booking → pandit →
+// astrology → festivals/yatra). Slide 1 is the LCP image (eager+high
+// fetchPriority in HeroBackground), so the most-clicked vertical loads first.
+// Each title is an H2 supporting the master sr-only H1 below.
 const heroSlides: HeroSlide[] = [
+  {
+    src: heroEssentialsImg,
+    alt: "Authentic puja samagri spread — brass idol, rudraksha, diyas and kalash",
+    mobilePosition: "center center",
+    tagline: "SHOP PUJA SAMAGRI",
+    title1: "Shop Puja Samagri",
+    title2: "& Puja Essentials ",
+    title2Highlight: "Online",
+    subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense sticks, kalash, and temple essentials for every Hindu ritual.",
+    cta1: { label: "Shop Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
+    cta2: { label: "Browse Categories", href: "/shop", icon: Gem },
+  },
   {
     src: heroBrandImg,
     alt: "Vedic Pandit performing online puja with samagri and diya",
@@ -55,7 +68,7 @@ const heroSlides: HeroSlide[] = [
     title1: "Book Online Puja",
     title2: "Services Across ",
     title2Highlight: "India",
-    subtitle: "Satyanarayan Puja, Rudrabhishek, Navratri Puja, Griha Pravesh, Havan and festival pujas with experienced Vedic pandits.",
+    subtitle: "Book Satyanarayan Puja, Rudrabhishek, Navratri Puja, Griha Pravesh, and festival pujas with verified pandits.",
     cta1: { label: "Book Puja", href: "/puja", icon: ShoppingBag },
     cta2: { label: "Explore Rituals", href: "/online-puja-booking", icon: Sparkles },
   },
@@ -63,25 +76,13 @@ const heroSlides: HeroSlide[] = [
     src: heroPindDaanImg,
     alt: "Verified Acharya performing havan and Vedic ritual",
     mobilePosition: "center center",
-    tagline: "BOOK PANDIT ONLINE",
-    title1: "Hire Trusted Pandits",
-    title2: "for Every Hindu ",
-    title2Highlight: "Ritual",
-    subtitle: "Book verified pandits for weddings, griha pravesh, havan, dosh nivaran, temple rituals and home pujas across India.",
+    tagline: "BOOK PANDITJI ONLINE",
+    title1: "Book Trusted Panditji",
+    title2: "for Every ",
+    title2Highlight: "Occasion",
+    subtitle: "Hire experienced panditji for weddings, havan, vastu puja, griha pravesh, dosh nivaran, and temple rituals.",
     cta1: { label: "Book a Pandit", href: "/pandits", icon: UserCheck },
     cta2: { label: "Pind Daan", href: "/pind-daan", icon: HandHeart },
-  },
-  {
-    src: heroEssentialsImg,
-    alt: "Authentic puja samagri spread with brass idol and rudraksha",
-    mobilePosition: "center center",
-    tagline: "SHOP PUJA SAMAGRI",
-    title1: "Shop Authentic Puja",
-    title2: "Samagri & Spiritual ",
-    title2Highlight: "Essentials",
-    subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense, kalash and temple essentials — sourced from Kashi, Gaya & Haridwar.",
-    cta1: { label: "Shop Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
-    cta2: { label: "Browse Idols", href: "/shop", icon: Gem },
   },
   {
     src: heroAstrologyImg,
@@ -91,7 +92,7 @@ const heroSlides: HeroSlide[] = [
     title1: "Online Astrology",
     title2: "Consultation & ",
     title2Highlight: "Kundli",
-    subtitle: "Get horoscope readings, kundli matching, dosh analysis, personalised remedies and Vedic astrology guidance from verified astrologers.",
+    subtitle: "Get Vedic astrology guidance, kundli matching, horoscope reading, dosh analysis, and personalised remedies.",
     cta1: { label: "Consult Astrologer", href: "/astrology", icon: Sparkles },
     cta2: { label: "Free Kundli", href: "/ai-kundli", icon: Star },
   },
@@ -99,11 +100,11 @@ const heroSlides: HeroSlide[] = [
     src: heroTirthYatraImg,
     alt: "Tirth Yatra and pilgrimage at sacred Bharat dhams",
     mobilePosition: "center center",
-    tagline: "TIRTH YATRA",
-    title1: "Tirth Yatra &",
-    title2: "Spiritual Pilgrimage ",
-    title2Highlight: "Packages",
-    subtitle: "Char Dham Yatra, Jyotirlinga tours, temple pilgrimages, spiritual retreats and sacred travel experiences across India.",
+    tagline: "FESTIVALS & TIRTH YATRA",
+    title1: "Festival Pujas, Muhurat",
+    title2: "& Spiritual ",
+    title2Highlight: "Yatras",
+    subtitle: "Explore upcoming Hindu festivals, auspicious timings, temple pilgrimages, and spiritual experiences.",
     cta1: { label: "Explore Yatras", href: "/tirth-yatra", icon: Map },
     cta2: { label: "Char Dham", href: "/tirth-yatra/char-dham-yatra", icon: MapPinned },
   },
@@ -435,16 +436,16 @@ export default function Home() {
   return (
     <div className="w-full">
       <PageSeo
-        title="Online Puja Booking, Book Pandits & Puja Samagri | Vedic Tatva"
-        description="Book Puja online, hire trusted Vedic Pandits & shop authentic puja samagri. AI Kundli & astrology services. 50,000+ families · same-day slots."
-        keywords="online puja booking, book pandit online, puja samagri online, astrology services, puja essentials, ai kundli, vedic tatva, festival puja, online pandit, satyanarayan puja, rudrabhishek, navratri puja"
+        title="Puja Samagri, Online Puja Booking & Panditji Services | Vedic Tatva"
+        description="Buy authentic puja samagri online, book experienced panditji for Hindu rituals, online puja services, astrology consultation, and festival puja booking across India."
+        keywords="puja samagri online, buy puja samagri, puja essentials, pooja samagri, online puja booking, puja booking, online puja services, book panditji online, pandit booking, pandit for puja, astrology services, online astrology consultation, kundli matching, vedic tatva"
         canonical="/"
         ogType="website"
         twitterCard="summary_large_image"
         schemas={homeSchemas}
       />
       {/* SEO H1 — keyword-loaded, screen-reader-only so hero brand visual stays clean */}
-      <h1 className="sr-only">Online Puja Booking, Book Pandit Online & Puja Samagri Services</h1>
+      <h1 className="sr-only">Puja Samagri, Online Puja Booking & Pandit Services</h1>
       {/* Hero Section */}
       <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
