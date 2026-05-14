@@ -143,11 +143,11 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
  * "every sacred need, one trusted app", with a scarcity hook to drive clicks.
  */
 export const FLAGSHIP_CARD: OgCard = {
-  title: "Pandits · Puja · Samagri · Jyotish — All Sacred, One App",
+  title: "Book Puja Online, Hire Trusted Pandits & Shop Puja Essentials",
   description:
-    "Om sarve bhavantu sukhinah — every sacred need in one trusted app. Verified Pandits, online puja, authentic samagri, AI kundli. Festival slots filling.",
+    "Book Puja online, hire trusted Vedic Pandits & shop authentic puja samagri. AI Kundli & astrology. 50,000+ families · same-day slots across India.",
   image: "/og/og-prime-services.jpg",
-  alt: "Vedic Tatva — Pandits, puja, samagri and Vedic astrology, all in one trusted app",
+  alt: "Vedic Tatva — book puja online, verified pandits, authentic samagri and Vedic astrology",
 };
 
 /**

@@ -18,7 +18,7 @@ import { getProductUrl } from "@/lib/utils";
 import { getDisplayRating } from "@/lib/displayRating";
 import { optImg, optImgSrcSet } from "@/lib/optImg";
 import PageSeo from "@/components/PageSeo";
-import { itemList as itemListSchemaBuilder } from "@/lib/seo-schemas";
+import { itemList as itemListSchemaBuilder, faqPage } from "@/lib/seo-schemas";
 // Hero scenes live under /attached_assets so /api/img can serve responsive variants.
 const heroBrandImg = "/attached_assets/heroes/hero-scene-brand.png";
 const heroTirthYatraImg = "/attached_assets/heroes/hero-scene-tirth-yatra.png";
@@ -367,6 +367,47 @@ export default function Home() {
       .slice(0, 6);
   }, [bestsellers, products]);
 
+  // FAQ JSON-LD — high-intent questions, drives Google's "People also ask" rich-results.
+  const homeFaqSchema = useMemo(
+    () =>
+      faqPage(
+        [
+          {
+            question: "How do I book a puja online with Vedic Tatva?",
+            answer:
+              "Choose your puja, pick a date and time, share your sankalp details, and pay securely. A verified Vedic Pandit performs the full ritual at the temple or your sankalp-sthan, you join the sankalp live on video call, and we courier the prasad and a photo-video record to your home. Same-day slots are available for most pujas.",
+          },
+          {
+            question: "Are Vedic Tatva pandits verified?",
+            answer:
+              "Yes. Every pandit is identity-verified (Aadhaar/PAN), background-checked, and shastra-tested by our acharya panel before they appear on the platform. Reviews and ratings are visible on each profile, and you can pick the exact pandit who fits your tradition (Shukla Yajurveda, Krishna Yajurveda, Madhwa, Iyer/Iyengar, Gujarati, Marathi, Konkani and more).",
+          },
+          {
+            question: "How much does an online puja cost?",
+            answer:
+              "Online puja prices start at ₹1,100 for a simple Satyanarayan or Lakshmi Puja and go up to ₹25,000+ for elaborate ceremonies like Rudrabhishek with 11 pandits, Maha Mrityunjaya Jaap or Chandi Path. The price always includes pandit dakshina, full samagri, and prasad courier — there are no hidden charges.",
+          },
+          {
+            question: "Do you deliver puja samagri across India?",
+            answer:
+              "Yes. We ship authentic puja samagri, rudraksha, gemstones, idols, yantras and havan kits to every PIN code in India and to NRI addresses in USA, UK, Canada, UAE, Singapore and Australia. Free shipping on orders above ₹499 within India.",
+          },
+          {
+            question: "Can I get a same-day pandit booking?",
+            answer:
+              "Yes. We hold a percentage of pandit slots open for same-day bookings in Delhi NCR, Mumbai, Bangalore, Hyderabad, Pune, Chennai, Kolkata, Ahmedabad, Jaipur and 40+ other cities. For festival days (Navratri, Diwali, Karwa Chauth, Janmashtami) we recommend booking 7–10 days in advance.",
+          },
+          {
+            question: "Does Vedic Tatva offer astrology and Kundli services?",
+            answer:
+              "Yes. We offer free AI-generated Janma Kundli, Kundli matching, Vastu analysis, palm reading and one-on-one consultations with verified Vedic astrologers. Live consultations start at ₹399 and detailed written reports start at ₹999.",
+          },
+        ],
+        "home-faq",
+      ),
+    [],
+  );
+
   // ItemList JSON-LD for featured products (homepage SEO)
   const homeItemListSchema = useMemo(() => {
     if (!products || products.length === 0) return null;
@@ -380,6 +421,12 @@ export default function Home() {
       items: featured.map((p) => ({ name: p.name, url: getProductUrl(p.id, p.name), image: p.image })),
     });
   }, [products, bestsellers]);
+
+  // Combined JSON-LD payload for the home PageSeo: FAQ + ItemList (when ready).
+  const homeSchemas = useMemo(
+    () => [homeFaqSchema, homeItemListSchema].filter((s): s is NonNullable<typeof s> => s != null),
+    [homeFaqSchema, homeItemListSchema],
+  );
 
   // Hero scene rotation — each background pairs with its own headline + CTAs
   const [heroIdx, setHeroIdx] = useState(0);
@@ -396,13 +443,16 @@ export default function Home() {
   return (
     <div className="w-full">
       <PageSeo
-        title="Vedic Tatva — Sacred Living, Authentic Puja, Pandits & Pilgrimages"
-        description="Book verified pandits, perform puja online, shop authentic spiritual essentials, and plan sacred pilgrimages. Vedic wisdom for modern devotees, delivered worldwide."
+        title="Online Puja Booking, Book Pandits & Puja Samagri | Vedic Tatva"
+        description="Book Puja online, hire trusted Vedic Pandits & shop authentic puja samagri. AI Kundli & astrology services. 50,000+ families · same-day slots."
+        keywords="online puja booking, book pandit online, puja samagri online, astrology services, puja essentials, ai kundli, vedic tatva, festival puja, online pandit, satyanarayan puja, rudrabhishek, navratri puja"
         canonical="/"
         ogType="website"
         twitterCard="summary_large_image"
-        schemas={homeItemListSchema ? [homeItemListSchema] : []}
+        schemas={homeSchemas}
       />
+      {/* SEO H1 — keyword-loaded, screen-reader-only so hero brand visual stays clean */}
+      <h1 className="sr-only">Book Puja Online, Hire Pandits & Shop Puja Essentials</h1>
       {/* Hero Section */}
       <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
@@ -435,8 +485,8 @@ export default function Home() {
                   </span>
                 </div>
 
-                {/* Headline */}
-                <h1
+                {/* Hero brand headline — demoted to h2 so the keyword-loaded sr-only h1 owns SEO */}
+                <h2
                   className="font-serif text-white text-[2.35rem] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
                   data-testid="text-hero-headline"
                 >
@@ -445,7 +495,7 @@ export default function Home() {
                     {scene.title2}
                     <span className="text-[#D4AF37]">{scene.title2Highlight}</span>
                   </span>
-                </h1>
+                </h2>
 
                 {/* Subtitle */}
                 <p
@@ -1365,6 +1415,111 @@ export default function Home() {
           </motion.div>
         </div>
       )}
+
+      {/* ─────────── SEO Content Section ───────────
+          Keyword-loaded H2 block sitting above the footer. Each H2 targets one
+          of the five primary homepage keywords, links into its hub page, and
+          gives Google semantic context for the whole site.                       */}
+      <section className="bg-[#FBF7EE] border-t border-[#D4AF37]/15" data-testid="section-home-seo-content">
+        <div className="container mx-auto px-4 py-10 md:py-14 max-w-5xl">
+          <div className="text-center mb-8 md:mb-10">
+            <span className="inline-block text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold mb-2">
+              Why Vedic Tatva
+            </span>
+            <h2 className="font-serif text-2xl md:text-3xl text-[#6D2B35] leading-tight">
+              Book Puja Online, Hire Pandits & Shop Puja Essentials
+            </h2>
+            <p className="mt-3 text-sm md:text-base text-[#5a4a3a]/80 max-w-2xl mx-auto leading-relaxed">
+              India's most trusted spiritual platform — verified Vedic Pandits, authentic samagri sourced
+              from Kashi & Gaya, AI-powered astrology, and prasad delivered to your door.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            <article className="rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
+              <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Online Puja Booking Services</h2>
+              <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
+                Book any Vedic puja online — Satyanarayan, Rudrabhishek, Lakshmi, Ganesh, Navratri,
+                Griha Pravesh and more. A verified pandit performs the full ritual at the temple or
+                sankalp-sthan, you join the sankalp live on video call, and prasad reaches your home.
+                Same-day slots available.
+              </p>
+              <Link href="/online-puja-booking" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-puja-booking">
+                Book a Puja Online <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </article>
+
+            <article className="rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
+              <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Book Experienced Pandits Online</h2>
+              <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
+                1,200+ identity-verified, scripture-trained Brahmin pandits across Delhi, Mumbai,
+                Bangalore, Hyderabad, Pune, Chennai, Kolkata and 40+ Indian cities. Pick by tradition
+                — Shukla Yajurveda, Iyer/Iyengar, Madhwa, Gujarati, Marathi, Konkani — with
+                transparent dakshina and same-day availability.
+              </p>
+              <Link href="/pandits" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-pandits">
+                Find a Verified Pandit <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </article>
+
+            <article className="rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
+              <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Shop Puja Samagri & Puja Essentials</h2>
+              <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
+                4,000+ authentic puja items — complete samagri kits, brass diyas and idols,
+                certified rudraksha and gemstones, havan kunds, yantras, dhoop and agarbatti.
+                Sourced from temple suppliers in Kashi, Gaya and Haridwar with free shipping
+                across India over ₹499.
+              </p>
+              <Link href="/spiritual-essentials" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-essentials">
+                Shop Puja Essentials <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </article>
+
+            <article className="rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
+              <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Astrology Consultation & Kundli Services</h2>
+              <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
+                Free AI-generated Janma Kundli, Kundli matching, Vastu analysis, palm reading and
+                live consultations with verified Vedic astrologers. Get a complete birth-chart
+                report, dasha analysis, gemstone recommendations and remedies — written in plain
+                English and Hindi.
+              </p>
+              <Link href="/astrology" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-astrology">
+                Talk to an Astrologer <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </article>
+
+            <article className="md:col-span-2 rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
+              <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Festival Puja Booking Across India</h2>
+              <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
+                Book pandit and samagri together for every major Hindu festival —
+                Navratri, Diwali Lakshmi Puja, Ganesh Chaturthi, Janmashtami, Karwa Chauth,
+                Shivratri, Holi and Karthik Purnima. Pan-India service with NRI-friendly slots
+                for USA, UK, Canada, UAE and Singapore households.
+              </p>
+              <div className="flex flex-wrap gap-2 text-[12px]">
+                <Link href="/satyanarayan-puja" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-satyanarayan">Satyanarayan Puja</Link>
+                <Link href="/rudrabhishek-puja" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-rudrabhishek">Rudrabhishek</Link>
+                <Link href="/navratri-puja" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-navratri">Navratri Puja</Link>
+                <Link href="/lakshmi-puja-benefits" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-lakshmi">Lakshmi Puja</Link>
+                <Link href="/griha-pravesh-muhurat" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-griha-pravesh">Griha Pravesh Muhurat</Link>
+                <Link href="/pind-daan" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-pind-daan">Pind Daan</Link>
+              </div>
+            </article>
+          </div>
+
+          <div className="mt-8 md:mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+            <Link href="/pandit-in-delhi" className="rounded-md border border-[#D4AF37]/25 bg-white px-4 py-3 text-[13px] text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-city-delhi">
+              Book Pandit in Delhi
+            </Link>
+            <Link href="/pandit-in-mumbai" className="rounded-md border border-[#D4AF37]/25 bg-white px-4 py-3 text-[13px] text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-city-mumbai">
+              Book Pandit in Mumbai
+            </Link>
+            <Link href="/pandit-in-bangalore" className="rounded-md border border-[#D4AF37]/25 bg-white px-4 py-3 text-[13px] text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-city-bangalore">
+              Book Pandit in Bangalore
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
