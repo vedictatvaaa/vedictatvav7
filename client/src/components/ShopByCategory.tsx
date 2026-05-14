@@ -5,26 +5,7 @@ import { CATEGORY_THEMES, ORDERED_THEME_SLUGS } from "@/data/category-themes";
 import { CATEGORY_CONTENT } from "@/data/category-content";
 import type { Product } from "@shared/schema";
 
-// Purpose-generated category hero images — one per themed vertical, 4:3 aspect.
-import rudrakshaImg from "@assets/generated_images/cat-rudraksha.png";
-import pujaSamagriImg from "@assets/generated_images/cat-puja-samagri.png";
-import idolsImg from "@assets/generated_images/cat-idols.png";
-import havanImg from "@assets/generated_images/cat-havan-samagri.png";
-import brassImg from "@assets/generated_images/cat-brass-copperware.png";
-import wearablesImg from "@assets/generated_images/cat-wearables.png";
-import dhotiImg from "@assets/generated_images/cat-dhoti-kurta.png";
-import gemstonesImg from "@assets/generated_images/cat-gemstones.png";
-
-const CATEGORY_IMAGE: Record<string, string> = {
-  "rudraksha": rudrakshaImg,
-  "puja-samagri": pujaSamagriImg,
-  "idols": idolsImg,
-  "havan-samagri": havanImg,
-  "brass-copperware": brassImg,
-  "wearables": wearablesImg,
-  "dhoti-kurta": dhotiImg,
-  "gemstones": gemstonesImg,
-};
+import { CATEGORY_IMAGE } from "@/data/category-images";
 
 const MAROON = "#5A1F22";
 const GOLD = "#B8860B";

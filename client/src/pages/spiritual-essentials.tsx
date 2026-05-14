@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CATEGORY_THEMES, ORDERED_THEME_SLUGS, type CategoryTheme } from "@/data/category-themes";
 import { CATEGORY_CONTENT } from "@/data/category-content";
+import { getCategoryImage } from "@/data/category-images";
 
 const CREAM = "#FBF7EE";
 const CREAM_DEEP = "#F3ECD9";
@@ -28,6 +29,7 @@ const HUB_FAQS: { q: string; a: string }[] = [
 function CategoryTile({ theme, position }: { theme: CategoryTheme; position: number }) {
   const Icon = theme.icon;
   const content = CATEGORY_CONTENT[theme.slug];
+  const heroImg = getCategoryImage(theme.slug);
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -38,15 +40,34 @@ function CategoryTile({ theme, position }: { theme: CategoryTheme; position: num
       <Link href={`/shop/${theme.slug}`} data-testid={`tile-category-${theme.slug}`}>
         <Card className="group relative overflow-hidden border-2 hover-elevate active-elevate-2 cursor-pointer h-full"
           style={{ borderColor: `${theme.palette.accent}33` }}>
-          {/* Themed gradient background */}
+          {/* Themed gradient background (kept as fallback / colour wash behind the image) */}
           <div
             className="absolute inset-0"
             style={{ background: `linear-gradient(135deg, ${theme.palette.bgFrom} 0%, ${theme.palette.bgVia} 60%, ${theme.palette.bgTo} 100%)` }}
           />
+          {/* Purpose-shot category hero image */}
+          {heroImg && (
+            <img
+              src={heroImg}
+              alt=""
+              aria-hidden="true"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 w-full h-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-[1.04]"
+            />
+          )}
+          {/* Dark scrim — keeps white text WCAG-AA legible over any image */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(160deg, ${theme.palette.bgFrom}E6 0%, ${theme.palette.bgFrom}99 45%, rgba(0,0,0,0.55) 100%)`,
+            }}
+          />
           {/* Decorative motif */}
           <div
             aria-hidden="true"
-            className="absolute -right-4 -bottom-8 sm:-right-6 sm:-bottom-10 text-[140px] sm:text-[180px] opacity-[0.12] leading-none select-none pointer-events-none font-serif text-white"
+            className="absolute -right-4 -bottom-8 sm:-right-6 sm:-bottom-10 text-[140px] sm:text-[180px] opacity-[0.10] leading-none select-none pointer-events-none font-serif text-white"
           >
             {theme.motifEmoji}
           </div>
