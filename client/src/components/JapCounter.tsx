@@ -1353,38 +1353,12 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     }
   }, [toast]);
 
-  const undo = () => {
-    setPersist((prev) => {
-      if (prev.total === 0) return prev;
-      let count = prev.count - 1;
-      let malas = prev.malas;
-      let todayMalas = prev.todayMalas;
-      // If we're at 0 and have completed a mala, peel one mala back
-      if (count < 0) {
-        if (malas <= 0) return prev;
-        count = target - 1;
-        malas -= 1;
-        todayMalas = Math.max(0, todayMalas - 1);
-      }
-      const nextTodayCount = Math.max(0, prev.todayCount - 1);
-      // If undo zeroes out today's activity, roll back the streak credit we
-      // gave when today's first tap happened.
-      let streak = prev.streak;
-      let lastDay = prev.lastDay;
-      if (nextTodayCount === 0 && prev.todayCount > 0) {
-        streak = Math.max(0, prev.streak - 1);
-        lastDay = streak === 0 ? null : yesterday();
-      }
-      return {
-        ...prev,
-        count, malas,
-        total: Math.max(0, prev.total - 1),
-        todayCount: nextTodayCount,
-        todayMalas,
-        streak, lastDay,
-      };
-    });
-  };
+  // The legacy Undo button delegates to the same undoLastTap callback
+  // used by long-press, so both undo paths produce identical state
+  // transitions (and both correctly handle the new "hold count at
+  // target" wrap rule that was added when the counter started showing
+  // 108 instead of wrapping to 0).
+  const undo = undoLastTap;
 
   const resetMala = () => {
     setPersist((prev) => ({ ...prev, count: 0 }));
