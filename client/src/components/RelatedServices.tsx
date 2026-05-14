@@ -12,7 +12,7 @@ type ServiceLink = {
 
 const ALL_SERVICES: ServiceLink[] = [
   { title: "Shop Products", description: "Browse authentic spiritual products", href: "/shop", icon: ShoppingBag, color: "bg-amber-50 text-amber-600" },
-  { title: "Spiritual Essentials", description: "Curated puja items & ritual needs", href: "/spiritual-essentials", icon: Leaf, color: "bg-lime-50 text-lime-600" },
+  { title: "Puja Essentials", description: "Curated puja items & ritual needs", href: "/spiritual-essentials", icon: Leaf, color: "bg-lime-50 text-lime-600" },
   { title: "Book a Pandit", description: "Verified pandits for all ceremonies", href: "/pandits", icon: UserCheck, color: "bg-orange-50 text-orange-600" },
   { title: "Book Puja", description: "Schedule sacred puja ceremonies", href: "/puja", icon: Calendar, color: "bg-red-50 text-red-600" },
   { title: "Astrology", description: "Expert Vedic astrology consultations", href: "/astrology", icon: Sparkles, color: "bg-purple-50 text-purple-600" },

@@ -21,7 +21,7 @@ const STATIC_SUGGESTIONS: { label: string; url: string; type: string }[] = [
   { label: "Astrology Consultation", url: "/astrology", type: "service" },
   { label: "Daily Panchang", url: "/panchang", type: "service" },
   { label: "Matrimony", url: "/matrimony", type: "service" },
-  { label: "Spiritual Essentials", url: "/spiritual-essentials", type: "category" },
+  { label: "Puja Essentials", url: "/spiritual-essentials", type: "category" },
   { label: "Idols & Murtis", url: "/category/idols", type: "category" },
   { label: "Puja Samagri", url: "/category/puja-samagri", type: "category" },
   { label: "Havan Samagri", url: "/category/havan-samagri", type: "category" },

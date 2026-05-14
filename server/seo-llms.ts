@@ -51,7 +51,7 @@ export async function buildLlmsTxt(siteUrl: string): Promise<string> {
   lines.push(`- [Matrimony](${siteUrl}/matrimony): Vedic-aligned matrimonial profiles`);
   lines.push("");
   lines.push("## Spiritual Shop");
-  lines.push(`- [Spiritual Essentials](${siteUrl}/spiritual-essentials)`);
+  lines.push(`- [Puja Essentials](${siteUrl}/spiritual-essentials)`);
   lines.push(`- [Idols & Murtis](${siteUrl}/category/idols)`);
   lines.push(`- [Puja Samagri](${siteUrl}/category/puja-samagri)`);
   lines.push(`- [Havan Samagri](${siteUrl}/category/havan-samagri)`);

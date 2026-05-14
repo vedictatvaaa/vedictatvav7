@@ -10,7 +10,7 @@ import { useSiteSettings } from "@/lib/site-settings";
 const PRIMARY_NAV: Array<{ name: string; url: string }> = [
   { name: "Home", url: "/" },
   { name: "Shop", url: "/shop" },
-  { name: "Spiritual Essentials", url: "/spiritual-essentials" },
+  { name: "Puja Essentials", url: "/spiritual-essentials" },
   { name: "Book a Pandit", url: "/pandits" },
   { name: "Book a Puja", url: "/puja" },
   { name: "Pind Daan", url: "/pind-daan" },

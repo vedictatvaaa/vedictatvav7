@@ -1163,7 +1163,7 @@ function ProductsTab() {
               <Select value={bulkMoveCategory} onValueChange={setBulkMoveCategory}>
                 <SelectTrigger data-testid="select-bulk-move-category"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Puja Samagri","Havan Samagri","Idols & Murtis","Wearables","Brass & Copperware","Rudraksha","Gemstones","Yantras","Books & Scriptures","Spiritual Essentials"].map((c) => (
+                  {["Puja Samagri","Havan Samagri","Idols & Murtis","Wearables","Brass & Copperware","Rudraksha","Gemstones","Yantras","Books & Scriptures","Puja Essentials"].map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1456,7 +1456,7 @@ function OneClickListingDialog({
       const payload: any = {
         name: listing.name || name,
         slug: listing.slug || undefined,
-        category: listing.category || category || "Spiritual Essentials",
+        category: listing.category || category || "Puja Essentials",
         brand: listing.brand || "Vedic Tatva",
         description: listing.description || "",
         highlights: listing.highlights || [],
@@ -1605,7 +1605,7 @@ function OneClickListingDialog({
                   <SelectTrigger data-testid="select-oc-category"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_auto">Let AI decide</SelectItem>
-                    {["Puja Samagri","Havan Samagri","Idols & Murtis","Wearables","Brass & Copperware","Rudraksha","Gemstones","Yantras","Books & Scriptures","Spiritual Essentials"].map((c) => (
+                    {["Puja Samagri","Havan Samagri","Idols & Murtis","Wearables","Brass & Copperware","Rudraksha","Gemstones","Yantras","Books & Scriptures","Puja Essentials"].map((c) => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>

@@ -5025,7 +5025,7 @@ If you did not request this reset, you can ignore this email — your password w
 
       const allCategories = [
         "Puja Samagri", "Havan Samagri", "Idols & Murtis", "Wearables", "Brass & Copperware",
-        "Rudraksha", "Gemstones", "Yantras", "Books & Scriptures", "Spiritual Essentials",
+        "Rudraksha", "Gemstones", "Yantras", "Books & Scriptures", "Puja Essentials",
       ];
 
       const sys =
@@ -5508,7 +5508,7 @@ If you did not request this reset, you can ignore this email — your password w
   // Input: { productIds: number[] (max 500), targetCategory: string (allow-listed) }
   const ALLOWED_TRANSFER_CATEGORIES = new Set([
     "Puja Samagri", "Havan Samagri", "Idols & Murtis", "Wearables", "Brass & Copperware",
-    "Rudraksha", "Gemstones", "Yantras", "Books & Scriptures", "Spiritual Essentials",
+    "Rudraksha", "Gemstones", "Yantras", "Books & Scriptures", "Puja Essentials",
   ]);
   app.post("/api/admin/products/transfer-category", adminAuthMiddleware, async (req: any, res) => {
     try {

@@ -16,24 +16,29 @@ import { useToast } from "@/hooks/use-toast";
 import { getProductUrl } from "@/lib/utils";
 import { IncenseSmoke } from "@/components/IncenseSmoke";
 
+// Categories MUST mirror /shop's SHOP_CATEGORY_LINKS (8 verticals) so /shop and
+// /spiritual-essentials present the exact same product taxonomy. Single source
+// of truth lives in shop.tsx — keep these arrays in sync when editing.
 const categoryData = [
-  { name: "Dhoti & Kurta", icon: Flame, color: "from-amber-500 to-orange-600", description: "Traditional spiritual clothing", image: "👔" },
-  { name: "Puja Samagri", icon: HandMetal, color: "from-red-500 to-rose-600", description: "Complete puja kits & daily essentials", image: "🕉️" },
-  { name: "Rudraksha", icon: Gem, color: "from-amber-700 to-yellow-600", description: "Certified natural Rudraksha beads", image: "📿" },
-  { name: "Idols & Murtis", icon: Star, color: "from-yellow-500 to-amber-500", description: "Handcrafted brass & marble murtis", image: "🙏" },
-  { name: "Wearables", icon: Leaf, color: "from-emerald-500 to-teal-600", description: "Yantras, malas & spiritual accessories", image: "🧿" },
-  { name: "Havan Samagri", icon: Flame, color: "from-orange-600 to-red-500", description: "Sacred havan ingredients & kits", image: "🔥" },
-  { name: "Brass & Copperware", icon: Star, color: "from-amber-600 to-yellow-700", description: "Pooja diyas, bells, lotas & thalis", image: "🪔" },
+  { name: "Rudraksha", icon: Gem, color: "from-amber-700 to-yellow-600", description: "1 to 21 mukhi · X-ray verified", image: "📿" },
+  { name: "Puja Samagri", icon: HandMetal, color: "from-red-500 to-rose-600", description: "Roli, kumkum, gangajal & kits", image: "🕉️" },
+  { name: "Idols", icon: Star, color: "from-yellow-500 to-amber-500", description: "Brass · Panchaloha · Marble", image: "🙏" },
+  { name: "Havan Samagri", icon: Flame, color: "from-orange-600 to-red-500", description: "Pure yajna ingredients", image: "🔥" },
+  { name: "Brass & Copperware", icon: Star, color: "from-amber-600 to-yellow-700", description: "Diyas, bells, lotas & thalis", image: "🪔" },
+  { name: "Wearables", icon: Leaf, color: "from-emerald-500 to-teal-600", description: "Energised malas & bracelets", image: "🧿" },
+  { name: "Dhoti & Kurta", icon: Flame, color: "from-amber-500 to-orange-600", description: "Pure cotton pooja wear", image: "👔" },
+  { name: "Gemstones", icon: Gem, color: "from-blue-500 to-indigo-600", description: "Lab-certified jyotish ratna", image: "💎" },
 ];
 
 const categoryCards = [
   { name: "Rudraksha", image: "/attached_assets/category_cards/rudraksha.png", description: "Sacred seeds for spiritual energy & protection" },
-  { name: "Dhoti & Kurta", image: "/attached_assets/category_cards/dhoti_kurta.png", description: "Traditional spiritual clothing" },
   { name: "Puja Samagri", image: "/attached_assets/category_cards/puja_samagri.png", description: "Complete essentials for daily rituals" },
+  { name: "Idols", image: "/attached_assets/category_cards/idols.png", description: "Brass · Panchaloha · Marble murtis" },
   { name: "Havan Samagri", image: "/attached_assets/category_cards/havan_samagri.png", description: "Premium ingredients for sacred fire ceremonies" },
-  { name: "Idols & Murtis", image: "/attached_assets/category_cards/idols.png", description: "Handcrafted divine statues & figurines" },
-  { name: "Wearables", image: "/attached_assets/category_cards/wearables.png", description: "Spiritual bracelets, malas & accessories" },
   { name: "Brass & Copperware", image: "/attached_assets/category_cards/brass_copperware.png", description: "Pooja diyas, bells, lotas, thalis & more" },
+  { name: "Wearables", image: "/attached_assets/category_cards/wearables.png", description: "Spiritual bracelets, malas & accessories" },
+  { name: "Dhoti & Kurta", image: "/attached_assets/category_cards/dhoti_kurta.png", description: "Traditional spiritual clothing" },
+  { name: "Gemstones", image: "/attached_assets/category_cards/rudraksha.png", description: "Lab-certified navaratna jyotish ratna" },
 ];
 
 export default function SpiritualEssentials() {
@@ -57,8 +62,8 @@ export default function SpiritualEssentials() {
   return (
     <div className="w-full pb-20">
       <PageSeo
-        title="Spiritual Essentials Online — Certified Rudraksha, Navaratna Gemstones, Malas, Yantras & Puja Samagri | Vedic Tatva"
-        description="Buy authentic Hindu spiritual essentials online — X-ray certified rudraksha (1-mukhi to 14-mukhi from Nepal & Indonesia), lab-tested navaratna gemstones (Manik/Ruby, Moti/Pearl, Moonga/Coral, Panna/Emerald, Pukhraj/Yellow Sapphire, Neelam/Blue Sapphire, Gomed/Hessonite, Lehsuniya/Cat's Eye, Heera/Diamond), tulsi/sphatik/sandalwood japa malas, energised yantras (Sri Yantra, Mahamrityunjaya, Kuber), brass deepak, dakshinavarti shankha, ghanti, parad shivling, complete puja samagri & havan kits."
+        title="Puja Essentials Online — Rudraksha, Gemstones, Malas, Yantras & Puja Samagri | Vedic Tatva"
+        description="Buy authentic Hindu puja essentials online — X-ray certified rudraksha (1-mukhi to 14-mukhi from Nepal & Indonesia), lab-tested navaratna gemstones (Manik/Ruby, Moti/Pearl, Moonga/Coral, Panna/Emerald, Pukhraj/Yellow Sapphire, Neelam/Blue Sapphire, Gomed/Hessonite, Lehsuniya/Cat's Eye, Heera/Diamond), tulsi/sphatik/sandalwood japa malas, energised yantras (Sri Yantra, Mahamrityunjaya, Kuber), brass deepak, dakshinavarti shankha, ghanti, parad shivling, complete puja samagri & havan kits."
         keywords="buy rudraksha online, 1 mukhi rudraksha price, 5 mukhi rudraksha, gauri shankar rudraksha, nepali rudraksha, indonesian rudraksha, rudraksha mala 108 beads, x-ray certified rudraksha, navaratna gemstone, certified gemstone online, ruby manik online, pearl moti, red coral moonga, emerald panna, yellow sapphire pukhraj, blue sapphire neelam, hessonite gomed, cat's eye lehsuniya, lab certified gemstone, tulsi mala, sphatik mala, sandalwood japa mala, sri yantra, mahamrityunjaya yantra, kuber yantra, vyapar vridhi yantra, vastu yantra, navagraha yantra, energised yantra online, brass deepak, samai deepak, dakshinavarti shankha, vamavarti lakshmi shankha, puja ghanti, aarti thali, parad shivling, panchaloha murti, brass idols, marble murti, complete puja samagri kit, havan samagri online, dhoti kurta online, dharan vidhi"
         canonical="/spiritual-essentials"
         ogType="website"
@@ -70,9 +75,9 @@ export default function SpiritualEssentials() {
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="text-secondary font-medium tracking-wider uppercase text-sm">Authentic & Premium</span>
-            <h1 className="text-4xl md:text-5xl font-serif mt-3 mb-4">Spiritual Essentials</h1>
+            <h1 className="text-4xl md:text-5xl font-serif mt-3 mb-4">Puja Essentials</h1>
             <p className="text-primary-foreground/80 max-w-2xl mx-auto font-light text-lg">
-              Curated collection of authentic spiritual products for your daily rituals and sacred ceremonies.
+              Curated collection of authentic puja products for your daily rituals and sacred ceremonies.
             </p>
           </motion.div>
         </div>
@@ -151,7 +156,7 @@ export default function SpiritualEssentials() {
             <p className="text-muted-foreground text-sm mt-1">
               {activeCategory 
                 ? categoryData.find(c => c.name === activeCategory)?.description 
-                : "Showing all spiritual essentials"}
+                : "Showing all puja essentials"}
             </p>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
@@ -327,9 +332,9 @@ export default function SpiritualEssentials() {
         </div>
 
         <PageAPlusContent
-          eyebrow="Why Choose Vedic Tatva Spiritual Essentials"
-          title="Curated Spiritual Essentials — Rudraksha, Gemstones, Malas & Sacred Items"
-          intro="Beyond daily puja samagri, Vedic Tatva offers carefully curated spiritual essentials for sadhana — certified rudraksha, lab-tested gemstones (navaratna), tulsi and sphatik malas, energised yantras, conch (shankha), bell (ghanti), brass deepak and parad (mercury) items. Every essential is sourced for authenticity and prepared for serious sadhakas."
+          eyebrow="Why Choose Vedic Tatva Puja Essentials"
+          title="Curated Puja Essentials — Rudraksha, Gemstones, Malas & Sacred Items"
+          intro="Beyond daily puja samagri, Vedic Tatva offers carefully curated puja essentials for sadhana — certified rudraksha, lab-tested gemstones (navaratna), tulsi and sphatik malas, energised yantras, conch (shankha), bell (ghanti), brass deepak and parad (mercury) items. Every essential is sourced for authenticity and prepared for serious sadhakas."
           trustBadges={[
             { value: "Lab", label: "Certified" },
             { value: "Energised", label: "Properly" },
@@ -360,7 +365,7 @@ export default function SpiritualEssentials() {
             { q: "Do I need a special vidhi to start using a rudraksha or gemstone?", a: "Yes — both have proper dharan vidhi. Rudraksha is typically energised on a Monday (Shiva's day) with the Mahamrityunjaya or rudraksha bija mantra. Gemstones are worn on the day ruled by the corresponding planet (Yellow Sapphire on Thursday for Jupiter, etc.). Each product ships with detailed vidhi instructions." },
             { q: "Are these items suitable for daily home sadhana?", a: "Yes — every spiritual essential we curate is intended for active sadhana, not décor. Whether it's a 1-mukhi rudraksha, sphatik mala, Sri Yantra or pancha-loha murti — these are tools to support your daily japa, dhyana and puja practice with proper sanctity." },
           ]}
-          keywordsBlurb="Curated Hindu spiritual essentials — certified rudraksha (1-mukhi, 5-mukhi, Gauri Shankar, 14-mukhi from Nepal and Indonesia with X-ray certificate), lab-tested navaratna gemstones (Manik, Moti, Moonga, Panna, Pukhraj, Heera, Neelam, Gomed, Lehsuniya), tulsi mala for Vaishnava sadhana, sphatik mala for Devi mantra, sandalwood japa mala. Energised yantras (Sri Yantra, Mahamrityunjaya, Kuber, Vyapar Vridhi, Navagraha, Vastu), brass and pancha-loha murtis, dakshinavarti and vamavarti shankha, samai deepak, ghanti, parad shivling. Authentic items for serious sadhakas, daily puja and dharan vidhi."
+          keywordsBlurb="Curated Hindu puja essentials — certified rudraksha (1-mukhi, 5-mukhi, Gauri Shankar, 14-mukhi from Nepal and Indonesia with X-ray certificate), lab-tested navaratna gemstones (Manik, Moti, Moonga, Panna, Pukhraj, Heera, Neelam, Gomed, Lehsuniya), tulsi mala for Vaishnava sadhana, sphatik mala for Devi mantra, sandalwood japa mala. Energised yantras (Sri Yantra, Mahamrityunjaya, Kuber, Vyapar Vridhi, Navagraha, Vastu), brass and pancha-loha murtis, dakshinavarti and vamavarti shankha, samai deepak, ghanti, parad shivling. Authentic items for serious sadhakas, daily puja and dharan vidhi."
         />
       </div>
     </div>

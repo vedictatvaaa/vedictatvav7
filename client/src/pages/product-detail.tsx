@@ -203,7 +203,7 @@ export default function ProductDetail() {
     } catch {}
     return "/shop";
   })();
-  const shopBackLabel = shopBackPath === "/spiritual-essentials" ? "Spiritual Essentials" : "Shop";
+  const shopBackLabel = shopBackPath === "/spiritual-essentials" ? "Puja Essentials" : "Shop";
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["/api/products", id],

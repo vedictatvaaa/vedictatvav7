@@ -1255,7 +1255,7 @@ export default function Shop() {
 
         <PageAPlusContent
           eyebrow="Why Shop on Vedic Tatva"
-          title="Hindu Puja Samagri & Spiritual Essentials Online"
+          title="Hindu Puja Samagri & Puja Essentials Online"
           intro="Authentic puja samagri, deity idols, brass diyas, panchapatra, rudraksha malas, gemstones, incense, yantras and more — sourced directly from traditional artisans of Banaras, Vrindavan, Tirupati, Kanchipuram and Kumbakonam. Every product is shastra-aligned and prepared with proper sanctity."
           trustBadges={[
             { value: "100%", label: "Authentic" },

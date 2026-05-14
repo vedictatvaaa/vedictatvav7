@@ -6,7 +6,7 @@ const SEED: InsertSeoPage[] = [
   {
     pagePath: "/",
     metaTitle: "Vedic Tatva — Sacred Living, Authentic Puja, Pandits & Pilgrimages",
-    metaDescription: "Book verified pandits, perform puja online, shop authentic spiritual essentials, and plan sacred pilgrimages. Vedic wisdom for modern devotees, delivered worldwide.",
+    metaDescription: "Book verified pandits, perform puja online, shop authentic puja essentials, and plan sacred pilgrimages. Vedic wisdom for modern devotees, delivered worldwide.",
     canonicalUrl: "/",
     ogType: "website",
     priority: 1.0,
@@ -95,8 +95,8 @@ const SEED: InsertSeoPage[] = [
   },
   {
     pagePath: "/spiritual-essentials",
-    metaTitle: "Spiritual Essentials — Daily Puja & Sadhana Kits | Vedic Tatva",
-    metaDescription: "Curated spiritual essentials for daily puja and sadhana — diyas, incense, asanas, japa malas and more. Authentic, energised and ready to ship.",
+    metaTitle: "Puja Essentials — Daily Puja & Sadhana Kits | Vedic Tatva",
+    metaDescription: "Curated puja essentials for daily puja and sadhana — diyas, incense, asanas, japa malas and more. Authentic, energised and ready to ship.",
     canonicalUrl: "/spiritual-essentials",
     priority: 0.8,
     changeFreq: "weekly",
@@ -216,7 +216,7 @@ const SEED: InsertSeoPage[] = [
   {
     pagePath: "/subscriptions",
     metaTitle: "Spiritual Subscriptions — Monthly Sadhana Boxes | Vedic Tatva",
-    metaDescription: "Subscribe to monthly spiritual essentials, samagri kits, and curated sadhana boxes delivered across India.",
+    metaDescription: "Subscribe to monthly puja essentials, samagri kits, and curated sadhana boxes delivered across India.",
     canonicalUrl: "/subscriptions",
     priority: 0.7,
     changeFreq: "monthly",
