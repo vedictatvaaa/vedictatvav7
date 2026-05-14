@@ -211,7 +211,7 @@ export default function BecomePandit() {
         ]}
       />
       <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
-        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+        <ol className="container mx-auto px-4 py-1.5 flex items-center gap-1 text-[11px] sm:text-[12px] text-[#5a4a3a]/75">
           <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
           <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
           <li aria-current="page" className="text-[#6D2B35] font-semibold">Become a Pandit</li>
@@ -294,8 +294,8 @@ function Hero({ onApply, onDemo }: { onApply: (e: React.MouseEvent) => void; onD
       <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ background: `${C.saffron}33` }} />
       <div className="absolute -bottom-40 -left-40 w-[28rem] h-[28rem] rounded-full blur-3xl pointer-events-none" style={{ background: `${C.gold}22` }} />
 
-      <div className="container mx-auto px-4 relative z-10 py-16 md:py-24 lg:py-28">
-        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+      <div className="container mx-auto px-4 relative z-10 py-9 sm:py-14 md:py-20 lg:py-24">
+        <div className="grid lg:grid-cols-12 gap-7 sm:gap-10 lg:gap-16 items-center">
           {/* LEFT — title + tagline + CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -303,16 +303,16 @@ function Hero({ onApply, onDemo }: { onApply: (e: React.MouseEvent) => void; onD
             transition={{ duration: 0.6 }}
             className="lg:col-span-7"
           >
-            <div className="flex items-center gap-3 mb-5">
-              <div className="h-px w-10" style={{ background: C.gold }} />
-              <span className="text-[11px] uppercase tracking-[0.32em] font-medium" style={{ color: C.gold }}>
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-5">
+              <div className="h-px w-7 sm:w-10" style={{ background: C.gold }} />
+              <span className="text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.32em] font-medium" style={{ color: C.gold }}>
                 A Digital Dharma Movement
               </span>
             </div>
 
             <h1
-              className="font-serif leading-[1.05] mb-5 text-white"
-              style={{ fontSize: "clamp(2.25rem, 5vw, 4.25rem)" }}
+              className="font-serif leading-[1.08] mb-3 sm:mb-5 text-white"
+              style={{ fontSize: "clamp(1.65rem, 5.2vw, 4.25rem)" }}
               data-testid="heading-become-pandit"
             >
               Become a <span style={{ color: C.gold }}>Verified</span>
@@ -321,9 +321,9 @@ function Hero({ onApply, onDemo }: { onApply: (e: React.MouseEvent) => void; onD
             </h1>
 
             <p
-              className="font-serif italic mb-6 text-white/95"
+              className="font-serif italic mb-3 sm:mb-6 text-white/95"
               style={{
-                fontSize: "clamp(1.1rem, 2vw, 1.55rem)",
+                fontSize: "clamp(0.95rem, 2.2vw, 1.55rem)",
                 fontFamily: '"Noto Serif Devanagari", "Tiro Devanagari Sanskrit", "Playfair Display", serif',
               }}
               data-testid="text-tagline-sanskrit"
@@ -331,7 +331,7 @@ function Hero({ onApply, onDemo }: { onApply: (e: React.MouseEvent) => void; onD
               सेवा को सम्मान, पंडितों को पहचान
             </p>
 
-            <p className="text-white/75 text-base md:text-lg max-w-xl leading-relaxed mb-8 font-light">
+            <p className="text-white/75 text-[13px] sm:text-base md:text-lg max-w-xl leading-snug sm:leading-relaxed mb-5 sm:mb-8 font-light">
               Get recognized, receive bookings, access powerful Vedic tools, and expand your spiritual reach across India and beyond — without losing the sanctity of your practice.
             </p>
 

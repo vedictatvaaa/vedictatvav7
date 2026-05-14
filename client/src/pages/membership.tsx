@@ -111,7 +111,7 @@ export default function Membership() {
         ]}
       />
       <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
-        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+        <ol className="container mx-auto px-4 py-1.5 flex items-center gap-1 text-[11px] sm:text-[12px] text-[#5a4a3a]/75">
           <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
           <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
           <li aria-current="page" className="text-[#6D2B35] font-semibold">Membership</li>
@@ -119,19 +119,19 @@ export default function Membership() {
       </nav>
       {/* Slim hero — solid maroon, no gradient, no faded ॐ */}
       <section className="bg-[#6D2B35] border-b border-[#D4AF37]/30 text-white">
-        <div className="container mx-auto px-4 py-12 sm:py-16 text-center">
-          <div className="flex items-center justify-center gap-2.5 mb-3">
-            <span className="h-px w-8 bg-[#D4AF37]/60" />
-            <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
+        <div className="container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center">
+          <div className="flex items-center justify-center gap-2 mb-2.5">
+            <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
+            <span className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] font-semibold">
               <Crown className="w-3 h-3" /> Vedic Tatva Membership
             </span>
-            <span className="h-px w-8 bg-[#D4AF37]/60" />
+            <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-3 font-semibold tracking-tight" data-testid="text-membership-title">
+          <h1 className="text-[19px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif mb-2 sm:mb-3 font-semibold tracking-tight" data-testid="text-membership-title">
             {MEMBERSHIP_H1}
           </h1>
-          <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-[15px] leading-relaxed">
-            Join our sacred community and unlock exclusive benefits, divine blessings, and premium spiritual services.
+          <p className="text-white/70 max-w-xl mx-auto text-[13px] sm:text-sm md:text-[15px] leading-snug sm:leading-relaxed">
+            Sacred community, divine blessings, premium spiritual services.
           </p>
         </div>
       </section>

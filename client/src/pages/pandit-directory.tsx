@@ -75,18 +75,18 @@ const CITY_TILES: Array<{ slug: string; name: string; tagline: string; defaultCi
 function SlimHero({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle?: string; children?: React.ReactNode }) {
   return (
     <div className="bg-[#6D2B35] border-b border-[#D4AF37]/30">
-      <div className="container mx-auto px-4 py-12 sm:py-16 text-center max-w-3xl">
-        <div className="flex items-center justify-center gap-2.5 mb-3">
-          <span className="h-px w-8 bg-[#D4AF37]/60" />
-          <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
+      <div className="container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center max-w-3xl">
+        <div className="flex items-center justify-center gap-2 mb-2.5">
+          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
+          <span className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] font-semibold">
             <Sparkles className="w-3 h-3" /> {eyebrow}
           </span>
-          <span className="h-px w-8 bg-[#D4AF37]/60" />
+          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
         </div>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-white mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
+        <h1 className="text-[19px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif text-white mb-2 sm:mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
           {title}
         </h1>
-        {subtitle && <p className="text-white/70 text-sm sm:text-[15px] leading-relaxed">{subtitle}</p>}
+        {subtitle && <p className="text-white/70 text-[13px] sm:text-sm md:text-[15px] leading-snug sm:leading-relaxed max-w-xl mx-auto">{subtitle}</p>}
         {children}
       </div>
     </div>
@@ -143,7 +143,7 @@ function CityChooser() {
         ]}
       />
       <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
-        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+        <ol className="container mx-auto px-4 py-1.5 flex items-center gap-1 text-[11px] sm:text-[12px] text-[#5a4a3a]/75">
           <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
           <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
           <li aria-current="page" className="text-[#6D2B35] font-semibold">Verified Pandits</li>
@@ -497,34 +497,34 @@ function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: strin
         ]}
       />
       <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
-        <ol className="container mx-auto px-4 py-2 flex items-center gap-1.5 text-[12px] text-[#5a4a3a]/75">
+        <ol className="container mx-auto px-4 py-1.5 flex items-center gap-1 text-[11px] sm:text-[12px] text-[#5a4a3a]/75">
           <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
           <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
           <li><Link href="/pandits" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-pandits">Verified Pandits</Link></li>
           <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
-          <li aria-current="page" className="text-[#6D2B35] font-semibold">{cityLabel}</li>
+          <li aria-current="page" className="text-[#6D2B35] font-semibold truncate">{cityLabel}</li>
         </ol>
       </nav>
       {/* Slim hero with search */}
       <div className="bg-[#6D2B35] border-b border-[#D4AF37]/30">
-        <div className="container mx-auto px-4 py-12 sm:py-16 text-center">
+        <div className="container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center">
           <Link
             href="/pandits"
-            className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-[#D4AF37] hover:text-white font-semibold mb-3"
+            className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] hover:text-white font-semibold mb-2.5"
             data-testid="link-back-cities"
           >
             <ChevronDown className="w-3 h-3 rotate-90" /> All Cities
           </Link>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif text-white mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
-            Verified Vedic Pandits in {cityLabel} — Same-Day Booking
+          <h1 className="text-[20px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif text-white mb-2 sm:mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
+            Verified Vedic Pandits in {cityLabel}
           </h1>
-          <p className="text-white/70 max-w-xl mx-auto text-sm sm:text-[15px] mb-7 leading-relaxed">
-            Connect with experienced, verified priests near you for authentic rituals and ceremonies.
+          <p className="text-white/70 max-w-xl mx-auto text-[13px] sm:text-sm md:text-[15px] mb-5 sm:mb-7 leading-snug sm:leading-relaxed">
+            Same-day booking · transparent dakshina · authentic vidhi.
           </p>
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-5 sm:mb-6">
             {TRUST_SIGNALS.map((label) => (
-              <span key={label} className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/8 px-3 h-8 text-[11px] font-semibold text-white/80">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#D4AF37]" />
+              <span key={label} className="inline-flex items-center gap-1 sm:gap-1.5 rounded-md border border-white/15 bg-white/8 px-2 sm:px-3 h-7 sm:h-8 text-[10px] sm:text-[11px] font-semibold text-white/80">
+                <ShieldCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#D4AF37]" />
                 {label}
               </span>
             ))}
