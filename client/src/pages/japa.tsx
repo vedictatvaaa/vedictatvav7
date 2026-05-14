@@ -253,38 +253,24 @@ export default function JapaPage() {
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#5B7FB8]/[0.08] rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative z-10 flex flex-col gap-8 sm:gap-12 pb-12">
+      <div className="relative z-10 flex flex-col gap-6 sm:gap-10 pt-2 sm:pt-6 pb-12">
 
-        {/* Zone 1 — Compact title block */}
-        <header className="px-4 sm:px-5 pt-5 sm:pt-8 text-center">
-          <div className="max-w-xl mx-auto">
-            <p className="text-[10px] sm:text-[11px] tracking-[0.28em] uppercase text-[#D4AF37]/80 mb-2">
-              Mantra · Sadhana · Streak
-            </p>
-            <h1
-              className="text-[22px] leading-tight sm:text-4xl font-bold tracking-tight text-[#FBF7EE] mb-2 sm:mb-3"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-              data-testid="text-japa-headline"
-            >
-              Mantra Japa Counter
-            </h1>
-            <p className="text-[12.5px] sm:text-base text-[#FBF7EE]/75 leading-relaxed">
-              Pick a sacred mantra and tap the orb for each repetition.
-              <br className="hidden sm:inline" />
-              Bell + vibration on every full mala. Streak saved privately on this device.
-            </p>
-          </div>
-        </header>
-
-        {/* Zone 2 — The counter (untouched centerpiece) */}
-        <section className="px-4 sm:px-5 scroll-mt-16">
+        {/* Zone 1 — The counter is the FACE of the page.
+            On mobile the orb must be the first thing the user sees, so we
+            ship the page with no header above the counter. The wrapper
+            chrome is also minimised on mobile (no shadow card / no
+            outer rounded border) so the orb sits flush at the top of
+            the viewport. The full SEO H1 + intro paragraph live as a
+            section heading directly under the counter — still indexable
+            by Google, but visually demoted below the interactive orb. */}
+        <section className="px-2 sm:px-5 scroll-mt-16">
           <div className="max-w-3xl mx-auto">
-            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_0_70px_rgba(212,175,55,0.22)] border border-[#D4AF37]/35">
+            <div className="relative sm:rounded-3xl sm:overflow-hidden sm:shadow-[0_0_70px_rgba(212,175,55,0.22)] sm:border sm:border-[#D4AF37]/35">
               <div
-                className="relative bg-[#FBF7EE]"
+                className="relative bg-[#FBF7EE] rounded-2xl sm:rounded-none overflow-hidden"
                 style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
-                <div className="px-3 sm:px-6 py-6 sm:py-10 max-w-3xl mx-auto space-y-4 text-[#2c2c2c]">
+                <div className="px-2 sm:px-6 py-3 sm:py-8 max-w-3xl mx-auto space-y-3 text-[#2c2c2c]">
                   <JapCounter
                     ownerKey="public"
                     title="Begin Your Sādhanā"
@@ -317,6 +303,28 @@ export default function JapaPage() {
             </div>
           </div>
         </section>
+
+        {/* Page heading — sits directly under the orb so the counter is
+            the first visual on page open while the H1 + intro stay on the
+            page for SEO and screen-reader landmarks. */}
+        <header className="px-4 sm:px-5 text-center">
+          <div className="max-w-xl mx-auto">
+            <p className="text-[10px] sm:text-[11px] tracking-[0.28em] uppercase text-[#D4AF37]/80 mb-2">
+              Mantra · Sadhana · Streak
+            </p>
+            <h1
+              className="text-[20px] leading-tight sm:text-3xl font-bold tracking-tight text-[#FBF7EE] mb-2"
+              style={{ fontFamily: "'Playfair Display', serif" }}
+              data-testid="text-japa-headline"
+            >
+              Mantra Japa Counter
+            </h1>
+            <p className="text-[12.5px] sm:text-sm text-[#FBF7EE]/70 leading-relaxed">
+              Pick a sacred mantra and tap the orb for each repetition.
+              Bell + vibration on every full mala. Streak saved privately on this device.
+            </p>
+          </div>
+        </header>
 
         {/* Zone 3 — Popular mantras (horizontal pill scroll, miniature) */}
         <section className="px-0 sm:px-5" aria-labelledby="japa-popular-h2">
