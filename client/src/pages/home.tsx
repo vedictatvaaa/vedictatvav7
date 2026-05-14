@@ -42,78 +42,70 @@ type HeroSlide = {
   cta2: HeroCta;
 };
 
+// 5 hero sliders — one per business vertical. Each title acts as an H2 supporting
+// the master homepage H1 ("Online Puja Booking, Book Pandit Online & Puja Samagri
+// Services"), giving Google a keyword-loaded support cluster per scene without
+// stealing H1 priority.
 const heroSlides: HeroSlide[] = [
   {
     src: heroBrandImg,
-    alt: "Sacred Puja Ceremony with Pandit",
+    alt: "Vedic Pandit performing online puja with samagri and diya",
     mobilePosition: "75% center",
-    tagline: "VEDIC TATVA",
-    title1: "Where Spirituality",
-    title2: "Meets ",
-    title2Highlight: "Technology",
-    subtitle: "Shop puja essentials. Book verified pandits. Experience authentic rituals — all in one place.",
-    cta1: { label: "Shop Now", href: "/shop", icon: ShoppingBag },
-    cta2: { label: "Book Pandit", href: "/pandits", icon: UserCheck },
-  },
-  {
-    src: heroTirthYatraImg,
-    alt: "Evening Ganga Aarti at Varanasi",
-    mobilePosition: "center center",
-    tagline: "SACRED PILGRIMAGE",
-    title1: "Walk the Sacred",
-    title2: "Land of ",
-    title2Highlight: "Bharat",
-    subtitle: "Curated Tirth Yatras to Char Dham, Kashi, Ayodhya & 18 more dhams — verified pandits, end-to-end care.",
-    cta1: { label: "Explore Yatras", href: "/tirth-yatra", icon: Map },
-    cta2: { label: "Free Yatra (NGO)", href: "/tirth-yatra", icon: HandHeart },
-  },
-  {
-    src: heroCharDhamImg,
-    alt: "Kedarnath Temple amid Himalayan peaks",
-    mobilePosition: "center center",
-    tagline: "CHAR DHAM YATRA 2026",
-    title1: "Reach Kedarnath",
-    title2: "With ",
-    title2Highlight: "Devotion",
-    subtitle: "Helicopter packages, group yatras & verified pandits for your Char Dham journey through the Himalayas.",
-    cta1: { label: "Plan Char Dham", href: "/tirth-yatra/char-dham-yatra", icon: MapPinned },
-    cta2: { label: "Kedarnath Yatra", href: "/tirth-yatra/kedarnath-yatra", icon: Map },
+    tagline: "ONLINE PUJA BOOKING",
+    title1: "Book Online Puja",
+    title2: "Services Across ",
+    title2Highlight: "India",
+    subtitle: "Satyanarayan Puja, Rudrabhishek, Navratri Puja, Griha Pravesh, Havan and festival pujas with experienced Vedic pandits.",
+    cta1: { label: "Book Puja", href: "/puja", icon: ShoppingBag },
+    cta2: { label: "Explore Rituals", href: "/online-puja-booking", icon: Sparkles },
   },
   {
     src: heroPindDaanImg,
-    alt: "Pind Daan ritual at Falgu river in Gaya",
+    alt: "Verified Acharya performing havan and Vedic ritual",
     mobilePosition: "center center",
-    tagline: "PIND DAAN AT GAYA",
-    title1: "Honour Your",
-    title2: "",
-    title2Highlight: "Ancestors",
-    subtitle: "Authentic Pind Daan at Gaya, Tribeni Ghat & Haridwar — performed by verified Acharyas with complete vidhi.",
-    cta1: { label: "Book Pind Daan", href: "/pind-daan", icon: HandHeart },
-    cta2: { label: "Pitru Tithi Calculator", href: "/tools/tithi-calculator", icon: Calculator },
+    tagline: "BOOK PANDIT ONLINE",
+    title1: "Hire Trusted Pandits",
+    title2: "for Every Hindu ",
+    title2Highlight: "Ritual",
+    subtitle: "Book verified pandits for weddings, griha pravesh, havan, dosh nivaran, temple rituals and home pujas across India.",
+    cta1: { label: "Book a Pandit", href: "/pandits", icon: UserCheck },
+    cta2: { label: "Pind Daan", href: "/pind-daan", icon: HandHeart },
   },
   {
     src: heroEssentialsImg,
     alt: "Authentic puja samagri spread with brass idol and rudraksha",
     mobilePosition: "center center",
-    tagline: "SHOP PUJA ESSENTIALS",
-    title1: "Authentic Samagri,",
-    title2: "Sourced With ",
-    title2Highlight: "Care",
-    subtitle: "Premium puja kits, brass idols, gemstones & malas — handpicked from sacred sources across India.",
-    cta1: { label: "Shop Now", href: "/shop", icon: ShoppingBag },
-    cta2: { label: "Browse Idols", href: "/spiritual-essentials", icon: Gem },
+    tagline: "SHOP PUJA SAMAGRI",
+    title1: "Shop Authentic Puja",
+    title2: "Samagri & Spiritual ",
+    title2Highlight: "Essentials",
+    subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense, kalash and temple essentials — sourced from Kashi, Gaya & Haridwar.",
+    cta1: { label: "Shop Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
+    cta2: { label: "Browse Idols", href: "/shop", icon: Gem },
   },
   {
     src: heroAstrologyImg,
     alt: "Vedic astrology rashi chakra and cosmic elements",
     mobilePosition: "center center",
-    tagline: "COSMIC GUIDANCE",
-    title1: "Daily Wisdom,",
-    title2: "Cosmic ",
-    title2Highlight: "Clarity",
-    subtitle: "Free AI Kundli, daily Panchang & expert astrologers — your personal guide to dharma & remedies.",
-    cta1: { label: "Free Kundli", href: "/ai-kundli", icon: Star },
-    cta2: { label: "Talk Astrologer", href: "/astrology", icon: Sparkles },
+    tagline: "ASTROLOGY & KUNDLI",
+    title1: "Online Astrology",
+    title2: "Consultation & ",
+    title2Highlight: "Kundli",
+    subtitle: "Get horoscope readings, kundli matching, dosh analysis, personalised remedies and Vedic astrology guidance from verified astrologers.",
+    cta1: { label: "Consult Astrologer", href: "/astrology", icon: Sparkles },
+    cta2: { label: "Free Kundli", href: "/ai-kundli", icon: Star },
+  },
+  {
+    src: heroTirthYatraImg,
+    alt: "Tirth Yatra and pilgrimage at sacred Bharat dhams",
+    mobilePosition: "center center",
+    tagline: "TIRTH YATRA",
+    title1: "Tirth Yatra &",
+    title2: "Spiritual Pilgrimage ",
+    title2Highlight: "Packages",
+    subtitle: "Char Dham Yatra, Jyotirlinga tours, temple pilgrimages, spiritual retreats and sacred travel experiences across India.",
+    cta1: { label: "Explore Yatras", href: "/tirth-yatra", icon: Map },
+    cta2: { label: "Char Dham", href: "/tirth-yatra/char-dham-yatra", icon: MapPinned },
   },
 ];
 
@@ -452,7 +444,7 @@ export default function Home() {
         schemas={homeSchemas}
       />
       {/* SEO H1 — keyword-loaded, screen-reader-only so hero brand visual stays clean */}
-      <h1 className="sr-only">Book Puja Online, Hire Pandits & Shop Puja Essentials</h1>
+      <h1 className="sr-only">Online Puja Booking, Book Pandit Online & Puja Samagri Services</h1>
       {/* Hero Section */}
       <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
