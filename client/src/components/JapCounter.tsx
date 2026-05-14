@@ -1516,96 +1516,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         />
       )}
 
-      {/* Mantra select */}
-      <Card>
-        <CardContent className="p-3 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <label className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mantra</label>
-            <select
-              value={mantraId}
-              onChange={(e) => setMantraId(e.target.value)}
-              disabled={audioLocked}
-              className="flex-1 min-w-[200px] h-9 rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              data-testid="select-mantra"
-            >
-              <optgroup label="Sacred mantras">
-                {PRESET_MANTRAS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </optgroup>
-              {customMantras.length > 0 && (
-                <optgroup label="My mantras">
-                  {customMantras.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                </optgroup>
-              )}
-            </select>
-          </div>
-          {/* The Sanskrit / Devanagari line for the active mantra is now
-              rendered inside the orb itself (above the count) — it's most
-              useful while chanting, where the eyes already rest. */}
-          {/* Mala size picker — sits right under Mantra selection (logical pair). */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <label className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mala size</label>
-            {TARGET_OPTIONS.map((n) => (
-              <Button
-                key={n}
-                size="sm"
-                variant={target === n ? "default" : "outline"}
-                className={target === n ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
-                onClick={() => setTarget(n)}
-                data-testid={`btn-target-${n}`}
-              >{n}</Button>
-            ))}
-            <Button
-              size="sm"
-              variant={!TARGET_OPTIONS.includes(target) ? "default" : "outline"}
-              className={!TARGET_OPTIONS.includes(target) ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
-              onClick={() => setShowCustomTarget((s) => !s)}
-              data-testid="btn-target-custom"
-            >
-              {!TARGET_OPTIONS.includes(target) ? `Custom (${target})` : "Custom"}
-            </Button>
-          </div>
-          {showCustomTarget && (
-            <div className="flex items-center gap-2">
-              <Input type="number" min={1} max={100000} value={customTarget} onChange={(e) => setCustomTarget(e.target.value)} placeholder="e.g. 540" className="max-w-[160px]" data-testid="input-custom-target" />
-              <Button size="sm" onClick={applyCustomTarget} data-testid="btn-apply-custom-target">Apply</Button>
-            </div>
-          )}
-          {/* Configure-this-practice row — secondary actions live here so they
-              don't crowd the primary Mantra dropdown above. */}
-          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdd((s) => !s)}
-              className="h-7 px-2 text-[#6D2B35] hover:text-[#6D2B35]"
-              data-testid="btn-add-mantra"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />Add custom mantra
-            </Button>
-            {mantra.custom && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => removeCustomMantra(mantra.id)}
-                className="h-7 px-2 text-rose-700 hover:text-rose-700"
-                data-testid="btn-remove-mantra"
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />Remove this mantra
-              </Button>
-            )}
-          </div>
-          {showAdd && (
-            <div className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] p-3 space-y-2">
-              <Input placeholder="Mantra name (e.g., Om Tat Sat)" value={newName} onChange={(e) => setNewName(e.target.value)} data-testid="input-new-mantra-name" />
-              <Input placeholder="Sanskrit / Devanagari (optional)" value={newSanskrit} onChange={(e) => setNewSanskrit(e.target.value)} data-testid="input-new-mantra-sanskrit" />
-              <div className="flex gap-2 justify-end">
-                <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
-                <Button size="sm" onClick={addCustomMantra} className="bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" data-testid="btn-save-mantra">Save mantra</Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Mantra select + Mala size + custom-mantra editor were moved BELOW
+          the Counter so the orb is the first interactive element on the
+          page. The picker is still one tap away — see the Mantra select
+          Card rendered after the Counter further down. */}
 
       {/* Karaoke-style synced lyrics for chants with a recorded audio track */}
       {lyrics && lyrics.length > 0 && (
@@ -1914,6 +1828,94 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
               {!("vibrate" in navigator) && " Your device does not support vibration."}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Mantra select + Mala size — relocated from above the Counter so the
+          orb sits at the top of the card. The picker still feels native to
+          the counter (same card surface, same colours) but is one scroll
+          below the orb instead of pushing it down on mobile. */}
+      <Card data-testid="card-mantra-picker">
+        <CardContent className="p-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mantra</label>
+            <select
+              value={mantraId}
+              onChange={(e) => setMantraId(e.target.value)}
+              disabled={audioLocked}
+              className="flex-1 min-w-[200px] h-9 rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              data-testid="select-mantra"
+            >
+              <optgroup label="Sacred mantras">
+                {PRESET_MANTRAS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </optgroup>
+              {customMantras.length > 0 && (
+                <optgroup label="My mantras">
+                  {customMantras.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                </optgroup>
+              )}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <label className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mala size</label>
+            {TARGET_OPTIONS.map((n) => (
+              <Button
+                key={n}
+                size="sm"
+                variant={target === n ? "default" : "outline"}
+                className={target === n ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
+                onClick={() => setTarget(n)}
+                data-testid={`btn-target-${n}`}
+              >{n}</Button>
+            ))}
+            <Button
+              size="sm"
+              variant={!TARGET_OPTIONS.includes(target) ? "default" : "outline"}
+              className={!TARGET_OPTIONS.includes(target) ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
+              onClick={() => setShowCustomTarget((s) => !s)}
+              data-testid="btn-target-custom"
+            >
+              {!TARGET_OPTIONS.includes(target) ? `Custom (${target})` : "Custom"}
+            </Button>
+          </div>
+          {showCustomTarget && (
+            <div className="flex items-center gap-2">
+              <Input type="number" min={1} max={100000} value={customTarget} onChange={(e) => setCustomTarget(e.target.value)} placeholder="e.g. 540" className="max-w-[160px]" data-testid="input-custom-target" />
+              <Button size="sm" onClick={applyCustomTarget} data-testid="btn-apply-custom-target">Apply</Button>
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap pt-1 text-xs">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAdd((s) => !s)}
+              className="h-7 px-2 text-[#6D2B35] hover:text-[#6D2B35]"
+              data-testid="btn-add-mantra"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />Add custom mantra
+            </Button>
+            {mantra.custom && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeCustomMantra(mantra.id)}
+                className="h-7 px-2 text-rose-700 hover:text-rose-700"
+                data-testid="btn-remove-mantra"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />Remove this mantra
+              </Button>
+            )}
+          </div>
+          {showAdd && (
+            <div className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] p-3 space-y-2">
+              <Input placeholder="Mantra name (e.g., Om Tat Sat)" value={newName} onChange={(e) => setNewName(e.target.value)} data-testid="input-new-mantra-name" />
+              <Input placeholder="Sanskrit / Devanagari (optional)" value={newSanskrit} onChange={(e) => setNewSanskrit(e.target.value)} data-testid="input-new-mantra-sanskrit" />
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setShowAdd(false)}>Cancel</Button>
+                <Button size="sm" onClick={addCustomMantra} className="bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" data-testid="btn-save-mantra">Save mantra</Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
