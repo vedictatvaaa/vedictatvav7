@@ -75,6 +75,22 @@ export default function PanditPortalPage() {
   const [showPwdDlg, setShowPwdDlg] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [calMonth, setCalMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [onLeave, setOnLeave] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("pandit:onLeave") === "1";
+  });
+  const [leaveNote, setLeaveNote] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem("pandit:leaveNote") || "";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("pandit:onLeave", onLeave ? "1" : "0");
+  }, [onLeave]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("pandit:leaveNote", leaveNote);
+  }, [leaveNote]);
 
   // Initial load
   useEffect(() => {
@@ -307,10 +323,77 @@ export default function PanditPortalPage() {
                 subtitle="Track your daily sadhana — anushthans, sankalps, and mala counts."
               />
             )}
+            {section === "settings" && (
+              <Card>
+                <CardContent className="p-5 md:p-6 space-y-5">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-md bg-[#6D2B35]/10 flex items-center justify-center text-[#6D2B35] shrink-0">
+                      <SettingsIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-serif font-bold text-[#4a1a22]">Settings</h2>
+                      <p className="text-[12px] text-[#5a4a3a]/70 mt-0.5">Manage your availability and account preferences. Profile editing, service catalog and pricing presets are coming next.</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-semibold mb-1">Availability</p>
+                        <p className="text-[14px] font-serif font-semibold text-[#4a1a22]">
+                          {onLeave ? "You are currently on leave" : "You are accepting new bookings"}
+                        </p>
+                        <p className="text-[12px] text-[#5a4a3a]/70 mt-1">
+                          When on leave, the live "Online now" dot stops appearing on your public profile and you'll see a banner on every screen so you don't forget. Existing bookings are not affected — please complete or reschedule them as usual.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={onLeave}
+                        aria-label={onLeave ? "Currently on leave — click to resume accepting bookings" : "Currently accepting bookings — click to mark on leave"}
+                        onClick={() => setOnLeave(v => !v)}
+                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${onLeave ? "bg-[#6D2B35]" : "bg-stone-300"}`}
+                        data-testid="toggle-on-leave"
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${onLeave ? "translate-x-6" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                    {onLeave && (
+                      <div className="mt-3 pt-3 border-t border-[#D4AF37]/25 space-y-1.5">
+                        <Label htmlFor="leave-note" className="text-[11px] text-[#6D2B35]/85 font-medium">Note for the team (optional)</Label>
+                        <textarea
+                          id="leave-note"
+                          value={leaveNote}
+                          onChange={(e) => setLeaveNote(e.target.value.slice(0, 240))}
+                          placeholder="e.g. Out for personal yatra till 25 Mar — please redirect urgent pujas to Pandit Sharma."
+                          maxLength={240}
+                          className="w-full min-h-[64px] resize-none rounded-md border border-[#D4AF37]/30 bg-white p-2.5 text-[12px] text-[#4a1a22] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30"
+                          data-testid="textarea-leave-note"
+                        />
+                        <p className="text-[10px] text-[#5a4a3a]/55 text-right">{leaveNote.length}/240</p>
+                      </div>
+                    )}
+                    <p className="text-[10.5px] text-[#5a4a3a]/55 mt-3 leading-relaxed">
+                      Note: this status is currently visible only inside your portal — sync to public listings is coming soon. For now, please also inform the team via WhatsApp so we can route urgent customer requests.
+                    </p>
+                  </div>
+
+                  <div className="rounded-md border border-[#D4AF37]/20 bg-white p-4">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-semibold mb-1">Account</p>
+                    <p className="text-[13px] text-[#4a1a22] font-medium">Login password</p>
+                    <p className="text-[11.5px] text-[#5a4a3a]/65 mt-0.5 mb-2.5">Update the password you use to sign in to this portal.</p>
+                    <Button size="sm" variant="outline" onClick={() => setShowPwdDlg(true)} data-testid="btn-open-pwd-dialog">
+                      Change password
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {section !== "bookings" && section !== "dashboard" && section !== "earnings"
               && section !== "customers" && section !== "tools" && section !== "membership"
               && section !== "storefront" && section !== "referrals" && section !== "card"
-              && section !== "japa" && (
+              && section !== "japa" && section !== "settings" && (
               <PanditComingSoon nav={PANDIT_NAV.find((n) => n.id === section)!} />
             )}
           </main>

@@ -2,6 +2,10 @@ import { Link } from "wouter";
 import { Shield, Heart, Globe, Cpu, MapPin, Users, Headphones, Building, ArrowRight, UserCheck, CheckCircle, IndianRupee, RotateCcw } from "lucide-react";
 import { PageHero, SectionHeader, slimPanel } from "@/components/ui/section-primitives";
 import PageSeo from "@/components/PageSeo";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+
+type PanditLite = { id: number; verified?: boolean; city?: string };
 
 const values = [
   { icon: Shield, title: "Authenticity", description: "Every ritual, mantra and service follows centuries-old Vedic scriptures verified by learned scholars." },
@@ -10,12 +14,13 @@ const values = [
   { icon: Cpu, title: "Technology", description: "Leveraging AI and modern platforms to deliver ancient wisdom in a seamless, digital-first experience." },
 ];
 
-const stats = [
-  { value: "500+", label: "Verified Pandits" },
-  { value: "10k+", label: "Happy Families" },
-  { value: "50+", label: "Puja Types" },
-  { value: "100%", label: "Authentic Products" },
-];
+function bandUp(n: number, fallback: string): string {
+  if (!n || n < 1) return fallback;
+  if (n < 10) return `${n}+`;
+  if (n < 100) return `${Math.floor(n / 10) * 10}+`;
+  if (n < 1000) return `${Math.floor(n / 50) * 50}+`;
+  return `${Math.floor(n / 1000)}k+`;
+}
 
 const trustItems = [
   { icon: UserCheck, title: "Verified Pandits", desc: "Background-checked & qualified" },
@@ -36,6 +41,23 @@ const company = [
 export default function About() {
   const primaryBtn = "inline-flex items-center justify-center gap-1.5 h-10 px-5 rounded-md text-[13px] font-semibold bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] transition-colors";
   const outlineBtn = "inline-flex items-center justify-center gap-1.5 h-10 px-5 rounded-md text-[13px] font-semibold bg-white text-[#6D2B35] border border-[#D4AF37]/30 hover:bg-[#FBF7EE] transition-colors";
+
+  const { data: pandits } = useQuery<PanditLite[]>({
+    queryKey: ["/api/pandits"],
+    queryFn: () => fetch("/api/pandits").then(r => r.ok ? r.json() : []),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const stats = useMemo(() => {
+    const verifiedCount = (pandits || []).filter(p => p.verified !== false).length;
+    const cityCount = new Set((pandits || []).map(p => (p.city || "").trim().toLowerCase()).filter(Boolean)).size;
+    return [
+      { value: bandUp(verifiedCount, "500+"), label: "Verified Pandits" },
+      { value: bandUp(cityCount, "50+"), label: "Cities Served" },
+      { value: "50+", label: "Puja Types" },
+      { value: "100%", label: "Authentic Products" },
+    ];
+  }, [pandits]);
 
   return (
     <div className="w-full pb-16 bg-white">

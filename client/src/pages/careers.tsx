@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Wifi, Heart, TrendingUp, Users, MapPin, Briefcase, Clock, Mail, ArrowRight, Send, Linkedin, FileText } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Wifi, Heart, TrendingUp, Users, MapPin, Briefcase, Clock, Mail, ArrowRight, Send, Linkedin, FileText, Loader2 } from "lucide-react";
 import { PageHero, SectionHeader, slimPanel } from "@/components/ui/section-primitives";
 import PageSeo from "@/components/PageSeo";
 import {
@@ -18,22 +20,35 @@ type ApplyDialogProps = {
 function ApplyDialog({ role, onClose }: ApplyDialogProps) {
   const [form, setForm] = useState({ name: "", email: "", linkedin: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email) return;
-    const body = [
-      `Name: ${form.name}`,
-      `Email: ${form.email}`,
-      form.linkedin ? `LinkedIn: ${form.linkedin}` : "",
-      form.message ? `\nCover note:\n${form.message}` : "",
-    ].filter(Boolean).join("\n");
-    const subject = `Application for ${role?.title} — Vedic Tatva`;
-    window.location.href = `mailto:careers@vedictatva.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setSent(true);
+    if (!form.name || !form.email || submitting || !role) return;
+    setSubmitting(true);
+    try {
+      await apiRequest("POST", "/api/careers/apply", {
+        roleId: role.id,
+        roleTitle: role.title,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        linkedin: form.linkedin.trim(),
+        message: form.message.trim(),
+      });
+      setSent(true);
+    } catch (err: any) {
+      toast({
+        title: "Could not submit application",
+        description: err?.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleClose = () => { setForm({ name: "", email: "", linkedin: "", message: "" }); setSent(false); onClose(); };
+  const handleClose = () => { setForm({ name: "", email: "", linkedin: "", message: "" }); setSent(false); setSubmitting(false); onClose(); };
 
   return (
     <Dialog open={!!role} onOpenChange={handleClose}>
@@ -45,13 +60,13 @@ function ApplyDialog({ role, onClose }: ApplyDialogProps) {
           <p className="text-[12px] text-[#5a4a3a]/65 mt-0.5">{role?.department} · Vedic Tatva</p>
         </DialogHeader>
         {sent ? (
-          <div className="py-4 text-center space-y-2">
+          <div className="py-4 text-center space-y-2" data-testid="apply-success">
             <div className="w-12 h-12 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30 flex items-center justify-center mx-auto">
               <Send className="w-5 h-5 text-[#6D2B35]" />
             </div>
-            <p className="text-[13px] text-[#5a4a3a] font-medium">Your email client has opened with your application pre-filled.</p>
-            <p className="text-[12px] text-[#5a4a3a]/65">Send the email to complete your application. We'll respond within 3–5 business days.</p>
-            <Button onClick={handleClose} className="mt-2 bg-[#6D2B35] text-[#D4AF37] rounded-md">Close</Button>
+            <p className="text-[13px] text-[#5a4a3a] font-medium">Application received — thank you!</p>
+            <p className="text-[12px] text-[#5a4a3a]/65">Our team will review and get back to you within 3–5 business days. If you'd like to share a resume, please email it to <span className="font-medium text-[#6D2B35]">careers@vedictatva.com</span>.</p>
+            <Button onClick={handleClose} className="mt-2 bg-[#6D2B35] text-[#D4AF37] rounded-md" data-testid="btn-apply-close">Close</Button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3 pt-1">
@@ -71,11 +86,11 @@ function ApplyDialog({ role, onClose }: ApplyDialogProps) {
               <Label className="text-[11px] text-[#6D2B35]/80 font-medium inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Why do you want to join? (optional)</Label>
               <Textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="A few lines about yourself and what excites you about this role..." className="text-[13px] min-h-[80px] resize-none" data-testid="textarea-apply-message" />
             </div>
-            <p className="text-[10px] text-[#5a4a3a]/55">Submitting will open your email client with your details pre-filled — just hit send. Please also attach your resume to the email.</p>
+            <p className="text-[10px] text-[#5a4a3a]/55">We'll respond within 3–5 business days. To share a resume, email it separately to careers@vedictatva.com.</p>
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="outline" onClick={handleClose} className="rounded-md h-9 text-[12px]">Cancel</Button>
-              <Button type="submit" className="bg-[#6D2B35] text-[#D4AF37] rounded-md h-9 text-[12px]" data-testid="btn-submit-apply">
-                <Send className="h-3.5 w-3.5 mr-1.5" /> Prepare application
+              <Button type="button" variant="outline" onClick={handleClose} disabled={submitting} className="rounded-md h-9 text-[12px]">Cancel</Button>
+              <Button type="submit" disabled={submitting} className="bg-[#6D2B35] text-[#D4AF37] rounded-md h-9 text-[12px]" data-testid="btn-submit-apply">
+                {submitting ? (<><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Submitting…</>) : (<><Send className="h-3.5 w-3.5 mr-1.5" /> Submit application</>)}
               </Button>
             </DialogFooter>
           </form>

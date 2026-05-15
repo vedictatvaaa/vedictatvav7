@@ -2068,7 +2068,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           : null;
         const expired = p.tierExpiresAt && new Date(p.tierExpiresAt as any) < new Date();
         const effectiveTier = expired ? "free" : ((p.tier || "free").toLowerCase() === "platinum" ? "guru_elite" : (p.tier || "free").toLowerCase());
-        return { ...p, distance, tier: effectiveTier, isOnline: isPanditOnline(p.id) };
+        // Strip contact + credential fields from the public bulk list,
+        // mirroring publicPanditDto used on the single-id endpoint.
+        const { phone: _ph, email: _em, passwordHash: _pw, lastLoginAt: _ll, ...safe } = p as any;
+        return { ...safe, distance, tier: effectiveTier, isOnline: isPanditOnline(p.id) };
       })
       .filter(p => passesReach(p, p.distance))
       .sort((a, b) => {
@@ -6889,6 +6892,53 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       res.json({ success: deleted });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete astrologer" });
+    }
+  });
+
+  // ---- Careers Application ----
+  const careersApplyLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 8,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many applications from this IP. Please try again in an hour." },
+  });
+  app.post("/api/careers/apply", careersApplyLimiter, async (req, res) => {
+    try {
+      const schema = z.object({
+        roleId: z.string().min(1).max(120),
+        roleTitle: z.string().min(1).max(200),
+        name: z.string().min(1).max(120),
+        email: z.string().email().max(200),
+        linkedin: z.string().max(300).optional().or(z.literal("")),
+        message: z.string().max(4000).optional().or(z.literal("")),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
+      }
+      const d = parsed.data;
+      console.log("New career application:", d.roleTitle, "·", d.name, "·", d.email);
+      // Best-effort notification — never block the response loop on email failures.
+      try {
+        const { sendEmailAsync } = await import("./email");
+        const safe = (s: string) => String(s || "").replace(/[<>]/g, "");
+        const text = [
+          `Role: ${safe(d.roleTitle)} (${safe(d.roleId)})`,
+          `Name: ${safe(d.name)}`,
+          `Email: ${safe(d.email)}`,
+          d.linkedin ? `LinkedIn: ${safe(d.linkedin)}` : "",
+          d.message ? `\nCover note:\n${safe(d.message)}` : "",
+        ].filter(Boolean).join("\n");
+        sendEmailAsync({
+          to: "careers@vedictatva.com",
+          subject: `[Careers] ${d.roleTitle} — ${d.name}`,
+          text,
+        }, "careers.apply");
+      } catch { /* email module optional / not configured */ }
+      res.status(201).json({ success: true, message: "Application received. Our team will review and respond within 3–5 business days." });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to submit application" });
     }
   });
 
