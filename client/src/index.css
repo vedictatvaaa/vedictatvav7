@@ -536,3 +536,33 @@
 @media (prefers-reduced-motion: reduce) {
   .vt-led-track { animation: none; transform: translateX(0); }
 }
+
+/* Japa page — subtle spiritual ambience layers. All animations are slow,
+   gentle, and respect prefers-reduced-motion. The faint Om glyph + dotted
+   mandala rings sit behind the orb to evoke a quiet temple atmosphere
+   without competing with the chant UI. */
+@keyframes vt-japa-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.9; }
+  50% { transform: translate3d(20px, -30px, 0); opacity: 1; }
+}
+@keyframes vt-japa-drift-slow {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0.85; }
+  50% { transform: translate3d(-25px, 20px, 0); opacity: 1; }
+}
+@keyframes vt-japa-om-breath {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.045; }
+  50% { transform: translate(-50%, -50%) scale(1.03); opacity: 0.07; }
+}
+@keyframes vt-japa-mandala-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.vt-japa-drift { animation: vt-japa-drift 18s ease-in-out infinite; }
+.vt-japa-drift-slow { animation: vt-japa-drift-slow 26s ease-in-out infinite; }
+.vt-japa-om { animation: vt-japa-om-breath 9s ease-in-out infinite; }
+.vt-japa-mandala { animation: vt-japa-mandala-spin 240s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .vt-japa-drift, .vt-japa-drift-slow, .vt-japa-om, .vt-japa-mandala {
+    animation: none;
+  }
+}

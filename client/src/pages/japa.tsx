@@ -320,10 +320,43 @@ export default function JapaPage() {
         schemas={[breadcrumb, howToSchema, faqSchema, softwareAppSchema]}
       />
 
-      {/* Aurora wash — desktop only, small mobile keeps it crisp + fast LCP */}
+      {/* Spiritual ambience — layered, all behind z-10 content, all
+          pointer-events-none, all aria-hidden so screen readers + taps
+          ignore it. Three layers: (1) deep radial vignette so the maroon
+          isn't flat, (2) soft aurora glows in brand gold + temple-blue
+          that drift slowly, (3) a giant faint ॐ watermark + dotted
+          mandala ring as quiet sacred geometry. Heavy SVG nodes are
+          desktop-only to keep mobile LCP fast. */}
+      <div className="fixed inset-0 pointer-events-none z-0" aria-hidden="true">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.10) 0%, transparent 55%), radial-gradient(ellipse at 50% 100%, rgba(91,127,184,0.07) 0%, transparent 60%), radial-gradient(circle at 50% 50%, transparent 40%, rgba(0,0,0,0.45) 100%)",
+          }}
+        />
+      </div>
       <div className="fixed inset-0 pointer-events-none z-0 hidden sm:block" aria-hidden="true">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#D4AF37]/[0.06] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#5B7FB8]/[0.08] rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-[#D4AF37]/[0.07] rounded-full blur-[120px] vt-japa-drift" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-[#5B7FB8]/[0.08] rounded-full blur-[100px] vt-japa-drift-slow" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] bg-[#FFD27A]/[0.04] rounded-full blur-[90px]" />
+        <span
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-[#D4AF37]/[0.045] select-none vt-japa-om"
+          style={{ fontSize: "clamp(360px, 52vw, 720px)", lineHeight: 1 }}
+        >
+          ॐ
+        </span>
+        <svg
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 vt-japa-mandala"
+          width="780"
+          height="780"
+          viewBox="0 0 780 780"
+          fill="none"
+        >
+          <circle cx="390" cy="390" r="360" stroke="#D4AF37" strokeOpacity="0.08" strokeWidth="1" strokeDasharray="2 10" />
+          <circle cx="390" cy="390" r="300" stroke="#D4AF37" strokeOpacity="0.06" strokeWidth="1" strokeDasharray="1 14" />
+          <circle cx="390" cy="390" r="240" stroke="#D4AF37" strokeOpacity="0.05" strokeWidth="1" />
+        </svg>
       </div>
 
       <div className="relative z-10 flex flex-col gap-6 sm:gap-10 pt-2 sm:pt-6 pb-12">
