@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Sparkles,
@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Globe,
   HeartHandshake,
+  HelpCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
@@ -138,6 +139,30 @@ export default function AiKundli() {
   const [birthCity, setBirthCity] = useState("");
   const [gender, setGender] = useState("Male");
   const [report, setReport] = useState<KundliReport | null>(null);
+  const [showTimeHelp, setShowTimeHelp] = useState(false);
+
+  // Persist form to localStorage so devotees don't lose progress on refresh
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("vt_kundli_form");
+      if (!raw) return;
+      const f = JSON.parse(raw);
+      if (f.fullName) setFullName(f.fullName);
+      if (f.birthDate) setBirthDate(f.birthDate);
+      if (f.birthTime) setBirthTime(f.birthTime);
+      if (f.birthCity) setBirthCity(f.birthCity);
+      if (f.gender) setGender(f.gender);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "vt_kundli_form",
+        JSON.stringify({ fullName, birthDate, birthTime, birthCity, gender })
+      );
+    } catch {}
+  }, [fullName, birthDate, birthTime, birthCity, gender]);
 
   const kundliMutation = useMutation({
     mutationFn: async () => {
@@ -238,9 +263,19 @@ export default function AiKundli() {
                 />
               </div>
               <div className="space-y-1.5">
-                <FieldLabel htmlFor="birthTime" optional>
-                  Time of Birth
-                </FieldLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FieldLabel htmlFor="birthTime" optional>
+                    Time of Birth
+                  </FieldLabel>
+                  <button
+                    type="button"
+                    onClick={() => setShowTimeHelp((v) => !v)}
+                    className="inline-flex items-center gap-1 text-[11px] text-[#6D2B35] hover:text-[#D4AF37] font-medium"
+                    data-testid="btn-birth-time-help"
+                  >
+                    <HelpCircle className="h-3 w-3" /> Don't know it?
+                  </button>
+                </div>
                 <input
                   id="birthTime"
                   type="time"
@@ -249,6 +284,17 @@ export default function AiKundli() {
                   onChange={(e) => setBirthTime(e.target.value)}
                   data-testid="input-birth-time"
                 />
+                {showTimeHelp && (
+                  <div className="mt-2 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30 p-3 text-[12px] text-[#5a4a3a] leading-relaxed" data-testid="card-birth-time-help">
+                    <p className="font-semibold text-[#6D2B35] mb-1.5">Where to find your exact birth time:</p>
+                    <ul className="space-y-1 list-disc list-inside marker:text-[#D4AF37]">
+                      <li>Hospital birth records or discharge summary</li>
+                      <li>Birth certificate (some Indian states record time)</li>
+                      <li>Ask parents or grandparents — even an approximate window helps</li>
+                      <li>If unknown, leave blank — we'll generate a Surya Kundli (sunrise chart) which is still highly accurate for major life themes</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 

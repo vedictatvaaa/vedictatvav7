@@ -232,7 +232,20 @@ export default function AIPalmReading() {
         <div className="max-w-2xl mx-auto">
           <div className="rounded-md border border-[#D4AF37]/25 bg-white p-6 md:p-8" data-testid="card-upload">
             <h2 className="text-xl md:text-2xl font-serif text-[#6D2B35] mb-1 text-center">Upload Your Palm Image</h2>
-            <p className="text-[12px] text-[#5a4a3a]/60 text-center mb-6">JPG · PNG · WebP — processed instantly, never stored</p>
+            <p className="text-[12px] text-[#5a4a3a]/60 text-center mb-5">JPG · PNG · WebP — processed instantly, never stored</p>
+
+            {/* Photo tips */}
+            <div className="mb-6 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/25 p-4" data-testid="card-photo-tips">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold mb-2.5 flex items-center gap-1.5">
+                <Camera className="h-3 w-3" /> How to take a good palm photo
+              </p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-[#5a4a3a]/85">
+                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Bright natural daylight, no flash</li>
+                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Open palm flat, fingers straight & spread</li>
+                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Centre the palm — fill the frame</li>
+                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Plain background, all major lines visible</li>
+              </ul>
+            </div>
 
             {/* Drop Zone */}
             <div

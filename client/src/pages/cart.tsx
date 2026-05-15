@@ -84,19 +84,36 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4">
-        <div className="text-center max-w-md">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white px-4 py-12">
+        <div className="text-center max-w-md w-full">
           <div className="w-16 h-16 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30 flex items-center justify-center mx-auto mb-6">
             <ShoppingBag className="h-7 w-7 text-[#6D2B35]/50" strokeWidth={1.6} />
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif text-[#6D2B35] mb-3 font-semibold tracking-tight" data-testid="text-empty-cart">Your Cart is Empty</h1>
           <p className="text-sm text-[#5a4a3a]/70 mb-6 leading-relaxed">Explore our collection of authentic spiritual products and add items to your cart.</p>
-          <Link href="/spiritual-essentials">
-            <Button className="rounded-md bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] h-10 px-5 text-[13px] font-semibold" data-testid="btn-continue-shopping">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Continue Shopping
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
+            <Link href="/spiritual-essentials">
+              <Button className="rounded-md bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] h-10 px-5 text-[13px] font-semibold" data-testid="btn-continue-shopping">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Continue Shopping
+              </Button>
+            </Link>
+            <Link href="/shop?sort=bestsellers">
+              <Button variant="outline" className="rounded-md border-[#D4AF37]/40 text-[#6D2B35] hover:bg-[#FBF7EE] h-10 px-5 text-[13px] font-semibold" data-testid="btn-browse-bestsellers">
+                <Sparkles className="h-4 w-4 mr-2 text-[#D4AF37]" />
+                Browse Bestsellers
+              </Button>
+            </Link>
+          </div>
+          <div className="bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md px-4 py-3 inline-flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] sm:text-[12px] text-[#5a4a3a]/80" data-testid="strip-cart-trust">
+            <span className="inline-flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-emerald-700" /> Free shipping ₹499+</span>
+            <span className="text-[#D4AF37]/40">·</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-emerald-700" /> 7-day returns</span>
+            <span className="text-[#D4AF37]/40">·</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-emerald-700" /> COD available</span>
+            <span className="text-[#D4AF37]/40">·</span>
+            <span className="inline-flex items-center gap-1.5"><CheckCircle className="h-3 w-3 text-emerald-700" /> Pan-India + NRI</span>
+          </div>
         </div>
       </div>
     );

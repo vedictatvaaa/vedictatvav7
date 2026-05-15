@@ -739,6 +739,30 @@ export function PindDaanHub() {
         </div>
       </div>
 
+      <div className="container mx-auto px-4 mt-10">
+        <div className="max-w-3xl mx-auto bg-gradient-to-br from-[#FBF7EE] to-white border border-[#D4AF37]/30 rounded-md p-5 sm:p-6" data-testid="card-tarpan-kit-crosssell">
+          <div className="flex items-start gap-4 sm:gap-5">
+            <div className="hidden sm:flex w-14 h-14 rounded-md bg-white border border-[#D4AF37]/30 items-center justify-center flex-shrink-0">
+              <Droplets className="w-6 h-6 text-[#6D2B35]" strokeWidth={1.6} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold mb-1.5">{t("Companion Service", "साथ की सेवा")}</p>
+              <h3 className="font-serif text-base sm:text-lg text-[#6D2B35] font-bold mb-1.5 leading-snug">
+                {t("Add a Home Tarpan Kit to your booking", "अपनी बुकिंग में घरेलू तर्पण किट जोड़ें")}
+              </h3>
+              <p className="text-xs sm:text-[13px] text-[#5a4a3a]/75 leading-relaxed mb-3">
+                {t("Til, jau, kusha grass, kumkum, copper Tarpan vessel and a printed Sankalp vidhi — everything you need to perform daily Tarpan at home alongside the pandit's tirth ritual. Ships pan-India in 3–5 days.", "तिल, जौ, कुशा, कुमकुम, ताम्र तर्पण पात्र एवं मुद्रित संकल्प विधि — पुरोहित के तीर्थ अनुष्ठान के साथ घर पर दैनिक तर्पण हेतु आवश्यक सब कुछ। 3–5 दिन में पैन-इंडिया डिलीवरी।")}
+              </p>
+              <Link href="/spiritual-essentials?category=Puja+Samagri">
+                <button className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="link-tarpan-kit">
+                  {t("Browse Tarpan Kits", "तर्पण किट देखें")} <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <PerformAnywhereSection />
 
       <PageAPlusContent

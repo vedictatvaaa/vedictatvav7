@@ -86,7 +86,7 @@ export default function ProductCompare() {
 
       <div className="container mx-auto px-4 py-8">
         {selectedProducts.length === 0 ? (
-          <div className="text-center py-16 bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md">
+          <div className="text-center py-12 sm:py-14 px-4 bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md">
             <div className="w-14 h-14 rounded-md bg-white border border-[#D4AF37]/30 flex items-center justify-center mx-auto mb-4">
               <Plus className="h-6 w-6 text-[#6D2B35]/50" strokeWidth={1.6} />
             </div>
@@ -99,6 +99,36 @@ export default function ProductCompare() {
             >
               <Plus className="h-4 w-4 inline mr-2" /> Add Products to Compare
             </button>
+
+            {(() => {
+              const suggestions = (products || [])
+                .slice()
+                .sort((a, b) => ((b as any).salesCount || 0) - ((a as any).salesCount || 0))
+                .slice(0, 3);
+              if (suggestions.length === 0) return null;
+              return (
+                <div className="mt-8 max-w-xl mx-auto">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold mb-3">Quick start with bestsellers</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {suggestions.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => addProduct(p.id)}
+                        className="group bg-white border border-[#D4AF37]/25 rounded-md p-3 text-left hover:border-[#D4AF37]/55 transition-colors flex items-center gap-2.5"
+                        data-testid={`btn-suggest-${p.id}`}
+                      >
+                        <img src={p.image} alt="" className="w-10 h-10 rounded-md object-cover border border-[#D4AF37]/20 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-semibold text-[#6D2B35] truncate">{p.name}</p>
+                          <p className="text-[10px] text-[#5a4a3a]/60">₹{p.price}</p>
+                        </div>
+                        <Plus className="h-3.5 w-3.5 text-[#D4AF37] flex-shrink-0 group-hover:text-[#6D2B35]" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <>

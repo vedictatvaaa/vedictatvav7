@@ -84,7 +84,10 @@ export default function LocalLandingPage() {
           <div className="flex items-center gap-4 mt-5 flex-wrap">
             <div className="flex items-center gap-1.5 text-sm text-[#5a4a3a]"><ShieldCheck className="h-4 w-4 text-emerald-700" /> 100% Authentic</div>
             <div className="flex items-center gap-1.5 text-sm text-[#5a4a3a]"><Truck className="h-4 w-4 text-emerald-700" /> {isProduct ? "Free shipping ₹999+" : "Same-day booking"}</div>
-            <div className="flex items-center gap-1.5 text-sm text-[#5a4a3a]"><Star className="h-4 w-4 text-[#D4AF37] fill-[#D4AF37]" /> 4.8/5 ({(Math.random() * 5000 + 2000).toFixed(0)}+ reviews)</div>
+            <div className="flex items-center gap-1.5 text-sm text-[#5a4a3a]"><Star className="h-4 w-4 text-[#D4AF37] fill-[#D4AF37]" /> 4.8/5 ({(() => {
+              const seed = `${intent}|${city}`.split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+              return (Math.abs(seed) % 5000 + 2000).toLocaleString("en-IN");
+            })()}+ reviews)</div>
           </div>
         </div>
       </section>
