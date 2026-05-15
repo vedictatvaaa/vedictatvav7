@@ -693,6 +693,45 @@ export default function ZodiacRashifal() {
 
   // "Find my rashi/sign" DOB helper: resolves a date to the matching sign using each sign's `dates` range.
   const [dob, setDob] = useState<string>("");
+
+  // ---- Janma Rashi (Vedic Moon Sign at birth) ----
+  const [showJanma, setShowJanma] = useState(false);
+  const [jrTime, setJrTime] = useState<string>("");
+  const [jrPlace, setJrPlace] = useState<string>("");
+  const [jrLoading, setJrLoading] = useState(false);
+  const [jrError, setJrError] = useState<string | null>(null);
+  const [jrResult, setJrResult] = useState<null | {
+    rashi: string; rashiHi: string; signIndex: number; rashiLord: string; element: string;
+    nakshatra: string; nakshatraHi: string; nakshatraLord: string; nakshatraDeity: string; pada: number;
+    timeKnown: boolean; place: string; note: string;
+  }>(null);
+  const lookupJanmaRashi = async () => {
+    setJrError(null); setJrResult(null);
+    if (!dob) { setJrError("Please enter your date of birth above first."); return; }
+    if (!jrPlace.trim()) { setJrError("Please enter your birth city."); return; }
+    setJrLoading(true);
+    try {
+      const params = new URLSearchParams({ date: dob, place: jrPlace.trim() });
+      if (jrTime) params.set("time", jrTime);
+      const r = await fetch(`/api/janma-rashi?${params}`);
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e?.message || "Could not compute your Janma Rashi.");
+      }
+      const data = await r.json();
+      setJrResult({
+        rashi: data.moon.rashi, rashiHi: data.moon.rashiHi, signIndex: data.moon.signIndex,
+        rashiLord: data.moon.rashiLord, element: data.moon.element,
+        nakshatra: data.moon.nakshatra, nakshatraHi: data.moon.nakshatraHi,
+        nakshatraLord: data.moon.nakshatraLord, nakshatraDeity: data.moon.nakshatraDeity,
+        pada: data.moon.pada, timeKnown: data.input.timeKnown, place: data.input.place, note: data.note,
+      });
+    } catch (err: any) {
+      setJrError(err?.message || "Could not compute your Janma Rashi.");
+    } finally {
+      setJrLoading(false);
+    }
+  };
   const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
   const parseRangeToken = (tok: string): [number, number] | null => {
     const m = tok.trim().match(/^([A-Za-z]{3})\s+(\d{1,2})$/);
@@ -811,10 +850,113 @@ export default function ZodiacRashifal() {
             )}
             {dobMatch && (
               <p className="text-sm text-[#5a4a3a] mt-3" data-testid="text-rashi-result">
-                Your {system === "vedic" ? "rashi" : "sun sign"} is{" "}
+                Your {system === "vedic" ? "Sun sign (Vedic & Western)" : "sun sign"} is{" "}
                 <strong className="text-[#6D2B35]">{dobMatch.sign.name} {dobMatch.sign.symbol}</strong>
                 {" "}— ruled by {dobMatch.sign.ruler}, {dobMatch.sign.element} element.
               </p>
+            )}
+
+            {system === "vedic" && (
+              <div className="mt-4 pt-4 border-t border-[#D4AF37]/20">
+                <button
+                  type="button"
+                  onClick={() => setShowJanma(v => !v)}
+                  className="w-full flex items-center justify-between text-left group"
+                  data-testid="btn-toggle-janma-rashi"
+                >
+                  <span className="flex items-center gap-2">
+                    <Moon className="h-4 w-4 text-[#6D2B35]" />
+                    <span className="text-sm font-semibold text-[#6D2B35]">Find my <em>true</em> Janma Rashi (Moon sign)</span>
+                  </span>
+                  <span className="text-xs text-[#5a4a3a]/60 group-hover:text-[#6D2B35]">{showJanma ? "Hide" : "Show"}</span>
+                </button>
+                <p className="text-[11px] text-[#5a4a3a]/65 mt-1 leading-relaxed">
+                  In Vedic tradition, your <strong>rashi</strong> usually means the Moon's sign at your birth — not the Sun's. It needs your birth time and city.
+                </p>
+
+                {showJanma && (
+                  <div className="mt-3 space-y-2" data-testid="janma-rashi-panel">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wide text-[#5a4a3a]/70 mb-1">Birth time (24h)</label>
+                        <input
+                          type="time"
+                          value={jrTime}
+                          onChange={(e) => setJrTime(e.target.value)}
+                          className="w-full h-10 px-3 rounded-md border border-[#D4AF37]/30 bg-white text-[13px] text-[#5a4a3a] focus:outline-none focus:border-[#6D2B35]"
+                          data-testid="input-janma-time"
+                          aria-label="Birth time"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] uppercase tracking-wide text-[#5a4a3a]/70 mb-1">Birth city</label>
+                        <input
+                          type="text"
+                          value={jrPlace}
+                          onChange={(e) => setJrPlace(e.target.value)}
+                          placeholder="e.g. Guwahati, Delhi, Mumbai"
+                          className="w-full h-10 px-3 rounded-md border border-[#D4AF37]/30 bg-white text-[13px] text-[#5a4a3a] focus:outline-none focus:border-[#6D2B35]"
+                          data-testid="input-janma-place"
+                          aria-label="Birth city"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={lookupJanmaRashi}
+                      disabled={jrLoading || !dob || !jrPlace.trim()}
+                      className="w-full h-10 rounded-md bg-[#6D2B35] text-[#D4AF37] text-[13px] font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#5a1f29] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid="btn-compute-janma-rashi"
+                    >
+                      {jrLoading ? (<><Loader2 className="h-3.5 w-3.5 animate-spin" /> Computing…</>) : (<><Moon className="h-3.5 w-3.5" /> Compute my Janma Rashi</>)}
+                    </button>
+                    {!dob && (
+                      <p className="text-[11px] text-[#5a4a3a]/70" data-testid="text-janma-need-dob">Tip: enter your date of birth in the field above first.</p>
+                    )}
+                    {jrError && (
+                      <p className="text-xs text-[#9a1a2a]" data-testid="text-janma-error">{jrError}</p>
+                    )}
+                    {jrResult && (
+                      <div className="mt-2 p-3 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30" data-testid="janma-rashi-result">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wide text-[#5a4a3a]/70">Your Janma Rashi (Moon sign)</div>
+                            <div className="font-serif text-xl text-[#6D2B35] leading-tight">
+                              {jrResult.rashiHi} <span className="text-base text-[#5a4a3a]">({jrResult.rashi})</span>
+                            </div>
+                            <div className="text-[12px] text-[#5a4a3a]/80 mt-0.5">
+                              Ruled by <strong>{jrResult.rashiLord}</strong> · {jrResult.element} element
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSign(jrResult.signIndex)}
+                            className="h-9 px-3 rounded-md bg-[#6D2B35] text-[#D4AF37] text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-[#5a1f29] transition-colors shrink-0"
+                            data-testid="btn-load-janma-reading"
+                          >
+                            Load reading <Sparkles className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="text-[12px] text-[#5a4a3a]/85 border-t border-[#D4AF37]/20 pt-2">
+                          Nakshatra: <strong>{jrResult.nakshatra} ({jrResult.nakshatraHi})</strong> · Pada {jrResult.pada}
+                          <span className="text-[#5a4a3a]/65"> · Lord {jrResult.nakshatraLord} · Deity {jrResult.nakshatraDeity}</span>
+                        </div>
+                        {!jrResult.timeKnown && (
+                          <p className="text-[11px] text-[#9a6a1a] mt-2 flex items-start gap-1.5">
+                            <Clock className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span>{jrResult.note}</span>
+                          </p>
+                        )}
+                        {dobMatch && jrResult.signIndex !== dobMatch.idx && (
+                          <p className="text-[11px] text-[#5a4a3a]/75 mt-2 italic">
+                            Different from your Sun sign ({dobMatch.sign.name})? That's normal — most Indian families call the <strong>Moon sign</strong> your "rashi".
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

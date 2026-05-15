@@ -1935,6 +1935,77 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
+  // ---- Janma Rashi (Vedic Moon Sign) lookup ----
+  // GET /api/janma-rashi?date=YYYY-MM-DD&time=HH:MM&place=City
+  // Computes Lahiri-sidereal Moon longitude at birth, returns rashi + nakshatra + pada.
+  // Public, rate-limited; pure ephemeris (no AI), no caching needed.
+  const janmaRashiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || "unknown"),
+    message: { message: "Too many lookups. Please try again shortly." },
+  });
+  app.get("/api/janma-rashi", janmaRashiLimiter, async (req, res) => {
+    try {
+      const date = String(req.query.date || "").trim();
+      const time = String(req.query.time || "").trim();
+      const place = String(req.query.place || "").trim();
+      if (!date || !place) {
+        return res.status(400).json({ message: "date and place are required" });
+      }
+      const [{ findCityLocal, defaultCity }, { localToJulianDayUT, tzOffsetHours, planetPosition }, { SIGNS_EN, SIGNS_HI, SIGN_LORDS, SIGN_ELEMENTS, NAKSHATRAS }] = await Promise.all([
+        import("./jyotish/cities"),
+        import("./jyotish/ephemeris"),
+        import("./jyotish/data"),
+      ]);
+      const dm = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!dm) return res.status(400).json({ message: "date must be YYYY-MM-DD" });
+      const year = parseInt(dm[1], 10), month = parseInt(dm[2], 10), day = parseInt(dm[3], 10);
+      // Time defaults to noon local if missing — flag the result so UI can warn.
+      let hour = 12, minute = 0, timeKnown = false;
+      if (time) {
+        const tm = time.match(/^(\d{1,2}):(\d{2})$/);
+        if (!tm) return res.status(400).json({ message: "time must be HH:MM (24h)" });
+        hour = parseInt(tm[1], 10); minute = parseInt(tm[2], 10);
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return res.status(400).json({ message: "time out of range" });
+        timeKnown = true;
+      }
+      const city = findCityLocal(place) || defaultCity();
+      const when = new Date(`${date}T${String(hour).padStart(2,"0")}:${String(minute).padStart(2,"0")}:00`);
+      const tzOff = tzOffsetHours(city.tz, when);
+      const jd = localToJulianDayUT(year, month, day, hour + minute / 60, tzOff);
+      const moon = planetPosition(jd, "Moon");
+      const idx = moon.sign;
+      const nak = NAKSHATRAS[moon.nakshatra];
+      res.json({
+        input: { date, time: time || null, place: city.name, country: city.country, tz: city.tz, timeKnown },
+        moon: {
+          longitude: Number(moon.longitude.toFixed(4)),
+          signIndex: idx,
+          rashi: SIGNS_EN[idx],
+          rashiHi: SIGNS_HI[idx],
+          rashiLord: SIGN_LORDS[idx],
+          element: SIGN_ELEMENTS[idx],
+          signDegree: Number(moon.signDegree.toFixed(2)),
+          nakshatra: nak.name,
+          nakshatraHi: nak.nameHi,
+          nakshatraLord: nak.lord,
+          nakshatraDeity: nak.deity,
+          pada: moon.nakshatraPada,
+        },
+        method: "Lahiri sidereal · Swiss Ephemeris",
+        note: timeKnown
+          ? "This is your true Janma Rashi (Moon at birth)."
+          : "Birth time unknown — Moon position estimated for noon local time. The Moon moves ~13°/day, so a missing time can shift the rashi by one sign.",
+      });
+    } catch (err: any) {
+      console.error("janma-rashi error:", err);
+      res.status(500).json({ message: "Could not compute Janma Rashi. Please check the inputs." });
+    }
+  });
+
   // ---- Puja Essentials: AI Category Advisor ----
   // Single endpoint for all 8 category landings (rudraksha, gemstones, idols, etc.).
   // Public; per-route limiter (15/15min/IP) + 1h in-memory cache to cap OpenAI spend.
