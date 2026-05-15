@@ -2,7 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Heart, MapPin, GraduationCap, Briefcase, Users, Star, Shield, Crown, Eye, Loader2, Search, Filter } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+function readInitialFilters() {
+  if (typeof window === "undefined") return { q: "", gender: "all", caste: "all" };
+  const sp = new URLSearchParams(window.location.search);
+  return {
+    q: sp.get("q") || "",
+    gender: sp.get("gender") || "all",
+    caste: sp.get("caste") || "all",
+  };
+}
 
 type MatrimonyProfile = {
   id: number;
@@ -34,9 +44,23 @@ type MatrimonyProfile = {
 };
 
 export default function MatrimonyProfiles() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [genderFilter, setGenderFilter] = useState("all");
-  const [casteFilter, setCasteFilter] = useState("all");
+  const initial = readInitialFilters();
+  const [searchTerm, setSearchTerm] = useState(initial.q);
+  const [genderFilter, setGenderFilter] = useState(initial.gender);
+  const [casteFilter, setCasteFilter] = useState(initial.caste);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    if (searchTerm) sp.set("q", searchTerm); else sp.delete("q");
+    if (genderFilter !== "all") sp.set("gender", genderFilter); else sp.delete("gender");
+    if (casteFilter !== "all") sp.set("caste", casteFilter); else sp.delete("caste");
+    const qs = sp.toString();
+    const next = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    if (next !== window.location.pathname + window.location.search) {
+      window.history.replaceState({}, "", next);
+    }
+  }, [searchTerm, genderFilter, casteFilter]);
 
   const { data: profiles, isLoading } = useQuery<MatrimonyProfile[]>({
     queryKey: ["/api/matrimony/profiles"],

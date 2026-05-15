@@ -394,6 +394,36 @@ export default function TirthYatraDetailPage() {
         </div>
       </section>
 
+      {/* Pilgrimage Card cross-link — visible value bridge */}
+      <section className="bg-[#FBF7EE] border-y border-[#D4AF37]/30">
+        <div className="container mx-auto px-4 py-5 md:py-6">
+          <Link href="/pilgrimage-card">
+            <a
+              className="block max-w-5xl mx-auto rounded-md bg-white border border-[#D4AF37]/30 hover-elevate p-4 md:p-5"
+              data-testid="link-pilgrimage-card-cta"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5">
+                <div className="w-10 h-10 rounded-md bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center shrink-0">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold mb-1">Pilgrimage Card · Members go free</p>
+                  <p className="text-[14px] md:text-[15px] font-serif text-[#4a1a22] font-semibold leading-snug">
+                    Want this yatra <span className="text-[#6D2B35]">included</span>, plus every other Tirth across Bharat for life?
+                  </p>
+                  <p className="text-[12px] text-[#5a4a3a]/75 mt-0.5">
+                    Save a small amount every month — your parents (or you) walk every sacred land of India, fully cared for. Set up KYC in 24 hours.
+                  </p>
+                </div>
+                <div className="shrink-0 inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] bg-[#FBF7EE] border border-[#D4AF37]/30 rounded-md px-3 py-2">
+                  Explore the card <ChevronRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            </a>
+          </Link>
+        </div>
+      </section>
+
       {/* A+ benefits / steps / FAQ from existing component */}
       <PageAPlusContent
         eyebrow={`Why Vedic Tatva for ${yatra.name}`}

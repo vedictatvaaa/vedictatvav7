@@ -245,6 +245,10 @@ export default function AIPalmReading() {
                 <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Centre the palm — fill the frame</li>
                 <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Plain background, all major lines visible</li>
               </ul>
+              <p className="mt-3 pt-2.5 border-t border-[#D4AF37]/20 text-[10.5px] text-[#5a4a3a]/65 flex items-start gap-1.5" data-testid="text-privacy-exif">
+                <span className="text-[#D4AF37] font-bold">·</span>
+                <span><strong className="text-[#6D2B35]">Your privacy:</strong> photos are re-encoded in your browser before upload — EXIF data, GPS location and device metadata are automatically stripped. Image is processed and discarded; nothing is stored on our servers.</span>
+              </p>
             </div>
 
             {/* Drop Zone */}
