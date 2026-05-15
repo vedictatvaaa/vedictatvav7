@@ -1463,6 +1463,734 @@ const MAHA_MRITYUNJAYA_JAAP: SeoLandingPageProps = {
   schema: { type: "service", serviceName: "Maha Mrityunjaya Jaap Booking" },
 };
 
+const DAILY_RASHIFAL: SeoLandingPageProps = {
+  seoTitle: "Aaj Ka Rashifal — Free Daily Horoscope for All 12 Zodiac Signs | Vedic Tatva",
+  seoDescription:
+    "Read accurate aaj ka rashifal in Hindi & English for all 12 zodiac signs. Free daily horoscope for love, career, money and health — Vedic Jyotish + Western astrology, lucky number, lucky colour and lucky direction updated every morning.",
+  seoKeywords:
+    "aaj ka rashifal, daily horoscope, daily rashifal, today horoscope, today rashifal, free daily horoscope, rashifal in hindi, vedic daily horoscope, mesh rashi today, vrishabh rashi today, mithun rashifal today, kark rashi today, singh rashi today, kanya rashi today, tula rashi today, vrishchik rashi today, dhanu rashi today, makar rashi today, kumbh rashi today, meen rashi today, lucky number today, lucky color today",
+  canonical: "/daily-rashifal",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Daily Rashifal", url: "/daily-rashifal" },
+  ],
+  eyebrow: "Aaj Ka Rashifal",
+  h1: "Daily Rashifal — Free Aaj Ka Rashifal for All 12 Zodiac Signs",
+  subtitle:
+    "Fresh every morning. Read your day's horoscope in Hindi or English — love, career, finance and health — based on the live tithi, nakshatra and planetary positions.",
+  heroCTAs: [
+    { label: "Open Today's Rashifal", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Talk to a Jyotishi", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Updated Daily", "Hindi + English", "Vedic & Western"],
+  intro:
+    "Aaj ka rashifal is your daily cosmic weather report — a quick read of how today's planetary positions, tithi and nakshatra are influencing your rashi. Vedic Tatva publishes accurate daily predictions for all 12 zodiac signs in both Vedic Jyotish (Moon-sign based) and Western (Sun-sign based) systems, including lucky colour, lucky number, lucky direction, what to do today and what to avoid. Use it to plan your meetings, your love conversations, your money decisions and even your meals.",
+  sections: [
+    {
+      heading: "What your daily rashifal covers",
+      bullets: [
+        "Overall day rating (1–10) and mood for your sign",
+        "Love & relationships — favourable hours and conversations to have",
+        "Career & profession — best time to pitch, sign or wait",
+        "Finance — when to invest, when to hold, lucky purchase directions",
+        "Health & wellness — body areas to watch, foods that suit today's energy",
+        "Lucky colour, lucky number, lucky direction and lucky time slot",
+        "Do today / Avoid today — short, actionable Vedic guidance",
+      ],
+    },
+    {
+      heading: "Vedic vs Western daily horoscope — which is more accurate?",
+      bullets: [
+        "Vedic rashifal uses your Janma Rashi (Moon sign at birth) — more personal and emotionally accurate",
+        "Western horoscope uses your Sun sign (date of birth only) — captures personality and ego",
+        "Most Indian astrologers consider the Vedic Moon-sign rashifal more reliable for daily decisions",
+        "If your birth time is unknown, the Western sun-sign rashifal still works — switch with one tap on Vedic Tatva",
+      ],
+    },
+    {
+      heading: "How to use your aaj ka rashifal",
+      bullets: [
+        "Read it before 10 am for the full day's planning advantage",
+        "Note the lucky colour and try to wear at least one accent piece in that shade",
+        "Plan important calls or pitches in the lucky time slot",
+        "Avoid signing contracts during the day's rahu-kaal window",
+        "Pair the rashifal with the day's panchang for the deepest read",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "When is the new daily rashifal published?", a: "Fresh predictions for all 12 rashis are published every morning before 6 am IST, based on the day's tithi, nakshatra, yoga and karana." },
+    { q: "Is it really free? Do I need to log in?", a: "Yes — fully free, no login required for any of the 12 rashis in either Vedic or Western system." },
+    { q: "How is your daily horoscope different from newspaper rashifal?", a: "We compute daily predictions live from the actual planetary positions for each sign, combined with the day's panchang. Newspaper rashifal is usually generic and pre-written days in advance." },
+    { q: "Which rashi should I read — Sun sign or Moon sign?", a: "If you know your birth time, read your Vedic Moon-sign (Janma Rashi) rashifal — it's far more personal. If you don't know your birth time, your Sun-sign Western horoscope still applies." },
+    { q: "Can I get tomorrow's (kal ka) rashifal in advance?", a: "Yes — Premium members can read kal ka rashifal a day ahead. Free users get today's prediction." },
+  ],
+  finalCtaTitle: "Start your day with the right cosmic alignment",
+  finalCtaSubtitle: "Free aaj ka rashifal for all 12 signs — Vedic + Western, in Hindi & English.",
+  finalCtaButtons: [
+    { label: "Read Today's Rashifal", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Generate My Free Kundli", href: "/ai-kundli", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Weekly Rashifal", href: "/weekly-rashifal" },
+    { label: "Monthly Horoscope", href: "/monthly-horoscope" },
+    { label: "Yearly Horoscope 2026", href: "/yearly-horoscope-2026" },
+    { label: "Zodiac Compatibility", href: "/zodiac-compatibility" },
+    { label: "Lucky Number Today", href: "/lucky-number-today" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const WEEKLY_RASHIFAL: SeoLandingPageProps = {
+  seoTitle: "Saptahik Rashifal — Free Weekly Horoscope for All 12 Zodiac Signs | Vedic Tatva",
+  seoDescription:
+    "Read your saptahik rashifal in Hindi & English — accurate weekly horoscope predictions for love, career, money and health. Plan your week with Vedic astrology guidance for all 12 rashis.",
+  seoKeywords:
+    "saptahik rashifal, weekly rashifal, weekly horoscope, weekly horoscope in hindi, this week horoscope, weekly rashifal in hindi, mesh saptahik rashifal, vrishabh weekly horoscope, mithun saptahik, kark weekly, singh weekly, kanya weekly, tula weekly, vrishchik weekly, dhanu weekly, makar weekly, kumbh weekly, meen weekly, weekly love horoscope, weekly career horoscope",
+  canonical: "/weekly-rashifal",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Weekly Rashifal", url: "/weekly-rashifal" },
+  ],
+  eyebrow: "Saptahik Rashifal",
+  h1: "Weekly Rashifal — Plan Your Week with Vedic Astrology",
+  subtitle:
+    "Saptahik rashifal for all 12 zodiac signs in Hindi and English. See which days favour love, money, contracts and travel — and which days to lay low.",
+  heroCTAs: [
+    { label: "Read Weekly Rashifal", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Find a Shubh Muhurat", href: "/muhurat-finder", variant: "outline" },
+  ],
+  trustChips: ["Refreshed Every Monday", "Day-Wise Highlights", "Vedic + Western"],
+  intro:
+    "Your saptahik rashifal is the seven-day cosmic forecast for your rashi — far more useful than daily for planning meetings, travel, financial decisions and family events. Each Monday, Vedic Tatva publishes detailed weekly horoscope predictions for all 12 zodiac signs, identifying the most favourable day of the week for each life area — love, career, finance, health and family.",
+  sections: [
+    {
+      heading: "What your weekly rashifal covers",
+      bullets: [
+        "Day-wise highlights — best day of the week for love, money, work, travel",
+        "Weekly love and relationship outlook with compatible signs",
+        "Career and business predictions — pitches, signings, interviews",
+        "Money and finance — favourable days to invest or transact",
+        "Health and wellness — energy peaks and dips through the week",
+        "Lucky day, lucky colour and lucky number for the full week",
+        "Caution windows — rahu-kaal heavy days, malefic transits to avoid",
+      ],
+    },
+    {
+      heading: "Why a weekly horoscope beats a daily one",
+      bullets: [
+        "Lets you batch decisions to the most auspicious day of the week",
+        "Captures planetary day-of-week effects (Mon/Moon, Tue/Mars, Wed/Mercury, etc.)",
+        "Gives breathing room to schedule shubh muhurats for big decisions",
+        "Useful for working professionals planning Monday–Friday work weeks",
+      ],
+    },
+    {
+      heading: "How to read your saptahik rashifal",
+      bullets: [
+        "Read it Sunday evening or Monday morning to plan the week",
+        "Note the strongest planetary day for your rashi — do important work then",
+        "Schedule romantic dinners on the love-favourable day",
+        "Pair with our Muhurat Finder for any major event during the week",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "When is the new weekly rashifal published?", a: "Every Monday morning before 6 am IST — covering Monday through Sunday for all 12 signs." },
+    { q: "Is the weekly horoscope free?", a: "Yes — completely free for all 12 zodiac signs in both Vedic and Western systems." },
+    { q: "What's the difference between daily and weekly rashifal?", a: "Daily rashifal gives day-by-day cosmic weather. Weekly gives you the seven-day pattern — far better for planning meetings, travel and big purchases." },
+    { q: "Can I get next week's rashifal in advance?", a: "Yes — Premium members can read next week's saptahik rashifal a week ahead. Free users get the current week." },
+    { q: "Is there a separate weekly love horoscope?", a: "Yes — every weekly rashifal includes a dedicated love and relationships section with compatible signs and the best date-night day for your rashi." },
+  ],
+  finalCtaTitle: "Plan your week with the planets, not against them",
+  finalCtaSubtitle: "Free saptahik rashifal for all 12 signs — refreshed every Monday morning.",
+  finalCtaButtons: [
+    { label: "Read Weekly Rashifal", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Find Shubh Muhurat", href: "/muhurat-finder", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Monthly Horoscope", href: "/monthly-horoscope" },
+    { label: "Yearly Horoscope 2026", href: "/yearly-horoscope-2026" },
+    { label: "Zodiac Compatibility", href: "/zodiac-compatibility" },
+    { label: "Panchang Today", href: "/panchang-calendar" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const MONTHLY_HOROSCOPE: SeoLandingPageProps = {
+  seoTitle: "Maasik Rashifal — Free Monthly Horoscope for All 12 Zodiac Signs | Vedic Tatva",
+  seoDescription:
+    "Read your maasik rashifal — accurate monthly horoscope predictions for all 12 rashis in Hindi & English. Plan major life events with Vedic + Western astrology forecasts for love, career, finance and health.",
+  seoKeywords:
+    "maasik rashifal, monthly rashifal, monthly horoscope, monthly horoscope in hindi, this month horoscope, mesh maasik rashifal, vrishabh monthly horoscope, mithun maasik, kark monthly, singh monthly, kanya monthly, tula monthly, vrishchik monthly, dhanu monthly, makar monthly, kumbh monthly, meen monthly, monthly love prediction, monthly money horoscope, monthly career astrology",
+  canonical: "/monthly-horoscope",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Monthly Horoscope", url: "/monthly-horoscope" },
+  ],
+  eyebrow: "Maasik Rashifal",
+  h1: "Monthly Horoscope — Maasik Rashifal for All 12 Zodiac Signs",
+  subtitle:
+    "Plan your month with Vedic astrology — sankranti transits, festival muhurats, love windows, money days and health watch-outs for each rashi.",
+  heroCTAs: [
+    { label: "Read Monthly Horoscope", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Get Premium Kundli", href: "/premium-kundli-pdf", variant: "outline" },
+  ],
+  trustChips: ["New on the 1st", "Sankranti-Aware", "Vedic + Western"],
+  intro:
+    "Your maasik rashifal is the 30-day forecast for your rashi — built around the month's sankranti (Sun ingress), the major planetary transits and the festival calendar. Vedic Tatva publishes a fresh monthly horoscope on the 1st of every month for all 12 zodiac signs, identifying the most favourable two-week window for love, money, contracts, travel and family events.",
+  sections: [
+    {
+      heading: "What your monthly rashifal includes",
+      bullets: [
+        "Month-at-a-glance summary and overall theme for your rashi",
+        "Sankranti transit and how it shifts your rashi's energy",
+        "Best week of the month for love, marriage talks and proposals",
+        "Best week for career moves, job changes, business launches",
+        "Money and investment outlook — favourable and risky dates",
+        "Health and wellness — body systems to nurture this month",
+        "Major festivals and recommended pujas for your rashi",
+        "Lucky days, lucky colour, lucky number, lucky direction",
+      ],
+    },
+    {
+      heading: "Major planetary events to watch this month",
+      bullets: [
+        "Surya Sankranti — the Sun's monthly sign change reshapes all 12 rashis",
+        "Chandra Gochar — the Moon's transit through your rashi (your most emotional days)",
+        "Mercury, Venus and Mars sign changes — career, love and energy shifts",
+        "Any retrograde periods — dates to avoid major decisions",
+        "Solar/lunar eclipses if applicable in the month",
+      ],
+    },
+    {
+      heading: "How to use your monthly horoscope",
+      bullets: [
+        "Read it on the 1st of the month before making any major plans",
+        "Highlight the favourable dates in your calendar",
+        "Schedule big-ticket purchases on the money-favourable dates",
+        "Plan major pujas (Satyanarayan, Mahalakshmi) on the recommended muhurats",
+        "Use the caution dates to slow down — not stop, just be vigilant",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "When is the new monthly horoscope published?", a: "On the 1st of every month before 6 am IST, covering the full month for all 12 zodiac signs." },
+    { q: "Is the maasik rashifal free?", a: "Yes — completely free for all 12 rashis in both Vedic and Western systems." },
+    { q: "How is monthly rashifal different from yearly?", a: "Monthly is built around the month's sankranti and weekly transits — practical for planning. Yearly captures the year's mahadasha and big planetary moves — strategic for life decisions." },
+    { q: "Should I read this with my kundli?", a: "Yes — for the deepest read, pair the monthly transits with your full Vedic kundli to see exactly which kundli houses are being activated this month." },
+    { q: "Can I get next month's rashifal in advance?", a: "Yes — Premium members get next month's maasik rashifal a month ahead. Free users get the current month." },
+  ],
+  finalCtaTitle: "Plan your month with the planets, not just your calendar",
+  finalCtaSubtitle: "Free maasik rashifal for all 12 signs — refreshed on the 1st of every month.",
+  finalCtaButtons: [
+    { label: "Read Monthly Horoscope", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Get Premium Kundli PDF", href: "/premium-kundli-pdf", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Weekly Rashifal", href: "/weekly-rashifal" },
+    { label: "Yearly Horoscope 2026", href: "/yearly-horoscope-2026" },
+    { label: "Panchang Today", href: "/panchang-calendar" },
+    { label: "Shubh Muhurat Finder", href: "/muhurat-finder" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const YEARLY_HOROSCOPE_2026: SeoLandingPageProps = {
+  seoTitle: "Varshik Rashifal 2026 — Yearly Horoscope for All 12 Zodiac Signs | Vedic Tatva",
+  seoDescription:
+    "Varshik rashifal 2026 — accurate yearly horoscope for all 12 rashis. Read your Vedic + Western yearly predictions for love, marriage, career, finance and health, including Saturn, Jupiter, Rahu-Ketu transits and Sade Sati update.",
+  seoKeywords:
+    "varshik rashifal 2026, yearly rashifal, yearly horoscope 2026, 2026 horoscope, year ahead astrology, mesh varshik rashifal 2026, vrishabh yearly horoscope, mithun yearly, kark yearly, singh yearly, kanya yearly, tula yearly, vrishchik yearly, dhanu yearly, makar yearly, kumbh yearly, meen yearly, sade sati 2026, jupiter transit 2026, rahu ketu transit 2026, kundli based yearly prediction",
+  canonical: "/yearly-horoscope-2026",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Yearly Horoscope 2026", url: "/yearly-horoscope-2026" },
+  ],
+  eyebrow: "Varshik Rashifal 2026",
+  h1: "Yearly Horoscope 2026 — Varshik Rashifal for All 12 Zodiac Signs",
+  subtitle:
+    "Your full 2026 forecast — Saturn transit, Jupiter blessings, Rahu-Ketu axis shift and Sade Sati update for every rashi, in Vedic + Western systems.",
+  heroCTAs: [
+    { label: "Read 2026 Yearly Forecast", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Talk to a Vedic Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["12 Rashis Covered", "Transit-Aware", "Vedic + Western"],
+  intro:
+    "The varshik rashifal 2026 is your year-long cosmic strategy — built around the major planetary moves of 2026: Saturn's transit through Kumbh and Meen, Jupiter's blessing on specific rashis, the Rahu-Ketu nodal axis shift, the year's eclipses, and the ongoing Shani Sade Sati phases for Vrishchik, Dhanu and Makar. Vedic Tatva publishes deep yearly forecasts for all 12 zodiac signs across love, marriage, career, finance, health, family and spiritual growth.",
+  sections: [
+    {
+      heading: "Major planetary events of 2026",
+      bullets: [
+        "Shani Gochar (Saturn transit) — discipline, karma and Sade Sati updates",
+        "Guru Gochar (Jupiter transit) — wisdom, marriage, children and wealth blessings",
+        "Rahu-Ketu axis shift — desire, detachment and karmic destiny rewrites",
+        "Mercury, Venus and Mars retrogrades — when to slow down",
+        "Solar and lunar eclipses 2026 — high-impact karma windows",
+      ],
+    },
+    {
+      heading: "What your varshik rashifal covers",
+      bullets: [
+        "Year-at-a-glance theme and overall rating for your rashi",
+        "Love and marriage prospects for 2026 — best months for proposals & wedding",
+        "Career and business — promotions, job changes, ventures, expansions",
+        "Finance and wealth — investment cycles, property purchases, debt clearance",
+        "Health and wellness — body systems to monitor through the year",
+        "Family, children and parents — milestones, watch-outs and rituals",
+        "Spiritual growth — recommended sadhana, pujas and yatra for the year",
+        "Lucky months, lucky colours and lucky gemstones for 2026",
+      ],
+    },
+    {
+      heading: "Sade Sati update for 2026",
+      bullets: [
+        "Vrishchik (Scorpio) — exit phase of Sade Sati, relief and rebuilding",
+        "Dhanu (Sagittarius) — peak phase, deepest karmic lessons of the cycle",
+        "Makar (Capricorn) — entry/middle phase, expansion of responsibility",
+        "Recommended remedies — Maha Mrityunjaya Jaap, Shani puja, donations",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "When is the varshik rashifal 2026 published?", a: "Yearly forecasts go live on the eve of the new Vikram Samvat year (around mid-March) and stay updated through the calendar year." },
+    { q: "Is the yearly horoscope free?", a: "Yes — full year-long forecasts for all 12 zodiac signs are free in both Vedic and Western systems." },
+    { q: "How accurate is the yearly forecast?", a: "Yearly rashifal captures the major planetary moves of the year — strategic guidance. For pin-point accuracy on personal events, pair it with your full Vedic kundli analysis or a 1-on-1 astrologer consultation." },
+    { q: "What's the difference between yearly and lifetime predictions?", a: "Yearly rashifal covers one calendar year. Lifetime predictions need your full kundli's mahadasha-antardasha periods — available in our Premium Kundli PDF." },
+    { q: "Should I do a Navgraha or Mahamrityunjaya puja for the year?", a: "Recommended if you're in Sade Sati, mahadasha of a malefic graha, or facing repeated obstacles. Read your varshik rashifal first to see what your year specifically calls for." },
+  ],
+  finalCtaTitle: "Make 2026 the year you stop fighting the cosmos",
+  finalCtaSubtitle: "Free varshik rashifal 2026 for all 12 signs — Vedic + Western forecasts.",
+  finalCtaButtons: [
+    { label: "Read 2026 Yearly Rashifal", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Get Premium Kundli PDF", href: "/premium-kundli-pdf", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Weekly Rashifal", href: "/weekly-rashifal" },
+    { label: "Monthly Horoscope", href: "/monthly-horoscope" },
+    { label: "Maha Mrityunjaya Jaap", href: "/maha-mrityunjaya-jaap" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const ZODIAC_COMPATIBILITY: SeoLandingPageProps = {
+  seoTitle: "Zodiac Compatibility — Rashi Love & Marriage Match Guide | Vedic Tatva",
+  seoDescription:
+    "Discover which zodiac signs are most compatible for love, marriage and friendship. Free rashi compatibility guide using Vedic Ashtakoot Guna Milan + Western sun-sign matching for all 12 signs.",
+  seoKeywords:
+    "zodiac compatibility, rashi compatibility, zodiac sign love match, zodiac marriage compatibility, best zodiac compatibility guide, zodiac compatibility chart, ashtakoot guna milan, sun sign compatibility, vedic compatibility, mesh compatibility, vrishabh compatibility, kark compatibility, singh compatibility, vrishchik compatibility, makar compatibility, love marriage astrology prediction",
+  canonical: "/zodiac-compatibility",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Zodiac Compatibility", url: "/zodiac-compatibility" },
+  ],
+  eyebrow: "Love & Marriage Astrology",
+  h1: "Zodiac Compatibility — Find Your Most Compatible Rashi",
+  subtitle:
+    "Vedic Ashtakoot Guna Milan + Western sun-sign compatibility — see which rashis are made for you in love, marriage and friendship.",
+  heroCTAs: [
+    { label: "Match My Kundli (Free)", href: "/ai-kundli", variant: "primary" },
+    { label: "Talk to a Match Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Ashtakoot Guna Milan", "Vedic + Western", "Free Compatibility"],
+  intro:
+    "Zodiac compatibility is the ancient science of seeing whether two souls have the planetary chemistry to thrive together. In Vedic tradition, the gold standard is the 36-point Ashtakoot Guna Milan — eight koots of rashi-nakshatra matching covering everything from mental compatibility (Manas Maitri) to progeny (Santati). Western astrology checks sun-sign chemistry across elements (fire, earth, air, water) and modalities (cardinal, fixed, mutable). Vedic Tatva combines both — giving you the deepest possible compatibility read for love, marriage and friendship.",
+  sections: [
+    {
+      heading: "The 8 koots of Ashtakoot Guna Milan",
+      bullets: [
+        "Varna (1 point) — spiritual compatibility and ego match",
+        "Vashya (2 points) — mutual attraction and dominance balance",
+        "Tara (3 points) — birth star compatibility and well-being",
+        "Yoni (4 points) — physical and sexual compatibility",
+        "Graha Maitri (5 points) — mental and intellectual harmony",
+        "Gana (6 points) — temperament — Deva, Manushya or Rakshasa",
+        "Bhakoot (7 points) — emotional connection and family welfare",
+        "Nadi (8 points) — health and progeny compatibility (most important)",
+      ],
+    },
+    {
+      heading: "Best zodiac compatibility pairs (Vedic Moon-sign)",
+      bullets: [
+        "Mesh + Singh / Dhanu — fiery passion, shared ambition",
+        "Vrishabh + Kanya / Makar — earthy stability, shared values",
+        "Mithun + Tula / Kumbh — intellectual spark, free-spirited bond",
+        "Kark + Vrishchik / Meen — emotional depth, soul-level care",
+        "Singh + Mesh / Dhanu — magnetic charisma, mutual admiration",
+        "Kanya + Vrishabh / Makar — quiet, dependable, long-term",
+      ],
+    },
+    {
+      heading: "Compatibility red flags to check",
+      bullets: [
+        "Nadi Dosha — same Nadi (Adi/Madhya/Antya) reduces health & progeny score",
+        "Bhakoot Dosha — 6-8 or 9-5 rashi positions — strains family welfare",
+        "Mangal Dosha (Manglik) — needs cross-checking on both kundlis",
+        "Graha Yuti — afflicted Venus, Jupiter or 7th house in either chart",
+        "Below 18/36 Guna score — generally not recommended for marriage",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "What is the minimum Guna score for marriage?", a: "Traditional shastra recommends a minimum of 18 out of 36 Gunas. 24+ is excellent, 30+ is rare and considered a divine match." },
+    { q: "Is sun-sign or moon-sign compatibility more accurate?", a: "Vedic Moon-sign (rashi) compatibility is far more accurate than Western Sun-sign because it accounts for emotional and karmic chemistry. Use sun-sign as a quick filter; use rashi-Guna Milan for marriage decisions." },
+    { q: "What if our Guna score is low — is the match doomed?", a: "Not necessarily. Many low-Guna couples thrive. The score is a guide; the full kundli analysis matters more — including doshas, dasha periods and 7th-house strength." },
+    { q: "Do you offer free Kundli Matching?", a: "Yes — generate your free kundli on Vedic Tatva and our system performs Ashtakoot Guna Milan with any partner kundli at no cost." },
+    { q: "What about same-sign or 6-8 axis couples?", a: "Same-sign (Naadi sahabhog) is workable with the right doshanivaran. 6-8 (Shadashtak) is challenging but resolvable through specific pujas — consult our astrologers." },
+  ],
+  finalCtaTitle: "See if your rashis were made for each other",
+  finalCtaSubtitle: "Free Ashtakoot Guna Milan kundli matching for all 12 zodiac sign pairs.",
+  finalCtaButtons: [
+    { label: "Match Kundli for Free", href: "/ai-kundli", variant: "primary" },
+    { label: "Talk to a Match Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Kundli Matching", href: "/kundli-matching" },
+    { label: "Marriage Puja", href: "/marriage-puja" },
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Nakshatra Predictions", href: "/nakshatra-predictions" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const LUCKY_NUMBER_TODAY: SeoLandingPageProps = {
+  seoTitle: "Lucky Number Today — Free Daily Lucky Number, Colour & Direction | Vedic Tatva",
+  seoDescription:
+    "Find your lucky number today, lucky colour, lucky gemstone and lucky direction for all 12 zodiac signs. Free daily numerology + Vedic astrology tool — updated every morning for love, money and career luck.",
+  seoKeywords:
+    "lucky number today, lucky color today, lucky number for today, daily lucky number, daily lucky color, today lucky number for me, lucky direction today, lucky gemstone today, lucky number by date of birth, numerology lucky number, zodiac lucky number, mesh lucky number, kark lucky number, singh lucky number, makar lucky number, lucky color and lucky number today",
+  canonical: "/lucky-number-today",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Lucky Number Today", url: "/lucky-number-today" },
+  ],
+  eyebrow: "Daily Luck Indicator",
+  h1: "Lucky Number Today — Daily Lucky Number, Colour & Direction",
+  subtitle:
+    "Your aaj ka lucky number, lucky colour, lucky gemstone and lucky direction — refreshed daily for all 12 zodiac signs based on the day's planetary lord.",
+  heroCTAs: [
+    { label: "Reveal Today's Lucky Number", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Get Numerology Reading", href: "/numerology-predictions", variant: "outline" },
+  ],
+  trustChips: ["Refreshed Daily", "All 12 Rashis", "Numerology + Vedic"],
+  intro:
+    "Your lucky number today isn't a single static digit — it shifts with the day's planetary lord, your rashi and your moolank (birth number from numerology). Vedic Tatva combines all three to give you the most accurate daily lucky number, lucky colour, lucky direction and lucky gemstone — small alignments that compound into real luck across love, money and work.",
+  sections: [
+    {
+      heading: "How your daily lucky number is calculated",
+      bullets: [
+        "Day-of-week planetary lord (Mon/Moon → 2, Tue/Mars → 9, Wed/Mercury → 5, etc.)",
+        "Your rashi's ruling graha and its current transit",
+        "Your moolank — birth-date single digit (1–9)",
+        "Your bhagyank — full birth-date sum (destiny number)",
+        "Combined into one auspicious 1–9 daily number",
+      ],
+    },
+    {
+      heading: "What today's luck pack gives you",
+      bullets: [
+        "Lucky number — for lottery, codes, seat picks, decisions",
+        "Lucky colour — wear at least one accent piece in this shade",
+        "Lucky direction — face this way for important calls or meditation",
+        "Lucky gemstone — touch or wear, especially during the lucky time slot",
+        "Lucky time slot — the day's most favourable 1-hour window",
+        "Lucky alphabet — for naming, signing, important communications",
+      ],
+    },
+    {
+      heading: "How to use your lucky pack today",
+      bullets: [
+        "Wear the lucky colour as a tie, dupatta, blouse or pocket-square",
+        "Schedule big calls in the lucky time slot facing the lucky direction",
+        "Avoid signing important documents during the day's rahu-kaal",
+        "Touch your lucky gemstone before any high-stakes meeting",
+        "Use the lucky number for app PINs, ticket choices, raffle entries",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How is my daily lucky number different from my permanent lucky number?", a: "Your permanent lucky number (moolank) is fixed by your birth date. Your daily lucky number shifts with the day's planetary lord and your rashi's transit — both matter." },
+    { q: "Is the lucky number really lucky for lottery / gambling?", a: "Vedic and numerology systems describe favourability for decisions and luck, not gambling outcomes specifically. We don't endorse using these for gambling — use them for genuine life decisions." },
+    { q: "Why does my lucky colour change every day?", a: "Each weekday is ruled by a different graha — Monday belongs to Chandra (white/silver), Tuesday to Mangal (red), Wednesday to Budh (green), and so on. Your rashi's modifier shifts the daily shade." },
+    { q: "Can I wear my lucky gemstone every day?", a: "Some gemstones (ruby, pearl) are gentle and can be worn daily. Others (blue sapphire, hessonite) are powerful and need an astrologer's clearance after a kundli check." },
+    { q: "Where can I see my lucky pack for all 12 signs?", a: "Open the daily rashifal page and select your rashi — the lucky number, colour, direction and gemstone are shown right inside the prediction card." },
+  ],
+  finalCtaTitle: "Wear the right colour. Pick the right number. Face the right way.",
+  finalCtaSubtitle: "Free daily lucky pack for all 12 zodiac signs — refreshed every morning.",
+  finalCtaButtons: [
+    { label: "Reveal Today's Lucky Number", href: "/zodiac-rashifal", variant: "primary" },
+    { label: "Numerology Predictions", href: "/numerology-predictions", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Numerology Predictions", href: "/numerology-predictions" },
+    { label: "Nakshatra Predictions", href: "/nakshatra-predictions" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Panchang Today", href: "/panchang-calendar" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const NUMEROLOGY_PREDICTIONS: SeoLandingPageProps = {
+  seoTitle: "Numerology Predictions — Free Moolank, Bhagyank & Name Number Reading | Vedic Tatva",
+  seoDescription:
+    "Free numerology predictions — find your moolank (birth number), bhagyank (destiny number) and naam ank (name number). Discover lucky days, lucky colours, careers and partners aligned with your numerology profile.",
+  seoKeywords:
+    "numerology predictions, numerology, free numerology reading, moolank, bhagyank, destiny number, name numerology, lucky number by date of birth, numerology calculator, vedic numerology, ank jyotish, numerology compatibility, numerology and zodiac, lucky number numerology, numerology chart, numerology life path",
+  canonical: "/numerology-predictions",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Numerology Predictions", url: "/numerology-predictions" },
+  ],
+  eyebrow: "Ank Jyotish",
+  h1: "Numerology Predictions — Moolank, Bhagyank & Name Number Reading",
+  subtitle:
+    "Discover your birth number, destiny number and name vibration — and how they decide your luckiest careers, partners, days and decisions.",
+  heroCTAs: [
+    { label: "Get My Numerology Reading", href: "/astrology", variant: "primary" },
+    { label: "Find My Lucky Number", href: "/lucky-number-today", variant: "outline" },
+  ],
+  trustChips: ["Vedic Ank Jyotish", "Birth + Destiny + Name", "Free Reading"],
+  intro:
+    "Numerology — known in India as Ank Jyotish — is the ancient science of how numbers carry vibrations that shape your destiny. Every person has three primary numbers: Moolank (your birth number, 1–9, ruled by a planet), Bhagyank (your destiny number, the sum of your full birth date), and Naam Ank (your name number, derived from the letters of your full name). When all three are in harmony, you flow with life. When they clash, small adjustments — a name spelling tweak, a different signing initial, a chosen lucky day — can realign your luck.",
+  sections: [
+    {
+      heading: "The three numbers that shape your destiny",
+      bullets: [
+        "Moolank (Birth Number) — single digit of your birth date (e.g. 23 → 5)",
+        "Bhagyank (Destiny Number) — sum of your full DOB (e.g. 23-04-1990 → 28 → 1)",
+        "Naam Ank (Name Number) — sum of letter values in your full name",
+        "Ruling Planet — every number 1–9 is ruled by a graha (1=Sun, 2=Moon, 3=Jupiter, etc.)",
+        "Lucky Day — your moolank's planetary day is your most favourable weekday",
+      ],
+    },
+    {
+      heading: "What numerology can predict for you",
+      bullets: [
+        "Career path that suits your numerological vibration",
+        "Compatible partner numbers for love and marriage",
+        "Best business name, brand name and signature style",
+        "Lucky days, lucky colours, lucky numbers for decisions",
+        "Years of major life shifts (personal year cycle)",
+        "Whether your name spelling is helping or hindering you",
+      ],
+    },
+    {
+      heading: "Moolank meaning at a glance",
+      bullets: [
+        "1 (Sun) — leader, ambitious, born CEO; lucky day Sunday",
+        "2 (Moon) — emotional, intuitive, peace-maker; lucky day Monday",
+        "3 (Jupiter) — wise, optimistic, teacher; lucky day Thursday",
+        "4 (Rahu) — unconventional, magnetic, risk-taker; lucky day Saturday",
+        "5 (Mercury) — communicator, traveller, agile; lucky day Wednesday",
+        "6 (Venus) — artist, romantic, family-oriented; lucky day Friday",
+        "7 (Ketu) — spiritual, mysterious, researcher; lucky day Monday/Sunday",
+        "8 (Saturn) — disciplined, karmic, late bloomer; lucky day Saturday",
+        "9 (Mars) — fierce, courageous, warrior; lucky day Tuesday",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How do I calculate my moolank?", a: "Take only the day of your birth date and reduce to a single digit. e.g. born on 23 → 2+3 = 5. Your moolank is 5." },
+    { q: "Should I change my name spelling for better luck?", a: "Only after a full numerology + kundli consultation. A name change without checking your bhagyank can backfire — it's a real spiritual rewrite, not a casual edit." },
+    { q: "What's the difference between numerology and astrology?", a: "Astrology reads the planets at your birth. Numerology reads the vibrational frequency of the numbers in your birth date and name. They overlap — every number is ruled by a planet — and combine for the deepest reading." },
+    { q: "Can numerology predict my marriage age or love life?", a: "Numerology indicates compatible partner numbers and favourable years for marriage. For exact predictions, pair it with your full Vedic kundli — that's where dasha-antardasha periods reveal exact marriage windows." },
+    { q: "Is numerology really part of Vedic tradition?", a: "Yes — Ank Jyotish is one of the six vedangas connected branches and is referenced in classical Jyotish texts. Modern numerology popularised by Cheiro is a Western evolution of the same root principles." },
+  ],
+  finalCtaTitle: "Your numbers are talking. Are you listening?",
+  finalCtaSubtitle: "Free moolank, bhagyank and name-number reading — uncover your numerological destiny.",
+  finalCtaButtons: [
+    { label: "Get My Numerology Reading", href: "/astrology", variant: "primary" },
+    { label: "Lucky Number Today", href: "/lucky-number-today", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Lucky Number Today", href: "/lucky-number-today" },
+    { label: "Daily Rashifal", href: "/daily-rashifal" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Kundli Matching", href: "/kundli-matching" },
+    { label: "Talk to an Astrologer", href: "/astrology" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
+const KUNDLI_MATCHING: SeoLandingPageProps = {
+  seoTitle: "Kundli Matching — Free Online Ashtakoot Guna Milan for Marriage | Vedic Tatva",
+  seoDescription:
+    "Free online kundli matching with full 36-point Ashtakoot Guna Milan. Check rashi, nakshatra, Mangal Dosha, Nadi Dosha and Bhakoot Dosha for marriage compatibility — instant Vedic kundli match report.",
+  seoKeywords:
+    "kundli matching, kundli milan, free kundli matching, online kundli matching, ashtakoot guna milan, 36 guna milan, marriage kundli matching, kundli compatibility, horoscope matching for marriage, gun milan, mangal dosha check, nadi dosha check, bhakoot dosha, kundli matching by name, kundli matching by date of birth, vedic kundli match, kundli match online free",
+  canonical: "/kundli-matching",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Kundli Matching", url: "/kundli-matching" },
+  ],
+  eyebrow: "Marriage Kundli Match",
+  h1: "Kundli Matching — Free Online Ashtakoot Guna Milan",
+  subtitle:
+    "The 5,000-year-old Vedic kundli matching system used in 100% of Hindu arranged marriages. 36-point Guna Milan + dosha check, free in 60 seconds.",
+  heroCTAs: [
+    { label: "Match Kundlis for Free", href: "/ai-kundli", variant: "primary" },
+    { label: "Talk to a Match Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["36-Point Guna Milan", "Dosha Check Included", "Free Report"],
+  intro:
+    "Kundli matching — Kundli Milan or Guna Milan — is the most important ritual before any Hindu marriage decision. Using the bride's and groom's exact birth details, the Vedic system calculates 36 Gunas across 8 koots (Varna, Vashya, Tara, Yoni, Graha Maitri, Gana, Bhakoot and Nadi) and checks for Mangal Dosha, Nadi Dosha, Bhakoot Dosha and other red flags. Vedic Tatva offers free online kundli matching with the full Ashtakoot report in under 60 seconds — and 1-on-1 astrologer consultations if your match needs a deeper read.",
+  sections: [
+    {
+      heading: "What our free kundli match report includes",
+      bullets: [
+        "Full 36-point Ashtakoot Guna Milan with breakdown by koot",
+        "Mangal Dosha (Manglik) check on both kundlis",
+        "Nadi Dosha and Bhakoot Dosha check",
+        "Rashi and Nakshatra compatibility",
+        "Janma Rashi-based emotional and karmic match",
+        "Recommended remedies if doshas are present",
+        "Astrologer recommendation — proceed, consult or reconsider",
+      ],
+    },
+    {
+      heading: "What Guna score really means",
+      bullets: [
+        "Below 18/36 — generally not recommended for marriage",
+        "18–24/36 — average match, workable with remedies",
+        "25–32/36 — very good match, harmonious union",
+        "33–36/36 — divine match, extremely rare",
+        "Even high scores still need a dosha cross-check",
+      ],
+    },
+    {
+      heading: "Common doshas explained",
+      bullets: [
+        "Mangal Dosha — Mars in 1/4/7/8/12 house — needs Manglik-Manglik match or remedy",
+        "Nadi Dosha — same Nadi (Adi/Madhya/Antya) — affects health & progeny",
+        "Bhakoot Dosha — 6-8 or 9-5 rashi positions — affects family welfare",
+        "Gana Dosha — Deva-Rakshasa or Manushya-Rakshasa pairing",
+        "Most doshas are remediable through specific Vedic pujas",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is online kundli matching as accurate as a pandit's?", a: "Our system uses the same classical Parashari calculations a Vedic pandit uses — so the math is identical. For interpretation of borderline cases or doshas, we recommend a follow-up with a verified astrologer." },
+    { q: "Can I match kundlis without knowing exact birth time?", a: "Birth time is essential for accurate kundli matching — it determines the rashi and nakshatra. If birth time is unknown, we can do a name-based or sun-sign quick match, but it's far less reliable." },
+    { q: "What if our Guna score is low — should we cancel the marriage?", a: "No — many low-Guna couples are very happy. Score is a starting point. The full kundli analysis (doshas, dasha periods, 7th-house strength) matters more. Always consult an astrologer before any final decision." },
+    { q: "Both partners have Mangal Dosha — is that bad?", a: "Actually it's good — Manglik-Manglik matches cancel each other's dosha out. The challenge is when one partner is Manglik and the other is not." },
+    { q: "How long does the free kundli match take?", a: "Under 60 seconds — enter both birth details, get the full Ashtakoot Guna Milan report instantly with downloadable PDF." },
+  ],
+  finalCtaTitle: "Don't begin a marriage without a kundli match",
+  finalCtaSubtitle: "Free 36-point Ashtakoot Guna Milan + dosha check — instant Vedic report.",
+  finalCtaButtons: [
+    { label: "Match Kundlis for Free", href: "/ai-kundli", variant: "primary" },
+    { label: "Consult a Match Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Zodiac Compatibility", href: "/zodiac-compatibility" },
+    { label: "Marriage Puja", href: "/marriage-puja" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Premium Kundli PDF", href: "/premium-kundli-pdf" },
+    { label: "Talk to an Astrologer", href: "/astrology" },
+  ],
+  schema: { type: "service", serviceName: "Online Vedic Kundli Matching" },
+};
+
+const NAKSHATRA_PREDICTIONS: SeoLandingPageProps = {
+  seoTitle: "Nakshatra Predictions — Your Birth Star, Pada & Lifetime Forecast | Vedic Tatva",
+  seoDescription:
+    "Find your janma nakshatra (birth star) and read its full lifetime predictions, ruling deity, lucky pada, compatible nakshatras and recommended remedies. Free guide to all 27 Vedic nakshatras.",
+  seoKeywords:
+    "nakshatra predictions, janma nakshatra, birth star prediction, 27 nakshatras, nakshatra characteristics, nakshatra by date of birth, nakshatra pada, nakshatra meaning, ashwini nakshatra, bharani nakshatra, krittika nakshatra, rohini nakshatra, mrigashira nakshatra, ardra nakshatra, punarvasu nakshatra, pushya nakshatra, ashlesha nakshatra, magha nakshatra, nakshatra compatibility, nakshatra remedies",
+  canonical: "/nakshatra-predictions",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Astrology", url: "/zodiac-rashifal" },
+    { name: "Nakshatra Predictions", url: "/nakshatra-predictions" },
+  ],
+  eyebrow: "Janma Nakshatra",
+  h1: "Nakshatra Predictions — Find Your Birth Star & Lifetime Forecast",
+  subtitle:
+    "The 27 nakshatras of Vedic astrology — your birth star, its ruling deity, its lifetime themes and the remedies that strengthen it.",
+  heroCTAs: [
+    { label: "Find My Nakshatra (Free)", href: "/ai-kundli", variant: "primary" },
+    { label: "Get Nakshatra Reading", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["All 27 Nakshatras", "Pada-Level Detail", "Free Reading"],
+  intro:
+    "In Vedic astrology, your janma nakshatra (the lunar mansion the Moon was in at your birth) is more personal than your rashi. The 27 nakshatras divide the zodiac into 13°20' segments, each ruled by a deity, a planet, an element and a symbol. Your nakshatra reveals your innate temperament, your karmic tendencies, your lifetime themes and the kind of partner who will resonate with you. Vedic Tatva computes your exact nakshatra and pada (one of four quarters within each nakshatra) from your birth time and gives you the full reading — completely free.",
+  sections: [
+    {
+      heading: "What your nakshatra reveals",
+      bullets: [
+        "Your innate temperament (Deva, Manushya or Rakshasa Gana)",
+        "Lifetime career path and natural talents",
+        "Compatible nakshatras for marriage and partnership",
+        "Ruling deity (Ishta Devata) — the divine form to worship",
+        "Ruling planet — your most powerful graha for remedies",
+        "Symbol, element and lucky pada",
+        "Karmic lessons of this birth",
+        "Recommended mantras and rituals",
+      ],
+    },
+    {
+      heading: "The 27 Vedic nakshatras",
+      bullets: [
+        "Ashwini, Bharani, Krittika — Mesh / early Vrishabh",
+        "Rohini, Mrigashira, Ardra — Vrishabh / early Mithun",
+        "Punarvasu, Pushya, Ashlesha — Mithun / Kark",
+        "Magha, Purva Phalguni, Uttara Phalguni — Singh / early Kanya",
+        "Hasta, Chitra, Swati — Kanya / Tula",
+        "Vishakha, Anuradha, Jyeshtha — Tula / Vrishchik",
+        "Mula, Purva Ashadha, Uttara Ashadha — Dhanu / early Makar",
+        "Shravana, Dhanishta, Shatabhisha — Makar / Kumbh",
+        "Purva Bhadrapada, Uttara Bhadrapada, Revati — Kumbh / Meen",
+      ],
+    },
+    {
+      heading: "Why nakshatra matters more than rashi",
+      bullets: [
+        "More precise — 27 segments vs 12 rashis",
+        "Used for naming children (nakshatra-aksharas)",
+        "Used for marriage matching (Yoni, Tara, Nadi koots)",
+        "Determines your Vimshottari Mahadasha sequence — your life timeline",
+        "Reveals subtler personality traits than rashi alone",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How do I find my nakshatra?", a: "Generate your free kundli on Vedic Tatva — your janma nakshatra and pada appear in the basic details, calculated from your exact date, time and place of birth." },
+    { q: "What is a nakshatra pada?", a: "Each of the 27 nakshatras is divided into 4 padas (quarters), each linked to a different rashi. Your pada refines your personality further within your nakshatra." },
+    { q: "Which is more important — rashi or nakshatra?", a: "Both matter — but nakshatra is more granular and personal. Most serious Vedic readings (marriage matching, mahadasha analysis, naming) use nakshatra primarily." },
+    { q: "Should I do a puja for my janma nakshatra?", a: "Yes — annually, especially on your nakshatra's day. The puja to your ruling deity strengthens your nakshatra's positive qualities and softens its challenges." },
+    { q: "Can my nakshatra predict marriage compatibility?", a: "Yes — three of the eight koots in Ashtakoot Guna Milan (Tara, Yoni, Nadi) are nakshatra-based. Same-Nadi or incompatible-Yoni matches need extra remedies." },
+  ],
+  finalCtaTitle: "Discover the star that was watching at your birth",
+  finalCtaSubtitle: "Free janma nakshatra reading + pada-level forecast for all 27 nakshatras.",
+  finalCtaButtons: [
+    { label: "Find My Nakshatra Free", href: "/ai-kundli", variant: "primary" },
+    { label: "Talk to a Nakshatra Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Zodiac Compatibility", href: "/zodiac-compatibility" },
+    { label: "Kundli Matching", href: "/kundli-matching" },
+    { label: "Numerology Predictions", href: "/numerology-predictions" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Nakshatra Baby Names", href: "/ai-baby-names" },
+  ],
+  schema: { type: "article", datePublished: TODAY_ISO },
+};
+
 // ---------------------------------------------------------------------------
 // REGISTRY
 // ---------------------------------------------------------------------------
@@ -1484,6 +2212,15 @@ export const SEO_LANDINGS: Record<string, SeoLandingPageProps> = {
   "marriage-puja": MARRIAGE_PUJA,
   "pitra-dosh-puja": PITRA_DOSH_PUJA,
   "maha-mrityunjaya-jaap": MAHA_MRITYUNJAYA_JAAP,
+  "daily-rashifal": DAILY_RASHIFAL,
+  "weekly-rashifal": WEEKLY_RASHIFAL,
+  "monthly-horoscope": MONTHLY_HOROSCOPE,
+  "yearly-horoscope-2026": YEARLY_HOROSCOPE_2026,
+  "zodiac-compatibility": ZODIAC_COMPATIBILITY,
+  "lucky-number-today": LUCKY_NUMBER_TODAY,
+  "numerology-predictions": NUMEROLOGY_PREDICTIONS,
+  "kundli-matching": KUNDLI_MATCHING,
+  "nakshatra-predictions": NAKSHATRA_PREDICTIONS,
 };
 
 export type SeoLandingSlug = keyof typeof SEO_LANDINGS;

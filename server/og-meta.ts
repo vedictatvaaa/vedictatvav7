@@ -295,6 +295,108 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
       alt: "Free Vedic Panchang and Tithi calendar for 2026 on Vedic Tatva",
     },
   },
+  // ── Rashifal / Horoscope hub + 9 zodiac SEO landings ──────────────
+  {
+    match: "/zodiac-rashifal",
+    card: {
+      title: "Aaj Ka Rashifal & Zodiac Predictions · Vedic Tatva",
+      description:
+        "Free aaj ka rashifal for all 12 zodiac signs in Hindi & English. Vedic Jyotish + Western daily, weekly, monthly horoscope with lucky number, colour and remedies.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Vedic Tatva rashifal hub — daily, weekly, monthly horoscope for all 12 zodiac signs",
+    },
+  },
+  {
+    match: "/daily-rashifal",
+    card: {
+      title: "Aaj Ka Rashifal — Free Daily Horoscope · Vedic Tatva",
+      description:
+        "Read accurate aaj ka rashifal for all 12 zodiac signs. Daily Vedic + Western horoscope with lucky number, colour and direction. Refreshed every morning.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free daily rashifal for all 12 zodiac signs · Vedic Tatva",
+    },
+  },
+  {
+    match: "/weekly-rashifal",
+    card: {
+      title: "Saptahik Rashifal — Free Weekly Horoscope · Vedic Tatva",
+      description:
+        "Weekly rashifal in Hindi & English for all 12 zodiac signs. Plan your week with day-wise love, career, money and health predictions from Vedic astrology.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free saptahik weekly horoscope for all 12 zodiac signs · Vedic Tatva",
+    },
+  },
+  {
+    match: "/monthly-horoscope",
+    card: {
+      title: "Maasik Rashifal — Free Monthly Horoscope · Vedic Tatva",
+      description:
+        "Monthly rashifal for all 12 zodiac signs — sankranti transits, festival muhurats and the best windows for love, career and money this month.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free maasik monthly horoscope for all 12 zodiac signs · Vedic Tatva",
+    },
+  },
+  {
+    match: "/yearly-horoscope-2026",
+    card: {
+      title: "Varshik Rashifal 2026 — Yearly Horoscope · Vedic Tatva",
+      description:
+        "Yearly horoscope 2026 for all 12 rashis — Saturn transit, Jupiter blessings, Rahu-Ketu shift and Sade Sati update. Plan your year with Vedic astrology.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free varshik rashifal 2026 yearly horoscope for all 12 zodiac signs · Vedic Tatva",
+    },
+  },
+  {
+    match: "/zodiac-compatibility",
+    card: {
+      title: "Zodiac Compatibility — Rashi Love & Marriage Match · Vedic Tatva",
+      description:
+        "Find your most compatible rashi for love, marriage and friendship. Free Vedic Ashtakoot Guna Milan + Western sun-sign compatibility for all 12 signs.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free zodiac compatibility and rashi love-match guide · Vedic Tatva",
+    },
+  },
+  {
+    match: "/lucky-number-today",
+    card: {
+      title: "Lucky Number Today — Daily Lucky Pack · Vedic Tatva",
+      description:
+        "Free daily lucky number, lucky colour, lucky direction and lucky gemstone for all 12 zodiac signs. Aligned with the day's planetary lord and your moolank.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free lucky number, colour and direction today for all zodiac signs · Vedic Tatva",
+    },
+  },
+  {
+    match: "/numerology-predictions",
+    card: {
+      title: "Numerology Predictions — Free Moolank & Bhagyank · Vedic Tatva",
+      description:
+        "Free numerology reading — discover your moolank, bhagyank and name number. Lucky days, careers, partners and decisions from Vedic Ank Jyotish.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free numerology predictions, moolank, bhagyank and name number · Vedic Tatva",
+    },
+  },
+  {
+    match: "/kundli-matching",
+    card: {
+      title: "Free Online Kundli Matching — Ashtakoot Guna Milan · Vedic Tatva",
+      description:
+        "Free 36-point Ashtakoot Guna Milan in 60 seconds. Mangal, Nadi and Bhakoot dosha check for marriage compatibility. Trusted Vedic kundli matching.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free online kundli matching with 36-point Ashtakoot Guna Milan · Vedic Tatva",
+    },
+  },
+  {
+    match: "/nakshatra-predictions",
+    card: {
+      title: "Nakshatra Predictions — Janma Nakshatra Reading · Vedic Tatva",
+      description:
+        "Find your janma nakshatra and read its full lifetime forecast — ruling deity, lucky pada, compatible nakshatras and remedies. Free guide to all 27 nakshatras.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free nakshatra predictions and janma nakshatra reading for all 27 nakshatras · Vedic Tatva",
+    },
+  },
+
   // ── Japa Counter (free PWA tool, ranks for "online jap counter" cluster) ──
   // Matches /japa, /jap, /japa-counter — exact only. Per-mantra
   // landings /japa/<slug> are handled by buildMantraOgCard() below so

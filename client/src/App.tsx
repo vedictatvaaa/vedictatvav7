@@ -644,6 +644,15 @@ function Router() {
           <Route path="/marriage-puja">{() => <SeoLanding slug="marriage-puja" />}</Route>
           <Route path="/pitra-dosh-puja">{() => <SeoLanding slug="pitra-dosh-puja" />}</Route>
           <Route path="/maha-mrityunjaya-jaap">{() => <SeoLanding slug="maha-mrityunjaya-jaap" />}</Route>
+          <Route path="/daily-rashifal">{() => <SeoLanding slug="daily-rashifal" />}</Route>
+          <Route path="/weekly-rashifal">{() => <SeoLanding slug="weekly-rashifal" />}</Route>
+          <Route path="/monthly-horoscope">{() => <SeoLanding slug="monthly-horoscope" />}</Route>
+          <Route path="/yearly-horoscope-2026">{() => <SeoLanding slug="yearly-horoscope-2026" />}</Route>
+          <Route path="/zodiac-compatibility">{() => <SeoLanding slug="zodiac-compatibility" />}</Route>
+          <Route path="/lucky-number-today">{() => <SeoLanding slug="lucky-number-today" />}</Route>
+          <Route path="/numerology-predictions">{() => <SeoLanding slug="numerology-predictions" />}</Route>
+          <Route path="/kundli-matching">{() => <SeoLanding slug="kundli-matching" />}</Route>
+          <Route path="/nakshatra-predictions">{() => <SeoLanding slug="nakshatra-predictions" />}</Route>
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
           <Route path="/shop" component={Shop} />
