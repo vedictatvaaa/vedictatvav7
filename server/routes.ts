@@ -2953,6 +2953,15 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(result);
   });
 
+  // API Credentials Vault — admin UI for payment gateways + AI providers.
+  // Routes self-register; rehydration projects active credentials into
+  // process.env so existing payment / OpenAI call sites keep working.
+  {
+    const { registerApiCredentialRoutes, rehydrateFromDb } = await import("./api-credentials");
+    rehydrateFromDb().catch((e) => console.warn("[api-credentials] rehydrate failed:", e?.message));
+    registerApiCredentialRoutes(app, (req, action, target, details) => auditAdmin(req, action, target, details));
+  }
+
   // Helper: append an entry to the admin audit log. Best-effort — logging
   // should never block the underlying operation.
   const auditAdmin = async (req: any, action: string, target?: string, details?: any) => {

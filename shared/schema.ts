@@ -1624,3 +1624,33 @@ export const insertSchemaChangelogSchema = createInsertSchema(schemaChangelog).o
 });
 export type SchemaChangelog = typeof schemaChangelog.$inferSelect;
 export type InsertSchemaChangelog = z.infer<typeof insertSchemaChangelogSchema>;
+
+// =====================================================================
+// API Credentials Vault — admin-managed payment-gateway and AI-provider
+// keys. Stored encrypted (AES-256-GCM) in `encrypted_data`. On server
+// boot every row with `is_active = true` is decrypted and projected into
+// process.env via the provider's envMap, so existing code paths that
+// read `process.env.RAZORPAY_KEY_ID` etc. keep working unchanged.
+// =====================================================================
+export const apiCredentials = pgTable("api_credentials", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  kind: text("kind").notNull(),          // "payment" | "ai"
+  provider: text("provider").notNull(),  // "razorpay" | "openai" | ...
+  label: text("label").notNull(),
+  mode: text("mode").notNull().default("test"), // "test" | "live"
+  isActive: boolean("is_active").notNull().default(false),
+  encryptedData: text("encrypted_data").notNull(),
+  meta: jsonb("meta").notNull().default(sql`'{}'::jsonb`),
+  lastTestedAt: timestamp("last_tested_at"),
+  lastTestResult: jsonb("last_test_result"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  providerActiveIdx: index("api_credentials_provider_active_idx").on(t.provider, t.isActive),
+  kindIdx: index("api_credentials_kind_idx").on(t.kind),
+}));
+export const insertApiCredentialSchema = createInsertSchema(apiCredentials).omit({
+  id: true, createdAt: true, updatedAt: true, lastTestedAt: true, lastTestResult: true,
+});
+export type ApiCredential = typeof apiCredentials.$inferSelect;
+export type InsertApiCredential = z.infer<typeof insertApiCredentialSchema>;

@@ -76,6 +76,7 @@ const SeoManagerTab         = safeLazy(() => import("./admin-tabs/SeoManagerTab"
 const MerchantCenterTab     = safeLazy(() => import("./admin-tabs/MerchantCenterTab"));
 const SiteSettingsTab       = safeLazy(() => import("./admin-tabs/SiteSettingsTab"));
 const IntegrationsTab       = safeLazy(() => import("./admin-tabs/IntegrationsTab"));
+const ProvidersTab          = safeLazy(() => import("./admin-tabs/ProvidersTab"));
 const AuditLogTab           = safeLazy(() => import("./admin-tabs/AuditLogTab"));
 const SocialProofTab        = safeLazy(() => import("./admin-tabs/SocialProofTab"));
 const SalesPopupsTab        = safeLazy(() => import("./admin-tabs/SalesPopupsTab"));
@@ -252,8 +253,8 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
     enabled: paletteOpen,
   });
   const recentOrders = recentOrdersData?.orders || [];
-  const recentReturns = [...(returnsForPalette || [])].sort((a, b) => b.id - a.id).slice(0, 5);
-  const recentSubs = [...(subsForPalette || [])].sort((a, b) => b.id - a.id).slice(0, 5);
+  const recentReturns = (Array.isArray(returnsForPalette) ? [...returnsForPalette] : []).sort((a, b) => b.id - a.id).slice(0, 5);
+  const recentSubs = (Array.isArray(subsForPalette) ? [...subsForPalette] : []).sort((a, b) => b.id - a.id).slice(0, 5);
 
   const fallback = (
     <div className="space-y-4" data-testid="admin-tab-loading">
@@ -531,6 +532,8 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "merchant" && <MerchantCenterTab adminToken={adminToken} />}
               {activeTab === "site-settings" && <SiteSettingsTab />}
               {activeTab === "integrations" && <IntegrationsTab />}
+              {activeTab === "payment-gateways" && <ProvidersTab kind="payment" />}
+              {activeTab === "ai-providers" && <ProvidersTab kind="ai" />}
               {activeTab === "audit-log" && <AuditLogTab adminToken={adminToken} />}
               {activeTab === "social-proof" && <SocialProofTab />}
               {activeTab === "sales-popups" && <SalesPopupsTab />}

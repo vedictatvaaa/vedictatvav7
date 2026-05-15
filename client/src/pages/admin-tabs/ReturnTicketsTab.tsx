@@ -34,10 +34,11 @@ const RETURN_STATUSES = ["pending", "processing", "approved", "rejected", "refun
 function ReturnTicketsTab({ adminToken }: { adminToken?: string }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: returnTickets = [] } = useQuery<ReturnTicket[]>({
+  const { data: returnTicketsRaw } = useQuery<ReturnTicket[] | { message?: string }>({
     queryKey: ["/api/return-tickets"],
     queryFn: () => fetch("/api/return-tickets", { headers: { "x-admin-token": adminToken || "" } }).then((r) => r.json()),
   });
+  const returnTickets: ReturnTicket[] = Array.isArray(returnTicketsRaw) ? returnTicketsRaw : [];
   const updateReturnTicketMut = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) =>
       fetch(`/api/return-tickets/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" }, body: JSON.stringify(data) }).then((r) => r.json()),

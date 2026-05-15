@@ -40,6 +40,8 @@ export const TABS: TabDef[] = [
   { id: "seo",             label: "SEO Manager",      icon: Search,        section: "System" },
   { id: "site-settings",   label: "Site Settings",    icon: Settings,      section: "System" },
   { id: "integrations",    label: "Integrations",     icon: Truck,         section: "System" },
+  { id: "payment-gateways", label: "Payment Gateways", icon: Wallet,       section: "System" },
+  { id: "ai-providers",    label: "AI Providers",     icon: Sparkles,      section: "System" },
   { id: "notifications",   label: "Notifications",    icon: BellRing,      section: "System" },
   { id: "security",        label: "Security",         icon: Shield,        section: "System" },
   { id: "audit-log",       label: "Audit Log",        icon: Lock,          section: "System" },
