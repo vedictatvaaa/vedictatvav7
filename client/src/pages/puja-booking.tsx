@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Sparkles, Users, Globe, BookOpen, Star, ScrollText, Calendar, CheckCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import type { Pandit } from "@shared/schema";
@@ -17,7 +17,7 @@ import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
 
-const PUJA_PARENT_H1 = "Book Pandit Online for Puja at Home — Verified Vedic Pandits, Authentic Vidhi";
+const PUJA_PARENT_H1 = "Book a Verified Pandit for Puja at Home";
 
 const PUJA_FAQS = [
   { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
@@ -28,18 +28,6 @@ const PUJA_FAQS = [
   { q: "How do I choose the right muhurat for my puja?", a: "Our system auto-suggests shubh muhurat based on your puja type, date and city — Abhijit muhurat, Brahma muhurat, or specific tithi-based windows. For complex ceremonies (wedding, griha pravesh), you can book a separate muhurat consultation first." },
   { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 48 hours before puja. Cancellations within 48 hours are subject to a small dakshina fee for the pandit's reserved time." },
   { q: "Is online puja booking available outside India?", a: "Yes — for NRIs, we offer two options: (1) book a pandit for puja at your family's home in India and join via video call, or (2) book a virtual puja where the pandit performs on your behalf at a sacred temple." },
-];
-
-const BOOKING_PROMISES = [
-  "Verified pandit matched to your puja type",
-  "Samagri kit shown clearly before checkout",
-  "Support after booking via the app team",
-];
-
-const BOOKING_HELP = [
-  "Choose a puja and see the cost split upfront.",
-  "Pick a date, time, and venue or choose online.",
-  "Confirm with secure checkout and get next steps instantly.",
 ];
 
 const pujaOptions = [
@@ -183,68 +171,7 @@ export default function PujaBooking() {
         )}
       </PageHero>
 
-      <div className="container mx-auto px-4 mt-6">
-        <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-3">
-          {BOOKING_PROMISES.map((item) => (
-            <div key={item} className="rounded-md border border-[#D4AF37]/20 bg-[#FBF7EE] px-4 py-4">
-              <div className="inline-flex items-center gap-1.5 rounded-md bg-white border border-[#D4AF37]/20 px-2.5 h-8 text-[11px] font-semibold text-[#6D2B35] mb-2">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#D4AF37]" />
-                Included
-              </div>
-              <p className="text-sm text-[#5a4a3a]/80 leading-relaxed">{item}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <div className="container mx-auto px-4 mt-8">
-        {/* 3-step intro (migrated from homepage) */}
-        <div className="max-w-4xl mx-auto mb-8" data-testid="section-puja-3step">
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2.5 mb-3">
-              <span className="h-px w-6 bg-[#D4AF37]" />
-              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">Simple & Sacred</span>
-              <span className="h-px w-6 bg-[#D4AF37]" />
-            </div>
-            <h2 className="text-xl md:text-2xl font-serif font-semibold text-[#6D2B35] mb-1">Book your puja in 3 simple steps</h2>
-            <p className="text-[12px] text-[#5a4a3a]/60">No complexity, no confusion — a seamless ceremony from selection to completion.</p>
-          </div>
-          <div className="relative">
-            <div className="hidden md:block absolute top-1/2 left-12 right-12 h-px bg-[#D4AF37]/20 -translate-y-1/2" aria-hidden="true" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 relative">
-              {[
-                { step: "01", title: "Select Puja", desc: "Satyanarayan, Griha Pravesh, Navgraha Shanti and more", icon: ScrollText },
-                { step: "02", title: "Choose Date", desc: "Pick an auspicious muhurat or a date that suits your family", icon: Calendar },
-                { step: "03", title: "Confirm Booking", desc: "Pay securely and get instant confirmation with pandit details", icon: CheckCircle },
-              ].map((item) => (
-                <div
-                  key={item.step}
-                  className="relative bg-white rounded-lg border border-[#D4AF37]/20 p-4 md:p-5"
-                  data-testid={`puja-step-${item.step}`}
-                >
-                  <div className="flex items-center gap-2.5 mb-2.5">
-                    <div className="w-8 h-8 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
-                      <item.icon className="h-4 w-4 text-[#6D2B35]" strokeWidth={1.8} />
-                    </div>
-                    <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37]">Step {item.step}</span>
-                  </div>
-                  <h3 className="font-serif text-base font-semibold text-[#6D2B35] mb-1 leading-tight">{item.title}</h3>
-                  <p className="text-[12px] text-[#5a4a3a]/60 leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto mb-8 grid md:grid-cols-3 gap-3">
-          {BOOKING_HELP.map((step, index) => (
-            <div key={step} className="rounded-md border border-[#D4AF37]/20 bg-white p-4">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold mb-2">Step {index + 1}</p>
-              <p className="text-sm text-[#5a4a3a]/75 leading-relaxed">{step}</p>
-            </div>
-          ))}
-        </div>
-
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-4">
             <Card className="rounded-lg border border-[#D4AF37]/20 bg-white shadow-none">
