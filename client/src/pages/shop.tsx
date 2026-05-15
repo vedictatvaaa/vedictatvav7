@@ -21,7 +21,6 @@ import PageSeo from "@/components/PageSeo";
 import { itemList as itemListSchema, faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, abs as schemaAbs, type Schema } from "@/lib/seo-schemas";
 import { getCategoryContent, CATEGORY_SLUG_ALIASES } from "@/data/category-content";
 import { getCategoryTheme } from "@/data/category-themes";
-import CategoryHeroThemed from "@/components/CategoryHeroThemed";
 import CategoryAdvisor from "@/components/CategoryAdvisor";
 import CategoryAPlusThemed from "@/components/CategoryAPlusThemed";
 import CategoryCrossSell from "@/components/CategoryCrossSell";
@@ -701,20 +700,13 @@ export default function Shop() {
         schemas={allShopSchemas}
       />
 
-      {/* ── Themed category hero (when on /shop/<one-of-8-slugs>) ── */}
-      {categoryTheme && categoryContent && (
-        <CategoryHeroThemed
-          theme={categoryTheme}
-          h1={categoryContent.h1}
-          intro={categoryContent.intro}
-          productCount={allProducts?.filter(p => p.category === categoryTheme.label || p.category === categoryContent.category).length}
-        />
-      )}
-
-      {/* ── Editorial banner REMOVED per user request — the visual
-          ShopByCategory tile grid below is now the primary above-the-fold
-          surface on /shop. The themed CategoryHeroThemed (rendered above
-          for /shop/<themed-slug>) still ships on category landings. ── */}
+      {/* ── All hero/banner surfaces removed per user request:
+          - Parent /shop editorial banner (gone)
+          - Themed CategoryHeroThemed for /shop/<slug> landings (gone)
+          The visual <ShopByCategory> grid (with product photos) below
+          is now the only above-the-fold surface on /shop. The category
+          H1 + intro copy still feeds the SSR <head> via PageSeo /
+          allShopSchemas, so SEO isn't impacted. ── */}
 
       {/* ── Shop by Category (parent /shop only, no active search) ── */}
       {!categoryTheme && !searchQuery && (
