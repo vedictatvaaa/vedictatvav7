@@ -99,6 +99,9 @@ const PanditPayoutsTab      = safeLazy(() => import("./admin-tabs/PanditPayoutsT
 const PanditAffiliateTab    = safeLazy(() => import("./admin-tabs/PanditAffiliateTab"));
 const PanditMembershipsTab  = safeLazy(() => import("./admin-tabs/PanditMembershipsTab"));
 const MantrasTab            = safeLazy(() => import("./admin-tabs/MantrasTab"));
+const BlogAiQueueTab        = safeLazy(() => import("./admin-tabs/BlogAiQueueTab"));
+const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab"));
+const CommunityTab          = safeLazy(() => import("./admin-tabs/CommunityTab"));
 
 interface AdminProps {
   adminToken?: string;
@@ -556,6 +559,9 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "pandit-affiliate" && <PanditAffiliateTab adminToken={adminToken} />}
               {activeTab === "pandit-memberships" && <PanditMembershipsTab adminToken={adminToken} />}
               {activeTab === "mantras" && <MantrasTab adminToken={adminToken} />}
+              {activeTab === "blog-ai" && <BlogAiQueueTab adminToken={adminToken} />}
+              {activeTab === "puja-library" && <PujaLibraryTab adminToken={adminToken} />}
+              {activeTab === "community" && <CommunityTab adminToken={adminToken} />}
             </Suspense>
           </div>
         </div>

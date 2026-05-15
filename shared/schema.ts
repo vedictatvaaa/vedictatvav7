@@ -1247,10 +1247,14 @@ export const blogPosts = pgTable("blog_posts", {
   isPublished: boolean("is_published").notNull().default(true),
   publishedAt: timestamp("published_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
+  status: text("status").notNull().default("published"), // "draft" | "pending" | "published" | "rejected"
+  aiGenerated: boolean("ai_generated").notNull().default(false),
+  sourcePrompt: text("source_prompt"),
 }, (t) => ({
   categoryIdx: index("blog_posts_category_idx").on(t.category),
   isPublishedIdx: index("blog_posts_is_published_idx").on(t.isPublished),
   publishedAtIdx: index("blog_posts_published_at_idx").on(t.publishedAt),
+  statusIdx: index("blog_posts_status_idx").on(t.status),
 }));
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, viewCount: true });
 export type BlogPost = typeof blogPosts.$inferSelect;
@@ -1654,3 +1658,139 @@ export const insertApiCredentialSchema = createInsertSchema(apiCredentials).omit
 });
 export type ApiCredential = typeof apiCredentials.$inferSelect;
 export type InsertApiCredential = z.infer<typeof insertApiCredentialSchema>;
+
+// ===== Blog Comments (public, moderated) =====
+export const blogComments = pgTable("blog_comments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  postId: integer("post_id").notNull(),
+  parentId: integer("parent_id"), // for threaded replies (1 level deep)
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  body: text("body").notNull(),
+  status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected"
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  postIdx: index("blog_comments_post_idx").on(t.postId),
+  statusIdx: index("blog_comments_status_idx").on(t.status),
+}));
+export const insertBlogCommentSchema = createInsertSchema(blogComments).omit({
+  id: true, createdAt: true, status: true, ipAddress: true,
+});
+export type BlogComment = typeof blogComments.$inferSelect;
+export type InsertBlogComment = z.infer<typeof insertBlogCommentSchema>;
+
+// ===== Community Q&A (Quora-style) =====
+// postId NULL = global community Q&A (not tied to a single blog post)
+export const qaQuestions = pgTable("qa_questions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  body: text("body"),
+  category: text("category"), // "puja" | "rituals" | "astrology" | "festivals" | "general"
+  tags: text("tags").array(),
+  postId: integer("post_id"), // optional link to a blog post
+  pujaSlug: text("puja_slug"), // optional link to a puja-type page
+  authorName: text("author_name").notNull().default("Anonymous"),
+  authorEmail: text("author_email"),
+  status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected"
+  isFeatured: boolean("is_featured").notNull().default(false),
+  viewCount: integer("view_count").notNull().default(0),
+  upvotes: integer("upvotes").notNull().default(0),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+}, (t) => ({
+  categoryIdx: index("qa_questions_category_idx").on(t.category),
+  statusIdx: index("qa_questions_status_idx").on(t.status),
+  postIdx: index("qa_questions_post_idx").on(t.postId),
+  pujaIdx: index("qa_questions_puja_idx").on(t.pujaSlug),
+}));
+export const insertQaQuestionSchema = createInsertSchema(qaQuestions).omit({
+  id: true, createdAt: true, status: true, viewCount: true, upvotes: true, ipAddress: true,
+});
+export type QaQuestion = typeof qaQuestions.$inferSelect;
+export type InsertQaQuestion = z.infer<typeof insertQaQuestionSchema>;
+
+export const qaAnswers = pgTable("qa_answers", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  questionId: integer("question_id").notNull(),
+  body: text("body").notNull(),
+  authorName: text("author_name").notNull().default("Vedic Tatva"),
+  authorEmail: text("author_email"),
+  authorRole: text("author_role").notNull().default("admin"), // "admin" | "user" | "ai"
+  isAccepted: boolean("is_accepted").notNull().default(false),
+  upvotes: integer("upvotes").notNull().default(0),
+  status: text("status").notNull().default("approved"),
+  ipAddress: text("ip_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  questionIdx: index("qa_answers_question_idx").on(t.questionId),
+  statusIdx: index("qa_answers_status_idx").on(t.status),
+}));
+export const insertQaAnswerSchema = createInsertSchema(qaAnswers).omit({
+  id: true, createdAt: true, upvotes: true, ipAddress: true,
+});
+export type QaAnswer = typeof qaAnswers.$inferSelect;
+export type InsertQaAnswer = z.infer<typeof insertQaAnswerSchema>;
+
+// ===== Puja Library (rich content per puja type) =====
+export const pujaTypes = pgTable("puja_types", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  deity: text("deity"),
+  shortDescription: text("short_description"),
+  whyPerformed: text("why_performed"), // markdown/HTML — meaning and purpose
+  storyMyth: text("story_myth"), // mythological background
+  howCelebrated: text("how_celebrated"), // step-by-step ritual
+  ethics: text("ethics"), // do's and don'ts
+  requirements: jsonb("requirements").default(sql`'[]'::jsonb`), // array of {item, qty, note}
+  benefits: text("benefits"),
+  faq: jsonb("faq").default(sql`'[]'::jsonb`), // array of {q, a}
+  aplusBlocks: jsonb("aplus_blocks").default(sql`'[]'::jsonb`), // optional rich content blocks
+  category: text("category"), // "deity" | "occasion" | "remedial" | "samskara"
+  difficulty: text("difficulty").default("moderate"), // "simple" | "moderate" | "elaborate"
+  durationMinutes: integer("duration_minutes"),
+  estimatedCost: text("estimated_cost"),
+  bestMonths: text("best_months").array(), // hindu month names
+  // Computed muhurat seed — engine uses these to derive yearly muhurats
+  muhuratRules: jsonb("muhurat_rules").default(sql`'[]'::jsonb`), // [{type:"tithi", paksha, tithi}, {type:"weekday", day}, {type:"festival", name}]
+  coverImage: text("cover_image"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  metaKeywords: text("meta_keywords"),
+  bookingShopUrl: text("booking_shop_url"),
+  bookingShopLabel: text("booking_shop_label"),
+  isPublished: boolean("is_published").notNull().default(true),
+  viewCount: integer("view_count").notNull().default(0),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  categoryIdx: index("puja_types_category_idx").on(t.category),
+  publishedIdx: index("puja_types_published_idx").on(t.isPublished),
+}));
+export const insertPujaTypeSchema = createInsertSchema(pujaTypes).omit({
+  id: true, createdAt: true, updatedAt: true, viewCount: true,
+});
+export type PujaType = typeof pujaTypes.$inferSelect;
+export type InsertPujaType = z.infer<typeof insertPujaTypeSchema>;
+
+// ===== Yearly muhurat cache (regenerated annually; content stable) =====
+export const pujaMuhurats = pgTable("puja_muhurats", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  pujaId: integer("puja_id").notNull(),
+  year: integer("year").notNull(),
+  muhurats: jsonb("muhurats").notNull().default(sql`'[]'::jsonb`), // [{date:"2026-03-14", tithi, time, note, label}]
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+}, (t) => ({
+  pujaYearUnique: uniqueIndex("puja_muhurats_puja_year_unique").on(t.pujaId, t.year),
+  yearIdx: index("puja_muhurats_year_idx").on(t.year),
+}));
+export const insertPujaMuhuratSchema = createInsertSchema(pujaMuhurats).omit({
+  id: true, generatedAt: true,
+});
+export type PujaMuhurat = typeof pujaMuhurats.$inferSelect;
+export type InsertPujaMuhurat = z.infer<typeof insertPujaMuhuratSchema>;

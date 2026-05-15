@@ -1,10 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { ArrowLeft, Clock, ShoppingBag, Share2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Clock, ShoppingBag, Share2, MessageCircle, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { BlogPost, Product } from "@shared/schema";
 import { getProductUrl } from "@/lib/utils";
@@ -267,7 +271,139 @@ export default function BlogPostPage() {
             </div>
           </div>
         )}
+        <BlogCommentsSection postSlug={post.slug} />
+        <BlogQuestionWidget postId={post.id} postSlug={post.slug} />
       </div>
     </article>
+  );
+}
+
+interface PublicComment {
+  id: number;
+  name: string;
+  body: string;
+  createdAt: string;
+}
+
+function BlogCommentsSection({ postSlug }: { postSlug: string }) {
+  const { toast } = useToast();
+  const [form, setForm] = useState({ name: "", email: "", body: "", website: "" });
+
+  const { data: comments = [] } = useQuery<PublicComment[]>({
+    queryKey: ["/api/blog-posts", postSlug, "comments"],
+    queryFn: () => fetch(`/api/blog-posts/${encodeURIComponent(postSlug)}/comments`).then((r) => r.json()),
+  });
+
+  const submit = useMutation({
+    mutationFn: () =>
+      fetch(`/api/blog-posts/${encodeURIComponent(postSlug)}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      }).then((r) => {
+        if (!r.ok) return r.json().then((j) => Promise.reject(new Error(j?.message || "Submit failed")));
+        return r.json();
+      }),
+    onSuccess: () => {
+      toast({ title: "Submitted", description: "Your comment is awaiting moderation." });
+      setForm({ name: "", email: "", body: "", website: "" });
+      queryClient.invalidateQueries({ queryKey: ["/api/blog-posts", postSlug, "comments"] });
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <section className="mt-16 pt-10 border-t border-[#E8DCC4]" data-testid="section-blog-comments">
+      <h2 className="text-2xl font-serif font-bold text-[#6D2B35] mb-6 inline-flex items-center gap-2">
+        <MessageCircle className="w-5 h-5" />Comments ({comments.length})
+      </h2>
+
+      <div className="space-y-3 mb-6">
+        {comments.length === 0 && <p className="text-sm text-muted-foreground">No comments yet. Be the first.</p>}
+        {comments.map((c) => (
+          <Card key={c.id}>
+            <CardContent className="pt-5 pb-5">
+              <div className="flex flex-row items-center gap-2 flex-wrap mb-1">
+                <p className="font-semibold text-sm text-[#6D2B35]">{c.name}</p>
+                <p className="text-xs text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()}</p>
+              </div>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{c.body}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="border-[#D4AF37]/40">
+        <CardContent className="pt-6 space-y-3">
+          <h3 className="font-serif font-bold text-[#6D2B35]">Leave a comment</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} data-testid="input-comment-name" /></div>
+            <div><Label>Email (not published)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} data-testid="input-comment-email" /></div>
+          </div>
+          <div><Label>Comment</Label><Textarea rows={3} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} data-testid="input-comment-body" /></div>
+          <input type="text" name="website" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+          <Button onClick={() => submit.mutate()} disabled={!form.name.trim() || !form.email.trim() || !form.body.trim() || submit.isPending} data-testid="button-submit-comment">
+            {submit.isPending ? "Submitting…" : "Post comment"}
+          </Button>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function BlogQuestionWidget({ postId, postSlug }: { postId: number; postSlug: string }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ title: "", body: "", authorName: "", authorEmail: "", website: "" });
+
+  const submit = useMutation({
+    mutationFn: () =>
+      fetch("/api/qa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, category: "general", postId }),
+      }).then((r) => {
+        if (!r.ok) return r.json().then((j) => Promise.reject(new Error(j?.message || "Submit failed")));
+        return r.json();
+      }),
+    onSuccess: () => {
+      toast({ title: "Question submitted", description: "Awaiting moderation. Thank you." });
+      setForm({ title: "", body: "", authorName: "", authorEmail: "", website: "" });
+      setOpen(false);
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <section className="mt-12 pt-8 border-t border-[#E8DCC4]" data-testid="section-blog-question">
+      <Card className="border-[#D4AF37]/40 bg-[#FFFBF0]">
+        <CardContent className="pt-6">
+          <div className="flex flex-row items-center justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-serif font-bold text-[#6D2B35] inline-flex items-center gap-2"><HelpCircle className="w-5 h-5" />Have a question on this topic?</h3>
+              <p className="text-sm text-muted-foreground mt-1">Our pandits review and answer every question publicly on our Q&A.</p>
+            </div>
+            <div className="flex flex-row gap-2 flex-wrap">
+              <Button variant="outline" asChild><Link href="/qa">Browse Q&A</Link></Button>
+              <Button onClick={() => setOpen(!open)} data-testid="button-open-ask">Ask a question</Button>
+            </div>
+          </div>
+          {open && (
+            <div className="space-y-3 mt-5 pt-5 border-t border-[#E8DCC4]">
+              <div><Label>Question</Label><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Short, specific question" data-testid="input-blog-q-title" /></div>
+              <div><Label>More detail (optional)</Label><Textarea rows={2} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="Your name" value={form.authorName} onChange={(e) => setForm({ ...form, authorName: e.target.value })} data-testid="input-blog-q-name" />
+                <Input type="email" placeholder="Email (not published)" value={form.authorEmail} onChange={(e) => setForm({ ...form, authorEmail: e.target.value })} data-testid="input-blog-q-email" />
+              </div>
+              <input type="text" name="website" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+              <Button onClick={() => submit.mutate()} disabled={!form.title.trim() || !form.authorName.trim() || !form.authorEmail.trim() || submit.isPending} data-testid="button-submit-blog-question">
+                {submit.isPending ? "Submitting…" : "Submit question"}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }

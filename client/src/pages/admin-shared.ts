@@ -7,7 +7,8 @@ export type TabId =
   | "blog" | "email-marketing" | "deploy" | "ai-assistant" | "ai-coder" | "backups"
   | "pandit-payouts" | "pandit-affiliate" | "pandit-memberships"
   | "mantras" | "schema-changelog"
-  | "payment-gateways" | "ai-providers";
+  | "payment-gateways" | "ai-providers"
+  | "blog-ai" | "puja-library" | "community";
 
 export type TabSection =
   | "Overview" | "Catalog" | "Orders & Bookings" | "People" | "Marketing" | "System";

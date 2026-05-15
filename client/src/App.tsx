@@ -204,6 +204,8 @@ const PujaCall = lazy(() => import("@/pages/puja-call"));
 const ReferPage = lazy(() => import("@/pages/refer"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPostPage = lazy(() => import("@/pages/blog-post"));
+const QaPage = lazy(() => import("@/pages/qa"));
+const PujaGuidePage = lazy(() => import("@/pages/puja-guide"));
 const ServiceLanding = lazy(() => import("@/pages/service-landing"));
 const PujaCity = lazy(() => import("@/pages/puja-city"));
 const SeoLanding = lazy(() => import("@/pages/seo-landing"));
@@ -680,6 +682,10 @@ function Router() {
           <Route path="/spiritual-essentials" component={SpiritualEssentials} />
           <Route path="/blog" component={Blog} />
           <Route path="/blog/:slug" component={BlogPostPage} />
+          <Route path="/qa" component={QaPage} />
+          <Route path="/qa/:slug" component={QaPage} />
+          <Route path="/puja-guide" component={PujaGuidePage} />
+          <Route path="/puja-guide/:slug" component={PujaGuidePage} />
           <Route path="/festival/:slug" component={FestivalLanding} />
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />

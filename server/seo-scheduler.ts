@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { adminAuthMiddleware } from "./admin-auth";
 import { pingIndexNowAsync, pingSitemap } from "./indexnow";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
+import { runDailyBlogGeneration } from "./blog-ai";
+import { regenerateForCurrentAndNextYear } from "./muhurat-engine";
 
 // Builds the canonical list of high-priority URLs the search engines should
 // recheck on a daily basis. Mirrors the sitemap but stays within IndexNow's
@@ -115,17 +117,69 @@ async function runOnce(siteUrl: string) {
   }
 }
 
+// Daily blog auto-generation (drafts go to admin queue, not auto-published).
+let blogTimer: NodeJS.Timeout | null = null;
+export const blogGenStatus = {
+  enabled: false,
+  lastRunAt: null as string | null,
+  lastInserted: 0,
+  lastErrors: [] as string[],
+  totalRuns: 0,
+};
+async function runBlogGenOnce() {
+  blogGenStatus.lastRunAt = new Date().toISOString();
+  blogGenStatus.totalRuns += 1;
+  try {
+    const r = await runDailyBlogGeneration(3);
+    blogGenStatus.lastInserted = r.inserted;
+    blogGenStatus.lastErrors = r.errors;
+  } catch (e: any) {
+    blogGenStatus.lastErrors = [e?.message || "unknown"];
+  }
+}
+
+// Yearly muhurat refresh (current + next year). Idempotent — safe to re-run.
+let muhuratTimer: NodeJS.Timeout | null = null;
+export const muhuratStatus = {
+  enabled: false,
+  lastRunAt: null as string | null,
+  lastResult: null as Record<string, unknown> | null,
+};
+async function runMuhuratOnce() {
+  muhuratStatus.lastRunAt = new Date().toISOString();
+  try {
+    muhuratStatus.lastResult = await regenerateForCurrentAndNextYear() as any;
+  } catch (e: any) {
+    muhuratStatus.lastResult = { error: e?.message || "unknown" };
+  }
+}
+
 export function startSeoScheduler() {
   if (timer) return;
   status.enabled = true;
   const siteUrl = process.env.PUBLIC_SITE_URL || "";
-  // Only run periodic pings when we know the public URL — pinging localhost is useless.
+
+  // Daily blog generation runs locally (no PUBLIC_SITE_URL needed) and is .unref()'d
+  // so it never blocks shutdown. First run delayed 10 minutes.
+  blogGenStatus.enabled = !!(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
+  if (blogGenStatus.enabled) {
+    setTimeout(() => runBlogGenOnce(), 10 * 60 * 1000).unref();
+    blogTimer = setInterval(() => runBlogGenOnce(), 24 * 60 * 60 * 1000);
+    blogTimer.unref();
+  }
+
+  // Muhurat regen — once at boot (5 min delay), then every 7 days.
+  muhuratStatus.enabled = true;
+  setTimeout(() => runMuhuratOnce(), 5 * 60 * 1000).unref();
+  muhuratTimer = setInterval(() => runMuhuratOnce(), 7 * 24 * 60 * 60 * 1000);
+  muhuratTimer.unref();
+
+  // SEO ping scheduler (existing) — only when we know the public URL.
   if (!siteUrl) {
     status.enabled = false;
-    status.lastError = "PUBLIC_SITE_URL not set; scheduler idle";
+    status.lastError = "PUBLIC_SITE_URL not set; ping scheduler idle";
     return;
   }
-  // First run delayed 5 minutes to avoid contention with boot work.
   setTimeout(() => runOnce(siteUrl), 5 * 60 * 1000);
   timer = setInterval(() => runOnce(siteUrl), status.intervalHours * 60 * 60 * 1000);
   status.nextRunAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
@@ -133,7 +187,17 @@ export function startSeoScheduler() {
 
 export function registerSeoSchedulerRoutes(app: Express) {
   app.get("/api/admin/seo/scheduler/status", adminAuthMiddleware, (_req: Request, res: Response) => {
-    res.json(status);
+    res.json({ ping: status, blogGen: blogGenStatus, muhurat: muhuratStatus });
+  });
+
+  app.post("/api/admin/blog-gen/run-now", adminAuthMiddleware, async (_req: Request, res: Response) => {
+    await runBlogGenOnce();
+    res.json({ success: true, status: blogGenStatus });
+  });
+
+  app.post("/api/admin/muhurat/run-now", adminAuthMiddleware, async (_req: Request, res: Response) => {
+    await runMuhuratOnce();
+    res.json({ success: true, status: muhuratStatus });
   });
 
   app.post("/api/admin/seo/scheduler/run", adminAuthMiddleware, async (req: Request, res: Response) => {
