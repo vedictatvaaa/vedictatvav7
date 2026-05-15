@@ -730,18 +730,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     try { localStorage.setItem(`${STORAGE_PREFIX}:clickStyle`, clickStyle); } catch {}
   }, [clickStyle]);
 
-  // LED caption strip — temple-style scrolling sing-along caption that
-  // sits directly above the orb. Off by default so we never surprise
-  // existing devotees; once enabled the choice is remembered globally
-  // (not per-mantra) so a devotee who reads along always gets it.
-  const [captionOn, setCaptionOn] = useState<boolean>(() => {
-    try { return localStorage.getItem(`${STORAGE_PREFIX}:caption`) === "on"; }
-    catch { return false; }
-  });
-  useEffect(() => {
-    try { localStorage.setItem(`${STORAGE_PREFIX}:caption`, captionOn ? "on" : "off"); } catch {}
-  }, [captionOn]);
-
   // Sync taps to audio (default OFF). When ON, the press button is hard-locked
   // while the recorded chant is mid-playback — devotees who want the discipline
   // of "one tap per recited cycle" turn this on. When OFF (the default) the
@@ -1787,17 +1775,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         </Card>
       )}
 
-      {/* LED caption strip — rendered OUTSIDE the Counter Card so the
-          card's overflow-hidden cannot clip its sticky position. Pinned
-          to the viewport just below the site navbar so the devotee can
-          still see the running mantra while scrolling down to read the
-          mantra detail / FAQ / related mantras below the counter. */}
-      {captionOn && (
-        <div className="sticky top-14 sm:top-16 z-30 -mx-2 sm:mx-0">
-          <LedCaptionStrip mantra={mantra} />
-        </div>
-      )}
-
       {/* Counter */}
       <Card className="overflow-hidden">
         <CardContent className="p-4 sm:p-6">
@@ -1817,31 +1794,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 >
                   {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
-                {/* Click-style toggle — only visible when sound is on, so
-                    we don't show a no-op control. Cycles between the
-                    metallic ghanta tap and the hollow sandalwood bead
-                    knock. Plays a quick preview tap on switch so the
-                    devotee hears the difference immediately. */}
-                {soundOn && (
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() => {
-                      setClickStyle((s) => {
-                        const next: ClickStyle = s === "bell" ? "wood" : "bell";
-                        bellPlayer.setStyle(next);
-                        bellPlayer.tap(0);
-                        return next;
-                      });
-                    }}
-                    aria-label={`Click sound: ${clickStyle === "wood" ? "wooden bead" : "temple bell"} (tap to switch)`}
-                    title={`Click: ${clickStyle === "wood" ? "Wood" : "Bell"}`}
-                    data-testid="btn-toggle-click-style"
-                    className="text-[10px] font-bold tracking-wider text-[#6D2B35]"
-                  >
-                    {clickStyle === "wood" ? "WD" : "BL"}
-                  </Button>
-                )}
                 <Button
                   size="icon"
                   variant={vibrationOn ? "default" : "outline"}
@@ -1904,23 +1856,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   data-testid="btn-toggle-mix-mode"
                 >
                   <Shuffle className="h-4 w-4" />
-                </Button>
-                {/* LED caption toggle — text label "CC" mirrors the BL/WD
-                    convention above so the strip reads as a single
-                    family of typographic toggles. Hover-pause is built
-                    into the strip itself; this button only flips it
-                    on/off. */}
-                <Button
-                  size="icon"
-                  variant={captionOn ? "default" : "outline"}
-                  className={captionOn ? "bg-[#0a0202] hover:bg-[#0a0202] text-[#ffd766] text-[10px] font-bold tracking-wider border border-[#D4AF37]/40" : "text-[10px] font-bold tracking-wider text-[#6D2B35]"}
-                  onClick={() => setCaptionOn((c) => !c)}
-                  aria-pressed={captionOn}
-                  aria-label={captionOn ? "Hide LED caption strip" : "Show LED caption strip with mantra transliteration"}
-                  title={`LED caption: ${captionOn ? "On" : "Off"} — sing-along transliteration scrolls below the orb.`}
-                  data-testid="btn-toggle-led-caption"
-                >
-                  CC
                 </Button>
               </div>
             <div className="relative shrink-0 animate-japa-orb-enter" style={{ width: RING_SIZE, height: RING_SIZE, maxWidth: "100%" }}>
@@ -2104,6 +2039,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           </div>
         </CardContent>
       </Card>
+
+      {/* LED caption strip — its own segment directly beneath the orb card.
+          Always visible (no toggle) so the devotee can chant along without
+          digging through controls. */}
+      <div className="-mx-2 sm:mx-0" data-testid="led-caption-segment">
+        <LedCaptionStrip mantra={mantra} />
+      </div>
 
       {/* Stats pill bar — single horizontal strip beneath the orb */}
       <div
