@@ -26,6 +26,7 @@ const heroPindDaanImg = "/attached_assets/heroes/hero-scene-pind-daan.png";
 const heroEssentialsImg = "/attached_assets/heroes/hero-scene-essentials.png";
 const heroAstrologyImg = "/attached_assets/heroes/hero-scene-astrology.png";
 import bhandaraSevaImg from "@assets/generated_images/bhandara_seva_hero.png";
+import astrologyBannerImg from "@assets/generated_images/astrology_hero_banner.png";
 
 type HeroCta = { label: string; href: string; icon: any };
 type HeroSlide = {
@@ -1111,55 +1112,69 @@ export default function Home() {
       {/* Testimonials / Community Stories */}
       <TestimonialsCarousel />
 
-      {/* Vedic Astrology — declutter pass.
-          Removed: starfield dot pattern, gold radial halo, animated
-          rotating zodiac SVG, eyebrow micro-label, sub-paragraph.
-          Kept: midnight gradient strip, single Sparkles glyph, the SEO
-          H2, both CTAs. Result is a clean ~90 px banner instead of the
-          previous busy ~150 px composition. All testids preserved. */}
+      {/* Vedic Astrology — true hero banner with bespoke image.
+          16:9 cinematic backdrop (zodiac chakra + golden constellations
+          on midnight maroon), dark wash on the LEFT side keeps text
+          legible, gold rule top + bottom. Single focal CTA lives where
+          the eye naturally lands after reading the headline. All
+          testids preserved (section-astrology, text-astrology-heading,
+          btn-generate-kundli). */}
       <section
         id="vedic-astrology"
         aria-labelledby="astrology-heading"
-        className="relative text-white scroll-mt-24 border-y border-[#D4AF37]/30"
-        style={{
-          background:
-            "linear-gradient(90deg, #140b10 0%, #2a1820 50%, #140b10 100%)",
-        }}
+        className="relative text-white scroll-mt-24 border-y border-[#D4AF37]/30 overflow-hidden"
         data-testid="section-astrology"
       >
-        <div className="container mx-auto px-4 sm:px-6 py-5 md:py-4">
-          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-5 max-w-5xl mx-auto">
-            {/* Glyph */}
-            <div className="w-9 h-9 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-4 w-4 text-[#D4AF37]" strokeWidth={1.6} />
-            </div>
+        {/* Backdrop image — 16:9 hero illustration */}
+        <img
+          src={optImg(astrologyBannerImg, 1440)}
+          srcSet={optImgSrcSet(astrologyBannerImg, [480, 768, 1080, 1440, 1920])}
+          sizes="100vw"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+          data-testid="img-astrology-banner"
+        />
+        {/* Dark wash — heavier on the left so the headline and CTA stay
+            legible regardless of where the artwork lands. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(20,11,16,0.85) 0%, rgba(20,11,16,0.7) 45%, rgba(20,11,16,0.4) 100%)",
+          }}
+          aria-hidden="true"
+        />
 
-            {/* Heading */}
+        <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14">
+          <div className="max-w-2xl">
+            <div className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold mb-3">
+              Vedic Astrology · Jyotish
+            </div>
             <h2
               id="astrology-heading"
-              className="flex-1 text-center md:text-left font-serif text-base md:text-lg font-semibold leading-snug tracking-tight"
+              className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold leading-[1.15] tracking-tight"
               data-testid="text-astrology-heading"
             >
-              Free Kundli, match-making &amp; live{" "}
-              <span className="text-[#D4AF37] whitespace-nowrap">Vedic astrologer</span>{" "}
-              consultations
+              Free Kundli &amp; live consultations with{" "}
+              <span className="text-[#D4AF37]">certified Vedic astrologers</span>
             </h2>
 
-            {/* Single CTA — dropped the secondary "Talk to Astrologer"
-                button to make this a clean hero strip with one focal
-                action. Free Kundli is the friction-free lead magnet;
-                paid astrologer consultations live on /astrology. */}
-            <Link href="/astrology" className="w-full md:w-auto shrink-0">
-              <Button
-                size="sm"
-                className="w-full md:w-auto bg-[#D4AF37] text-[#1a1118] font-semibold gap-1.5 hover:bg-[#D4AF37]"
-                data-testid="btn-generate-kundli"
-                aria-label="Get your free Vedic Kundli and consult an astrologer"
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                Free Kundli &amp; Consult
-              </Button>
-            </Link>
+            {/* Single focal CTA */}
+            <div className="mt-6">
+              <Link href="/astrology">
+                <Button
+                  className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
+                  data-testid="btn-generate-kundli"
+                  aria-label="Get your free Vedic Kundli and consult an astrologer"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Get My Free Kundli
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
