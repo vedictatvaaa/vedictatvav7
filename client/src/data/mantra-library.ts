@@ -1,6 +1,6 @@
 // Curated library of 30 widely-chanted Vedic / Sanatan mantras.
 // Each entry uses the same shape as the AI mantra-assist response so the
-// MysticMantraCounter can render either source identically.
+// JapCounter can render either source identically.
 //
 // `audioUrl` is intentionally null by default — populate per-mantra with a
 // direct MP3/OGG URL (CORS-enabled host) to enable in-browser playback.

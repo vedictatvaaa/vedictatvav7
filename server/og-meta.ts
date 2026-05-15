@@ -295,6 +295,20 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
       alt: "Free Vedic Panchang and Tithi calendar for 2026 on Vedic Tatva",
     },
   },
+  // ── Japa Counter (free PWA tool, ranks for "online jap counter" cluster) ──
+  // Matches /japa, /jap, /japa-counter. Server 301s redirect /jap and
+  // /japa-counter to /japa, but list all three patterns as a safety net
+  // for direct social shares of the alias URLs.
+  {
+    match: /^\/(japa|jap|japa-counter)(\/|$)/,
+    card: {
+      title: "Free 108 Mala Counter — Online Mantra Japa Counter · Vedic Tatva",
+      description:
+        "Sahasra-namami — chant in rhythm. Free 108-bead jap counter with bell, vibration, daily streak & 30+ Vedic mantras. Mahamrityunjaya, Gayatri, Om Namah Shivaya. Saved on your device.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Free online japa mala counter with bell, vibration and 30+ Vedic mantras — Vedic Tatva",
+    },
+  },
 ];
 
 /**

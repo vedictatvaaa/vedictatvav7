@@ -182,6 +182,9 @@ export async function registerRoutes(
     "/puja-kits": "/spiritual-essentials",
     "/book-panditji": "/pandits",
     "/astrology-services": "/astrology",
+    // Japa counter — consolidate ranking signal on /japa.
+    "/jap": "/japa",
+    "/japa-counter": "/japa",
   };
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
@@ -856,7 +859,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/tirth-yatra", priority: "0.75", changefreq: "weekly" },
       { loc: "/temple-tourism", priority: "0.7", changefreq: "monthly" },
       { loc: "/puja-kit", priority: "0.7", changefreq: "weekly" },
-      { loc: "/japa", priority: "0.65", changefreq: "monthly" },
+      { loc: "/japa", priority: "0.85", changefreq: "weekly" },
       { loc: "/tools/tithi-calculator", priority: "0.65", changefreq: "monthly" },
       { loc: "/refer", priority: "0.5", changefreq: "monthly" },
       { loc: "/blog", priority: "0.7", changefreq: "daily" },

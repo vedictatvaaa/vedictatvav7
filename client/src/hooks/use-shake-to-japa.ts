@@ -42,10 +42,18 @@ export async function requestIOSMotionPermission(): Promise<boolean> {
   }
 }
 
+/** Custom event fired when the user shakes the device while ON the /japa
+ *  page. JapCounter listens for it and counts a tap — the spiritual
+ *  equivalent of nodding the bead in your hand. Decoupled via an event so
+ *  the hook stays global while the counter stays self-contained. */
+export const SHAKE_TAP_EVENT = "vt:japa-shake-tap";
+
 /**
- * Global shake listener — navigates to /japa when the device is shaken
- * SHAKES_REQUIRED times within WINDOW_MS. No-op when:
- *   - already on /japa (or aliases)
+ * Global shake listener.
+ *   - Off /japa: navigates to /japa after 3 shakes in 1.5s.
+ *   - On  /japa: dispatches SHAKE_TAP_EVENT so the counter increments
+ *     (single shake — no triple-shake gate, that would kill the rhythm).
+ * No-op when:
  *   - DeviceMotion API unsupported
  *   - user has opted out
  *   - on iOS where permission was never granted
@@ -60,7 +68,6 @@ export function useShakeToJapa() {
     if (typeof window === "undefined") return;
     const path = (location.split("?")[0] || "").replace(/\/+$/, "") || "/";
     const onJapa = path === "/japa" || path === "/jap" || path === "/japa-counter";
-    if (onJapa) return;
     if (shakeToJapaDisabled()) return;
     if (!("DeviceMotionEvent" in window)) return;
 
@@ -84,6 +91,13 @@ export function useShakeToJapa() {
       if (Math.abs(magnitude) < SHAKE_THRESHOLD) return;
       if (now - lastShake.current < MIN_GAP_MS) return;
       lastShake.current = now;
+
+      // On /japa: every clean shake counts a bead. Tighter min-gap (handled
+      // above) plus the JapCounter's own 250ms tap debounce keeps it sane.
+      if (onJapa) {
+        try { window.dispatchEvent(new CustomEvent(SHAKE_TAP_EVENT)); } catch {}
+        return;
+      }
 
       events.current = events.current.filter((t) => now - t < WINDOW_MS);
       events.current.push(now);

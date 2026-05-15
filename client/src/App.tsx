@@ -171,6 +171,14 @@ const MatrimonyProfiles = lazy(() => import("@/pages/matrimony-profiles"));
 const MatrimonyProfileDetail = lazy(() => import("@/pages/matrimony-profile-detail"));
 const MuhuratFinder = lazy(() => import("@/pages/muhurat-finder"));
 const JapaPage = lazy(() => import("@/pages/japa"));
+
+/** Tiny redirector for /jap and /japa-counter SPA hits — replaces the URL
+ *  with the canonical /japa so internal <Link>s honor canonicalization. */
+function JapaAliasRedirect() {
+  const [, navigate] = useLocation();
+  useEffect(() => { navigate("/japa", { replace: true }); }, [navigate]);
+  return null;
+}
 const ZodiacRashifal = lazy(() => import("@/pages/zodiac-rashifal"));
 const TempleTourism = lazy(() => import("@/pages/temple-tourism"));
 const ScriptureSearch = lazy(() => import("@/pages/scripture-search"));
@@ -713,8 +721,13 @@ function Router() {
           <Route path="/matrimony/profile/:id" component={MatrimonyProfileDetail} />
           <Route path="/muhurat-finder" component={MuhuratFinder} />
           <Route path="/japa" component={JapaPage} />
-          <Route path="/jap" component={JapaPage} />
-          <Route path="/japa-counter" component={JapaPage} />
+          {/* In-app navigation safety net for the SEO aliases — server
+              already 301s these on initial HTTP load, but a client-side
+              <Link href="/jap"> would otherwise stay on the alias URL.
+              This pushes the canonical /japa with replaceState so back
+              button doesn't bounce. */}
+          <Route path="/jap"><JapaAliasRedirect /></Route>
+          <Route path="/japa-counter"><JapaAliasRedirect /></Route>
           <Route path="/zodiac-rashifal" component={ZodiacRashifal} />
           <Route path="/temple-tourism" component={TempleTourism} />
           <Route path="/scripture-search" component={ScriptureSearch} />

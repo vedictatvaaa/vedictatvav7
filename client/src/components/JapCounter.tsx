@@ -1154,7 +1154,20 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         ts: Date.now(),
       });
     } else {
-      vibrate(35, vibrationOn);
+      // Milestone haptics — gives the chanting body a felt sense of
+      // progress without any visual interruption. Spec: gentle pulse on
+      // every bead, distinct pattern on every 108th lifetime tap, and a
+      // sustained sahasranama pulse on every 1008th. Lifetime (not
+      // current-mala) so the felt-rhythm survives target switches and
+      // mid-mala undo. NB: persistRef.total is the count BEFORE this tap.
+      const lifetimeNext = persistRef.current.total + 1;
+      if (lifetimeNext > 0 && lifetimeNext % 1008 === 0) {
+        vibrate([120, 60, 120, 60, 120, 60, 280], vibrationOn);
+      } else if (lifetimeNext > 0 && lifetimeNext % 108 === 0) {
+        vibrate([100, 50, 100], vibrationOn);
+      } else {
+        vibrate(35, vibrationOn);
+      }
     }
 
     setPersist((prev) => {
@@ -1295,6 +1308,15 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     }
     tap();
   }, [autoMode, soundOn, mantra.id, toast, tap]);
+
+  // Shake-to-count: useShakeToJapa fires this CustomEvent on every clean
+  // shake while the devotee is on /japa. We treat it like a manual tap —
+  // includes the auto-chant gating + the tap()'s 250ms debounce.
+  useEffect(() => {
+    const onShake = () => handleTapOrAutoStart();
+    window.addEventListener("vt:japa-shake-tap", onShake);
+    return () => window.removeEventListener("vt:japa-shake-tap", onShake);
+  }, [handleTapOrAutoStart]);
 
   // Full-mala bloom trigger — when a mala completes (celebration is
   // set by the tap/auto-chant paths), light up the orb with the gold
@@ -2969,7 +2991,14 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
           // Pointer-events restricted to the visible circle via clip-path
           // so even hover / cursor-change feedback only happens inside
           // the orb. Belt-and-braces with the click hit-test above.
-          style={{ clipPath: "circle(50% at 50% 50%)" }}
+          style={{
+            clipPath: "circle(50% at 50% 50%)",
+            // Mobile tap polish: kill the 300ms double-tap-zoom delay AND
+            // the iOS blue tap-highlight flash. Per-button only — global
+            // viewport remains pinch-zoomable for accessibility.
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
+          }}
           className={`relative w-[min(78vmin,560px)] h-[min(78vmin,560px)] rounded-full select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 transition-transform ${p.autoChanting || (p.audioLocked && p.syncTapsToAudio) ? "cursor-wait" : "active:scale-[0.985]"}`}
           aria-label={p.autoMode && !p.autoChanting ? "Tap to start auto-chant" : p.autoChanting ? "Auto-chant is playing — press Stop to chant manually" : p.audioLocked && p.syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa"}
           data-testid="btn-fs-tap"
