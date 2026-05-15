@@ -745,6 +745,36 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [celebrationExiting, setCelebrationExiting] = useState(false);
   const [ashirvad, setAshirvad] = useState<{ mantraLabel: string; mantraId: string; ts: number } | null>(null);
 
+  // Pre-chant breathwork (4-7-8 pranayama). Auto-runs once per session
+  // on the first orb tap; subsequent taps go straight to counting.
+  // Session is process-lifetime (mount → unmount). A fresh page load
+  // counts as a new session and the breathwork triggers again.
+  const [breathingActive, setBreathingActive] = useState(false);
+  const [breathTick, setBreathTick] = useState(0);
+  const breathingDoneThisSessionRef = useRef(false);
+  const BREATH_TOTAL_MS = 60000;
+  const BREATH_CYCLE_MS = 19000; // 4s inhale + 7s hold + 8s exhale
+  useEffect(() => {
+    if (!breathingActive) return;
+    const start = Date.now();
+    const id = setInterval(() => {
+      const e = Date.now() - start;
+      setBreathTick(e);
+      if (e >= BREATH_TOTAL_MS) {
+        clearInterval(id);
+        breathingDoneThisSessionRef.current = true;
+        setBreathingActive(false);
+        setBreathTick(0);
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [breathingActive]);
+  const skipBreathing = useCallback(() => {
+    breathingDoneThisSessionRef.current = true;
+    setBreathingActive(false);
+    setBreathTick(0);
+  }, []);
+
   // — Full-mala bloom: timestamp of the most recent mala completion;
   //   the orb fires a gold radial flash + slow pulse for ~2.4s when
   //   this changes. Distinct from the existing CelebrationOverlay so
@@ -1394,6 +1424,15 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // armed but not yet running, the first tap kicks off the loop. Otherwise
   // it falls through to the normal manual tap.
   const handleTapOrAutoStart = useCallback(() => {
+    // First tap of the session → run pranayama instead of counting.
+    // The breathing overlay calls back into normal tap behaviour once
+    // it finishes (or the devotee skips it).
+    if (!breathingDoneThisSessionRef.current && !breathingActive) {
+      setBreathingActive(true);
+      setBreathTick(0);
+      return;
+    }
+    if (breathingActive) return;
     if (autoMode && !autoChantingRef.current) {
       if (!soundOn || !mantraAudio.has(mantra.id)) {
         toast({
@@ -1437,6 +1476,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // moment of completion). Now the aarti chime plays as the count flips,
   // and ~600 ms later the Tathastu blessing rises — one sacred handoff.
   // `celebration` lives on purely as the scheduling trigger.
+  // Auto-reset: ~4s after the mala closes we silently roll the visible
+  // count back to 0 so when the devotee dismisses the ashirvad the orb
+  // is already showing a fresh mala. malasCompleted / total are
+  // untouched (those were credited at the moment of completion).
   useEffect(() => {
     if (!celebration) return;
     setCelebrationExiting(false);
@@ -1450,11 +1493,16 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     const id = setTimeout(() => {
       setCelebration(null);
     }, 900);
+    const resetId = setTimeout(() => {
+      setPersist((prev) => (prev.count >= target ? { ...prev, count: 0 } : prev));
+      setSessionStartTs(null);
+    }, 4000);
     return () => {
       clearTimeout(id);
       clearTimeout(ashirvadId);
+      clearTimeout(resetId);
     };
-  }, [celebration]);
+  }, [celebration, target]);
 
   // Share the divine blessing — separate copy from the mantra share so
   // the recipient gets the ashirvad, not just the chant link.
@@ -1909,6 +1957,79 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   </>
                 )}
               </button>
+              {/* Pre-chant 4-7-8 pranayama overlay — auto-runs once on the
+                  first tap of the session. Sits above the orb button so
+                  taps during breathing don't count. Dynamically labelled
+                  Inhale / Hold / Exhale with a live countdown and a soft
+                  scaling aura that paces the breath. */}
+              {breathingActive && (() => {
+                const elapsed = breathTick;
+                const totalRemain = Math.max(0, Math.ceil((BREATH_TOTAL_MS - elapsed) / 1000));
+                const t = elapsed % BREATH_CYCLE_MS;
+                let phase: "Inhale" | "Hold" | "Exhale";
+                let phaseRemain: number;
+                let auraScale: number;
+                if (t < 4000) {
+                  phase = "Inhale";
+                  phaseRemain = Math.max(1, Math.ceil((4000 - t) / 1000));
+                  auraScale = 0.78 + (t / 4000) * 0.27;
+                } else if (t < 11000) {
+                  phase = "Hold";
+                  phaseRemain = Math.max(1, Math.ceil((11000 - t) / 1000));
+                  auraScale = 1.05;
+                } else {
+                  phase = "Exhale";
+                  phaseRemain = Math.max(1, Math.ceil((19000 - t) / 1000));
+                  auraScale = 1.05 - ((t - 11000) / 8000) * 0.27;
+                }
+                const cycleNum = Math.min(3, Math.floor(elapsed / BREATH_CYCLE_MS) + 1);
+                return (
+                  <div
+                    className="absolute inset-7 z-20 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30 select-none"
+                    data-testid="breathing-overlay"
+                    role="status"
+                    aria-live="polite"
+                    aria-label={`${phase} for ${phaseRemain} seconds. Cycle ${cycleNum} of 3.`}
+                  >
+                    <div
+                      className="absolute inset-[12%] rounded-full pointer-events-none transition-transform duration-1000 ease-in-out"
+                      style={{
+                        background: "radial-gradient(circle, rgba(212,175,55,0.30) 0%, rgba(212,175,55,0.10) 55%, transparent 80%)",
+                        transform: `scale(${auraScale})`,
+                      }}
+                      aria-hidden="true"
+                    />
+                    <div className="relative flex flex-col items-center gap-1 px-4">
+                      <div className="text-[10px] sm:text-xs uppercase tracking-[0.32em] text-[#D4AF37] font-semibold">
+                        Pranayama · Cycle {cycleNum}/3
+                      </div>
+                      <div className="text-3xl sm:text-4xl font-serif font-bold text-[#FFFAEC] mt-1" data-testid="text-breath-phase">
+                        {phase}
+                      </div>
+                      <div className="text-6xl sm:text-7xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none my-1" data-testid="text-breath-countdown">
+                        {phaseRemain}
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-[#D4AF37]/85 tracking-wide">
+                        {phase === "Inhale" ? "Breathe in slowly through the nose"
+                          : phase === "Hold" ? "Hold gently · settle the mind"
+                          : "Release slowly through the mouth"}
+                      </div>
+                      <div className="text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]/60 mt-2">
+                        {totalRemain}s until chanting
+                      </div>
+                      <button
+                        type="button"
+                        onClick={skipBreathing}
+                        className="mt-2 text-[11px] uppercase tracking-[0.18em] font-semibold px-3 py-1 rounded-full border border-[#D4AF37]/50 text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                        data-testid="btn-skip-breathing"
+                        aria-label="Skip breathwork and begin chanting now"
+                      >
+                        Skip · Begin Chanting
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Pace pulse — gentle gold ring flash when tapping faster than a chant cycle. */}
               {paceHint && (
                 <div
