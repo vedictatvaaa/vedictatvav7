@@ -598,8 +598,9 @@ function Router() {
   // nav / promo ribbon on these routes so they don't leak onto the panel
   // (most visible on mobile, where the bottom-nav otherwise overlaps the
   // admin tabs and links to customer-only pages).
-  const isBackOffice = routerLocation.startsWith("/admin")
-    || routerLocation.startsWith("/pandit/portal");
+  const lowerLoc = routerLocation.toLowerCase();
+  const isBackOffice = lowerLoc.startsWith("/admin")
+    || lowerLoc.startsWith("/pandit/portal");
   return (
     <div className="flex flex-col min-h-screen">
       <ScrollToTop />
