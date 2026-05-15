@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   twoFactorSecret: text("two_factor_secret"),
   twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   twoFactorMethod: text("two_factor_method").default("authenticator"),
+  recoveryCodes: text("recovery_codes").array().notNull().default(sql`'{}'::text[]`),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires"),
   loyaltyPoints: integer("loyalty_points").notNull().default(0),

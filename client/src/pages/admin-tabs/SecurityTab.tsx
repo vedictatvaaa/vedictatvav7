@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-import { CheckCircle, Type, Eye, EyeOff, Shield, Lock, Download } from "lucide-react";
+import { CheckCircle, Type, Eye, EyeOff, Shield, Lock, Download, KeyRound } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -325,6 +325,8 @@ function SecurityTab({ adminToken }: { adminToken?: string }) {
         </CardContent>
       </Card>
 
+      <RecoveryCodesCard headers={headers} twoFAEnabled={twoFAEnabled} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-primary">Session Management</CardTitle>
@@ -359,6 +361,177 @@ function SecurityTab({ adminToken }: { adminToken?: string }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function RecoveryCodesCard({ headers, twoFAEnabled }: { headers: Record<string, string>; twoFAEnabled: boolean }) {
+  const { toast } = useToast();
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [generated, setGenerated] = useState<boolean>(false);
+  const [codes, setCodes] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [confirmRegen, setConfirmRegen] = useState(false);
+  const [acting, setActing] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/2fa/recovery-codes-status", { headers, credentials: "include" })
+      .then(r => r.json())
+      .then(d => { setRemaining(d.remaining ?? 0); setGenerated(!!d.generated); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const generate = async () => {
+    setActing(true);
+    try {
+      const res = await fetch("/api/admin/2fa/generate-recovery-codes", {
+        method: "POST", headers, credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed");
+      setCodes(data.codes);
+      setRemaining(data.codes.length);
+      setGenerated(true);
+      setConfirmRegen(false);
+      toast({ title: "Recovery codes generated", description: "Store them safely — they will not be shown again." });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const downloadCodes = () => {
+    if (!codes) return;
+    const stamp = new Date().toISOString().slice(0, 10);
+    const body = `Vedic Tatva — Admin Recovery Codes\nGenerated: ${new Date().toISOString()}\n\nEach code can be used once at the 2FA step in place of your authenticator code.\nStore them somewhere safe. Generating a new batch invalidates all of these.\n\n${codes.join("\n")}\n`;
+    const blob = new Blob([body], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vedictatva-admin-recovery-codes-${stamp}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyAll = async () => {
+    if (!codes) return;
+    try {
+      await navigator.clipboard.writeText(codes.join("\n"));
+      toast({ title: "Copied", description: "Recovery codes copied to clipboard." });
+    } catch {
+      toast({ title: "Copy failed", description: "Use Download instead.", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-primary">
+          <KeyRound className="h-5 w-5" /> Backup Recovery Codes
+        </CardTitle>
+        <CardDescription>
+          Single-use codes you can enter at the 2FA step if you lose access to your authenticator app or admin email. Store them somewhere safe and offline.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <p className="text-sm text-muted-foreground/60">Loading…</p>
+        ) : (
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg border gap-3 flex-wrap">
+            <div>
+              <p className="font-medium text-muted-foreground">Codes remaining</p>
+              <p className="text-sm text-muted-foreground/60">
+                {generated
+                  ? remaining === 0
+                    ? "All codes used. Generate a new batch."
+                    : `${remaining} of 10 unused`
+                  : "Not generated yet"}
+              </p>
+            </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold ${
+                !generated ? "bg-yellow-100 text-yellow-700"
+                : remaining === 0 ? "bg-red-100 text-red-700"
+                : (remaining ?? 0) <= 3 ? "bg-amber-100 text-amber-700"
+                : "bg-emerald-100 text-emerald-700"
+              }`}
+              data-testid="text-recovery-codes-status"
+            >
+              {!generated ? "NOT SET" : remaining === 0 ? "EXHAUSTED" : `${remaining} LEFT`}
+            </span>
+          </div>
+        )}
+
+        {!twoFAEnabled && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+            Enable two-factor authentication first — recovery codes are only used at the 2FA step.
+          </p>
+        )}
+
+        {codes && codes.length > 0 && (
+          <div className="space-y-3 p-4 border border-emerald-200 rounded-lg bg-emerald-50/40">
+            <div className="flex items-start gap-2 text-sm text-emerald-900">
+              <Shield className="h-4 w-4 mt-0.5 shrink-0" />
+              <p><strong>Save these now.</strong> They will never be shown again. Each code works once.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 font-mono text-sm">
+              {codes.map((c, i) => (
+                <code
+                  key={i}
+                  className="bg-card px-3 py-2 rounded border text-primary text-center select-all"
+                  data-testid={`text-recovery-code-${i}`}
+                >{c}</code>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={downloadCodes} variant="outline" className="gap-2" data-testid="btn-download-recovery">
+                <Download className="h-4 w-4" /> Download as .txt
+              </Button>
+              <Button onClick={copyAll} variant="outline" data-testid="btn-copy-recovery">
+                Copy all
+              </Button>
+              <Button onClick={() => setCodes(null)} variant="outline" data-testid="btn-dismiss-recovery">
+                I have saved them
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!codes && (
+          <div className="flex flex-wrap gap-2">
+            {!generated || remaining === 0 ? (
+              <Button onClick={generate} disabled={acting || !twoFAEnabled} data-testid="btn-generate-recovery">
+                {acting ? "Generating…" : generated ? "Generate new batch" : "Generate recovery codes"}
+              </Button>
+            ) : !confirmRegen ? (
+              <Button
+                onClick={() => setConfirmRegen(true)}
+                variant="outline"
+                disabled={!twoFAEnabled}
+                data-testid="btn-regenerate-recovery"
+              >
+                Regenerate (invalidates current codes)
+              </Button>
+            ) : (
+              <div className="w-full p-3 border border-red-200 rounded-lg bg-red-50/50 space-y-2">
+                <p className="text-sm text-red-700">
+                  This will invalidate all {remaining} unused codes and replace them with a fresh batch of 10. Continue?
+                </p>
+                <div className="flex gap-2">
+                  <Button onClick={generate} disabled={acting} variant="destructive" data-testid="btn-confirm-regenerate">
+                    {acting ? "Regenerating…" : "Yes, regenerate"}
+                  </Button>
+                  <Button onClick={() => setConfirmRegen(false)} variant="outline" data-testid="btn-cancel-regenerate">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

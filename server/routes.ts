@@ -4682,7 +4682,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       setAdminCookie(res, token);
       clearAdminLoginFailures(ip);
 
-      const { password: _, twoFactorSecret: __, ...safeUser } = user[0];
+      const { password: _, twoFactorSecret: __, recoveryCodes: ___, ...safeUser } = user[0];
       res.json({ token, user: safeUser, requires2FA: false });
     } catch (error) {
       console.error("Admin login error:", error);
@@ -4714,11 +4714,214 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       await db.insert(adminSessions).values({ userId: user[0].id, token, expiresAt });
       setAdminCookie(res, token);
 
-      const { password: _, twoFactorSecret: __, ...safeUser } = user[0];
+      const { password: _, twoFactorSecret: __, recoveryCodes: ___, ...safeUser } = user[0];
       res.json({ token, user: safeUser });
     } catch (error) {
       console.error("2FA verify error:", error);
       res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  // ── Email-OTP fallback for 2FA ─────────────────────────────────────────
+  // Uses the same admin_sessions table as the TOTP flow. The pending row
+  // (`2fa-pending-<tempToken>`) must already exist (created by /api/admin/login
+  // on a successful password match for a 2FA-enabled user). We then layer a
+  // single-use email OTP row keyed `email-otp-<tempToken>` whose `userId` field
+  // stores the HMAC of the 6-digit code (so the plaintext never touches the DB).
+  // Rate-limited per-IP via the existing OTP limiter; bad attempts also feed
+  // the admin-login lockout so a slow drip can't bypass brute-force defense.
+  const adminEmailOtpRequestLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many email-OTP requests. Please wait and try again." },
+    keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+  });
+  const adminEmailOtpVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many verification attempts. Please request a new code." },
+    keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+  });
+  const ADMIN_OTP_TTL_MS = 10 * 60 * 1000;
+  const adminOtpHash = (code: string, tempToken: string) =>
+    crypto.createHmac("sha256", ORDER_LOOKUP_SECRET).update(`admin|${tempToken}|${code}`).digest("hex");
+
+  app.post("/api/admin/2fa/request-email-otp", adminEmailOtpRequestLimiter, async (req, res) => {
+    try {
+      const { tempToken, userId } = req.body || {};
+      if (!tempToken || !userId) return res.status(400).json({ message: "Missing fields" });
+      const pending = await db.select().from(adminSessions)
+        .where(and(eq(adminSessions.token, `2fa-pending-${tempToken}`), gt(adminSessions.expiresAt, new Date())))
+        .limit(1);
+      if (pending.length === 0 || pending[0].userId !== userId) {
+        return res.status(401).json({ message: "Verification request expired. Please sign in again." });
+      }
+      const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (user.length === 0) return res.status(404).json({ message: "User not found" });
+
+      // Replace any prior pending OTP for this tempToken — both marker and hash rows.
+      await db.delete(adminSessions).where(eq(adminSessions.token, `email-otp-${tempToken}`));
+      await db.delete(adminSessions).where(like(adminSessions.token, `email-otp-hash-${tempToken}-%`));
+      const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+      const otpExpiresAt = new Date(Date.now() + ADMIN_OTP_TTL_MS);
+      // Marker row + hash-keyed row. The hash row is the one we look up at verify
+      // time; the marker row exists only so /resend cleanup is a single delete pattern.
+      await db.insert(adminSessions).values({
+        userId,
+        token: `email-otp-${tempToken}`,
+        expiresAt: otpExpiresAt,
+      });
+      await db.insert(adminSessions).values({
+        userId,
+        token: `email-otp-hash-${tempToken}-${adminOtpHash(code, tempToken)}`,
+        expiresAt: otpExpiresAt,
+      });
+
+      const { buildAdminLoginOtpEmail } = await import("./email");
+      const ip = adminLoginIp(req);
+      const msg = buildAdminLoginOtpEmail({ to: user[0].email, code, expiresInMinutes: 10, ip });
+      sendEmailAsync(msg, "admin-2fa-otp");
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[admin-2fa] request-email-otp error:", err);
+      res.status(500).json({ message: "Failed to send code" });
+    }
+  });
+
+  app.post("/api/admin/2fa/verify-email-otp", adminEmailOtpVerifyLimiter, async (req, res) => {
+    try {
+      const { tempToken, userId, code } = req.body || {};
+      if (!tempToken || !userId || !code || !/^\d{6}$/.test(String(code))) {
+        return res.status(400).json({ message: "Invalid code format" });
+      }
+      const pending = await db.select().from(adminSessions)
+        .where(and(eq(adminSessions.token, `2fa-pending-${tempToken}`), gt(adminSessions.expiresAt, new Date())))
+        .limit(1);
+      if (pending.length === 0 || pending[0].userId !== userId) {
+        return res.status(401).json({ message: "Verification request expired. Please sign in again." });
+      }
+      const expectedToken = `email-otp-hash-${tempToken}-${adminOtpHash(String(code), tempToken)}`;
+      const match = await db.select().from(adminSessions)
+        .where(and(eq(adminSessions.token, expectedToken), gt(adminSessions.expiresAt, new Date())))
+        .limit(1);
+      if (match.length === 0 || match[0].userId !== userId) {
+        recordAdminLoginFailure(adminLoginIp(req));
+        return res.status(401).json({ message: "Invalid or expired code" });
+      }
+      const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (user.length === 0) return res.status(404).json({ message: "User not found" });
+
+      // Burn the OTP rows + the 2fa-pending row.
+      await db.delete(adminSessions).where(eq(adminSessions.token, `2fa-pending-${tempToken}`));
+      await db.delete(adminSessions).where(eq(adminSessions.token, `email-otp-${tempToken}`));
+      await db.delete(adminSessions).where(eq(adminSessions.token, expectedToken));
+      clearAdminLoginFailures(adminLoginIp(req));
+
+      const token = crypto.randomBytes(48).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await db.insert(adminSessions).values({ userId: user[0].id, token, expiresAt });
+      setAdminCookie(res, token);
+
+      const { password: _, twoFactorSecret: __, recoveryCodes: ___, ...safeUser } = user[0];
+      res.json({ token, user: safeUser });
+    } catch (err) {
+      console.error("[admin-2fa] verify-email-otp error:", err);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  app.post("/api/admin/2fa/verify-recovery-code", adminEmailOtpVerifyLimiter, async (req, res) => {
+    try {
+      const { tempToken, userId, code } = req.body || {};
+      if (!tempToken || !userId || !code || typeof code !== "string") {
+        return res.status(400).json({ message: "Missing fields" });
+      }
+      const cleaned = code.trim().replace(/\s+/g, "").toLowerCase();
+      if (cleaned.length < 8 || cleaned.length > 32) {
+        return res.status(400).json({ message: "Invalid recovery code format" });
+      }
+      const pending = await db.select().from(adminSessions)
+        .where(and(eq(adminSessions.token, `2fa-pending-${tempToken}`), gt(adminSessions.expiresAt, new Date())))
+        .limit(1);
+      if (pending.length === 0 || pending[0].userId !== userId) {
+        return res.status(401).json({ message: "Verification request expired. Please sign in again." });
+      }
+      const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (user.length === 0) return res.status(404).json({ message: "User not found" });
+      const stored = (user[0].recoveryCodes || []) as string[];
+      if (stored.length === 0) {
+        return res.status(401).json({ message: "No recovery codes are configured. Use your authenticator app or email code." });
+      }
+      const bcrypt = await import("bcryptjs");
+      let usedIndex = -1;
+      for (let i = 0; i < stored.length; i++) {
+        // bcrypt.compare is constant-time per-hash; loop is small (≤10).
+        // eslint-disable-next-line no-await-in-loop
+        if (await bcrypt.compare(cleaned, stored[i])) { usedIndex = i; break; }
+      }
+      if (usedIndex < 0) {
+        recordAdminLoginFailure(adminLoginIp(req));
+        return res.status(401).json({ message: "Invalid recovery code" });
+      }
+      const remaining = stored.filter((_, i) => i !== usedIndex);
+      await db.update(users).set({ recoveryCodes: remaining }).where(eq(users.id, userId));
+      await db.delete(adminSessions).where(eq(adminSessions.token, `2fa-pending-${tempToken}`));
+      clearAdminLoginFailures(adminLoginIp(req));
+
+      const token = crypto.randomBytes(48).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await db.insert(adminSessions).values({ userId: user[0].id, token, expiresAt });
+      setAdminCookie(res, token);
+
+      const { password: _, twoFactorSecret: __, recoveryCodes: ___, ...safeUser } = user[0];
+      res.json({ token, user: safeUser, recoveryCodesRemaining: remaining.length });
+    } catch (err) {
+      console.error("[admin-2fa] verify-recovery-code error:", err);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  app.post("/api/admin/2fa/generate-recovery-codes", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.adminUserId;
+      const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (user.length === 0) return res.status(404).json({ message: "User not found" });
+      // Format: 4-4 alphanumeric (e.g. "a1b2-c3d4"). 8 chars from a 32-char
+      // alphabet ≈ 40 bits — combined with bcrypt + lockout this is fine for
+      // single-use codes that rotate on every regenerate.
+      const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"; // no 0/o/1/l/i to avoid copy errors
+      const makeCode = () => {
+        const bytes = crypto.randomBytes(8);
+        let s = "";
+        for (let i = 0; i < 8; i++) s += ALPHABET[bytes[i] % ALPHABET.length];
+        return `${s.slice(0, 4)}-${s.slice(4)}`;
+      };
+      const plaintexts: string[] = [];
+      for (let i = 0; i < 10; i++) plaintexts.push(makeCode());
+      const bcrypt = await import("bcryptjs");
+      const hashes = await Promise.all(plaintexts.map(c => bcrypt.hash(c, 10)));
+      await db.update(users).set({ recoveryCodes: hashes }).where(eq(users.id, userId));
+      try { auditAdmin(req, "admin.recovery_codes.generate", `user:${userId}`, { count: 10 }); } catch {}
+      res.json({ codes: plaintexts, generatedAt: new Date().toISOString() });
+    } catch (err) {
+      console.error("[admin-2fa] generate-recovery-codes error:", err);
+      res.status(500).json({ message: "Failed to generate recovery codes" });
+    }
+  });
+
+  app.get("/api/admin/2fa/recovery-codes-status", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const userId = req.adminUserId;
+      const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (user.length === 0) return res.status(404).json({ message: "User not found" });
+      const remaining = ((user[0].recoveryCodes || []) as string[]).length;
+      res.json({ remaining, generated: remaining > 0 });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to load status" });
     }
   });
 
@@ -5032,7 +5235,7 @@ If you did not request this reset, you can ignore this email — your password w
     if (!userId) return res.status(401).json({ valid: false });
     const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
     if (user.length === 0) return res.status(401).json({ valid: false });
-    const { password: _, twoFactorSecret: __, ...safeUser } = user[0];
+    const { password: _, twoFactorSecret: __, recoveryCodes: ___, ...safeUser } = user[0];
     res.json({ valid: true, user: safeUser });
   });
 

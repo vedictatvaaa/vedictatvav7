@@ -543,6 +543,39 @@ If you did not request this, you can safely ignore this email — your password 
   return { to: params.to, subject: "Reset your Vedic Tatva password", text, html };
 }
 
+export function buildAdminLoginOtpEmail(params: {
+  to: string;
+  code: string;
+  expiresInMinutes: number;
+  ip?: string;
+}): EmailMessage {
+  const subject = "Your Vedic Tatva admin login code";
+  const text = `Namaste,
+
+Your Vedic Tatva admin login code is: ${params.code}
+
+It expires in ${params.expiresInMinutes} minutes and can be used once. ${params.ip ? `Requested from IP ${params.ip}. ` : ""}If this wasn't you, ignore this email and consider rotating your admin password.
+
+— Vedic Tatva Security`;
+  const html = wrapHtml(subject, `
+    <p style="margin:0 0 12px;font-size:15px;">Namaste,</p>
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.55;">
+      Use this code to finish signing in to the Vedic Tatva admin panel:
+    </p>
+    <p style="margin:18px 0;text-align:center;">
+      <span style="display:inline-block;background:#f7f1e8;color:#7a1f1f;padding:14px 26px;border-radius:6px;font-weight:700;font-size:28px;letter-spacing:8px;font-family:Menlo,Consolas,monospace;">${escapeHtml(params.code)}</span>
+    </p>
+    <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;line-height:1.55;">
+      Expires in <strong>${params.expiresInMinutes} minutes</strong>. Single-use.${params.ip ? ` Requested from IP <code>${escapeHtml(params.ip)}</code>.` : ""}
+    </p>
+    <p style="margin:14px 0 0;font-size:13px;color:#6b6b6b;line-height:1.55;">
+      Did not try to sign in? Ignore this email and rotate your admin password from Security &rarr; Change Password.
+    </p>
+    <p style="margin:8px 0 0;font-size:13px;color:#6b6b6b;">— Vedic Tatva Security</p>
+  `);
+  return { to: params.to, subject, text, html };
+}
+
 // ---- Welcome email (account creation) ----
 export function buildWelcomeEmail(params: {
   to: string;

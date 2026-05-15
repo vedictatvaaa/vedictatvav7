@@ -18,7 +18,6 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"credentials" | "2fa" | "forgot" | "reset">("credentials");
-  const [twoFACode, setTwoFACode] = useState("");
   const [tempToken, setTempToken] = useState("");
   const [userId, setUserId] = useState<number>(0);
   const [twoFAMethod, setTwoFAMethod] = useState("authenticator");
@@ -132,33 +131,6 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
     }
   };
 
-  const handleVerify2FA = async () => {
-    if (!twoFACode || twoFACode.length !== 6) {
-      toast({ title: "Invalid Code", description: "Please enter the 6-digit code", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/verify-2fa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ tempToken, code: twoFACode, userId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: "Verification Failed", description: data.message || "Invalid code", variant: "destructive" });
-        return;
-      }
-      // Cookie-only auth (15B): server set httpOnly vt_admin_token via Set-Cookie.
-      onLogin(data.token, data.user);
-      toast({ title: "Welcome back!", description: "Admin login successful" });
-    } catch {
-      toast({ title: "Error", description: "Verification failed. Please try again.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#F5F0E6] flex items-center justify-center p-4">
@@ -354,56 +326,16 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="text-center mb-4">
-                    <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                      {twoFAMethod === "authenticator" ? (
-                        <Smartphone className="h-6 w-6 text-[#D4AF37]" />
-                      ) : (
-                        <KeyRound className="h-6 w-6 text-[#D4AF37]" />
-                      )}
-                    </div>
-                    <h2 className="font-serif text-lg font-bold text-[#6D2B35]">Two-Factor Verification</h2>
-                    <p className="text-sm text-[#5a4a3a]/50 mt-1">
-                      {twoFAMethod === "authenticator"
-                        ? "Enter the 6-digit code from your authenticator app"
-                        : "Enter the verification code sent to your phone"}
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-[#6D2B35] uppercase tracking-wider">Verification Code</label>
-                    <Input
-                      type="text"
-                      value={twoFACode}
-                      onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="000000"
-                      className="text-center text-2xl tracking-[0.5em] font-mono border-[#6D2B35]/15 focus:border-[#D4AF37]"
-                      maxLength={6}
-                      data-testid="input-2fa-code"
-                      onKeyDown={(e) => e.key === "Enter" && handleVerify2FA()}
-                      autoFocus
-                    />
-                  </div>
-                  <Button
-                    onClick={handleVerify2FA}
-                    disabled={loading || twoFACode.length !== 6}
-                    className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white py-5 text-base font-semibold"
-                    data-testid="btn-verify-2fa"
-                  >
-                    {loading ? (
-                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Verifying...</>
-                    ) : (
-                      <><KeyRound className="h-4 w-4 mr-2" /> Verify & Sign In</>
-                    )}
-                  </Button>
-                  <button
-                    onClick={() => { setStep("credentials"); setTwoFACode(""); }}
-                    className="w-full text-sm text-[#5a4a3a]/40 hover:text-[#6D2B35] transition-colors"
-                    data-testid="btn-back-to-login"
-                  >
-                    Back to login
-                  </button>
-                </div>
+                <TwoFAStep
+                  tempToken={tempToken}
+                  userId={userId}
+                  defaultMethod={twoFAMethod}
+                  onSuccess={(token, user) => {
+                    onLogin(token, user);
+                    toast({ title: "Welcome back!", description: "Admin login successful" });
+                  }}
+                  onBack={() => setStep("credentials")}
+                />
               )}
 
               <div className="mt-6 pt-4 border-t border-[#6D2B35]/5 text-center">
@@ -415,6 +347,211 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           </Card>
         </motion.div>
       </div>
+    </div>
+  );
+}
+
+type TwoFAMode = "totp" | "email" | "recovery";
+
+function TwoFAStep({
+  tempToken,
+  userId,
+  defaultMethod,
+  onSuccess,
+  onBack,
+}: {
+  tempToken: string;
+  userId: number;
+  defaultMethod: string;
+  onSuccess: (token: string, user: any) => void;
+  onBack: () => void;
+}) {
+  const { toast } = useToast();
+  const [mode, setMode] = useState<TwoFAMode>(defaultMethod === "email" ? "email" : "totp");
+  const [code, setCode] = useState("");
+  const [recovery, setRecovery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const requestEmailOtp = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/2fa/request-email-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tempToken, userId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({ title: "Could not send code", description: data.message || "Please try again", variant: "destructive" });
+        return;
+      }
+      setEmailSent(true);
+      setCode("");
+      toast({ title: "Code sent", description: "Check your admin inbox. The code expires in 10 minutes." });
+    } catch {
+      toast({ title: "Error", description: "Connection failed. Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitCode = async () => {
+    if (mode === "recovery") {
+      if (!recovery.trim()) {
+        toast({ title: "Enter a recovery code", variant: "destructive" });
+        return;
+      }
+    } else if (code.length !== 6) {
+      toast({ title: "Invalid code", description: "Enter the 6-digit code", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const url =
+        mode === "totp" ? "/api/admin/verify-2fa" :
+        mode === "email" ? "/api/admin/2fa/verify-email-otp" :
+        "/api/admin/2fa/verify-recovery-code";
+      const body =
+        mode === "recovery"
+          ? { tempToken, userId, code: recovery.trim() }
+          : { tempToken, userId, code };
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({ title: "Verification failed", description: data.message || "Invalid code", variant: "destructive" });
+        return;
+      }
+      if (mode === "recovery" && typeof data.recoveryCodesRemaining === "number") {
+        toast({
+          title: data.recoveryCodesRemaining === 0 ? "Last recovery code used" : "Recovery code accepted",
+          description: data.recoveryCodesRemaining === 0
+            ? "Generate a fresh batch from Security → Recovery Codes."
+            : `${data.recoveryCodesRemaining} recovery code${data.recoveryCodesRemaining === 1 ? "" : "s"} left.`,
+          variant: data.recoveryCodesRemaining === 0 ? "destructive" : "default",
+        });
+      }
+      onSuccess(data.token, data.user);
+    } catch {
+      toast({ title: "Error", description: "Verification failed. Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center mb-4">
+        <div className="w-12 h-12 bg-[#D4AF37]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+          {mode === "totp" ? <Smartphone className="h-6 w-6 text-[#D4AF37]" />
+            : mode === "email" ? <Mail className="h-6 w-6 text-[#D4AF37]" />
+            : <KeyRound className="h-6 w-6 text-[#D4AF37]" />}
+        </div>
+        <h2 className="font-serif text-lg font-bold text-[#6D2B35]">
+          {mode === "totp" ? "Authenticator code"
+            : mode === "email" ? "Email verification"
+            : "Recovery code"}
+        </h2>
+        <p className="text-sm text-[#5a4a3a]/50 mt-1">
+          {mode === "totp" ? "Enter the 6-digit code from your authenticator app"
+            : mode === "email" ? (emailSent ? "Enter the 6-digit code we just emailed you" : "Send a one-time code to your admin email")
+            : "Enter one of your single-use backup codes"}
+        </p>
+      </div>
+
+      {mode === "recovery" ? (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-[#6D2B35] uppercase tracking-wider">Recovery code</label>
+          <Input
+            type="text"
+            value={recovery}
+            onChange={(e) => setRecovery(e.target.value)}
+            placeholder="abcd-efgh"
+            className="text-center text-lg font-mono tracking-[0.2em] border-[#6D2B35]/15 focus:border-[#D4AF37]"
+            data-testid="input-2fa-recovery"
+            onKeyDown={(e) => e.key === "Enter" && submitCode()}
+            autoFocus
+          />
+        </div>
+      ) : (mode === "email" && !emailSent) ? null : (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-[#6D2B35] uppercase tracking-wider">Verification code</label>
+          <Input
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="000000"
+            className="text-center text-2xl tracking-[0.5em] font-mono border-[#6D2B35]/15 focus:border-[#D4AF37]"
+            maxLength={6}
+            data-testid="input-2fa-code"
+            onKeyDown={(e) => e.key === "Enter" && submitCode()}
+            autoFocus
+          />
+        </div>
+      )}
+
+      {mode === "email" && !emailSent ? (
+        <Button
+          onClick={requestEmailOtp}
+          disabled={loading}
+          className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white py-5 text-base font-semibold"
+          data-testid="btn-2fa-send-email"
+        >
+          {loading ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending...</>) : (<><Mail className="h-4 w-4 mr-2" /> Email me a code</>)}
+        </Button>
+      ) : (
+        <Button
+          onClick={submitCode}
+          disabled={loading || (mode === "recovery" ? !recovery.trim() : code.length !== 6)}
+          className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white py-5 text-base font-semibold"
+          data-testid="btn-2fa-verify"
+        >
+          {loading ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" /> Verifying...</>) : (<><KeyRound className="h-4 w-4 mr-2" /> Verify & Sign In</>)}
+        </Button>
+      )}
+
+      {mode === "email" && emailSent && (
+        <button
+          onClick={requestEmailOtp}
+          disabled={loading}
+          className="w-full text-xs text-[#5a4a3a]/50 hover:text-[#6D2B35] transition-colors"
+          data-testid="btn-2fa-resend-email"
+        >
+          Didn't get it? Resend code
+        </button>
+      )}
+
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-2 text-xs">
+        {mode !== "totp" && (
+          <button onClick={() => { setMode("totp"); setCode(""); setEmailSent(false); }} className="text-[#5a4a3a]/60 hover:text-[#6D2B35]" data-testid="btn-2fa-mode-totp">
+            Use authenticator app
+          </button>
+        )}
+        {mode !== "email" && (
+          <button onClick={() => { setMode("email"); setCode(""); setEmailSent(false); }} className="text-[#5a4a3a]/60 hover:text-[#6D2B35]" data-testid="btn-2fa-mode-email">
+            Email me a code
+          </button>
+        )}
+        {mode !== "recovery" && (
+          <button onClick={() => { setMode("recovery"); setRecovery(""); setEmailSent(false); }} className="text-[#5a4a3a]/60 hover:text-[#6D2B35]" data-testid="btn-2fa-mode-recovery">
+            Use a recovery code
+          </button>
+        )}
+      </div>
+
+      <button
+        onClick={onBack}
+        className="w-full text-sm text-[#5a4a3a]/40 hover:text-[#6D2B35] transition-colors"
+        data-testid="btn-back-to-login"
+      >
+        Back to login
+      </button>
     </div>
   );
 }
