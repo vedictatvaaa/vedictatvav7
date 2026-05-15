@@ -3009,20 +3009,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // Admin: list, create, update, delete campaigns.
-  app.get("/api/sales-popups", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.get("/api/sales-popups", adminAuthMiddleware, async (_req, res) => {
     const popups = await storage.getSalesPopups();
     res.json(popups);
   });
 
-  app.post("/api/sales-popups", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.post("/api/sales-popups", adminAuthMiddleware, async (req, res) => {
     const parsed = validate(insertSalesPopupSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
     if (parsed.data.endsAt <= parsed.data.startsAt) {
@@ -3033,11 +3025,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.status(201).json(popup);
   });
 
-  app.patch("/api/sales-popups/:id", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.patch("/api/sales-popups/:id", adminAuthMiddleware, async (req, res) => {
     const partial = insertSalesPopupSchema.partial().safeParse(req.body);
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
     if (partial.data.startsAt && partial.data.endsAt && partial.data.endsAt <= partial.data.startsAt) {
@@ -3049,11 +3037,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(popup);
   });
 
-  app.delete("/api/sales-popups/:id", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.delete("/api/sales-popups/:id", adminAuthMiddleware, async (req, res) => {
     const ok = await storage.deleteSalesPopup(Number(req.params.id));
     if (!ok) return res.status(404).json({ message: "Popup not found" });
     await auditAdmin(req, "sales-popup.delete", "salesPopup", { id: req.params.id });
@@ -3087,11 +3071,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Integrations Hub ----
-  app.get("/api/admin/integrations/status", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.get("/api/admin/integrations/status", adminAuthMiddleware, async (_req, res) => {
     const { getIntegrationsStatus } = await import("./services/integrations-status");
     res.json(getIntegrationsStatus());
   });
@@ -3100,11 +3080,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   // 3 seconds per admin token. Prevents an admin from hammering upstream
   // providers if they hold the button or trigger repeated React renders.
   const pingRateLimit = new Map<string, number>();
-  app.post("/api/admin/integrations/:key/ping", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.post("/api/admin/integrations/:key/ping", adminAuthMiddleware, async (req, res) => {
+    const token = (req.headers["x-admin-token"] as string) || "";
     const key = `${token}:${req.params.key}`;
     const now = Date.now();
     const last = pingRateLimit.get(key) || 0;
@@ -3149,11 +3126,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(settings || {});
   });
 
-  app.post("/api/site-settings", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.post("/api/site-settings", adminAuthMiddleware, async (req, res) => {
     const parsed = validate(insertSiteSettingsSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
     const settings = await storage.upsertSiteSettings(parsed.data);
@@ -3162,11 +3135,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Admin audit log ----
-  app.get("/api/admin/audit-log", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.get("/api/admin/audit-log", adminAuthMiddleware, async (req, res) => {
     const limit = Math.min(500, Math.max(10, Number(req.query.limit) || 200));
     const rows = await storage.getAdminAuditLogs(limit);
     res.json(rows);
@@ -3183,11 +3152,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  app.get("/api/admin/bestsellers/settings", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.get("/api/admin/bestsellers/settings", adminAuthMiddleware, async (_req, res) => {
     const s = await storage.getSiteSettings();
     res.json({
       mode: s?.bestsellersMode ?? "auto",
@@ -3196,11 +3161,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     });
   });
 
-  app.post("/api/admin/bestsellers/settings", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (!token || !(await validateAdminSession(token))) {
-      return res.status(401).json({ message: "Admin authentication required" });
-    }
+  app.post("/api/admin/bestsellers/settings", adminAuthMiddleware, async (req, res) => {
     const { mode, productIds, limit } = req.body || {};
     if (mode && mode !== "auto" && mode !== "manual") {
       return res.status(400).json({ message: "mode must be 'auto' or 'manual'" });
@@ -4264,19 +4225,26 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Subscriptions ----
-  app.get("/api/subscriptions", async (_req, res) => {
+  // Admin-only: returns every subscriber's email + plan. Public exposure
+  // would leak the entire subscriber list (PII).
+  app.get("/api/subscriptions", adminAuthMiddleware, async (_req, res) => {
     const subs = await storage.getSubscriptions();
     res.json(subs);
   });
 
-  app.get("/api/subscriptions/by-email", async (req, res) => {
+  // Admin-only: arbitrary email lookup leaks subscription PII and enables an
+  // IDOR chain into /customer-update. Customer self-service must use the
+  // identity-checked /by-user/:userId endpoint instead.
+  app.get("/api/subscriptions/by-email", adminAuthMiddleware, async (req, res) => {
     const email = req.query.email as string;
     if (!email) return res.status(400).json({ message: "Email is required" });
     const subs = await storage.getSubscriptionsByEmail(email);
     res.json(subs);
   });
 
-  app.get("/api/subscriptions/:id", async (req, res) => {
+  // Admin-only: returning a subscription by raw ID leaks customer PII to
+  // anyone who can guess/enumerate IDs.
+  app.get("/api/subscriptions/:id", adminAuthMiddleware, async (req, res) => {
     const sub = await storage.getSubscription(Number(req.params.id));
     if (!sub) return res.status(404).json({ message: "Subscription not found" });
     res.json(sub);
@@ -7128,12 +7096,15 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   });
 
   // ---- Donation Orders ----
-  app.get("/api/donation-orders", async (_req, res) => {
+  // Admin-only: returns every donor's name, email, phone, and amount.
+  // Public exposure would leak donor PII + giving history.
+  app.get("/api/donation-orders", adminAuthMiddleware, async (_req, res) => {
     const orders = await storage.getDonationOrders();
     res.json(orders);
   });
 
-  app.get("/api/donation-orders/by-email", async (req, res) => {
+  // Admin-only: arbitrary email lookup would leak donor PII + giving history.
+  app.get("/api/donation-orders/by-email", adminAuthMiddleware, async (req, res) => {
     const email = req.query.email as string;
     if (!email) return res.status(400).json({ message: "Email is required" });
     const orders = await storage.getDonationOrdersByEmail(email);

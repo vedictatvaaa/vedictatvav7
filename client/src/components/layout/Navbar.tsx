@@ -867,21 +867,7 @@ export default function Navbar() {
                       <div className="px-4 py-6 text-center">
                         <Sparkles className="w-8 h-8 text-[#D4AF37]/40 mx-auto mb-2" />
                         <p className="text-sm text-[#5a4a3a]/70 mb-1">No results found for "{searchQuery}"</p>
-                        {didYouMean?.suggestion ? (
-                          <p className="text-xs text-[#5a4a3a]/60 mt-2" data-testid="text-did-you-mean">
-                            Did you mean{" "}
-                            <button
-                              onClick={() => { setSearchQuery(didYouMean.suggestion!); setDebouncedQuery(didYouMean.suggestion!); }}
-                              className="font-bold text-[#6D2B35] hover:text-[#D4AF37] underline-offset-2 hover:underline"
-                              data-testid="btn-did-you-mean"
-                            >
-                              {didYouMean.suggestion}
-                            </button>
-                            ?
-                          </p>
-                        ) : (
-                          <p className="text-xs text-[#5a4a3a]/40">Try different keywords or browse our categories</p>
-                        )}
+                        <p className="text-xs text-[#5a4a3a]/40">Try different keywords or browse our categories</p>
                         <div className="flex flex-wrap justify-center gap-2 mt-3">
                           {quickSuggestions.slice(0, 4).map((s, i) => {
                             const Icon = s.icon;
