@@ -659,6 +659,123 @@ function SeoFooterParagraph() {
   );
 }
 
+function CityComparisonBlock() {
+  const { t } = useT();
+  type Row = { label: string; labelHi: string; gaya: string; gayaHi: string; kashi: string; kashiHi: string; haridwar: string; haridwarHi: string };
+  const rows: Row[] = [
+    {
+      label: "Best for",                labelHi: "सर्वश्रेष्ठ",
+      gaya: "Permanent moksha of all ancestors", gayaHi: "सभी पितरों की स्थायी मुक्ति",
+      kashi: "Ancestors who passed unnaturally / unrest", kashiHi: "अकाल मृत्यु / अशांत पितर",
+      haridwar: "Asthi visarjan & yearly Tarpan", haridwarHi: "अस्थि विसर्जन एवं वार्षिक तर्पण",
+    },
+    {
+      label: "Sacred site",            labelHi: "पवित्र स्थल",
+      gaya: "Vishnupad · Phalgu · Akshayavat", gayaHi: "विष्णुपद · फल्गु · अक्षयवट",
+      kashi: "Pishachmochan · Manikarnika", kashiHi: "पिशाचमोचन · मणिकर्णिका",
+      haridwar: "Narayani Shila · Har Ki Pauri", haridwarHi: "नारायणी शिला · हर की पौड़ी",
+    },
+    {
+      label: "Holy river",             labelHi: "पवित्र नदी",
+      gaya: "Phalgu",                  gayaHi: "फल्गु",
+      kashi: "Ganga at Kashi",         kashiHi: "गंगा (काशी)",
+      haridwar: "Ganga at Haridwar",   haridwarHi: "गंगा (हरिद्वार)",
+    },
+    {
+      label: "Ideal time",             labelHi: "उपयुक्त समय",
+      gaya: "Pitru Paksha (most powerful) · year-round", gayaHi: "पितृ पक्ष (सर्वोत्तम) · वर्षभर",
+      kashi: "Year-round · Amavasya & Pitru Paksha", kashiHi: "वर्षभर · अमावस्या एवं पितृ पक्ष",
+      haridwar: "After cremation · Amavasya · Pitru Paksha", haridwarHi: "दाह संस्कार पश्चात · अमावस्या · पितृ पक्ष",
+    },
+    {
+      label: "Frequency",              labelHi: "आवृत्ति",
+      gaya: "Once in a lifetime is sufficient", gayaHi: "जीवन में एक बार पर्याप्त",
+      kashi: "Once, plus annual Shradh", kashiHi: "एक बार, साथ में वार्षिक श्राद्ध",
+      haridwar: "Yearly Tarpan recommended", haridwarHi: "वार्षिक तर्पण संस्तुत",
+    },
+    {
+      label: "Duration",               labelHi: "अवधि",
+      gaya: "1–3 days (Tri-pakshik available)", gayaHi: "1–3 दिन (त्रिपाक्षिक उपलब्ध)",
+      kashi: "Half day to 1 day",      kashiHi: "आधा से एक दिन",
+      haridwar: "2–4 hours",           haridwarHi: "2–4 घंटे",
+    },
+  ];
+  const headers = [
+    { key: "gaya",     name: "Gaya",     nameHi: "गया",     href: "/pind-daan-gaya",     featured: true },
+    { key: "kashi",    name: "Kashi",    nameHi: "काशी",    href: "/pind-daan-kashi",    featured: false },
+    { key: "haridwar", name: "Haridwar", nameHi: "हरिद्वार", href: "/pind-daan-haridwar", featured: false },
+  ] as const;
+
+  return (
+    <section className="container mx-auto px-4 mt-12" data-testid="section-city-comparison">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <div className="h-px w-6 bg-[#D4AF37]/60" />
+            <Calculator className="h-3.5 w-3.5 text-[#D4AF37]" />
+            <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.25em] font-medium">{t("Quick Comparison", "त्वरित तुलना")}</span>
+            <div className="h-px w-6 bg-[#D4AF37]/60" />
+          </div>
+          <h2 className="font-serif text-2xl sm:text-3xl text-[#6D2B35] font-bold leading-tight mb-2">
+            {t("Which Tirth Is Right for You?", "आपके लिए कौन सा तीर्थ उपयुक्त है?")}
+          </h2>
+          <p className="text-[#5a4a3a]/70 text-sm leading-relaxed max-w-2xl mx-auto">
+            {t("All three sites are sacred and shastra-sanctioned. The right choice depends on the form of seva you wish to perform for your ancestors.", "तीनों स्थल पवित्र एवं शास्त्र-सम्मत हैं। उपयुक्त चयन इस पर निर्भर करता है कि आप पितरों के निमित्त कौन-सी सेवा करना चाहते हैं।")}
+          </p>
+        </div>
+
+        <div className="overflow-x-auto rounded-md border border-[#D4AF37]/25 bg-white">
+          <table className="w-full text-left text-[12px] sm:text-[13px]" data-testid="table-city-comparison">
+            <thead className="bg-[#FBF7EE]">
+              <tr>
+                <th scope="col" className="px-3 sm:px-4 py-3 font-semibold text-[#5a4a3a]/80 text-[11px] uppercase tracking-wider min-w-[100px]">
+                  {t("Aspect", "विषय")}
+                </th>
+                {headers.map((h) => (
+                  <th key={h.key} scope="col" className={`px-3 sm:px-4 py-3 font-serif text-[#6D2B35] font-bold text-sm sm:text-base ${h.featured ? "bg-[#D4AF37]/15" : ""}`}>
+                    <Link href={h.href} className="inline-flex items-center gap-1 hover:underline">
+                      {t(h.name, h.nameHi)}
+                      {h.featured && <Award className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                    </Link>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, idx) => {
+                const stripe = idx % 2 === 0;
+                return (
+                  <tr key={r.label} className={stripe ? "bg-white" : "bg-[#FAF7F2]"}>
+                    <th scope="row" className="px-3 sm:px-4 py-3 align-top font-semibold text-[#5a4a3a] text-[12px] border-t border-[#D4AF37]/15">
+                      {t(r.label, r.labelHi)}
+                    </th>
+                    <td className={`px-3 sm:px-4 py-3 align-top text-[#5a4a3a] leading-snug border-t border-[#D4AF37]/15 ${stripe ? "bg-[#FBF3DD]" : "bg-[#F6EAC9]"}`}>
+                      {t(r.gaya, r.gayaHi)}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 align-top text-[#5a4a3a] leading-snug border-t border-[#D4AF37]/15">
+                      {t(r.kashi, r.kashiHi)}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 align-top text-[#5a4a3a] leading-snug border-t border-[#D4AF37]/15">
+                      {t(r.haridwar, r.haridwarHi)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-[11px] text-[#5a4a3a]/60 text-center mt-3 italic">
+          {t("Not sure which to choose? Talk to our Tirth Purohit team on WhatsApp — guidance is free and takes 2 minutes.", "निर्णय में सहायता चाहिए? हमारी तीर्थ पुरोहित टीम से व्हाट्सऐप पर बात करें — मार्गदर्शन निःशुल्क एवं केवल 2 मिनट का है।")}{" "}
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="text-[#6D2B35] font-semibold hover:underline" data-testid="link-comparison-whatsapp">
+            {t("Ask on WhatsApp →", "व्हाट्सऐप पर पूछें →")}
+          </a>
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export function PindDaanHub() {
   const { t, isHi } = useT();
   return (
@@ -738,6 +855,8 @@ export function PindDaanHub() {
           })}
         </div>
       </div>
+
+      <CityComparisonBlock />
 
       <div className="container mx-auto px-4 mt-10">
         <div className="max-w-3xl mx-auto bg-gradient-to-br from-[#FBF7EE] to-white border border-[#D4AF37]/30 rounded-md p-5 sm:p-6" data-testid="card-tarpan-kit-crosssell">

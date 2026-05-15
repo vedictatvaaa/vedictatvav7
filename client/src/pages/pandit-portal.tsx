@@ -241,6 +241,30 @@ export default function PanditPortalPage() {
           </header>
 
           <main className="flex-1 px-3 md:px-6 py-4 md:py-6">
+            {onLeave && (
+              <aside
+                aria-label="On leave status"
+                className="mb-4 rounded-md border border-[#D4AF37]/40 bg-[#FBF7EE] px-3 py-2 flex items-start gap-2.5"
+                data-testid="banner-on-leave"
+              >
+                <span className="mt-0.5 inline-block h-2 w-2 rounded-full bg-[#6D2B35] shrink-0" aria-hidden="true" />
+                <div className="flex-1 min-w-0 text-[12px] text-[#5a4a3a]">
+                  <span className="font-semibold text-[#6D2B35]">You're marked on leave.</span>{" "}
+                  Your "Online now" dot is hidden from the public profile and new bookings will not be auto-routed to you.
+                  {leaveNote.trim() && (
+                    <span className="block mt-1 text-[#5a4a3a]/80 italic truncate">"{leaveNote.trim()}"</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSection("settings")}
+                  className="text-[11px] font-semibold text-[#6D2B35] underline underline-offset-2 hover:text-[#D4AF37] shrink-0"
+                  data-testid="link-banner-manage-leave"
+                >
+                  Manage
+                </button>
+              </aside>
+            )}
             {section === "dashboard" && (
               <div className="space-y-4">
                 {StatsBar}

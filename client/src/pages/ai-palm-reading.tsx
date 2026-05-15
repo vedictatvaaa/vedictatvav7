@@ -239,12 +239,48 @@ export default function AIPalmReading() {
               <p className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold mb-2.5 flex items-center gap-1.5">
                 <Camera className="h-3 w-3" /> How to take a good palm photo
               </p>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-[#5a4a3a]/85">
-                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Bright natural daylight, no flash</li>
-                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Open palm flat, fingers straight & spread</li>
-                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Centre the palm — fill the frame</li>
-                <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Plain background, all major lines visible</li>
-              </ul>
+              <div className="grid grid-cols-[88px_1fr] sm:grid-cols-[110px_1fr] gap-3 sm:gap-4 items-start">
+                {/* Diagram: stylised palm centered in a viewfinder frame */}
+                <svg
+                  viewBox="0 0 100 120"
+                  className="w-full h-auto rounded-md bg-white border border-[#D4AF37]/30"
+                  role="img"
+                  aria-label="Diagram of a hand with fingers spread and the palm centered inside the camera frame"
+                  data-testid="diagram-palm-photo"
+                >
+                  {/* viewfinder corner brackets */}
+                  <g stroke="#D4AF37" strokeWidth="1.5" fill="none" strokeLinecap="round">
+                    <path d="M6 14 L6 6 L14 6" />
+                    <path d="M86 6 L94 6 L94 14" />
+                    <path d="M94 106 L94 114 L86 114" />
+                    <path d="M14 114 L6 114 L6 106" />
+                  </g>
+                  {/* palm + fingers (simplified silhouette) */}
+                  <g fill="#6D2B35" fillOpacity="0.92">
+                    {/* palm */}
+                    <path d="M28 70 Q26 56 32 50 L32 86 Q32 102 50 104 Q68 102 68 86 L68 50 Q74 56 72 70 Z" />
+                    {/* fingers */}
+                    <rect x="34" y="22" width="7" height="32" rx="3.5" />
+                    <rect x="43" y="14" width="7" height="40" rx="3.5" />
+                    <rect x="52" y="18" width="7" height="36" rx="3.5" />
+                    <rect x="61" y="26" width="7" height="28" rx="3.5" />
+                    {/* thumb */}
+                    <path d="M28 60 Q18 56 18 70 Q18 80 26 80 L32 76 Z" />
+                  </g>
+                  {/* major palm lines (gold) */}
+                  <g stroke="#D4AF37" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeOpacity="0.95">
+                    <path d="M36 64 Q50 60 64 64" />
+                    <path d="M36 74 Q50 70 62 76" />
+                    <path d="M40 70 Q44 86 50 96" />
+                  </g>
+                </svg>
+                <ul className="text-[12px] text-[#5a4a3a]/85 space-y-1.5">
+                  <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Bright natural daylight, no flash</li>
+                  <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Open palm flat, fingers straight &amp; spread</li>
+                  <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Centre the palm — fill the frame</li>
+                  <li className="flex items-start gap-1.5"><span className="text-[#D4AF37] font-bold mt-0.5">·</span> Plain background, all major lines visible</li>
+                </ul>
+              </div>
               <p className="mt-3 pt-2.5 border-t border-[#D4AF37]/20 text-[10.5px] text-[#5a4a3a]/65 flex items-start gap-1.5" data-testid="text-privacy-exif">
                 <span className="text-[#D4AF37] font-bold">·</span>
                 <span><strong className="text-[#6D2B35]">Your privacy:</strong> photos are re-encoded in your browser before upload — EXIF data, GPS location and device metadata are automatically stripped. Image is processed and discarded; nothing is stored on our servers.</span>
