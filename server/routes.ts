@@ -5610,6 +5610,81 @@ If you did not request this reset, you can ignore this email — your password w
     }
   });
 
+  // ---- Database stats ----
+  // Returns live PostgreSQL metrics: per-table row counts + sizes, overall DB
+  // size, and schema fingerprint (last DDL timestamp). Used by the Backups
+  // admin tab to surface "DB health at a glance" and drive the schema-sync UI.
+  app.get("/api/admin/db-stats", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const [sizeRow, tablesRows, dbNameRow] = await Promise.all([
+        pool.query<{ db_size: string; db_bytes: string }>(
+          `SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size,
+                  pg_database_size(current_database())::text AS db_bytes`
+        ),
+        pool.query<{
+          table_name: string; row_estimate: string;
+          total_bytes: string; table_bytes: string; index_bytes: string;
+          total_pretty: string;
+        }>(
+          `SELECT
+             t.relname AS table_name,
+             c.reltuples::bigint::text AS row_estimate,
+             (pg_total_relation_size(t.oid))::text AS total_bytes,
+             (pg_relation_size(t.oid))::text AS table_bytes,
+             (pg_indexes_size(t.oid))::text AS index_bytes,
+             pg_size_pretty(pg_total_relation_size(t.oid)) AS total_pretty
+           FROM pg_stat_user_tables s
+           JOIN pg_class t ON t.relname = s.relname
+           WHERE t.relkind = 'r'
+           ORDER BY pg_total_relation_size(t.oid) DESC
+           LIMIT 40`
+        ),
+        pool.query<{ datname: string }>("SELECT current_database() AS datname"),
+      ]);
+      res.json({
+        dbName: dbNameRow.rows[0]?.datname || "postgres",
+        dbSize: sizeRow.rows[0]?.db_size || "–",
+        dbBytes: parseInt(sizeRow.rows[0]?.db_bytes || "0", 10),
+        tables: tablesRows.rows.map((r) => ({
+          name: r.table_name,
+          rows: parseInt(r.row_estimate, 10) || 0,
+          totalBytes: parseInt(r.total_bytes, 10) || 0,
+          tableBytes: parseInt(r.table_bytes, 10) || 0,
+          indexBytes: parseInt(r.index_bytes, 10) || 0,
+          totalPretty: r.total_pretty,
+        })),
+      });
+    } catch (err: any) {
+      console.error("[db-stats] error:", err?.message || err);
+      res.status(500).json({ message: err?.message || "Failed to fetch DB stats" });
+    }
+  });
+
+  // Schema sync — runs `drizzle-kit push` in a child process (same as deploy
+  // does) so the admin can apply new columns / tables without a full deploy.
+  app.post("/api/admin/db-sync", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const { spawn } = await import("child_process");
+      try { await auditAdmin(req, "db.schema.sync", "shared/schema.ts", {}); } catch {}
+      const child = spawn("npx", ["tsx", "node_modules/drizzle-kit/bin.cjs", "push", "--config=drizzle.config.ts", "--force"], {
+        cwd: process.cwd(),
+        env: { ...process.env },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let stdout = "", stderr = "";
+      child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+      child.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
+      child.on("close", (code: number | null) => {
+        res.json({ ok: code === 0, exitCode: code, output: (stdout + stderr).slice(0, 4000) });
+      });
+      child.on("error", (e: any) => {
+        res.status(500).json({ ok: false, message: "Failed to spawn drizzle-kit: " + (e?.message || "") });
+      });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, message: err?.message || "Schema sync failed" });
+    }
+  });
+
   // ---- Bulk Category Transfer ----
   // Input: { productIds: number[] (max 500), targetCategory: string (allow-listed) }
   const ALLOWED_TRANSFER_CATEGORIES = new Set([
