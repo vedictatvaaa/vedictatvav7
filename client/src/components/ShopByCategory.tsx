@@ -37,14 +37,14 @@ export default function ShopByCategory({ products }: Props) {
           className="font-serif text-2xl sm:text-3xl lg:text-4xl mb-2.5"
           style={{ color: MAROON }}
         >
-          Eight sacred verticals — pick where to begin
+          Every purchase a story, every story a tradition
         </h2>
         <p
           className="text-sm sm:text-[15px] max-w-2xl mx-auto leading-relaxed"
           style={{ color: `${INK}aa` }}
         >
-          From X-ray verified Rudraksha to GIA-certified gemstones, every category
-          carries its own AI advisor and shastra-aligned curation.
+          Puja essentials hand-picked from temple towns and master artisans across
+          Bharat — each product is verified, energised and made ready for your home altar.
         </p>
       </div>
 
