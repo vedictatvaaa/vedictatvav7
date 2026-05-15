@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,31 @@ export default function BlogPostPage() {
 
   const relatedPosts = (related || []).filter(p => p.slug !== post.slug).slice(0, 3);
 
+  // Build TOC from H2 headings in the post body and inject stable ids onto each H2.
+  const { tocItems, bodyWithIds } = useMemo(() => {
+    const items: Array<{ id: string; text: string }> = [];
+    const used = new Set<string>();
+    const slugify = (s: string) =>
+      s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "section";
+    const html = (post.body || "").replace(/<h2(\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (_m, attrs = "", inner) => {
+      const text = String(inner).replace(/<[^>]+>/g, "").trim();
+      // Reuse an existing id on the heading if present, so TOC anchors always resolve.
+      const existing = String(attrs || "").match(/\sid=["']([^"']+)["']/i);
+      let id: string;
+      if (existing) {
+        id = existing[1];
+      } else {
+        id = slugify(text);
+        let n = 2;
+        while (used.has(id)) { id = `${slugify(text)}-${n++}`; }
+      }
+      used.add(id);
+      items.push({ id, text });
+      return `<h2${existing ? attrs : `${attrs || ""} id="${id}"`}>${inner}</h2>`;
+    });
+    return { tocItems: items, bodyWithIds: html };
+  }, [post.body]);
+
   return (
     <article className="w-full pb-20 bg-[#FBF7EE]" data-testid={`page-blog-post-${post.slug}`}>
       <PageSeo
@@ -153,11 +178,35 @@ export default function BlogPostPage() {
           />
         )}
 
-        <div
-          className="prose prose-stone max-w-none text-[#3d3328] leading-relaxed [&_h2]:font-serif [&_h2]:text-[#6D2B35] [&_h2]:text-2xl [&_h2]:mt-10 [&_h2]:mb-3 [&_h3]:font-serif [&_h3]:text-[#6D2B35] [&_h3]:text-xl [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1.5 [&_strong]:text-[#6D2B35] [&_a]:text-[#6D2B35] [&_a]:underline"
-          dangerouslySetInnerHTML={{ __html: post.body }}
-          data-testid="content-blog-body"
-        />
+        <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-10">
+          <div
+            className="prose prose-stone max-w-none text-[#3d3328] leading-relaxed [&_h2]:font-serif [&_h2]:text-[#6D2B35] [&_h2]:text-2xl [&_h2]:mt-10 [&_h2]:mb-3 [&_h2]:scroll-mt-24 [&_h3]:font-serif [&_h3]:text-[#6D2B35] [&_h3]:text-xl [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1.5 [&_strong]:text-[#6D2B35] [&_a]:text-[#6D2B35] [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: bodyWithIds }}
+            data-testid="content-blog-body"
+          />
+          {tocItems.length >= 2 && (
+            <aside className="hidden lg:block" aria-label="Article contents" data-testid="blog-toc">
+              <div className="sticky top-24">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-[#D4AF37] font-semibold mb-2">On this page</p>
+                <nav>
+                  <ul className="space-y-1.5 border-l-2 border-[#E8DCC4] pl-3">
+                    {tocItems.map((t) => (
+                      <li key={t.id}>
+                        <a
+                          href={`#${t.id}`}
+                          className="block text-xs text-[#5a4a3a] hover:text-[#6D2B35] hover:underline leading-snug"
+                          data-testid={`toc-link-${t.id}`}
+                        >
+                          {t.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            </aside>
+          )}
+        </div>
 
         {post.relatedShopUrl && post.relatedShopLabel && (
           <Card className="p-6 md:p-8 mt-12 bg-[#F5EFE0] border-[#D4AF37]/40" data-testid="card-blog-cta">

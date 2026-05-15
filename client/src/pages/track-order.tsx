@@ -63,13 +63,34 @@ export default function TrackOrderPage() {
     }
   }
 
+  const [emailFromUrl, setEmailFromUrl] = useState(false);
   useEffect(() => {
     if (params?.orderId && !data && !loading) {
-      // Pre-fill but require email entry for verification
       setOrderId(params.orderId);
+    }
+    // Pre-fill email from ?email= query param (e.g. deep-link from confirmation email)
+    if (typeof window !== "undefined") {
+      const qp = new URLSearchParams(window.location.search);
+      const e = qp.get("email");
+      if (e && !email) {
+        setEmail(e);
+        setEmailFromUrl(true);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.orderId]);
+
+  // Auto-trigger lookup once both fields are pre-filled from URL (one-shot).
+  // Gated on emailFromUrl so the request only fires when the email came from ?email=,
+  // not when the user is mid-typing on /track-order/:orderId.
+  const [autoTried, setAutoTried] = useState(false);
+  useEffect(() => {
+    if (!autoTried && params?.orderId && emailFromUrl && orderId && email && !data && !loading && !error) {
+      setAutoTried(true);
+      void lookup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, email, emailFromUrl, params?.orderId]);
 
   return (
     <div className="min-h-screen bg-[#FBF7EE]">

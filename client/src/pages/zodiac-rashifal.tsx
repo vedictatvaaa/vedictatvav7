@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash } from "lucide-react";
+import { useMemo, useState, useRef } from "react";
+import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash, Calendar } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import { RelatedServicesSection } from "@/components/RelatedServices";
 
@@ -292,6 +292,40 @@ export default function ZodiacRashifal() {
     setTimeout(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   };
 
+  // "Find my rashi/sign" DOB helper: resolves a date to the matching sign using each sign's `dates` range.
+  const [dob, setDob] = useState<string>("");
+  const MONTHS: Record<string, number> = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  const parseRangeToken = (tok: string): [number, number] | null => {
+    const m = tok.trim().match(/^([A-Za-z]{3})\s+(\d{1,2})$/);
+    if (!m) return null;
+    const mo = MONTHS[m[1].toLowerCase()];
+    if (mo == null) return null;
+    return [mo, parseInt(m[2], 10)];
+  };
+  const dobMatch = useMemo(() => {
+    if (!dob) return null;
+    // Parse YYYY-MM-DD manually to avoid Date() UTC parsing shifting the day in negative tz offsets.
+    const parts = dob.split("-");
+    if (parts.length !== 3) return null;
+    const m = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (Number.isNaN(m) || Number.isNaN(day) || m < 0 || m > 11 || day < 1 || day > 31) return null;
+    const dayOfYear = (mo: number, dy: number) => mo * 31 + dy;
+    const target = dayOfYear(m, day);
+    for (let i = 0; i < signs.length; i++) {
+      const range = signs[i].dates.split(/[–-]/);
+      if (range.length !== 2) continue;
+      const a = parseRangeToken(range[0]);
+      const b = parseRangeToken(range[1]);
+      if (!a || !b) continue;
+      const start = dayOfYear(a[0], a[1]);
+      const end = dayOfYear(b[0], b[1]);
+      const inRange = start <= end ? target >= start && target <= end : target >= start || target <= end;
+      if (inRange) return { idx: i, sign: signs[i] };
+    }
+    return null;
+  }, [dob, signs]);
+
   const categories = [
     { key: "overview", label: "Yearly Overview", icon: BookOpen },
     { key: "love", label: "Love & Relationships", icon: Heart },
@@ -336,6 +370,53 @@ export default function ZodiacRashifal() {
             >
               <Star className="w-3.5 h-3.5" /> Western
             </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-8 md:py-10 bg-[#FBF7EE] border-b border-[#D4AF37]/15">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <div className="bg-white border border-[#D4AF37]/30 rounded-md p-5 md:p-6" data-testid="rashi-dob-helper">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="h-9 w-9 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4 text-[#6D2B35]" />
+              </div>
+              <div>
+                <h3 className="font-serif text-lg text-[#6D2B35] leading-tight">Don't know your {system === "vedic" ? "rashi" : "sign"}?</h3>
+                <p className="text-xs text-[#5a4a3a]/70 mt-0.5">Enter your date of birth and we'll find it for you.</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="date"
+                value={dob}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setDob(e.target.value)}
+                className="flex-1 h-10 px-3 rounded-md border border-[#D4AF37]/30 bg-white text-[13px] text-[#5a4a3a] focus:outline-none focus:border-[#6D2B35]"
+                data-testid="input-rashi-dob"
+                aria-label="Date of birth"
+              />
+              {dobMatch && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectSign(dobMatch.idx)}
+                  className="h-10 px-4 rounded-md bg-[#6D2B35] text-[#D4AF37] text-[13px] font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#5a1f29] transition-colors"
+                  data-testid="btn-show-my-rashi"
+                >
+                  Show my reading <Sparkles className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {dob && !dobMatch && (
+              <p className="text-xs text-[#5a4a3a]/70 mt-2" data-testid="text-rashi-no-match">Please enter a valid date of birth.</p>
+            )}
+            {dobMatch && (
+              <p className="text-sm text-[#5a4a3a] mt-3" data-testid="text-rashi-result">
+                Your {system === "vedic" ? "rashi" : "sun sign"} is{" "}
+                <strong className="text-[#6D2B35]">{dobMatch.sign.name} {dobMatch.sign.symbol}</strong>
+                {" "}— ruled by {dobMatch.sign.ruler}, {dobMatch.sign.element} element.
+              </p>
+            )}
           </div>
         </div>
       </section>

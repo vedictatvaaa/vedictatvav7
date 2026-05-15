@@ -163,6 +163,16 @@ export default function ResetPasswordPage() {
                     required
                   />
                 </div>
+                {confirm && confirm !== password && (
+                  <p className="text-[10px] text-rose-600 flex items-center gap-1 mt-1" data-testid="text-password-mismatch">
+                    <X className="h-3 w-3" /> Passwords don't match
+                  </p>
+                )}
+                {confirm && confirm === password && password.length >= 8 && (
+                  <p className="text-[10px] text-emerald-600 flex items-center gap-1 mt-1" data-testid="text-password-match">
+                    <CheckCircle2 className="h-3 w-3" /> Passwords match
+                  </p>
+                )}
               </div>
               <Button
                 type="submit"

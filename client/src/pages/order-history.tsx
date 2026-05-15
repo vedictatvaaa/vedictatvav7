@@ -187,6 +187,7 @@ export default function OrderHistory() {
   const [token, setToken] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "confirmed" | "shipped" | "delivered">("all");
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -258,6 +259,30 @@ export default function OrderHistory() {
           new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()
       )
     : [];
+
+  const matchesFilter = (status: string) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "pending") return status === "pending";
+    if (statusFilter === "confirmed") return status === "confirmed" || status === "paid";
+    if (statusFilter === "shipped") return status === "dispatched" || status === "shipped" || status === "out_for_delivery";
+    if (statusFilter === "delivered") return status === "delivered";
+    return true;
+  };
+  const filteredOrders = sortedOrders.filter((o) => matchesFilter(o.status));
+  const filterCounts = {
+    all: sortedOrders.length,
+    pending: sortedOrders.filter((o) => o.status === "pending").length,
+    confirmed: sortedOrders.filter((o) => o.status === "confirmed" || o.status === "paid").length,
+    shipped: sortedOrders.filter((o) => o.status === "dispatched" || o.status === "shipped" || o.status === "out_for_delivery").length,
+    delivered: sortedOrders.filter((o) => o.status === "delivered").length,
+  };
+  const FILTER_CHIPS: Array<{ id: typeof statusFilter; label: string }> = [
+    { id: "all", label: "All" },
+    { id: "pending", label: "Pending" },
+    { id: "confirmed", label: "Confirmed" },
+    { id: "shipped", label: "Shipped" },
+    { id: "delivered", label: "Delivered" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#FDF6EC]">
@@ -397,6 +422,30 @@ export default function OrderHistory() {
               </Button>
             </div>
 
+            {sortedOrders.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4" data-testid="filter-chips">
+                {FILTER_CHIPS.map((c) => {
+                  const count = filterCounts[c.id];
+                  const active = statusFilter === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setStatusFilter(c.id)}
+                      className={`text-xs px-3 h-8 rounded-full border font-medium transition-colors ${
+                        active
+                          ? "bg-[#6D2B35] text-white border-[#6D2B35]"
+                          : "bg-white text-[#6D2B35] border-[#D4AF37]/40 hover-elevate"
+                      }`}
+                      data-testid={`filter-chip-${c.id}`}
+                    >
+                      {c.label} <span className={active ? "text-white/70" : "text-[#5a4a3a]/55"}>({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {sortedOrders.length === 0 && (
               <div
                 className="text-center py-12 text-muted-foreground"
@@ -406,9 +455,15 @@ export default function OrderHistory() {
               </div>
             )}
 
-            {sortedOrders.length > 0 && (
+            {sortedOrders.length > 0 && filteredOrders.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground" data-testid="text-no-filtered-orders">
+                No orders in this status. Try a different filter.
+              </div>
+            )}
+
+            {filteredOrders.length > 0 && (
               <div className="space-y-4">
-                {sortedOrders.map((order) => {
+                {filteredOrders.map((order) => {
                   const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
                   const items = (order.items as Array<{ name: string; quantity: number; price: number }>) ?? [];
 
