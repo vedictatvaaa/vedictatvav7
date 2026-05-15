@@ -26,7 +26,6 @@ import CategoryAdvisor from "@/components/CategoryAdvisor";
 import CategoryAPlusThemed from "@/components/CategoryAPlusThemed";
 import CategoryCrossSell from "@/components/CategoryCrossSell";
 import ShopByCategory from "@/components/ShopByCategory";
-import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.png";
 
 /* ───────────────────────── Parent /shop SEO content ─────────────────────────
  * Single source of truth for the parent (un-filtered) /shop landing.
@@ -36,8 +35,10 @@ import shopHeroFamilyImg from "@assets/generated_images/shop-hero-family-puja.pn
  *   sees real anchor text + URLs to every /shop/:slug landing.
  * - SHOP_PARENT_H1 / SUBTITLE keep the page's keyword H1 above-the-fold.
  */
-const SHOP_PARENT_H1 = "Shop Spiritual & Puja Essentials Online — Rudraksha, Idols, Samagri, Havan Kits";
-const SHOP_PARENT_SUBTITLE = "Every purchase, a story. Every story, a tradition.";
+// SHOP_PARENT_H1 / SHOP_PARENT_SUBTITLE removed alongside the editorial
+// banner per user request (the visual <ShopByCategory> grid is now the
+// primary above-the-fold surface and the H1 lives inside
+// CategoryHeroThemed on themed slugs).
 
 const SHOP_PARENT_FAQS: { q: string; a: string }[] = [
   { q: "Are your idols and samagri really authentic?", a: "Yes — we work directly with traditional artisan families across Banaras (brass), Channapatna and Krishnagar (clay/wood idols), Kumbakonam (panchaloha), Vrindavan (deity dress) and Kanchipuram (silk). Each product page shows the source, material composition and shastra reference. We don't sell mass-machine-stamped substitutes." },
@@ -50,16 +51,10 @@ const SHOP_PARENT_FAQS: { q: string; a: string }[] = [
   { q: "Do you offer pandit booking with the kits?", a: "Yes — for major occasions (Satyanarayan, Griha Pravesh, Rudra Abhishek, Mundan, Namkaran, Wedding), you can add a verified pandit booking from our directory at checkout. Pandit visits your home with the samagri kit ready." },
 ];
 
-const SHOP_CATEGORY_LINKS: { slug: string; label: string; tagline: string; hue: string }[] = [
-  { slug: "rudraksha", label: "Rudraksha", tagline: "1 to 21 mukhi · X-ray verified", hue: "#8C5A3C" },
-  { slug: "puja-samagri", label: "Puja Samagri", tagline: "Roli, kumkum, gangajal & kits", hue: "#C28E5A" },
-  { slug: "idols", label: "Idols & Murtis", tagline: "Brass · Panchaloha · Marble", hue: "#E8C97A" },
-  { slug: "havan-samagri", label: "Havan Samagri", tagline: "Pure yajna ingredients", hue: "#B86F4A" },
-  { slug: "brass-copperware", label: "Brass & Copperware", tagline: "Diyas, bells, lotas, thalis", hue: "#D4A256" },
-  { slug: "wearables", label: "Wearables", tagline: "Energised malas & bracelets", hue: "#5C7548" },
-  { slug: "dhoti-kurta", label: "Dhoti & Kurta", tagline: "Pure cotton pooja wear", hue: "#9C3340" },
-  { slug: "gemstones", label: "Gemstones", tagline: "Lab-certified jyotish ratna", hue: "#4A7BA6" },
-];
+// SHOP_CATEGORY_LINKS removed alongside the second (no-image) "Shop by
+// Category" tile grid. The visual <ShopByCategory> component above
+// already emits the same /shop/:slug anchors for crawlers, so internal
+// link coverage is preserved.
 
 // Brand palette — tile-grid graduation
 const CREAM = "#FBF7EE";
@@ -716,78 +711,10 @@ export default function Shop() {
         />
       )}
 
-      {/* ── Editorial banner (parent /shop or non-themed slugs) ── */}
-      {!categoryTheme && (
-      <section className="border-b" style={{ borderColor: `${INK}11`, background: CREAM_DEEP }} data-testid="hero-shop">
-        <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-14 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          <div className="lg:col-span-7 order-2 lg:order-1">
-            <div className="text-[11px] tracking-[0.3em] uppercase mb-3 sm:mb-4" style={{ color: GOLD }}>
-              The Sacred Marketplace
-            </div>
-            {categoryContent ? (
-              <h1
-                className="font-serif text-2xl sm:text-3xl lg:text-[34px] leading-[1.1] mb-3"
-                style={{ color: MAROON, fontWeight: 500 }}
-                data-testid="text-shop-h1"
-              >
-                {categoryContent.h1}
-              </h1>
-            ) : (
-              <>
-                <h1
-                  className="font-serif text-2xl sm:text-3xl lg:text-[34px] leading-[1.1] mb-2"
-                  style={{ color: MAROON, fontWeight: 500 }}
-                  data-testid="text-shop-h1"
-                >
-                  {SHOP_PARENT_H1}
-                </h1>
-                <p className="font-serif text-base sm:text-lg italic mb-3" style={{ color: `${MAROON}cc` }}>
-                  {SHOP_PARENT_SUBTITLE}
-                </p>
-              </>
-            )}
-            <p className="text-sm sm:text-[15px] max-w-xl leading-relaxed mb-6 sm:mb-8" style={{ color: `${INK}99` }}>
-              {categoryContent?.intro || "Hand-picked from temple towns and master artisans across Bharat. Each item is verified, energised, and ready for your home altar."}
-            </p>
-            <div className="grid grid-cols-3 gap-6 max-w-md" style={{ color: INK }}>
-              {[
-                { v: `${totalCount > 0 ? totalCount.toLocaleString() : "2,400"}+`, l: "Sacred items" },
-                { v: "180+", l: "Master artisans" },
-                { v: "4.9", l: "Avg rating" },
-              ].map((s) => (
-                <div key={s.l}>
-                  <div className="font-serif text-xl sm:text-2xl font-medium" style={{ color: MAROON }}>{s.v}</div>
-                  <div className="text-[10px] sm:text-xs uppercase tracking-wider mt-1" style={{ color: `${INK}77` }}>{s.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="lg:col-span-5 order-1 lg:order-2">
-            <div className="relative rounded-md overflow-hidden shadow-md" style={{ aspectRatio: "4 / 3" }}>
-              <img
-                src={shopHeroFamilyImg}
-                alt="A multigenerational Indian family performing puja at a beautifully decorated home altar"
-                width={800}
-                height={600}
-                loading="eager"
-                fetchPriority="high"
-                decoding="sync"
-                className="absolute inset-0 w-full h-full object-cover"
-                data-testid="img-shop-hero-family"
-              />
-              {/* Soft cream wash for text-readability + brand cohesion */}
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background:
-                    `linear-gradient(180deg, transparent 55%, ${CREAM_DEEP}cc 100%)`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-      )}
+      {/* ── Editorial banner REMOVED per user request — the visual
+          ShopByCategory tile grid below is now the primary above-the-fold
+          surface on /shop. The themed CategoryHeroThemed (rendered above
+          for /shop/<themed-slug>) still ships on category landings. ── */}
 
       {/* ── Shop by Category (parent /shop only, no active search) ── */}
       {!categoryTheme && !searchQuery && (
@@ -1078,47 +1005,13 @@ export default function Shop() {
           </ol>
         </nav>
 
-        {/* Shop by Category — crawlable internal links to every /shop/:slug landing.
-            Only shown on the parent /shop landing (not on a category or search). */}
-        {isShopParent && (
-          <section className="mb-8 sm:mb-10" aria-labelledby="shop-by-category-heading" data-testid="section-shop-by-category">
-            <div className="flex items-end justify-between mb-3 sm:mb-4 flex-wrap gap-2">
-              <h2
-                id="shop-by-category-heading"
-                className="font-serif text-lg sm:text-xl"
-                style={{ color: MAROON, fontWeight: 500 }}
-              >
-                Shop by Category
-              </h2>
-              <span className="text-[10px] uppercase tracking-[0.2em]" style={{ color: `${INK}55` }}>
-                {SHOP_CATEGORY_LINKS.length} sacred collections
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 sm:gap-3">
-              {SHOP_CATEGORY_LINKS.map((cat) => (
-                <Link
-                  key={cat.slug}
-                  href={`/shop/${cat.slug}`}
-                  className="group flex flex-col items-start p-3 sm:p-3.5 rounded-md border bg-white hover-elevate active-elevate-2 transition-colors"
-                  style={{ borderColor: `${INK}14` }}
-                  data-testid={`link-shop-category-${cat.slug}`}
-                >
-                  <span
-                    className="w-9 h-9 rounded-md mb-2 flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${cat.hue} 0%, ${cat.hue}66 100%)` }}
-                    aria-hidden="true"
-                  />
-                  <span className="text-[12.5px] font-semibold leading-tight" style={{ color: INK }}>
-                    {cat.label}
-                  </span>
-                  <span className="text-[10.5px] mt-0.5 leading-snug line-clamp-2" style={{ color: `${INK}88` }}>
-                    {cat.tagline}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Second "Shop by Category" tile grid REMOVED per user request —
+            this was the no-image gradient-swatch list. The visual
+            <ShopByCategory> component (with real product photos)
+            higher up on the page is the single source of truth for
+            category browsing. SEO-wise the same /shop/:slug links are
+            still emitted by the visual ShopByCategory + the breadcrumb
+            + the SPA router, so internal-link coverage is preserved. */}
 
         <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
           <div className="text-sm" style={{ color: `${INK}99` }}>
