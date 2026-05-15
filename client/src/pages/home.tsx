@@ -753,21 +753,20 @@ export default function Home() {
           decoding="async"
           data-testid="img-bhandara-seva"
         />
-        {/* Dark wash — heavier on the left so the headline + CTA stay
-            legible regardless of the artwork beneath. */}
+        {/* Dark wash — even on both sides for centered content. */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(90deg, rgba(20,11,16,0.85) 0%, rgba(20,11,16,0.7) 45%, rgba(20,11,16,0.4) 100%)",
+              "linear-gradient(180deg, rgba(20,11,16,0.75) 0%, rgba(20,11,16,0.7) 50%, rgba(20,11,16,0.75) 100%)",
           }}
           aria-hidden="true"
         />
 
         <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14 text-white">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto text-center">
             {/* Eyebrow + live meals counter (carries the impact metric) */}
-            <div className="flex items-center gap-3 flex-wrap mb-3">
+            <div className="flex items-center justify-center gap-3 flex-wrap mb-3">
               <span
                 className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold"
                 data-testid="text-bhandara-eyebrow"
@@ -793,7 +792,7 @@ export default function Home() {
               Devotion that goes <span className="text-[#D4AF37]">beyond your home</span>
             </h2>
             <p
-              className="text-[13.5px] md:text-[14.5px] text-white/80 mt-3 leading-relaxed max-w-xl"
+              className="text-[13.5px] md:text-[14.5px] text-white/80 mt-3 leading-relaxed max-w-xl mx-auto"
               data-testid="text-bhandara-body"
             >
               Every order helps us serve bhandara &mdash; sharing food, care and
@@ -807,7 +806,7 @@ export default function Home() {
             </p>
 
             {/* Single focal CTA — drives to /donations */}
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center">
               <Link href="/donations">
                 <Button
                   className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
@@ -1158,7 +1157,7 @@ export default function Home() {
         />
 
         <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14">
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto text-center">
             <div className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold mb-3">
               Vedic Astrology · Jyotish
             </div>
@@ -1172,7 +1171,7 @@ export default function Home() {
             </h2>
 
             {/* Single focal CTA */}
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center">
               <Link href="/astrology">
                 <Button
                   className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
