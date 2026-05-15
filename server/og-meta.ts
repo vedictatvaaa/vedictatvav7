@@ -397,6 +397,128 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
 
+  // ── Online Puja Store hub + 11 category SEO landings ──
+  {
+    match: "/online-puja-store",
+    card: {
+      title: "Buy Puja Samagri Online · Hindu Puja Essentials Store · Vedic Tatva",
+      description:
+        "Authentic puja samagri online — diyas, incense, havan samagri, idols, rudraksha, puja kits and spiritual products for every Hindu ritual and festival.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Vedic Tatva online puja store — authentic Hindu puja essentials",
+    },
+  },
+  {
+    match: "/rudraksha-collection",
+    card: {
+      title: "Original Rudraksha Online — 1 to 21 Mukhi, Lab-Certified · Vedic Tatva",
+      description:
+        "Hand-picked Nepali and Indonesian rudraksha beads, lab-certified and energised by our pandits. 1 mukhi to 21 mukhi plus rare beads — the wearable Shiva tattva.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Original lab-certified rudraksha beads and malas · Vedic Tatva",
+    },
+  },
+  {
+    match: "/brass-diyas",
+    card: {
+      title: "Brass Diyas Online — Akhand Jyot, Panchmukhi & Decorative · Vedic Tatva",
+      description:
+        "Hand-crafted brass diyas — akhand jyot, panchmukhi, hanging samai and aarti diyas. Pure pital, sourced from Moradabad and Madurai artisans.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Hand-crafted brass diyas and oil lamps for Hindu puja · Vedic Tatva",
+    },
+  },
+  {
+    match: "/sambrani-cups",
+    card: {
+      title: "Sambrani Cups · Natural Loban Dhoop for Puja & Vastu · Vedic Tatva",
+      description:
+        "Pandit-recommended sambrani cups in pure benzoin, guggulu and dasangam herbs. Smokeless, no chemicals — for sandhya puja, vastu shuddhi and aura cleansing.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Natural sambrani loban dhoop cups for daily puja · Vedic Tatva",
+    },
+  },
+  {
+    match: "/havan-cups",
+    card: {
+      title: "Havan Cups — Complete Yajna at Home in 15 Minutes · Vedic Tatva",
+      description:
+        "Pre-filled havan cups with 16-herb samagri, pure cow ghee and havan wood. Smokeless, apartment-safe — light one cup and perform a full shastric havan.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Pre-filled havan cups for home yajna · Vedic Tatva",
+    },
+  },
+  {
+    match: "/incense-dhoop",
+    card: {
+      title: "Premium Incense & Dhoop · Hand-Rolled in Mysore · Vedic Tatva",
+      description:
+        "Hand-rolled masala agarbatti, sandalwood dhoop sticks and cone dhoop with pure essential oils. The classic Mysore temple fragrance — no synthetic perfume.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Premium hand-rolled incense and dhoop sticks · Vedic Tatva",
+    },
+  },
+  {
+    match: "/crystal-healing",
+    card: {
+      title: "Crystal Healing — Sphatik, Pyramids & Chakra Stones · Vedic Tatva",
+      description:
+        "Lab-certified, energised healing crystals — sphatik shree yantra, rose quartz, amethyst, citrine, black tourmaline and chakra balancing kits with placement guide.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Lab-certified healing crystals and sphatik yantras · Vedic Tatva",
+    },
+  },
+  {
+    match: "/puja-kits",
+    card: {
+      title: "Complete Puja Kits — Satyanarayan, Griha Pravesh, Diwali · Vedic Tatva",
+      description:
+        "Pandit-curated complete puja kits — every samagri inside, with a printed vidhi guide. One box, one puja, zero last-minute panic.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Pandit-curated complete puja kits with vidhi guide · Vedic Tatva",
+    },
+  },
+  {
+    match: "/festival-collections",
+    card: {
+      title: "Festival Collections — Diwali, Navratri, Janmashtami Kits · Vedic Tatva",
+      description:
+        "Every Hindu festival kit and decor, released 4–6 weeks ahead. Diwali, Navratri, Janmashtami, Ganesh Chaturthi, Holi, Karva Chauth, Mahashivratri.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Hindu festival puja kits and decor — Diwali, Navratri & more · Vedic Tatva",
+    },
+  },
+  {
+    match: "/vastu-products",
+    card: {
+      title: "Vastu Products & Cures — Yantras, Pyramids, Tortoise · Vedic Tatva",
+      description:
+        "Direction-specific vastu cures — sphatik shree yantra, crystal pyramid, brass kachhua and shanti yantras with placement and activation guide from our acharyas.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Vastu yantras and direction-specific cures · Vedic Tatva",
+    },
+  },
+  {
+    match: "/spiritual-jewelry",
+    card: {
+      title: "Spiritual Jewelry — Rudraksha, Sphatik & Navratna · Vedic Tatva",
+      description:
+        "Energised spiritual jewelry — silver-capped rudraksha pendants, sphatik and tulsi malas, navratna rings and chakra bracelets. Hallmarked silver, lab-certified stones.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Energised Vedic spiritual jewelry — rudraksha, sphatik, navratna · Vedic Tatva",
+    },
+  },
+  {
+    match: "/temple-decor",
+    card: {
+      title: "Temple Decor for Home Mandir — Brass Bells, Singhasan, Toran · Vedic Tatva",
+      description:
+        "Temple-grade brass bells, hand-carved deity thrones (singhasan), prabhavali backdrops, toran, kalash and aarti accessories — sourced from temple-supply artisans.",
+      image: "/og/og-puja-essentials.jpg",
+      alt: "Home mandir temple decor and accessories · Vedic Tatva",
+    },
+  },
+
   // ── Japa Counter (free PWA tool, ranks for "online jap counter" cluster) ──
   // Matches /japa, /jap, /japa-counter — exact only. Per-mantra
   // landings /japa/<slug> are handled by buildMantraOgCard() below so

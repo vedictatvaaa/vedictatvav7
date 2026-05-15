@@ -2192,6 +2192,986 @@ const NAKSHATRA_PREDICTIONS: SeoLandingPageProps = {
 };
 
 // ---------------------------------------------------------------------------
+// SHOP / PUJA-ESSENTIALS SEO HUB + 11 CATEGORY LANDINGS
+// ---------------------------------------------------------------------------
+
+const ONLINE_PUJA_STORE: SeoLandingPageProps = {
+  seoTitle: "Buy Puja Samagri Online | Hindu Puja Essentials Store | Vedic Tatva",
+  seoDescription:
+    "Shop authentic puja essentials online at Vedic Tatva. Buy diyas, incense sticks, camphor, havan samagri, idols, rudraksha, puja kits, and spiritual products for all Hindu rituals and festivals.",
+  seoKeywords:
+    "puja samagri online, buy puja items online, hindu puja essentials, online spiritual store, pooja items shop, vedic puja products, online puja store India, authentic puja samagri, temple essentials online, spiritual products India, puja accessories online, devotional products store, religious items online, hindu ritual products, online pooja samagri shop, buy havan samagri online, brass diya online, copper kalash for puja, agarbatti online India, dhoop sticks for puja, kumkum and roli online, puja thali set online, rudraksha mala online, puja kits online India, temple decor products",
+  canonical: "/online-puja-store",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+  ],
+  eyebrow: "Authentic Hindu Puja Essentials",
+  h1: "Buy Authentic Puja Essentials Online at Vedic Tatva",
+  subtitle:
+    "From diyas, incense sticks, havan samagri, rudraksha malas and complete puja kits to divine idols and temple accessories — every sacred item for daily worship, havans and festivals, delivered across India.",
+  heroCTAs: [
+    { label: "Shop All Puja Samagri", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Full Store", href: "/shop", variant: "outline" },
+  ],
+  trustChips: ["Sourced from Kashi & Gaya", "Free Shipping over ₹499", "50,000+ Devotee Families"],
+  intro:
+    "Welcome to Vedic Tatva, your trusted destination for authentic puja samagri, spiritual products and Hindu ritual essentials. From diyas, incense sticks, havan samagri, rudraksha malas and puja kits to divine idols and temple accessories — we bring everything needed for your spiritual journey in one sacred place. Our carefully selected collection is inspired by Vedic traditions and designed to support daily worship, festivals, havans, meditation and temple rituals. Whether you're preparing for Diwali, Navratri, Griha Pravesh, Satyanarayan Puja or personal sadhana, Vedic Tatva offers premium-quality puja essentials delivered across India.",
+  sections: [
+    {
+      heading: "Shop by category — every essential, one trusted store",
+      bullets: [
+        "Diyas & Lamps — brass diyas, akhand jyot, decorative oil lamps",
+        "Incense & Dhoop — premium agarbatti, sandalwood dhoop, sambrani cups",
+        "Havan Products — havan samagri, havan wood, ghee, yajna kits",
+        "Idols & Murti — brass Ganesh, Lakshmi, Shiva Parivar, Hanuman",
+        "Rudraksha & Malas — 1 to 21 mukhi rudraksha, sphatik, tulsi malas",
+        "Puja Kits — Satyanarayan, Griha Pravesh, Navratri, Diwali kits",
+        "Crystal Healing — sphatik shree yantra, crystal pyramids, healing stones",
+        "Vastu Products — vastu yantras, kachhua, pyramids, fengshui-vastu cures",
+        "Spiritual Jewelry — silver-capped rudraksha, gemstone pendants",
+        "Temple Decor — home mandir, brass bells, throne stands, kalash",
+      ],
+    },
+    {
+      heading: "Why devotees trust Vedic Tatva for puja samagri",
+      bullets: [
+        "Authentic samagri sourced directly from Kashi, Gaya, Haridwar and Ujjain",
+        "Pandit-verified quality — the same items our verified Vedic Pandits use",
+        "Free shipping pan-India on every order above ₹499",
+        "GST-compliant invoicing and easy returns",
+        "Curated festival collections released ahead of every major Hindu utsav",
+        "4.8★ from 50,000+ verified buyer reviews",
+      ],
+    },
+    {
+      heading: "Complete pooja samagri for home temple, havans & festivals",
+      bullets: [
+        "Daily nitya puja — diya, agarbatti, kumkum, roli, akshat, panchamrit cups",
+        "Festival pujas — Diwali, Navratri, Janmashtami, Ganesh Chaturthi, Holi",
+        "Life-event pujas — Griha Pravesh, Satyanarayan, baby naming, marriage",
+        "Havans & yajnas — havan kund, samagri, wood sticks, ghee, kalash",
+        "Meditation & sadhana — japa malas, asana mats, conch (shankh), bell",
+        "Temple decor — home mandir, throne, backdrops, brass aarti accessories",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is the puja samagri sold on Vedic Tatva authentic?", a: "Yes — every product is sourced from traditional Vedic sources in Kashi, Gaya, Haridwar and Ujjain, and verified by our network of practising Vedic Pandits. We sell only what we ourselves use in actual pujas." },
+    { q: "Do you deliver puja samagri across India?", a: "Yes — we ship pan-India with free delivery on orders above ₹499. Most metros receive orders in 2–4 days, smaller towns within 5–7 days." },
+    { q: "Can I buy a complete puja kit instead of individual items?", a: "Absolutely — our Puja Kits collection bundles everything you need for Satyanarayan, Griha Pravesh, Diwali, Navratri and other rituals into a single ready-to-use pack, with a printed vidhi guide." },
+    { q: "Are these the same items used by your verified Pandits?", a: "Yes — our Pandit network sources samagri from this same store, which is why every item is ritually compliant and not a generic religious-novelty product." },
+    { q: "Do you offer GST invoices and bulk orders for temples?", a: "Yes — every order ships with a GST-compliant invoice. For temples, ashrams and bulk festival orders, write to us via the Contact page for a custom quote." },
+  ],
+  finalCtaTitle: "Bring the temple home — every puja essential, in one trusted store",
+  finalCtaSubtitle: "Authentic Vedic samagri, verified by practising Pandits. Free shipping over ₹499.",
+  finalCtaButtons: [
+    { label: "Shop All Puja Samagri", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Talk to a Pandit", href: "/pandits", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Rudraksha Collection", href: "/rudraksha-collection" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Festival Collections", href: "/festival-collections" },
+    { label: "Vastu Products", href: "/vastu-products" },
+    { label: "Temple Decor", href: "/temple-decor" },
+  ],
+  schema: { type: "service", serviceName: "Online Puja Samagri Store" },
+};
+
+const RUDRAKSHA_COLLECTION: SeoLandingPageProps = {
+  seoTitle: "Rudraksha Collection — Buy Original 1 to 21 Mukhi Rudraksha Online | Vedic Tatva",
+  seoDescription:
+    "Shop original Rudraksha online — 1 mukhi to 21 mukhi, Nepali & Indonesian, lab-certified beads and energised rudraksha malas. Authentic Vedic rudraksha for protection, prosperity and spiritual growth.",
+  seoKeywords:
+    "rudraksha collection, original rudraksha online, 1 mukhi rudraksha, 5 mukhi rudraksha, 7 mukhi rudraksha, 11 mukhi rudraksha, 14 mukhi rudraksha, gauri shankar rudraksha, ganesh rudraksha, nepali rudraksha, indonesian rudraksha, rudraksha mala online, certified rudraksha, energised rudraksha, rudraksha for prosperity, rudraksha benefits, buy rudraksha bead, sphatik rudraksha mala",
+  canonical: "/rudraksha-collection",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Rudraksha Collection", url: "/rudraksha-collection" },
+  ],
+  eyebrow: "Lab-Certified Rudraksha",
+  h1: "Original Rudraksha Collection — 1 Mukhi to 21 Mukhi",
+  subtitle:
+    "Hand-picked Nepali and Indonesian rudraksha beads, lab-certified for authenticity and energised by our pandits before dispatch. Choose by mukhi for the spiritual outcome you seek.",
+  heroCTAs: [
+    { label: "Shop Rudraksha", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Talk to an Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Lab-Certified", "Energised by Pandits", "Nepali & Indonesian"],
+  intro:
+    "Rudraksha — the tear of Lord Shiva — is the most sacred bead in Sanatana Dharma. Each mukhi (face) carries the energy of a specific deity or planet and is worn for a defined spiritual purpose. Vedic Tatva's rudraksha collection includes 1 mukhi to 21 mukhi, plus rare beads like Gauri Shankar, Ganesh and Trijuti rudraksha, sourced from authentic Nepali and Indonesian growers, lab-certified for genuineness and energised by our pandits with the prescribed mantra siddhi before dispatch.",
+  sections: [
+    {
+      heading: "Popular rudraksha by mukhi and outcome",
+      bullets: [
+        "1 Mukhi — Lord Shiva, supreme consciousness, moksha",
+        "5 Mukhi — Lord Kalagni, peace of mind, blood pressure, most worn daily bead",
+        "6 Mukhi — Kartikeya, Venus energy, charm, learning, family harmony",
+        "7 Mukhi — Goddess Mahalakshmi, wealth, business growth, removes Shani dosha",
+        "8 Mukhi — Lord Ganesh, removes obstacles, success in new ventures",
+        "11 Mukhi — Lord Hanuman, courage, leadership, victory over enemies",
+        "14 Mukhi — Hanuman / Shani, intuition, third-eye awakening, protection",
+        "Gauri Shankar — Shiva-Parvati, marital harmony, conjugal bliss",
+      ],
+    },
+    {
+      heading: "How to identify an original rudraksha",
+      bullets: [
+        "Visible, well-defined mukhi lines running from top to bottom",
+        "Sinks in water (most genuine beads, though not absolute)",
+        "X-ray or lab certificate confirming the mukhi count",
+        "Natural surface texture — never perfectly smooth or painted",
+        "All Vedic Tatva beads ship with a tamper-evident lab certificate",
+      ],
+    },
+    {
+      heading: "How to wear and care for your rudraksha",
+      bullets: [
+        "Cleanse with gangajal or fresh water before first wear",
+        "Energise with the Mahamrityunjaya or Om Namah Shivaya mantra (108 times)",
+        "Wear on a Monday morning after bath, ideally during Shravan",
+        "Avoid leather contact and remove during cremation rituals",
+        "Re-energise yearly on Mahashivratri or Sawan Somwar",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Which rudraksha should I wear?", a: "5 Mukhi is safe for everyone and worn daily. For specific outcomes — wealth (7 Mukhi), obstacles (8 Mukhi), courage (11 Mukhi) — match the bead to your goal or consult our astrologers for a personalised recommendation." },
+    { q: "Are your rudraksha beads original?", a: "Yes — every bead is sourced from authenticated Nepali or Indonesian growers and ships with a tamper-evident lab certificate confirming mukhi count and genuineness." },
+    { q: "Should the rudraksha be energised before wearing?", a: "Yes — every Vedic Tatva rudraksha is pre-energised by our pandits with the prescribed mantra siddhi. You can also re-energise it yourself on Mahashivratri or any Sawan Monday." },
+    { q: "Can women wear rudraksha?", a: "Absolutely — rudraksha is for every devotee regardless of gender. Some traditions advise removing it during the menstrual cycle as a respectful precaution, not a prohibition." },
+    { q: "What's the difference between Nepali and Indonesian rudraksha?", a: "Nepali rudraksha are larger, with deeper mukhi lines and traditionally considered more potent — they're also more expensive. Indonesian beads are smaller, more affordable, and equally authentic for daily wear." },
+  ],
+  finalCtaTitle: "Find your rudraksha — energised, certified, sacred",
+  finalCtaSubtitle: "Original 1 to 21 mukhi rudraksha with lab certificate and pandit energisation.",
+  finalCtaButtons: [
+    { label: "Shop Rudraksha Collection", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Get Astrologer Recommendation", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Spiritual Jewelry", href: "/spiritual-jewelry" },
+    { label: "Crystal Healing", href: "/crystal-healing" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Original Rudraksha Bead Collection" },
+};
+
+const BRASS_DIYAS: SeoLandingPageProps = {
+  seoTitle: "Brass Diyas Online — Buy Akhand Jyot, Decorative & Traditional Oil Lamps | Vedic Tatva",
+  seoDescription:
+    "Shop authentic brass diyas online — akhand jyot, panchmukhi diyas, decorative oil lamps and traditional puja diyas. Hand-crafted brass diyas for daily puja, Diwali and home temple lighting.",
+  seoKeywords:
+    "brass diya online, brass diyas, akhand jyot diya, panchmukhi diya, decorative diyas for puja, traditional oil lamps, brass diya for puja, diwali diyas online, hand carved brass diya, hanging brass diya, brass aarti diya, kuber diya, gajalakshmi diya, ashtadhatu diya",
+  canonical: "/brass-diyas",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Brass Diyas", url: "/brass-diyas" },
+  ],
+  eyebrow: "Hand-Crafted Brass Diyas",
+  h1: "Brass Diyas Online — Akhand Jyot, Panchmukhi & Decorative Lamps",
+  subtitle:
+    "Hand-crafted brass diyas for daily puja, akhand jyot, Diwali lighting and home mandir aarti — sourced from traditional artisan clusters in Moradabad and Madurai.",
+  heroCTAs: [
+    { label: "Shop Brass Diyas", href: "/spiritual-essentials", variant: "primary" },
+    { label: "View Puja Kits", href: "/puja-kits", variant: "outline" },
+  ],
+  trustChips: ["Hand-Crafted Brass", "Pure Pital Finish", "Akhand-Jyot Compatible"],
+  intro:
+    "Lighting a diya is the simplest and most powerful act in Sanatana Dharma — agni is the messenger to every devata. Vedic Tatva's brass diya collection includes traditional akhand jyot lamps that burn continuously for 24 hours, panchmukhi five-wick diyas for major festivals, decorative hanging lamps for the home mandir, and aarti diyas for daily puja. Every piece is hand-crafted in pure pital brass by master artisans in Moradabad and Madurai, finished to last generations.",
+  sections: [
+    {
+      heading: "Choose the right diya for your puja",
+      bullets: [
+        "Akhand Jyot Diya — large oil reservoir, burns continuously for 24+ hours during Navratri / Diwali",
+        "Panchmukhi Diya — five wicks for Lakshmi Puja, festivals and special pujas",
+        "Standard Daily Diya — single wick for nitya puja, lightweight and easy to clean",
+        "Aarti Diya with Handle — for circling deity during aarti, ergonomic grip",
+        "Hanging Brass Lamp (Samai) — temple-style hanging diya for home mandir",
+        "Kuber Diya — north-facing wealth diya, burnt on Dhanteras and Friday evenings",
+      ],
+    },
+    {
+      heading: "Care and lighting tips",
+      bullets: [
+        "Light with cotton wick (batti) and pure cow ghee for maximum subtle benefit",
+        "Sesame oil is acceptable substitute for daily puja and longevity diyas",
+        "Wipe brass with lemon-salt paste once a month to retain shine",
+        "Never leave akhand jyot unattended — place on fireproof brass plate",
+        "Replace wick on every Amavasya for fresh sankalp",
+      ],
+    },
+    {
+      heading: "When to light each kind of diya",
+      bullets: [
+        "Akhand jyot — Navratri (9 days), Diwali night, Annapurna jayanti, sankalp pujas",
+        "Panchmukhi — Lakshmi Puja, Satyanarayan Puja, Friday evenings",
+        "Aarti diya — daily morning and evening aarti at home mandir",
+        "Kuber diya — Dhanteras, Akshaya Tritiya, every Friday for wealth flow",
+        "Samai (hanging) — daily lighting at the threshold or main puja room",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Are these diyas pure brass?", a: "Yes — every diya is solid pital (pure brass), not brass-coated. Pure brass has spiritual shastric sanction for puja and develops a beautiful patina over decades of use." },
+    { q: "Will the akhand jyot diya really burn 24 hours?", a: "Yes — our akhand jyot diyas have a deep oil reservoir designed to hold enough cow ghee or sesame oil for a continuous 24-hour burn, when used with a long cotton wick." },
+    { q: "Can I use these diyas with electric bulbs instead of oil?", a: "Some decorative diyas can hold an LED candle for safety — but for actual puja, oil-and-wick is shastrically required. Agni from real flame is what carries the offering." },
+    { q: "How do I clean tarnished brass?", a: "Make a paste of lemon juice and salt, rub gently with a soft cloth, rinse and dry. For deep cleaning use Brasso or tamarind paste. Avoid harsh detergents." },
+    { q: "Do you ship brass diyas safely?", a: "Yes — every piece is bubble-wrapped and boxed with corner protection. We offer free replacement for any transit damage reported within 48 hours of delivery." },
+  ],
+  finalCtaTitle: "Bring divine light home — hand-crafted brass diyas for every puja",
+  finalCtaSubtitle: "Akhand jyot, panchmukhi, hanging samai and aarti diyas, free shipping over ₹499.",
+  finalCtaButtons: [
+    { label: "Shop Brass Diyas", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Puja Kits", href: "/puja-kits", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Temple Decor", href: "/temple-decor" },
+    { label: "Festival Collections", href: "/festival-collections" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Incense & Dhoop", href: "/incense-dhoop" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Hand-crafted Brass Diyas & Oil Lamps" },
+};
+
+const SAMBRANI_CUPS: SeoLandingPageProps = {
+  seoTitle: "Sambrani Cups Online — Buy Loban Dhoop Cups for Puja & Vastu | Vedic Tatva",
+  seoDescription:
+    "Shop authentic sambrani cups online — natural loban, benzoin and traditional dhoop cups for daily puja, vastu shuddhi and aura cleansing. Smokeless, long-lasting and pandit-recommended sambrani.",
+  seoKeywords:
+    "sambrani cups online, sambrani dhoop cups, loban cups, benzoin sambrani, natural sambrani, traditional sambrani, sambrani for vastu, smokeless sambrani, pandit sambrani, lobaan dhoop, gugglu sambrani, dasangam sambrani, sambrani for negative energy, sambrani for puja",
+  canonical: "/sambrani-cups",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Sambrani Cups", url: "/sambrani-cups" },
+  ],
+  eyebrow: "Natural Loban Dhoop",
+  h1: "Sambrani Cups — Natural Loban Dhoop for Puja & Vastu Shuddhi",
+  subtitle:
+    "Pandit-recommended sambrani cups made from pure benzoin resin, guggulu and dasangam herbs — for daily evening puja, aura cleansing and vastu shuddhi of every room.",
+  heroCTAs: [
+    { label: "Shop Sambrani Cups", href: "/spiritual-essentials", variant: "primary" },
+    { label: "View Incense & Dhoop", href: "/incense-dhoop", variant: "outline" },
+  ],
+  trustChips: ["Natural Resin", "Smokeless Burn", "Vastu-Approved"],
+  intro:
+    "Sambrani — also called loban or saambrani dhoop — is the centuries-old Vedic dhoop made from pure benzoin resin, guggulu, dasangam herbs and natural cow-dung. Lit at sandhya (evening twilight) in every traditional Hindu home, sambrani is the most powerful tool for vastu shuddhi (space purification), aura cleansing and dispelling negative energy. Vedic Tatva's sambrani cups are hand-rolled in small batches with no chemical bonding agents, giving a clean, fragrant smoke that lasts 25 to 30 minutes per cup.",
+  sections: [
+    {
+      heading: "Why every Hindu home needs sambrani",
+      bullets: [
+        "Purifies vastu and dispels negative energy (drishti dosha) from every room",
+        "Recommended at sandhya (evening twilight) — the most spiritually charged time",
+        "Traditionally believed to freshen the air and repel mosquitoes",
+        "Lifts mood, deepens meditation and prepares mind for sleep",
+        "Mandatory in shradh, pitra paksha and bhoomi puja rituals",
+      ],
+    },
+    {
+      heading: "Types of sambrani we offer",
+      bullets: [
+        "Natural Benzoin Sambrani — pure loban resin, the classic temple fragrance",
+        "Guggulu Sambrani — traditionally used for graha shanti and planetary balancing",
+        "Dasangam Sambrani — 10-herb blend for vastu shuddhi and aura clearing",
+        "Sandalwood Sambrani — premium chandan-blended, for meditation rooms",
+        "Cow-Dung Sambrani — Ayurvedic, gentle smoke ideal for nursery and elderly homes",
+      ],
+    },
+    {
+      heading: "How to use a sambrani cup",
+      bullets: [
+        "Place on a metal or ceramic plate — never directly on wood or floor",
+        "Light the top edge until it glows red, then blow out the flame",
+        "Carry around every room clockwise during sandhya for full vastu shuddhi",
+        "Burn time: 25–30 minutes per cup, leaves only fine ash",
+        "Use 1 cup daily in the puja room, 1 weekly in every other room",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "What's the difference between sambrani and agarbatti?", a: "Agarbatti are bamboo-stick incense for fragrance. Sambrani is solid resin dhoop — much more potent, used specifically for vastu shuddhi and dispelling negative energy. Sambrani is the traditional shastric dhoop." },
+    { q: "Is sambrani smoke harmful?", a: "Pure natural sambrani — with no chemicals or synthetic fragrance — has been used in Indian homes for centuries. Always burn in a ventilated room and use just enough; one cup per room is sufficient." },
+    { q: "Can I burn sambrani during pregnancy?", a: "Mild natural cow-dung sambrani is fine in a well-ventilated room. Avoid heavy guggulu varieties during pregnancy and consult your doctor for any respiratory conditions." },
+    { q: "When is the best time to burn sambrani?", a: "Sandhya — evening twilight, between sunset and 8 pm — is the shastric prescription. This is when the home is most receptive to vastu shuddhi." },
+    { q: "How many cups do I need per month?", a: "For a 2BHK with daily evening puja, around 30 cups per month — 1 daily in the puja room. For weekly whole-home shuddhi, add 4–8 cups for the remaining rooms." },
+  ],
+  finalCtaTitle: "Bring sandhya sanctity to every room — pure sambrani cups",
+  finalCtaSubtitle: "Natural benzoin, guggulu and dasangam sambrani — pandit-recommended, no chemicals.",
+  finalCtaButtons: [
+    { label: "Shop Sambrani Cups", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Incense & Dhoop", href: "/incense-dhoop", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Incense & Dhoop", href: "/incense-dhoop" },
+    { label: "Havan Cups", href: "/havan-cups" },
+    { label: "Vastu Products", href: "/vastu-products" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Natural Sambrani Loban Dhoop Cups" },
+};
+
+const HAVAN_CUPS: SeoLandingPageProps = {
+  seoTitle: "Havan Cups Online — Smokeless Havan Samagri Cups for Yajna at Home | Vedic Tatva",
+  seoDescription:
+    "Shop ready-to-light havan cups online. Pre-filled with authentic havan samagri, herbs and ghee — perform a complete havan or yajna at home in minutes. Smokeless, fragrant and pandit-approved.",
+  seoKeywords:
+    "havan cups online, ready havan cups, smokeless havan, havan samagri cups, havan kit at home, instant havan, mini havan, ghee havan cup, yajna cups, agnihotra cups, havan dhoop cup, daily havan kit, havan for puja, havan in apartment",
+  canonical: "/havan-cups",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Havan Cups", url: "/havan-cups" },
+  ],
+  eyebrow: "Ready-to-Light Yajna",
+  h1: "Havan Cups — Complete Yajna at Home in Minutes",
+  subtitle:
+    "Pre-filled havan cups with authentic samagri, dried herbs, ghee and havan wood — light one cup and perform a full agnihotra-grade havan at home, even in an apartment.",
+  heroCTAs: [
+    { label: "Shop Havan Cups", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book a Pandit", href: "/pandits", variant: "outline" },
+  ],
+  trustChips: ["Smokeless Formula", "Pre-Filled Samagri", "Apartment-Safe"],
+  intro:
+    "Performing a daily havan or yajna is one of the most cherished practices in Sanatana Dharma. But arranging a havan kund, samagri, wood, ghee and time daily is hard for modern households. Vedic Tatva's havan cups solve this — each cup is pre-filled with traditional havan samagri (a 16-herb classical blend), pure cow ghee and slow-burning havan wood. Light one cup, chant your mantra and complete a meaningful havan in 15 minutes — even on a balcony in a high-rise.",
+  sections: [
+    {
+      heading: "What's inside every havan cup",
+      bullets: [
+        "Traditional 16-herb havan samagri blend — sandalwood, guggulu, jatamansi, kapur kachri, devdar",
+        "Pure A2 cow ghee binder for the agni offering",
+        "Slow-burning havan wood (palash, mango, peepal) chips",
+        "Self-igniting top layer — lights with a single matchstick",
+        "Smokeless formulation — no eye irritation, apartment-safe",
+        "Burn time 15–20 minutes — duration of one full sankalp havan",
+      ],
+    },
+    {
+      heading: "When to use havan cups",
+      bullets: [
+        "Daily nitya havan — morning sandhya offering",
+        "Sankalp havan — before any major decision, exam or journey",
+        "Festival havans — Navratri, Diwali, Holi, Mahashivratri",
+        "Vastu shuddhi — moving into a new home or office",
+        "Ancestor havan — pitra paksha, shradh, tarpan",
+        "Mantra siddhi — completing a 108-day mantra anushthan",
+      ],
+    },
+    {
+      heading: "How to perform havan with a single cup",
+      bullets: [
+        "Place cup on a brass plate or havan kund on a fireproof surface",
+        "Light the top with a matchstick — no kindling needed",
+        "Chant your sankalp and the chosen mantra (Gayatri, Mahamrityunjaya, Navarna)",
+        "Offer pinches of additional samagri with each 'svaha' if doing extended path",
+        "Allow to burn down completely — collect bhasma for tilak the next day",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Are these havan cups suitable for a real havan?", a: "Yes — they contain the classical 16-herb samagri blend, pure cow ghee and traditional havan wood used in nitya havan. The cups are formulated by our pandits and used in our own daily karma." },
+    { q: "Can I use these in an apartment without smoke alarms going off?", a: "Yes — our smokeless formulation produces fragrant vapor rather than thick smoke. Open a window during burn. We've never had a customer report a smoke-alarm trigger." },
+    { q: "Is one cup enough for a full puja?", a: "One cup performs a complete sankalp havan or daily nitya havan. For a longer Rudra-abhishek or Chandi path havan, plan 2–4 cups per session." },
+    { q: "What mantra should I chant during havan?", a: "Gayatri Mantra is universal and safe for everyone. For wealth: Mahalakshmi mantra; protection: Mahamrityunjaya; obstacles: Ganesh mantra. Chant 27, 54 or 108 times with each 'svaha'." },
+    { q: "Can I collect the ash for any use?", a: "Yes — the bhasma (ash) is sacred. Apply a tilak the next morning, sprinkle in your puja room or garden, or store in a small box for use in future havans and tilak." },
+  ],
+  finalCtaTitle: "A complete shastric havan in 15 minutes — start daily yajna today",
+  finalCtaSubtitle: "Pre-filled, smokeless, apartment-safe — pure cow ghee and 16-herb samagri inside.",
+  finalCtaButtons: [
+    { label: "Shop Havan Cups", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book Online Havan with Pandit", href: "/puja", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Sambrani Cups", href: "/sambrani-cups" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Festival Collections", href: "/festival-collections" },
+    { label: "Maha Mrityunjaya Jaap", href: "/maha-mrityunjaya-jaap" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Pre-filled Havan Cups for Home Yajna" },
+};
+
+const INCENSE_DHOOP: SeoLandingPageProps = {
+  seoTitle: "Incense & Dhoop Online — Premium Agarbatti, Sandalwood Dhoop Sticks | Vedic Tatva",
+  seoDescription:
+    "Shop premium incense sticks and dhoop online. Natural masala agarbatti, sandalwood, rose, mogra and temple-grade dhoop sticks hand-rolled in Mysore and Bangalore. Long-lasting, chemical-free.",
+  seoKeywords:
+    "premium agarbatti online, natural incense sticks, sandalwood dhoop sticks, temple incense products, masala agarbatti, mysore agarbatti, mogra incense, rose incense, chandan dhoop, gulab agarbatti, hand rolled agarbatti, chemical free incense, long burning agarbatti, dhoop batti online, divine fragrance agarbatti",
+  canonical: "/incense-dhoop",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Incense & Dhoop", url: "/incense-dhoop" },
+  ],
+  eyebrow: "Mysore-Crafted Fragrance",
+  h1: "Premium Incense Sticks & Dhoop — Hand-Rolled in Mysore",
+  subtitle:
+    "Natural masala agarbatti, sandalwood dhoop sticks and traditional cone dhoop, hand-rolled in Mysore and Bangalore using pure essential oils — no chemical fragrance.",
+  heroCTAs: [
+    { label: "Shop Incense & Dhoop", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Try Sambrani Cups", href: "/sambrani-cups", variant: "outline" },
+  ],
+  trustChips: ["Pure Essential Oils", "Hand-Rolled", "No Synthetic Fragrance"],
+  intro:
+    "Fragrance is the first offering in every Hindu puja — it carries the sankalp upward to the deity. Vedic Tatva's incense and dhoop collection is hand-rolled in Mysore and Bangalore by master fragrance houses, using pure essential oils, halmaddi, sandalwood powder and natural resins — never the chemical perfume oils that dominate mass-market agarbatti. From the classic Mysore chandan stick to deity-specific blends and slow-burning cone dhoop, every fragrance is chosen for its devotional and Ayurvedic value.",
+  sections: [
+    {
+      heading: "Our incense and dhoop collection",
+      bullets: [
+        "Mysore Sandalwood Agarbatti — the classic temple fragrance, daily puja staple",
+        "Mogra & Rose Agarbatti — for Lakshmi, Saraswati and Devi pujas",
+        "Loban & Guggulu Sticks — for vastu shuddhi and shradh karmas",
+        "Cone Dhoop — bambooless, slow-burning for meditation",
+        "Wet Dhoop Sticks (Halmaddi) — traditional dough sticks, deeper aroma",
+        "Deity-specific blends — Shiv, Krishna, Hanuman, Durga, Ganesh",
+      ],
+    },
+    {
+      heading: "Why hand-rolled, essential-oil incense matters",
+      bullets: [
+        "Pure essential oils carry the actual phyto-spiritual signature of the plant",
+        "No synthetic perfume — no headache, no respiratory irritation",
+        "Halmaddi binder retains fragrance 3x longer than synthetic glues",
+        "Natural sandalwood and chandan have shastric mention in Devi Bhagavatam",
+        "Supports traditional Mysore-Bangalore fragrance artisan economy",
+      ],
+    },
+    {
+      heading: "Which fragrance for which deity",
+      bullets: [
+        "Lord Shiva — Sandalwood, bel leaves, guggulu",
+        "Goddess Lakshmi — Rose, mogra, kewda, lotus",
+        "Lord Krishna — Tulsi, mogra, jasmine",
+        "Lord Hanuman — Sandalwood, jasmine, chameli oil",
+        "Goddess Durga — Rose, hibiscus, kewda, kapur",
+        "Lord Ganesh — Durva, sandalwood, chandan-mogra blend",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Are your agarbatti chemical-free?", a: "Yes — every stick is hand-rolled with pure essential oils, halmaddi binder and natural plant powders. No synthetic perfume oils, no DEP, no charcoal-only sticks." },
+    { q: "What's the difference between agarbatti and dhoop?", a: "Agarbatti has a bamboo stick core; dhoop is bambooless, made of pure dough or cone. Dhoop burns slower and has a deeper, more concentrated aroma — preferred for serious puja." },
+    { q: "Why is your sandalwood agarbatti more expensive?", a: "Real Mysore sandalwood essential oil costs ₹1,80,000+ per kg. Cheap 'sandalwood' agarbatti uses synthetic santalol perfume. Ours uses traceable Karnataka sandalwood — the price reflects authenticity." },
+    { q: "How many sticks should I light per puja?", a: "One stick is sufficient for daily nitya puja. Three sticks (representing trinity) for festival pujas. Always odd numbers — never 2 or 4." },
+    { q: "Where should I dispose of incense ash?", a: "Collect in a brass or clay pot; once accumulated, immerse in flowing water (river, lake) or in a tulsi pot. The ash is sacred and should not go in regular garbage." },
+  ],
+  finalCtaTitle: "The first offering — pure fragrance, hand-rolled with reverence",
+  finalCtaSubtitle: "Mysore sandalwood, mogra, rose, guggulu and deity-specific blends. No synthetic perfume.",
+  finalCtaButtons: [
+    { label: "Shop Incense & Dhoop", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Sambrani Cups", href: "/sambrani-cups", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Sambrani Cups", href: "/sambrani-cups" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Temple Decor", href: "/temple-decor" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Premium Hand-Rolled Incense & Dhoop" },
+};
+
+const CRYSTAL_HEALING: SeoLandingPageProps = {
+  seoTitle: "Crystal Healing Online — Buy Sphatik, Healing Crystals & Pyramids | Vedic Tatva",
+  seoDescription:
+    "Shop authentic healing crystals online — sphatik shree yantra, crystal pyramids, energy stones, gemstone bracelets and chakra crystals. Lab-certified, energised and astrologer-recommended.",
+  seoKeywords:
+    "healing crystal products, crystal healing online, sphatik shree yantra, sphatik mala, crystal pyramid, energy stones, chakra crystals, healing crystals for home, gemstone bracelets, rose quartz, amethyst online, citrine for wealth, black tourmaline, pyrite for prosperity, vastu crystal, energised crystals, crystals for negative energy",
+  canonical: "/crystal-healing",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Crystal Healing", url: "/crystal-healing" },
+  ],
+  eyebrow: "Lab-Certified Healing Crystals",
+  h1: "Crystal Healing Collection — Sphatik, Pyramids & Chakra Stones",
+  subtitle:
+    "Lab-certified, energised healing crystals chosen by our astrologers — sphatik shree yantra, rose quartz, amethyst, citrine, black tourmaline and chakra balancing kits.",
+  heroCTAs: [
+    { label: "Shop Healing Crystals", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Talk to an Astrologer", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Lab-Certified", "Pre-Energised", "Astrologer-Picked"],
+  intro:
+    "Crystals are nature's frequency batteries — each mineral resonates at a precise vibration that interacts with the human chakra system and the vastu of a space. Vedic Tatva's crystal healing collection is sourced from authenticated Indian and global mines, lab-certified for purity and pre-energised by our astrologers with the appropriate planetary mantra. From the classic sphatik shree yantra for wealth to amethyst for the third eye and black tourmaline for negative-energy shielding, every stone comes with its purpose, placement direction and care guide.",
+  sections: [
+    {
+      heading: "Most-loved crystals and what they do",
+      bullets: [
+        "Sphatik (Clear Quartz) — universal amplifier, master healer, third-eye activation",
+        "Rose Quartz — heart chakra, love, marital harmony, self-acceptance",
+        "Amethyst — crown chakra, intuition, sleep, addiction recovery",
+        "Citrine — solar plexus, wealth, business growth, confidence",
+        "Black Tourmaline — root chakra grounding, EMF and negativity shield",
+        "Pyrite — prosperity, manifestation, north-east placement",
+        "Green Aventurine — heart healing, abundance, opportunity magnet",
+      ],
+    },
+    {
+      heading: "Powerful crystal yantras for home & office",
+      bullets: [
+        "Sphatik Shree Yantra — wealth, harmony, must in every Vedic home",
+        "Crystal Pyramid — energy amplifier, place in centre of room (brahmasthan)",
+        "Crystal Lotus — meditation, peace, place on altar",
+        "Crystal Tortoise — vastu corrector, longevity, place facing inside",
+        "Seven-Chakra Wand — full chakra balancing for healers",
+      ],
+    },
+    {
+      heading: "How to cleanse and energise your crystal",
+      bullets: [
+        "First wash — soak in salt water for 6–8 hours, rinse with fresh water",
+        "Sun cleanse — leave in early morning sunlight for 1 hour (avoid harsh noon)",
+        "Moon cleanse — full moon night, especially Sharad Purnima",
+        "Sound cleanse — chant the planetary mantra of the stone 108 times",
+        "Re-energise monthly on full moon and any eclipse — they reset deeply",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Are healing crystals scientifically proven?", a: "In the spiritual tradition, crystals are understood to work through resonance and intention — the same way mantras work. Their subtle effect is felt over weeks of consistent placement and devotional intent. Treat them as a complement to, not a replacement for, qualified medical care." },
+    { q: "Which crystal should I start with?", a: "Sphatik (clear quartz) is the universal beginner — works with every chakra and every intent. For specific outcomes — wealth (citrine), love (rose quartz), protection (black tourmaline) — choose accordingly or consult our astrologers." },
+    { q: "Are your crystals real or glass?", a: "Every Vedic Tatva crystal is lab-certified — we provide a tamper-evident certificate confirming authenticity. We do not sell glass replicas, dyed howlite or synthetic stones." },
+    { q: "Where should I place a sphatik shree yantra?", a: "North or north-east of your puja room or home, on a clean red cloth, facing the main entrance. Light a diya in front every Friday for activation." },
+    { q: "Can I wear a crystal bracelet daily?", a: "Yes — crystal bracelets are designed for daily wear on your dominant hand for receptive crystals (rose quartz, amethyst) and non-dominant for protective ones (tourmaline, hematite). Cleanse weekly." },
+  ],
+  finalCtaTitle: "Bring nature's frequency batteries home — energised, certified crystals",
+  finalCtaSubtitle: "Sphatik shree yantra, chakra stones, pyramids and bracelets — pre-energised by our astrologers.",
+  finalCtaButtons: [
+    { label: "Shop Healing Crystals", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Get Personal Crystal Recommendation", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Rudraksha Collection", href: "/rudraksha-collection" },
+    { label: "Spiritual Jewelry", href: "/spiritual-jewelry" },
+    { label: "Vastu Products", href: "/vastu-products" },
+    { label: "Free AI Kundli", href: "/ai-kundli" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Healing Crystals & Sphatik Yantras" },
+};
+
+const PUJA_KITS: SeoLandingPageProps = {
+  seoTitle: "Puja Kits Online — Complete Satyanarayan, Griha Pravesh, Diwali, Navratri Kits | Vedic Tatva",
+  seoDescription:
+    "Buy complete puja kits online — Satyanarayan, Griha Pravesh, Diwali, Navratri, daily puja and havan kits. Pandit-curated, every samagri included with printed vidhi guide. Ready in one box.",
+  seoKeywords:
+    "puja kits online India, complete puja kit, satyanarayan puja kit, griha pravesh puja samagri, navratri puja kit, diwali puja essentials, ganesh puja kit, lakshmi puja kit, daily puja kit, havan kit at home, ready puja samagri, all in one puja kit, complete pooja samagri, festival puja kit, marriage puja kit",
+  canonical: "/puja-kits",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Puja Kits", url: "/puja-kits" },
+  ],
+  eyebrow: "Complete Ritual Kits",
+  h1: "Puja Kits Online — Every Samagri You Need, In One Box",
+  subtitle:
+    "Pandit-curated complete puja kits — Satyanarayan, Griha Pravesh, Diwali, Navratri, Ganesh, Lakshmi and daily nitya kits — with every samagri inside and a printed vidhi guide.",
+  heroCTAs: [
+    { label: "Shop Puja Kits", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book Pandit for Puja", href: "/pandits", variant: "outline" },
+  ],
+  trustChips: ["Pandit-Curated", "Vidhi Guide Included", "Nothing Forgotten"],
+  intro:
+    "The biggest stress before any puja is realising at the last minute that you forgot kumkum, or panchamrit cups, or the right size kalash. Vedic Tatva's complete puja kits eliminate that — every kit is curated by our practising Vedic Pandits to include every single samagri the puja requires, packaged in clean labelled compartments, with a printed step-by-step vidhi guide in Hindi and English. Open the box, follow the card, perform the puja with the same authenticity as a temple.",
+  sections: [
+    {
+      heading: "Our most-loved complete puja kits",
+      bullets: [
+        "Satyanarayan Puja Kit — kalash, panchamrit, prasad ingredients, kathaa book, vidhi card",
+        "Griha Pravesh Puja Kit — havan samagri, navagraha, kalash, mango leaves, vidhi",
+        "Diwali Puja Kit — Lakshmi-Ganesh murti, kamal gatta, gulab, kheel-batashe, kalash",
+        "Navratri Kit — 9-day kalash sthapana, akhand jyot, navagraha, nine-colour cloths",
+        "Daily Nitya Kit — diya, agarbatti, kumkum, akshat, bell, panchamrit cups",
+        "Ganesh Chaturthi Kit — modak ingredients, durva, red flowers, gulal, samagri",
+        "Karva Chauth Kit — sieve, karva, mehndi, sindoor, vidhi card, kathaa book",
+      ],
+    },
+    {
+      heading: "What goes inside every kit",
+      bullets: [
+        "Brass or copper kalash with coconut and mango leaves where shastra prescribes",
+        "Pre-measured kumkum, roli, chandan, akshat, haldi in glass jars",
+        "Panchamrit ingredients — milk, dahi, ghee, honey, sugar in sealed sachets",
+        "Specific puja flowers, durva, bel patra (seasonal, fresh-packed)",
+        "Cotton wicks, cow ghee, agarbatti, dhoop, kapur",
+        "Printed vidhi guide in Hindi-English with full Sanskrit mantras",
+        "Red puja cloth, asana cover and a small brass bell",
+      ],
+    },
+    {
+      heading: "Why a curated kit beats buying samagri item-by-item",
+      bullets: [
+        "Saves 3–4 hours of running between local shops",
+        "Nothing forgotten — every shastric item verified by our pandits",
+        "Pre-measured quantities — no waste, no shortage",
+        "Vidhi guide ensures you actually perform the puja correctly",
+        "Costs less than buying separately — bundle pricing",
+        "Beautiful presentation — perfect gifting for housewarmings, weddings",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is everything really included in the puja kit?", a: "Yes — every kit lists its full contents on the product page and matches the shastric requirement for that specific puja. The only thing you may need to add is fresh fruit, sweets and the deity murti (if not part of that specific kit)." },
+    { q: "Can I perform the puja without a pandit if I have the kit?", a: "Yes — the printed vidhi guide takes you step by step. For first-time pujas like Satyanarayan or Griha Pravesh, we recommend booking an online pandit through Vedic Tatva who can guide you live on video." },
+    { q: "Are the items fresh — flowers, leaves, panchamrit?", a: "Yes — perishable items (mango leaves, durva, fresh flowers) are packed within 24 hours of dispatch and shipped via priority courier. Order at least 48 hours before your puja date." },
+    { q: "Can I gift a puja kit?", a: "Absolutely — kits are beautifully packaged for gifting. Popular choices: Griha Pravesh kit (housewarming gift), Diwali kit (festive corporate gift), Karva Chauth kit (gift for newlyweds)." },
+    { q: "Can I customise a puja kit?", a: "Yes — for major orders or custom occasions (e.g. mundan, anna prasana, vivah) write to our pandit team via Contact and we'll curate a kit specific to your sankalp." },
+  ],
+  finalCtaTitle: "One box, one puja, zero stress — complete kits curated by Vedic Pandits",
+  finalCtaSubtitle: "Every samagri, pre-measured, with a printed vidhi guide. Ready to perform.",
+  finalCtaButtons: [
+    { label: "Shop Puja Kits", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book Pandit for Live Guidance", href: "/puja", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Festival Collections", href: "/festival-collections" },
+    { label: "Havan Cups", href: "/havan-cups" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Temple Decor", href: "/temple-decor" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Complete Pandit-Curated Puja Kits" },
+};
+
+const FESTIVAL_COLLECTIONS: SeoLandingPageProps = {
+  seoTitle: "Festival Collections — Diwali, Navratri, Janmashtami, Holi Puja Kits | Vedic Tatva",
+  seoDescription:
+    "Shop festival puja collections online — Diwali, Navratri, Janmashtami, Ganesh Chaturthi, Holi, Karva Chauth, Mahashivratri kits and decor. Releases ahead of every major Hindu festival.",
+  seoKeywords:
+    "festival puja kit, diwali puja kit online, navratri kit, janmashtami samagri, ganesh chaturthi kit, holi puja samagri, karva chauth kit, mahashivratri puja kit, raksha bandhan thali, dussehra puja kit, festive decor online, hindu festival shopping, diwali decoration online, navratri akhand jyot, festival samagri kit",
+  canonical: "/festival-collections",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Festival Collections", url: "/festival-collections" },
+  ],
+  eyebrow: "Festival-Ready Kits",
+  h1: "Hindu Festival Collections — Every Major Utsav, Curated",
+  subtitle:
+    "Diwali, Navratri, Janmashtami, Ganesh Chaturthi, Holi, Karva Chauth, Mahashivratri — every festival kit, decor and samagri released ahead of the date so you're never last-minute.",
+  heroCTAs: [
+    { label: "Shop Festival Kits", href: "/spiritual-essentials", variant: "primary" },
+    { label: "View Full Calendar", href: "/panchang-calendar", variant: "outline" },
+  ],
+  trustChips: ["Released Pre-Festival", "Pandit-Curated", "Pan-India Delivery"],
+  intro:
+    "Hindu festivals follow the Vedic calendar — and every utsav has a precise samagri list, vidhi and decor tradition. Vedic Tatva's festival collections are released 4–6 weeks ahead of every major festival, curated by our pandits with the exact samagri the rituals demand, alongside traditional decor — toran, rangoli stencils, marigold strings, kandils and idols. Whether it's Diwali, Navratri, Janmashtami, Ganesh Chaturthi, Holi, Karva Chauth or Mahashivratri — we ship pan-India in time so your festival starts on the right note.",
+  sections: [
+    {
+      heading: "Major festival collections we release every year",
+      bullets: [
+        "Diwali Collection — Lakshmi-Ganesh puja kit, diyas, kandil, toran, rangoli, gift hampers",
+        "Navratri Collection — 9-day kalash sthapana, akhand jyot, navagraha, nine-colour saree pack",
+        "Janmashtami Collection — Bal Krishna jhula, makhan-mishri, peacock feather, vastra",
+        "Ganesh Chaturthi Collection — eco-friendly Ganpati murti, modak mould, durva, red flower",
+        "Holi Collection — herbal gulal, holika dahan samagri, thandai mix",
+        "Karva Chauth Collection — sieve, karva, mehndi, sindoor box, kathaa book",
+        "Mahashivratri Collection — Shiv parivar puja kit, bel patra, bhasma, jalabhishek lota",
+        "Raksha Bandhan Collection — pure rakhi, roli-chawal box, mithai gift hamper",
+      ],
+    },
+    {
+      heading: "What's special about Vedic Tatva festival kits",
+      bullets: [
+        "Pre-released 4–6 weeks before each festival — never out-of-stock at peak",
+        "Eco-friendly options — clay murti, herbal gulal, organic samagri",
+        "Free festival vidhi guide and Sanskrit mantras as printed booklet",
+        "Coordinated decor — toran, rangoli, lighting and idol — all match aesthetically",
+        "Pan-India delivery with festival deadline guarantee or free reship",
+      ],
+    },
+    {
+      heading: "Festival decor that complements the puja",
+      bullets: [
+        "Brass and silver-plated toran (door hanging) for every festival",
+        "Reusable rangoli stencils — easier than freehand for working households",
+        "Marigold and rose petal garlands — fresh, dispatched 48 hours before",
+        "Festival kandils, akash deeps and string lights for Diwali, Karthik",
+        "Eco-friendly Ganpati and Durga murtis — clay, water-soluble paint",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "When are festival kits available?", a: "Each kit is published on the site 4–6 weeks before the festival date and stays live until 3 days before the festival. Set a wishlist alert and we'll email you when this year's pack opens." },
+    { q: "Will my Diwali / Navratri kit arrive in time?", a: "Yes — order at least 5 days before the festival for guaranteed delivery. We use priority courier for festival-period orders and offer free reship on any delay caused by us." },
+    { q: "Are your Ganpati and Durga murtis eco-friendly?", a: "Yes — we offer fully clay murtis with water-soluble natural paint that dissolve in 2 hours during visarjan, leaving no pollution. PoP murtis are not part of our catalogue." },
+    { q: "Can I gift a festival kit?", a: "Absolutely — Diwali Lakshmi-Ganesh kits, Janmashtami jhula sets and Karva Chauth kits are popular gifts. Add a personal note at checkout — we ship gift-wrapped with no price visible." },
+    { q: "Do you deliver fresh flowers and mango leaves?", a: "Yes — for Navratri kalash sthapana, Griha Pravesh and Ganesh Chaturthi we ship fresh-packed mango leaves and durva via priority courier. Order 48 hours ahead of the puja." },
+  ],
+  finalCtaTitle: "Never last-minute again — every festival, ready in one box",
+  finalCtaSubtitle: "Curated by Vedic Pandits, released weeks ahead, delivered pan-India in time.",
+  finalCtaButtons: [
+    { label: "Shop Festival Collections", href: "/spiritual-essentials", variant: "primary" },
+    { label: "View Yearly Panchang", href: "/panchang-calendar", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Temple Decor", href: "/temple-decor" },
+    { label: "Lakshmi Puja", href: "/lakshmi-puja" },
+    { label: "Navratri Puja", href: "/navratri-puja" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Hindu Festival Puja Kits & Decor" },
+};
+
+const VASTU_PRODUCTS: SeoLandingPageProps = {
+  seoTitle: "Vastu Products Online — Vastu Yantras, Pyramids, Tortoise & Cures | Vedic Tatva",
+  seoDescription:
+    "Shop authentic vastu products online — vastu yantras, crystal pyramids, brass kachhua, fengshui-vastu cures and direction-specific remedies. Place-and-activation guide included with every item.",
+  seoKeywords:
+    "vastu products online, vastu yantra, vastu pyramid, brass kachhua, vastu tortoise, fengshui vastu cures, vastu remedies, vastu shanti yantra, vastu dosha cure, north east vastu items, south west vastu, brahmasthan crystal, vastu compass, vastu shastra products, home vastu correction",
+  canonical: "/vastu-products",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Vastu Products", url: "/vastu-products" },
+  ],
+  eyebrow: "Vastu-Approved Cures",
+  h1: "Vastu Products & Cures — For Every Direction of Your Home",
+  subtitle:
+    "Authentic vastu yantras, crystal pyramids, brass kachhua, vastu shanti kits and direction-specific cures — each item ships with a placement and activation guide from our vastu experts.",
+  heroCTAs: [
+    { label: "Shop Vastu Products", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book Vastu Consultation", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Direction-Specific", "Activation Guide", "Vastu-Expert Curated"],
+  intro:
+    "Vastu Shastra is the Vedic science of space — every direction of a home or office carries a planetary lord, an element and an energy flow. When the flow is correct, prosperity and peace follow; when blocked, vastu doshas appear as disputes, financial loss or health issues. Vedic Tatva's vastu products are direction-specific cures — yantras, pyramids, tortoises and elemental items — each curated by our vastu acharyas with a printed placement and activation guide so the cure actually works.",
+  sections: [
+    {
+      heading: "Top vastu products and where to place them",
+      bullets: [
+        "Sphatik Shree Yantra — north-east, on red cloth, for wealth and harmony",
+        "Crystal Pyramid — brahmasthan (centre), to amplify positive energy",
+        "Brass Kachhua (Tortoise) — facing inside the home, for longevity and stability",
+        "Vastu Shanti Yantra — main entrance, neutralises overall vastu doshas",
+        "Pyrite — north for wealth flow, south-east for business",
+        "Black Tourmaline — south-west for shielding negativity",
+        "Bagua Mirror (with caution) — only after vastu consultation",
+      ],
+    },
+    {
+      heading: "Common vastu doshas and their cures",
+      bullets: [
+        "Toilet in north-east — sea salt bowl + camphor to neutralise",
+        "Kitchen in north — copper pyramid in the south-east corner",
+        "Main door facing south — Vastu Shanti Yantra above the door",
+        "Bedroom in north-east — clear quartz cluster + remove mirrors facing bed",
+        "Cluttered south-west — heavy red items, brass kachhua",
+        "Cracks in walls — copper wire and rangoli at the entrance",
+      ],
+    },
+    {
+      heading: "How to activate any vastu product",
+      bullets: [
+        "Cleanse with gangajal or salt water before first placement",
+        "Place on a clean cloth in the prescribed direction (red for wealth, white for peace)",
+        "Light a diya in front and chant the relevant mantra 108 times",
+        "Re-energise on every full moon and during eclipses",
+        "For yantras — never let dust accumulate; clean weekly with a soft dry cloth",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Does vastu actually work without breaking walls?", a: "Yes — 80% of vastu doshas can be neutralised with the right yantra, pyramid or elemental cure placed in the prescribed direction. Major structural changes are only needed for severe doshas." },
+    { q: "Which is the most important vastu product for a home?", a: "Sphatik Shree Yantra in the north-east is the universal vastu starter — it harmonises wealth, peace and prosperity. Combine with a brass kachhua facing inside for longevity." },
+    { q: "How do I know which direction is which in my home?", a: "Stand in the brahmasthan (centre) of your home with a vastu compass facing north. We sell vastu compasses in this collection — or get a full home vastu mapping during our paid consultation." },
+    { q: "Are these products fengshui or vastu?", a: "Vastu Shastra and Fengshui share principles but differ in directions and remedies. Our cures are primarily Vastu (Vedic) — we mark fengshui items separately if you want to use both systems." },
+    { q: "Can I use vastu products in a rented apartment?", a: "Absolutely — yantras, pyramids and crystals don't need any structural modification. Place, activate, and they work in any home, rented or owned." },
+  ],
+  finalCtaTitle: "Correct your vastu without breaking walls — direction-specific cures",
+  finalCtaSubtitle: "Yantras, pyramids and tortoises curated by vastu acharyas, with placement guide.",
+  finalCtaButtons: [
+    { label: "Shop Vastu Products", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Book Vastu Consultation", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Crystal Healing", href: "/crystal-healing" },
+    { label: "Rudraksha Collection", href: "/rudraksha-collection" },
+    { label: "Temple Decor", href: "/temple-decor" },
+    { label: "Griha Pravesh Puja", href: "/griha-pravesh-puja" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Vastu Yantras, Pyramids & Direction-Specific Cures" },
+};
+
+const SPIRITUAL_JEWELRY: SeoLandingPageProps = {
+  seoTitle: "Spiritual Jewelry Online — Rudraksha, Sphatik & Gemstone Pendants | Vedic Tatva",
+  seoDescription:
+    "Shop authentic spiritual jewelry online — silver-capped rudraksha pendants, sphatik malas, navratna rings, gemstone bracelets and chakra jewelry. Energised, lab-certified and astrologer-recommended.",
+  seoKeywords:
+    "spiritual jewelry, rudraksha pendant silver, sphatik mala online, tulsi mala online, navratna ring, gemstone bracelet, chakra jewelry, energised pendants, vedic jewelry online, rudraksha bracelet, sphatik bracelet, evil eye nazar pendant, om pendant silver, hanuman locket, devi locket gold",
+  canonical: "/spiritual-jewelry",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Spiritual Jewelry", url: "/spiritual-jewelry" },
+  ],
+  eyebrow: "Energised, Wearable Sadhana",
+  h1: "Spiritual Jewelry — Rudraksha Pendants, Sphatik Malas, Gemstone Rings",
+  subtitle:
+    "Wearable Vedic protection — silver-capped rudraksha pendants, sphatik and tulsi malas, navratna rings, chakra bracelets and deity lockets. All energised by our pandits before dispatch.",
+  heroCTAs: [
+    { label: "Shop Spiritual Jewelry", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Get Personal Recommendation", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Energised by Pandits", "Hallmarked Silver", "Lab-Certified Stones"],
+  intro:
+    "Spiritual jewelry is wearable sadhana — a constant connection to your ishta devata, your sankalp and your protective shield. Vedic Tatva's spiritual jewelry collection includes silver-capped rudraksha pendants, hand-knotted sphatik and tulsi malas, navratna rings set in 925 silver, chakra-balanced gemstone bracelets and deity lockets. Every metal piece is hallmarked, every stone is lab-certified, and every item is energised by our pandits with the appropriate planetary or deity mantra before dispatch.",
+  sections: [
+    {
+      heading: "Most-loved spiritual jewelry pieces",
+      bullets: [
+        "Silver-capped Rudraksha Pendant — daily protection, paired with red thread",
+        "Sphatik 108-bead Mala — for Saraswati, Lakshmi and meditation japa",
+        "Tulsi 108-bead Mala — for Vishnu, Krishna and Vaishnava sadhakas",
+        "Navratna Ring — all 9 planetary stones, balances the full birth chart",
+        "Chakra-Balancing Gemstone Bracelet — 7 stones for full chakra alignment",
+        "Om / Trishul / Swastik Pendant — daily symbol of dharma",
+        "Hanuman / Devi / Krishna Locket — ishta devata for personal sadhana",
+        "Evil Eye (Nazar) Pendant — for children and travellers",
+      ],
+    },
+    {
+      heading: "Choose by intent — what to wear and why",
+      bullets: [
+        "Daily protection — silver-capped rudraksha pendant",
+        "Wealth and Lakshmi favour — citrine bracelet, gold pendant with shree yantra",
+        "Marital harmony — rose quartz bracelet, gauri-shankar rudraksha pendant",
+        "Health and longevity — sphatik mala, navratna ring",
+        "Career growth — yellow sapphire (pukhraj) ring, energised on Thursday",
+        "Sadhana / japa — sphatik or tulsi 108-bead mala",
+        "For children — silver evil-eye pendant, kavach with kumkum-mantra",
+      ],
+    },
+    {
+      heading: "Care and energising guide",
+      bullets: [
+        "Cleanse new piece in salt water for 6 hours before first wear",
+        "Re-energise monthly on full moon and during eclipses",
+        "Avoid contact with leather, perfume and chemicals",
+        "Remove during cremation rituals and re-energise after returning",
+        "Polish silver every 3 months with brass cloth — never harsh polish",
+        "Restring a broken mala on the same day; never throw broken mala away",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is the silver in your jewelry hallmarked?", a: "Yes — all our silver is BIS-hallmarked 92.5% sterling silver. We do not sell silver-plated or German-silver pieces. Hallmark is visible on the inside of every metal piece." },
+    { q: "Are the gemstones in your navratna ring real?", a: "Yes — every gemstone is lab-certified and ships with an individual certificate listing the stone, weight, treatment status and origin. We use natural stones, not synthetic or glass-filled." },
+    { q: "Can I wear a rudraksha pendant in gold?", a: "Yes — gold is auspicious for rudraksha and recommended for Lakshmi-related intent. Silver is more traditional, more affordable and works for every intent. We offer both." },
+    { q: "How is the jewelry energised?", a: "Each piece is energised by our pandits with the deity or planetary mantra appropriate to the stone — for example, navratna with all 9 graha mantras, rudraksha with Mahamrityunjaya, sphatik with Saraswati Beej." },
+    { q: "Can I gift spiritual jewelry?", a: "Absolutely — silver rudraksha pendants for newborns (with kumkum kavach), navratna rings for milestone birthdays, and chakra bracelets for friends are popular gift choices. We ship gift-wrapped." },
+  ],
+  finalCtaTitle: "Wearable Vedic protection — energised, certified, sacred",
+  finalCtaSubtitle: "Hallmarked silver, lab-certified stones, pandit-energised before dispatch.",
+  finalCtaButtons: [
+    { label: "Shop Spiritual Jewelry", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Get Astrologer Recommendation", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Rudraksha Collection", href: "/rudraksha-collection" },
+    { label: "Crystal Healing", href: "/crystal-healing" },
+    { label: "Vastu Products", href: "/vastu-products" },
+    { label: "Free Kundli", href: "/ai-kundli" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Energised Vedic Spiritual Jewelry" },
+};
+
+const TEMPLE_DECOR: SeoLandingPageProps = {
+  seoTitle: "Temple Decor for Home Mandir — Brass Bells, Throne, Toran & Backdrops | Vedic Tatva",
+  seoDescription:
+    "Shop temple decor for your home mandir — brass bells, deity thrones (singhasan), tora hangings, prabhavali backdrops, kalash, aarti accessories and traditional puja decor. Pan-India shipping.",
+  seoKeywords:
+    "temple decor products, home mandir decor, brass bells for puja, singhasan for deity, deity throne, prabhavali backdrop, mandir toran, kalash for puja, aarti accessories, brass shankh, panchamrit cups, copper plate puja, home mandir backdrop, mandir curtain, deity vastra",
+  canonical: "/temple-decor",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Temple Decor", url: "/temple-decor" },
+  ],
+  eyebrow: "Home Mandir, Temple-Grade",
+  h1: "Temple Decor — Make Your Home Mandir Feel Like a Real Temple",
+  subtitle:
+    "Brass bells, deity thrones (singhasan), prabhavali backdrops, toran, kalash, conch and aarti sets — every accessory needed to make your home mandir feel like a sanctified temple sanctum.",
+  heroCTAs: [
+    { label: "Shop Temple Decor", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Brass Diyas", href: "/brass-diyas", variant: "outline" },
+  ],
+  trustChips: ["Temple-Grade Brass", "Hand-Crafted", "Pan-India Shipping"],
+  intro:
+    "Your home mandir is the sacred sanctum of your house — vastu, decor and accessories all matter as much as the deity itself. Vedic Tatva's temple decor collection brings temple-grade brass bells, hand-carved wooden singhasan (deity thrones), prabhavali backdrops, toran, kalash, conch (shankh), aarti sets and traditional puja accessories that transform an ordinary home mandir into a true devalaya. Every piece is sourced from temple-supply artisans in Madurai, Moradabad and Jaipur.",
+  sections: [
+    {
+      heading: "Essential temple decor for every home mandir",
+      bullets: [
+        "Brass Singhasan / Throne — for the main deity, raises with reverence",
+        "Hand-Carved Prabhavali / Backdrop — frames the deity, classical temple aesthetic",
+        "Brass Mandir Bell — rung at puja start, awakens deity and removes negativity",
+        "Door Toran — marigold, mango leaf or brass, for daily auspiciousness",
+        "Brass Kalash with Coconut — represents the cosmic vessel, refilled daily",
+        "Conch (Shankh) — blown at puja end, banishes negative energy",
+        "Aarti Thali Set — diya, flowers, kumkum, akshat, ghanti — five-element offering",
+        "Deity Vastra & Mukut — fresh fabrics and crowns for daily shringar",
+      ],
+    },
+    {
+      heading: "Why temple-grade brass and craft matter",
+      bullets: [
+        "Temple-grade pital brass holds shastric purity and develops sacred patina",
+        "Hand-carved singhasan and prabhavali carry the same designs as historic temples",
+        "Brass bell tone is traditionally believed to purify the puja space and announce the deity",
+        "Conch (shankh) sound carries far and is the traditional Vedic call to assembly",
+        "Daily fresh vastra and shringar invite the deity to dwell — not just visit",
+      ],
+    },
+    {
+      heading: "Setting up an authentic home mandir",
+      bullets: [
+        "Place mandir in north-east corner, deity facing east or west",
+        "Singhasan elevated above floor level, never directly on the ground",
+        "Prabhavali behind deity, framed by garlands and brass bell on either side",
+        "Kalash with mango leaves and coconut on the deity's right",
+        "Brass diya, agarbatti stand and conch in front, on a clean copper plate",
+        "Daily — fresh flowers, water in kalash, light diya at sandhya, ring bell",
+        "Weekly — full shringar, fresh vastra, polish brass, restock samagri",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "What size singhasan do I need for my deity?", a: "The singhasan should be 2–3 inches taller than your deity at minimum, with the deity occupying about 60% of the throne width. Our product pages list dimensions clearly." },
+    { q: "Should I get a wooden or marble or brass mandir?", a: "Wooden mandir (sheesham, teak) is the most traditional and warmest aesthetic. Marble suits modern interiors. Brass is for small countertop mandirs. All are shastric — choose by your interior style." },
+    { q: "How often should I change deity vastra?", a: "Change for every weekly puja and on every festival. The deity is treated as a living guest — fresh clothing is part of daily seva. We sell vastra packs in deity-specific colours." },
+    { q: "Is it okay to keep a conch (shankh) on the mandir?", a: "Yes — but specifically the dakshinavarti (right-spiraled) shankh, which is auspicious. Avoid the regular vamavarti shankh on the mandir; it's used for everyday blowing only." },
+    { q: "Where should I dispose of broken brass items?", a: "Broken brass items should not go in regular waste. Either melt them down and remake into new pieces (most artisans do this), or immerse in a flowing river. We accept old brass for recycling against credit." },
+  ],
+  finalCtaTitle: "Make your home mandir a real devalaya — temple-grade brass and craft",
+  finalCtaSubtitle: "Singhasan, prabhavali, brass bells, conch and aarti accessories — sourced from temple artisans.",
+  finalCtaButtons: [
+    { label: "Shop Temple Decor", href: "/spiritual-essentials", variant: "primary" },
+    { label: "Browse Brass Diyas", href: "/brass-diyas", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Festival Collections", href: "/festival-collections" },
+    { label: "Vastu Products", href: "/vastu-products" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Home Mandir Temple Decor & Accessories" },
+};
+
+// ---------------------------------------------------------------------------
 // REGISTRY
 // ---------------------------------------------------------------------------
 
@@ -2221,6 +3201,18 @@ export const SEO_LANDINGS: Record<string, SeoLandingPageProps> = {
   "numerology-predictions": NUMEROLOGY_PREDICTIONS,
   "kundli-matching": KUNDLI_MATCHING,
   "nakshatra-predictions": NAKSHATRA_PREDICTIONS,
+  "online-puja-store": ONLINE_PUJA_STORE,
+  "rudraksha-collection": RUDRAKSHA_COLLECTION,
+  "brass-diyas": BRASS_DIYAS,
+  "sambrani-cups": SAMBRANI_CUPS,
+  "havan-cups": HAVAN_CUPS,
+  "incense-dhoop": INCENSE_DHOOP,
+  "crystal-healing": CRYSTAL_HEALING,
+  "puja-kits": PUJA_KITS,
+  "festival-collections": FESTIVAL_COLLECTIONS,
+  "vastu-products": VASTU_PRODUCTS,
+  "spiritual-jewelry": SPIRITUAL_JEWELRY,
+  "temple-decor": TEMPLE_DECOR,
 };
 
 export type SeoLandingSlug = keyof typeof SEO_LANDINGS;

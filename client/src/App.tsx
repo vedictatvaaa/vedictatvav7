@@ -653,6 +653,18 @@ function Router() {
           <Route path="/numerology-predictions">{() => <SeoLanding slug="numerology-predictions" />}</Route>
           <Route path="/kundli-matching">{() => <SeoLanding slug="kundli-matching" />}</Route>
           <Route path="/nakshatra-predictions">{() => <SeoLanding slug="nakshatra-predictions" />}</Route>
+          <Route path="/online-puja-store">{() => <SeoLanding slug="online-puja-store" />}</Route>
+          <Route path="/rudraksha-collection">{() => <SeoLanding slug="rudraksha-collection" />}</Route>
+          <Route path="/brass-diyas">{() => <SeoLanding slug="brass-diyas" />}</Route>
+          <Route path="/sambrani-cups">{() => <SeoLanding slug="sambrani-cups" />}</Route>
+          <Route path="/havan-cups">{() => <SeoLanding slug="havan-cups" />}</Route>
+          <Route path="/incense-dhoop">{() => <SeoLanding slug="incense-dhoop" />}</Route>
+          <Route path="/crystal-healing">{() => <SeoLanding slug="crystal-healing" />}</Route>
+          <Route path="/puja-kits">{() => <SeoLanding slug="puja-kits" />}</Route>
+          <Route path="/festival-collections">{() => <SeoLanding slug="festival-collections" />}</Route>
+          <Route path="/vastu-products">{() => <SeoLanding slug="vastu-products" />}</Route>
+          <Route path="/spiritual-jewelry">{() => <SeoLanding slug="spiritual-jewelry" />}</Route>
+          <Route path="/temple-decor">{() => <SeoLanding slug="temple-decor" />}</Route>
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
           <Route path="/shop" component={Shop} />
