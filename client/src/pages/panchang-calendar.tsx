@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import { RelatedServicesSection } from "@/components/RelatedServices";
 import { DailyRecommendations } from "@/pages/home";
 import PageSeo from "@/components/PageSeo";
+import { classifyDay, Motif, STYLES, type ClassifiedEvent, type EventCategory } from "@/lib/panchang-events";
 
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -586,9 +587,67 @@ export default function PanchangCalendar() {
           </button>
         </div>
 
-        <div className="flex items-center gap-4 mb-5 text-[11px] text-[#5a4a3a]/65 justify-center flex-wrap">
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-100 border border-amber-300" /> Festival / Vrat</span>
-          <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-100 border border-emerald-300" /> Auspicious</span>
+        {/* Highlights strip — first scene: sacred days of this month */}
+        {data?.days && !isLoading && (() => {
+          const events = data.days
+            .map(d => ({ day: d, e: classifyDay(d, { month, hinduMonth: data.hinduMonth }) }))
+            .filter(x => x.e.style.rank >= 50)
+            .sort((a, b) => b.e.style.rank - a.e.style.rank || a.day.date - b.day.date);
+          if (!events.length) return null;
+          return (
+            <div className="mb-6 rounded-xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#FBF7EE] via-white to-[#FBF7EE] overflow-hidden" data-testid="month-highlights">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D4AF37]/20 bg-white/50">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2} />
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-[#6D2B35] font-semibold">Sacred Days This Month</p>
+                </div>
+                <p className="text-[11px] text-[#5a4a3a]/65">{events.length} highlight{events.length === 1 ? "" : "s"}</p>
+              </div>
+              <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide">
+                {events.map(({ day, e }) => (
+                  <button
+                    key={day.date}
+                    onClick={() => setSelectedDay(day)}
+                    className={`flex-shrink-0 group relative rounded-lg border ${e.style.chipBorder} ${e.style.chipBg} px-3 py-2 min-w-[140px] text-left hover-elevate active-elevate-2 transition-transform`}
+                    data-testid={`highlight-${day.date}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className={`flex-shrink-0 w-9 h-9 rounded-md flex items-center justify-center ${e.style.chipInk} ${e.category === "maha-shivratri" ? "bg-indigo-950/20" : "bg-white/70"}`}>
+                        <Motif name={e.motif} size={20} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-[10px] uppercase tracking-wider font-semibold ${e.style.chipInk}/80`}>{MONTH_NAMES[month - 1].slice(0, 3)} {day.date}</p>
+                        <p className={`text-[12px] font-semibold ${e.style.chipInk} leading-tight truncate`}>{e.label}</p>
+                        {e.labelHi && <p className={`text-[10px] ${e.style.chipInk}/70 leading-tight truncate`}>{e.labelHi}</p>}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Color legend with motifs */}
+        <div className="mb-5 flex items-center gap-x-4 gap-y-2 text-[10px] text-[#5a4a3a]/75 justify-center flex-wrap" data-testid="event-legend">
+          {([
+            ["maha-shivratri", "Maha Shivratri"],
+            ["shivratri", "Shivratri"],
+            ["purnima", "Purnima"],
+            ["amavasya", "Amavasya"],
+            ["ekadashi", "Ekadashi"],
+            ["pradosh", "Pradosh"],
+            ["sankashti", "Sankashti"],
+            ["festival", "Festival"],
+          ] as [EventCategory, string][]).map(([k, lbl]) => {
+            const s = STYLES[k];
+            return (
+              <span key={k} className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border ${s.chipBorder} ${s.chipBg} ${s.chipInk}`}>
+                <Motif name={s.motif} size={11} />
+                {lbl}
+              </span>
+            );
+          })}
           <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#6D2B35]" /> Today</span>
         </div>
 
@@ -624,32 +683,50 @@ export default function PanchangCalendar() {
                 const date = i + 1;
                 const dayData = getDay(date);
                 const today = isToday(date);
-                const hasFestival = !!dayData?.festival;
-                const isAuspicious = dayData?.auspicious && !hasFestival;
+                const ev: ClassifiedEvent | null = dayData ? classifyDay(dayData, { month, hinduMonth: data.hinduMonth }) : null;
+                const isMahaShiv = ev?.category === "maha-shivratri";
 
                 return (
                   <div
                     key={date}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${MONTH_NAMES[month - 1]} ${date}${ev && ev.label ? `, ${ev.label}` : ""}`}
                     onClick={() => setSelectedDay(dayData || null)}
-                    className={`min-h-[80px] sm:min-h-[110px] p-1.5 sm:p-2 border-b border-r border-[#D4AF37]/15 cursor-pointer transition-colors relative bg-white hover:bg-[#FBF7EE]
-                      ${today ? "bg-[#FBF7EE] ring-1 ring-[#6D2B35] ring-inset" : ""}
-                      ${hasFestival ? "bg-amber-50/80" : ""}
-                      ${isAuspicious ? "bg-emerald-50/60" : ""}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedDay(dayData || null);
+                      }
+                    }}
+                    className={`min-h-[80px] sm:min-h-[110px] p-1.5 sm:p-2 border-b border-r border-[#D4AF37]/15 cursor-pointer relative overflow-hidden transition-[filter] hover:brightness-[1.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6D2B35] focus-visible:ring-inset
+                      ${ev ? ev.style.cellBg : "bg-white"}
+                      ${ev ? ev.style.cellRing : ""}
+                      ${today ? "ring-2 ring-[#6D2B35] ring-inset" : ""}
                     `}
                     data-testid={`panchang-day-${date}`}
                   >
-                    <div className="flex items-start justify-between">
-                      <span className={`text-sm sm:text-base font-semibold ${today ? "text-[#D4AF37] bg-[#6D2B35] w-6 h-6 sm:w-7 sm:h-7 rounded-md inline-flex items-center justify-center text-[11px] sm:text-[12px]" : "text-[#6D2B35]"}`}>
+                    {ev && ev.style.rank >= 50 && (
+                      <div className={`pointer-events-none absolute -right-2 -bottom-2 opacity-15 ${isMahaShiv ? "text-amber-200" : ev.style.chipInk}`} aria-hidden="true">
+                        <Motif name={ev.motif} size={56} />
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between relative z-10">
+                      <span className={`text-sm sm:text-base font-semibold ${today ? "text-[#D4AF37] bg-[#6D2B35] w-6 h-6 sm:w-7 sm:h-7 rounded-md inline-flex items-center justify-center text-[11px] sm:text-[12px]" : isMahaShiv ? "text-amber-200" : "text-[#6D2B35]"}`}>
                         {date}
                       </span>
-                      {hasFestival && <Star className="h-3 w-3 text-[#D4AF37] flex-shrink-0" strokeWidth={1.8} />}
+                      {ev && ev.style.rank >= 50 && (
+                        <span className={`flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center ${isMahaShiv ? "bg-amber-300/90 text-indigo-950" : "bg-white/85 " + ev.style.chipInk}`}>
+                          <Motif name={ev.motif} size={12} />
+                        </span>
+                      )}
                     </div>
                     {dayData && (
-                      <div className="mt-1 space-y-0.5">
-                        <p className="text-[9px] sm:text-[11px] text-[#5a4a3a]/75 leading-tight truncate">{dayData.tithi}</p>
-                        <p className="text-[8px] sm:text-[10px] text-[#5a4a3a]/50 leading-tight truncate">{dayData.nakshatra}</p>
-                        {dayData.festival && (
-                          <p className="text-[8px] sm:text-[10px] font-semibold text-[#6D2B35] leading-tight truncate">{dayData.festival}</p>
+                      <div className="mt-1 space-y-0.5 relative z-10">
+                        <p className={`text-[9px] sm:text-[11px] leading-tight truncate ${isMahaShiv ? "text-amber-100/85" : "text-[#5a4a3a]/75"}`}>{dayData.tithi}</p>
+                        <p className={`text-[8px] sm:text-[10px] leading-tight truncate ${isMahaShiv ? "text-amber-100/65" : "text-[#5a4a3a]/55"}`}>{dayData.nakshatra}</p>
+                        {ev && ev.style.rank >= 50 && (
+                          <p className={`text-[8px] sm:text-[10px] font-semibold leading-tight truncate ${isMahaShiv ? "text-amber-200" : ev.style.chipInk}`}>{ev.label}</p>
                         )}
                       </div>
                     )}
@@ -660,16 +737,27 @@ export default function PanchangCalendar() {
           </div>
         )}
 
-        {selectedDay && (
+        {selectedDay && (() => {
+          const ev = classifyDay(selectedDay, { month, hinduMonth: data?.hinduMonth });
+          return (
           <>
             <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setSelectedDay(null)} />
             <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-white rounded-lg border border-[#D4AF37]/30 z-50 overflow-hidden" data-testid="day-detail-modal">
-              <div className="bg-[#6D2B35] text-white p-5 border-b border-[#D4AF37]/30 relative">
+              <div className="bg-[#6D2B35] text-white p-5 border-b border-[#D4AF37]/30 relative overflow-hidden">
+                <div className={`pointer-events-none absolute -right-4 -bottom-4 opacity-20 text-[#D4AF37]`} aria-hidden="true">
+                  <Motif name={ev.motif} size={120} />
+                </div>
                 <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" aria-hidden="true" />
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative z-10">
                   <div>
                     <p className="font-serif text-3xl font-semibold">{selectedDay.date}</p>
                     <p className="text-white/70 text-[12px] mt-0.5">{MONTH_NAMES[month - 1]} {year} · {selectedDay.day}</p>
+                    {ev.style.rank >= 50 && (
+                      <div className={`mt-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${ev.style.chipBorder} ${ev.style.chipBg} ${ev.style.chipInk}`}>
+                        <Motif name={ev.motif} size={12} />
+                        <span className="text-[11px] font-semibold">{ev.label}{ev.labelHi ? ` · ${ev.labelHi}` : ""}</span>
+                      </div>
+                    )}
                   </div>
                   <button onClick={() => setSelectedDay(null)} className="w-8 h-8 rounded-md bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors" data-testid="btn-close-detail" aria-label="Close">
                     <ChevronRight className="h-4 w-4 rotate-90 hidden" />
@@ -717,7 +805,8 @@ export default function PanchangCalendar() {
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
 
         <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="rounded-lg border border-[#D4AF37]/20 bg-white p-5">
