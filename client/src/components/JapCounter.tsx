@@ -582,9 +582,7 @@ function LedCaptionStrip({ mantra }: { mantra: Mantra }) {
   const caption = useMemo(() => {
     const lib = MANTRA_LIBRARY.find((m) => m.id === mantra.id);
     const dev = lib?.devanagari || mantra.sanskrit || "";
-    const trans = lib?.transliteration || "";
-    const parts = [dev, trans, mantra.label].filter((s) => s && s.trim().length > 0);
-    const joined = parts.join("   ·   ");
+    const joined = dev;
     // Pad with spaces so very short mantras (e.g. "Om") still feel like
     // they're scrolling rather than blinking past.
     return joined.length < 40 ? `${joined}${" ".repeat(40 - joined.length)}` : joined;
