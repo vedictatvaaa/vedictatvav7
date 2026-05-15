@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, check, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, check, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,7 +39,9 @@ export const loyaltyTransactions = pgTable("loyalty_transactions", {
   note: text("note"),
   balanceAfter: integer("balance_after").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  userIdIdx: index("loyalty_transactions_user_id_idx").on(t.userId),
+}));
 
 export const adminSessions = pgTable("admin_sessions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -80,7 +82,11 @@ export const products = pgTable("products", {
   seoFocusKeyword: text("seo_focus_keyword"),
   seoFaq: jsonb("seo_faq"),
   seoVideoUrl: text("seo_video_url"),
-});
+}, (t) => ({
+  slugIdx: index("products_slug_idx").on(t.slug),
+  categoryIdx: index("products_category_idx").on(t.category),
+  salesCountIdx: index("products_sales_count_idx").on(t.salesCount),
+}));
 
 export const productReviews = pgTable("product_reviews", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -100,7 +106,10 @@ export const productReviews = pgTable("product_reviews", {
   moderatedAt: timestamp("moderated_at"),
   rejectReason: text("reject_reason"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  productIdIdx: index("product_reviews_product_id_idx").on(t.productId),
+  statusIdx: index("product_reviews_status_idx").on(t.status),
+}));
 
 export const reviewHelpfulVotes = pgTable("review_helpful_votes", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -147,7 +156,12 @@ export const orders = pgTable("orders", {
   shippingCharges: integer("shipping_charges").default(0),
   codCharges: integer("cod_charges").default(0),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  userIdIdx: index("orders_user_id_idx").on(t.userId),
+  customerEmailIdx: index("orders_customer_email_idx").on(t.customerEmail),
+  statusIdx: index("orders_status_idx").on(t.status),
+  createdAtIdx: index("orders_created_at_idx").on(t.createdAt),
+}));
 
 export const invoices = pgTable("invoices", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -166,7 +180,9 @@ export const invoices = pgTable("invoices", {
   isIgst: boolean("is_igst").notNull().default(false),
   pdfUrl: text("pdf_url"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  orderIdIdx: index("invoices_order_id_idx").on(t.orderId),
+}));
 
 export const dispatches = pgTable("dispatches", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -188,7 +204,9 @@ export const dispatches = pgTable("dispatches", {
   shippingStatus: text("shipping_status"),
   weightGrams: integer("weight_grams"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  orderIdIdx: index("dispatches_order_id_idx").on(t.orderId),
+}));
 
 export const pandits = pgTable("pandits", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -238,7 +256,12 @@ export const pandits = pgTable("pandits", {
   // pandit (incl. seeded fixtures) gets immediate access; admin can revoke.
   cardIssued: boolean("card_issued").notNull().default(true),
   cardIssuedAt: timestamp("card_issued_at"),
-});
+}, (t) => ({
+  cityIdx: index("pandits_city_idx").on(t.city),
+  stateIdx: index("pandits_state_idx").on(t.state),
+  verifiedIdx: index("pandits_verified_idx").on(t.verified),
+  boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
+}));
 
 export const panditSessions = pgTable("pandit_sessions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -308,7 +331,9 @@ export const panditReviews = pgTable("pandit_reviews", {
   comment: text("comment"),
   serviceType: text("service_type"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  panditIdIdx: index("pandit_reviews_pandit_id_idx").on(t.panditId),
+}));
 
 export const astrologers = pgTable("astrologers", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -358,7 +383,12 @@ export const pujaBookings = pgTable("puja_bookings", {
   needsReassignment: boolean("needs_reassignment").notNull().default(false),
   reassignmentFlaggedAt: timestamp("reassignment_flagged_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  userIdIdx: index("puja_bookings_user_id_idx").on(t.userId),
+  panditIdIdx: index("puja_bookings_pandit_id_idx").on(t.panditId),
+  statusIdx: index("puja_bookings_status_idx").on(t.status),
+  needsReassignmentIdx: index("puja_bookings_needs_reassignment_idx").on(t.needsReassignment),
+}));
 
 export const pujaBookingMessages = pgTable("puja_booking_messages", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -543,7 +573,10 @@ export const abandonedCarts = pgTable("abandoned_carts", {
   nudgeSentAt: timestamp("nudge_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (t) => ({
+  emailIdx: index("abandoned_carts_email_idx").on(t.email),
+  recoveredIdx: index("abandoned_carts_recovered_idx").on(t.recovered),
+}));
 export const insertAbandonedCartSchema = createInsertSchema(abandonedCarts).omit({
   id: true, createdAt: true, updatedAt: true, nudgeSentAt: true, recovered: true,
 });
@@ -822,7 +855,10 @@ export const emailSends = pgTable("email_sends", {
   status: text("status").notNull().default("queued"), // queued | sent | failed | skipped
   error: text("error"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  recipientKindIdx: index("email_sends_recipient_kind_idx").on(t.recipientEmail, t.kind),
+  statusIdx: index("email_sends_status_idx").on(t.status),
+}));
 export const insertEmailSendSchema = createInsertSchema(emailSends).omit({ id: true, createdAt: true });
 export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
 export type EmailSend = typeof emailSends.$inferSelect;
@@ -1057,7 +1093,10 @@ export const aiCache = pgTable("ai_cache", {
   data: jsonb("data").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  typeKeyIdx: index("ai_cache_type_key_idx").on(t.cacheType, t.cacheKey),
+  expiresAtIdx: index("ai_cache_expires_at_idx").on(t.expiresAt),
+}));
 
 export type AiCache = typeof aiCache.$inferSelect;
 
@@ -1199,7 +1238,11 @@ export const blogPosts = pgTable("blog_posts", {
   isPublished: boolean("is_published").notNull().default(true),
   publishedAt: timestamp("published_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  categoryIdx: index("blog_posts_category_idx").on(t.category),
+  isPublishedIdx: index("blog_posts_is_published_idx").on(t.isPublished),
+  publishedAtIdx: index("blog_posts_published_at_idx").on(t.publishedAt),
+}));
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, viewCount: true });
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
@@ -1235,7 +1278,9 @@ export const pitruAncestors = pgTable("pitru_ancestors", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  userIdIdx: index("pitru_ancestors_user_id_idx").on(t.userId),
+}));
 export const insertPitruAncestorSchema = createInsertSchema(pitruAncestors).omit({
   id: true, createdAt: true, updatedAt: true,
   tithiNumber: true, tithiName: true, paksha: true, nakshatraName: true, hinduMonth: true,
@@ -1279,7 +1324,9 @@ export const familyMembers = pgTable("family_members", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  userIdIdx: index("family_members_user_id_idx").on(t.userId),
+}));
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true, updatedAt: true });
 export type FamilyMember = typeof familyMembers.$inferSelect;
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
@@ -1297,7 +1344,10 @@ export const userNotifications = pgTable("user_notifications", {
   meta: jsonb("meta"),                   // optional extra context (orderId, bookingId, …)
   readAt: timestamp("read_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  userIdIdx: index("user_notifications_user_id_idx").on(t.userId),
+  readAtIdx: index("user_notifications_read_at_idx").on(t.readAt),
+}));
 export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({ id: true, createdAt: true, readAt: true });
 export type UserNotification = typeof userNotifications.$inferSelect;
 export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
@@ -1323,7 +1373,9 @@ export const panditPayouts = pgTable("pandit_payouts", {
   reversedAt: timestamp("reversed_at"),
   reverseReason: text("reverse_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  panditIdIdx: index("pandit_payouts_pandit_id_idx").on(t.panditId),
+}));
 export const insertPanditPayoutSchema = createInsertSchema(panditPayouts).omit({ id: true, createdAt: true, reversedAt: true, reverseReason: true });
 export type PanditPayout = typeof panditPayouts.$inferSelect;
 export type InsertPanditPayout = z.infer<typeof insertPanditPayoutSchema>;
