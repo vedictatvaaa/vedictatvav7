@@ -52,9 +52,17 @@ import {
   type BlogPost, type InsertBlogPost,
   adminMantras, type AdminMantra, type InsertAdminMantra,
   panditChats, type PanditChat, type InsertPanditChat,
+  schemaChangelog, type SchemaChangelog, type InsertSchemaChangelog,
 } from "@shared/schema";
 
 export interface IStorage {
+  // ===== Schema Changelog =====
+  listSchemaChangelog(): Promise<SchemaChangelog[]>;
+  getSchemaChangelogEntry(id: number): Promise<SchemaChangelog | undefined>;
+  createSchemaChangelogEntry(data: InsertSchemaChangelog): Promise<SchemaChangelog>;
+  updateSchemaChangelogEntry(id: number, data: Partial<InsertSchemaChangelog>): Promise<SchemaChangelog | undefined>;
+  deleteSchemaChangelogEntry(id: number): Promise<boolean>;
+
   // ===== Admin-managed Jap Counter mantras =====
   // Public list — only active rows, ordered by sortOrder asc.
   listActiveAdminMantras(): Promise<AdminMantra[]>;
@@ -1820,6 +1828,30 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteAdminMantra(id: number): Promise<boolean> {
     const out = await db.delete(adminMantras).where(eq(adminMantras.id, id)).returning({ id: adminMantras.id });
+    return out.length > 0;
+  }
+
+  // ===== Schema Changelog =====
+  async listSchemaChangelog(): Promise<SchemaChangelog[]> {
+    return db.select().from(schemaChangelog).orderBy(desc(schemaChangelog.changeDate), desc(schemaChangelog.createdAt));
+  }
+  async getSchemaChangelogEntry(id: number): Promise<SchemaChangelog | undefined> {
+    const [row] = await db.select().from(schemaChangelog).where(eq(schemaChangelog.id, id));
+    return row;
+  }
+  async createSchemaChangelogEntry(data: InsertSchemaChangelog): Promise<SchemaChangelog> {
+    const [row] = await db.insert(schemaChangelog).values(data).returning();
+    return row;
+  }
+  async updateSchemaChangelogEntry(id: number, data: Partial<InsertSchemaChangelog>): Promise<SchemaChangelog | undefined> {
+    const [row] = await db.update(schemaChangelog)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(schemaChangelog.id, id))
+      .returning();
+    return row;
+  }
+  async deleteSchemaChangelogEntry(id: number): Promise<boolean> {
+    const out = await db.delete(schemaChangelog).where(eq(schemaChangelog.id, id)).returning({ id: schemaChangelog.id });
     return out.length > 0;
   }
 }

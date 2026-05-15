@@ -1579,3 +1579,26 @@ export const insertAiCoderSessionSchema = createInsertSchema(aiCoderSessions).om
 });
 export type AiCoderSession = typeof aiCoderSessions.$inferSelect;
 export type InsertAiCoderSession = z.infer<typeof insertAiCoderSessionSchema>;
+
+// =====================================================================
+// Schema Changelog — human-readable log of every database schema change.
+// Each row records when a change was made, what it was (in plain English),
+// which type of change it was, which table(s) it affected, and who did it.
+// Surfaced in Admin → Schema Changelog for non-technical stakeholders.
+// =====================================================================
+export const schemaChangelog = pgTable("schema_changelog", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  changeDate: text("change_date").notNull(),
+  description: text("description").notNull(),
+  changeType: text("change_type").notNull().default("other"),
+  tableName: text("table_name"),
+  author: text("author"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export const insertSchemaChangelogSchema = createInsertSchema(schemaChangelog).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type SchemaChangelog = typeof schemaChangelog.$inferSelect;
+export type InsertSchemaChangelog = z.infer<typeof insertSchemaChangelogSchema>;

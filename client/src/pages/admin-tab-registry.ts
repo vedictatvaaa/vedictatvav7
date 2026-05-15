@@ -2,7 +2,7 @@ import {
   TrendingUp, ShoppingCart, Package, Users, Calendar, Star, RotateCcw, Tag,
   CalendarClock, HandHeart, Heart, Search, Globe, BarChart3, Settings, Truck,
   Shield, Lock, Eye, BellRing, Trophy, Inbox, AlertTriangle, FileText, Megaphone,
-  Mail, Rocket, Sparkles, Database, Wallet, Share2, Crown, Music, Code2,
+  Mail, Rocket, Sparkles, Database, Wallet, Share2, Crown, Music, Code2, GitCommit,
 } from "lucide-react";
 import type { TabId, TabSection } from "./admin-shared";
 
@@ -47,6 +47,7 @@ export const TABS: TabDef[] = [
   { id: "ai-assistant",    label: "AI Assistant",     icon: Sparkles,      section: "System" },
   { id: "ai-coder",        label: "AI Coder",         icon: Code2,         section: "System" },
   { id: "backups",         label: "Backups",          icon: Database,      section: "System" },
+  { id: "schema-changelog", label: "Schema Changelog", icon: GitCommit,     section: "System" },
 ];
 
 export const TAB_SECTIONS: TabSection[] = [

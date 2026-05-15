@@ -5660,6 +5660,70 @@ If you did not request this reset, you can ignore this email — your password w
     }
   });
 
+  // ---- Schema Changelog CRUD ----
+  app.get("/api/admin/schema-changelog", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const rows = await storage.listSchemaChangelog();
+      res.json(rows);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Failed to list schema changelog" });
+    }
+  });
+
+  app.post("/api/admin/schema-changelog", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const body = req.body || {};
+      if (!body.changeDate || !body.description) {
+        return res.status(400).json({ message: "changeDate and description are required" });
+      }
+      const row = await storage.createSchemaChangelogEntry({
+        changeDate: String(body.changeDate),
+        description: String(body.description),
+        changeType: String(body.changeType || "other"),
+        tableName: body.tableName ? String(body.tableName) : null,
+        author: body.author ? String(body.author) : null,
+        notes: body.notes ? String(body.notes) : null,
+      });
+      try { await auditAdmin(req, "schema.changelog.create", row.description.slice(0, 80), { id: row.id }); } catch {}
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Failed to create changelog entry" });
+    }
+  });
+
+  app.patch("/api/admin/schema-changelog/:id", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const body = req.body || {};
+      const update: Record<string, unknown> = {};
+      if (body.changeDate !== undefined) update.changeDate = String(body.changeDate);
+      if (body.description !== undefined) update.description = String(body.description);
+      if (body.changeType !== undefined) update.changeType = String(body.changeType);
+      if (body.tableName !== undefined) update.tableName = body.tableName ? String(body.tableName) : null;
+      if (body.author !== undefined) update.author = body.author ? String(body.author) : null;
+      if (body.notes !== undefined) update.notes = body.notes ? String(body.notes) : null;
+      const row = await storage.updateSchemaChangelogEntry(id, update as any);
+      if (!row) return res.status(404).json({ message: "Entry not found" });
+      res.json(row);
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Failed to update changelog entry" });
+    }
+  });
+
+  app.delete("/api/admin/schema-changelog/:id", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const ok = await storage.deleteSchemaChangelogEntry(id);
+      if (!ok) return res.status(404).json({ message: "Entry not found" });
+      try { await auditAdmin(req, "schema.changelog.delete", String(id), {}); } catch {}
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ message: err?.message || "Failed to delete changelog entry" });
+    }
+  });
+
   // Schema sync — runs `drizzle-kit push` in a child process (same as deploy
   // does) so the admin can apply new columns / tables without a full deploy.
   app.post("/api/admin/db-sync", adminAuthMiddleware, async (req: any, res) => {

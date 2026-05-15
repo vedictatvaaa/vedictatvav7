@@ -93,6 +93,7 @@ const DeployTab             = safeLazy(() => import("./admin-tabs/DeployTab"));
 const AiAssistantTab        = safeLazy(() => import("./admin-tabs/AiAssistantTab"));
 const AiCoderTab            = safeLazy(() => import("./admin-tabs/AiCoderTab"));
 const AdminBackupsTab       = safeLazy(() => import("./admin-tabs/AdminBackupsTab"));
+const SchemaChangelogTab    = safeLazy(() => import("./admin-tabs/SchemaChangelogTab"));
 const PanditPayoutsTab      = safeLazy(() => import("./admin-tabs/PanditPayoutsTab"));
 const PanditAffiliateTab    = safeLazy(() => import("./admin-tabs/PanditAffiliateTab"));
 const PanditMembershipsTab  = safeLazy(() => import("./admin-tabs/PanditMembershipsTab"));
@@ -547,6 +548,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "ai-assistant" && <AiAssistantTab adminToken={adminToken} />}
               {activeTab === "ai-coder" && <AiCoderTab adminToken={adminToken} />}
               {activeTab === "backups" && <AdminBackupsTab adminToken={adminToken} />}
+              {activeTab === "schema-changelog" && <SchemaChangelogTab adminToken={adminToken} />}
               {activeTab === "pandit-payouts" && <PanditPayoutsTab adminToken={adminToken} />}
               {activeTab === "pandit-affiliate" && <PanditAffiliateTab adminToken={adminToken} />}
               {activeTab === "pandit-memberships" && <PanditMembershipsTab adminToken={adminToken} />}

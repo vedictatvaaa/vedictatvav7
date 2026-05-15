@@ -6,7 +6,7 @@ export type TabId =
   | "notifications" | "bestsellers" | "abandoned-carts" | "inventory" | "customers"
   | "blog" | "email-marketing" | "deploy" | "ai-assistant" | "ai-coder" | "backups"
   | "pandit-payouts" | "pandit-affiliate" | "pandit-memberships"
-  | "mantras";
+  | "mantras" | "schema-changelog";
 
 export type TabSection =
   | "Overview" | "Catalog" | "Orders & Bookings" | "People" | "Marketing" | "System";
