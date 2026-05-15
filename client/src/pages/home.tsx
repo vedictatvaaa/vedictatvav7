@@ -27,6 +27,7 @@ const heroEssentialsImg = "/attached_assets/heroes/hero-scene-essentials.png";
 const heroAstrologyImg = "/attached_assets/heroes/hero-scene-astrology.png";
 import bhandaraSevaImg from "@assets/generated_images/bhandara_seva_hero.png";
 import astrologyBannerImg from "@assets/generated_images/astrology_hero_banner.png";
+import bhandaraBannerImg from "@assets/generated_images/bhandara_seva_banner.png";
 
 type HeroCta = { label: string; href: string; icon: any };
 type HeroSlide = {
@@ -727,88 +728,96 @@ export default function Home() {
         sectionTag={t.products.sectionTag}
       />
 
-      {/* Bhandara Seva — slim social-impact banner.
-          Was a 520 px hero (Wave: homepage clutter audit). Compressed
-          to ~140 px so it stops competing visually with commercial
-          sections, while still carrying the seva message + live meals
-          counter. Image runs as a low-opacity backdrop on desktop;
-          mobile collapses to a clean maroon strip. All testids
-          preserved (eyebrow, heading, body, tagline, meals-count,
-          impact chip). */}
+      {/* Bhandara Seva — true hero banner with bespoke image + single CTA.
+          Mirrors the new astrology hero pattern: 16:9 cinematic
+          backdrop (temple bhandara feast), dark wash on the LEFT for
+          legibility, content left-aligned, single focal CTA →
+          /donations. Live meals counter retained as a slim chip above
+          the headline so the social-impact metric still reads. All
+          testids preserved (section-bhandara-seva, text-bhandara-heading,
+          text-bhandara-body, text-bhandara-tagline, text-meals-count,
+          chip-bhandara-impact, img-bhandara-seva). */}
       <section
-        className="relative overflow-hidden border-y border-[#D4AF37]/25"
+        className="relative overflow-hidden border-y border-[#D4AF37]/30"
         data-testid="section-bhandara-seva"
       >
-        {/* Backdrop — dark maroon base + faint photo on the right side
-            (desktop only) so the message is always legible. */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, #2a0f15 0%, #4a1a22 50%, #6D2B35 100%)" }} aria-hidden="true" />
+        {/* Backdrop image — 16:9 hero illustration */}
         <img
-          src={optImg(bhandaraSevaImg, 1080)}
-          srcSet={optImgSrcSet(bhandaraSevaImg, [320, 480, 768, 1080])}
-          sizes="(min-width: 1024px) 50vw, 0px"
+          src={optImg(bhandaraBannerImg, 1440)}
+          srcSet={optImgSrcSet(bhandaraBannerImg, [480, 768, 1080, 1440, 1920])}
+          sizes="100vw"
           alt=""
-          className="hidden lg:block absolute inset-y-0 right-0 w-1/2 h-full object-cover opacity-25"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
           decoding="async"
-          aria-hidden="true"
           data-testid="img-bhandara-seva"
         />
-        <div className="hidden lg:block absolute inset-y-0 right-0 w-1/2 pointer-events-none"
-          style={{ background: "linear-gradient(90deg, #4a1a22 0%, rgba(74,26,34,0.6) 40%, transparent 100%)" }}
+        {/* Dark wash — heavier on the left so the headline + CTA stay
+            legible regardless of the artwork beneath. */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(20,11,16,0.85) 0%, rgba(20,11,16,0.7) 45%, rgba(20,11,16,0.4) 100%)",
+          }}
           aria-hidden="true"
         />
 
-        <div className="relative container mx-auto px-4 py-4 md:py-5">
-          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-5 text-white">
-            {/* Icon + eyebrow + tagline cluster (left) */}
-            <div className="flex items-center gap-3 md:flex-shrink-0">
-              <div className="w-10 h-10 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
-                <HandHeart className="w-5 h-5 text-[#D4AF37]" />
-              </div>
-              <div className="min-w-0">
-                <p
-                  className="text-[9px] md:text-[10px] uppercase tracking-[0.32em] font-semibold text-[#D4AF37] leading-none mb-1"
-                  data-testid="text-bhandara-eyebrow"
-                >
-                  Seva
-                </p>
-                <p
-                  className="font-serif italic text-[12px] md:text-[13px] text-[#D4AF37] leading-tight"
-                  data-testid="text-bhandara-tagline"
-                >
-                  Pure essentials. Greater purpose.
-                </p>
-              </div>
-            </div>
-
-            {/* Heading + body (center, takes remaining width) */}
-            <div className="min-w-0 md:flex-1">
-              <h2
-                className="font-serif text-[15px] md:text-[17px] lg:text-lg font-semibold leading-snug"
-                data-testid="text-bhandara-heading"
+        <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14 text-white">
+          <div className="max-w-2xl">
+            {/* Eyebrow + live meals counter (carries the impact metric) */}
+            <div className="flex items-center gap-3 flex-wrap mb-3">
+              <span
+                className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold"
+                data-testid="text-bhandara-eyebrow"
               >
-                Devotion that goes <span className="italic text-[#D4AF37]">beyond your home</span>
-              </h2>
-              <p
-                className="text-[12px] md:text-[12.5px] leading-snug text-white/75 mt-1"
-                data-testid="text-bhandara-body"
-              >
-                Every order helps us serve bhandara &mdash; sharing food, care and blessings with others.
-              </p>
-            </div>
-
-            {/* Live meals counter (right) */}
-            <div className="md:flex-shrink-0">
-              <div
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#D4AF37]/40 bg-white/5 backdrop-blur-sm"
+                Seva
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#D4AF37]/40 bg-white/5 backdrop-blur-sm"
                 data-testid="chip-bhandara-impact"
               >
-                <Flame className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span className="text-[11.5px] md:text-[12px] font-medium tracking-wide text-white whitespace-nowrap">
+                <Flame className="w-3 h-3 text-[#D4AF37]" />
+                <span className="text-[11px] font-medium tracking-wide whitespace-nowrap">
                   <span className="font-semibold text-[#D4AF37]" data-testid="text-meals-count">3,809</span>
                   {" "}meals served this year
                 </span>
-              </div>
+              </span>
+            </div>
+
+            <h2
+              className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold leading-[1.15] tracking-tight"
+              data-testid="text-bhandara-heading"
+            >
+              Devotion that goes <span className="text-[#D4AF37]">beyond your home</span>
+            </h2>
+            <p
+              className="text-[13.5px] md:text-[14.5px] text-white/80 mt-3 leading-relaxed max-w-xl"
+              data-testid="text-bhandara-body"
+            >
+              Every order helps us serve bhandara &mdash; sharing food, care and
+              blessings with families in need across India.
+            </p>
+            <p
+              className="font-serif italic text-[13px] md:text-sm text-[#D4AF37] mt-2"
+              data-testid="text-bhandara-tagline"
+            >
+              Pure essentials. Greater purpose.
+            </p>
+
+            {/* Single focal CTA — drives to /donations */}
+            <div className="mt-6">
+              <Link href="/donations">
+                <Button
+                  className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
+                  data-testid="btn-sponsor-meal"
+                  aria-label="Sponsor a meal — contribute to bhandara seva"
+                >
+                  <HandHeart className="h-4 w-4" />
+                  Sponsor a Meal
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

@@ -1434,6 +1434,12 @@ uri = "file://attached_assets/generated_images/astrology_hero_banner.png"
 type = "image"
 title = "astrology hero banner"
 
+[[generated]]
+id = "cQYFx-JNqhlw7QvjyWzi5"
+uri = "file://attached_assets/generated_images/bhandara_seva_banner.png"
+type = "image"
+title = "bhandara seva banner"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
