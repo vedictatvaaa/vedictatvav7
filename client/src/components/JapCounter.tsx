@@ -1740,41 +1740,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           page. The picker is still one tap away — see the Mantra select
           Card rendered after the Counter further down. */}
 
-      {/* Karaoke-style synced lyrics for chants with a recorded audio track */}
-      {lyrics && lyrics.length > 0 && (
-        <Card className="overflow-hidden border-[#D4AF37]/30 bg-gradient-to-br from-[#FFFAEC] to-[#F4E9CC]/60">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Music2 className="h-3.5 w-3.5 text-[#6D2B35]" />
-              <div className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#6D2B35]">
-                Sing along · {audioLocked ? "Chanting now" : "Tap the mala to begin"}
-              </div>
-            </div>
-            <div className="space-y-2" data-testid="inline-lyrics">
-              {lyrics.map((line, i) => {
-                const active = i === activeLyricIndex;
-                const seen = activeLyricIndex >= 0 && i < activeLyricIndex;
-                return (
-                  <div
-                    key={i}
-                    className={`text-center transition-all duration-300 ${active ? "scale-[1.03]" : ""}`}
-                    data-testid={`inline-lyric-line-${i}`}
-                    data-active={active || undefined}
-                  >
-                    <div className={`font-serif leading-snug ${active ? "text-[#4a1a22] text-base sm:text-lg" : seen ? "text-[#6D2B35]/45 text-sm" : "text-[#6D2B35]/75 text-sm"}`}>
-                      {line.sa}
-                    </div>
-                    <div className={`text-[10px] sm:text-xs ${active ? "text-[#6D2B35]" : "text-[#6D2B35]/50"}`}>
-                      {line.iast} <span className={active ? "text-[#5a4a3a]" : "text-[#5a4a3a]/55"}>· {line.en}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Counter */}
       <Card className="overflow-hidden">
         <CardContent className="p-4 sm:p-6">
