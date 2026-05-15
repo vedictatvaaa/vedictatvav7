@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -1696,6 +1697,92 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           onDismiss={() => setAshirvad(null)}
         />
       )}
+
+      {/* Pre-chant 4-7-8 pranayama — modal popup so the breathing UI has
+          its own canvas instead of cramming inside the orb. Auto-runs
+          once per session on the first orb tap; "Skip" closes it and
+          counting begins. Closing the dialog (Esc / overlay click) is
+          treated as Skip so the devotee never gets locked out. */}
+      <Dialog
+        open={breathingActive}
+        onOpenChange={(open) => { if (!open) skipBreathing(); }}
+      >
+        <DialogContent
+          className="max-w-md bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] border-[#D4AF37]/40 text-[#FFFAEC] p-0 overflow-hidden"
+          data-testid="dialog-pranayama"
+        >
+          {(() => {
+            const elapsed = breathTick;
+            const totalRemain = Math.max(0, Math.ceil((BREATH_TOTAL_MS - elapsed) / 1000));
+            const t = elapsed % BREATH_CYCLE_MS;
+            let phase: "Inhale" | "Hold" | "Exhale";
+            let phaseRemain: number;
+            let auraScale: number;
+            if (t < 4000) {
+              phase = "Inhale";
+              phaseRemain = Math.max(1, Math.ceil((4000 - t) / 1000));
+              auraScale = 0.78 + (t / 4000) * 0.27;
+            } else if (t < 11000) {
+              phase = "Hold";
+              phaseRemain = Math.max(1, Math.ceil((11000 - t) / 1000));
+              auraScale = 1.05;
+            } else {
+              phase = "Exhale";
+              phaseRemain = Math.max(1, Math.ceil((19000 - t) / 1000));
+              auraScale = 1.05 - ((t - 11000) / 8000) * 0.27;
+            }
+            const cycleNum = Math.min(3, Math.floor(elapsed / BREATH_CYCLE_MS) + 1);
+            return (
+              <div className="relative px-6 py-8 flex flex-col items-center text-center">
+                <DialogTitle className="sr-only">Pranayama breathing</DialogTitle>
+                <DialogDescription className="sr-only">
+                  60-second 4-7-8 breathing exercise before chanting begins.
+                </DialogDescription>
+                <div className="text-[10px] sm:text-xs uppercase tracking-[0.32em] text-[#D4AF37] font-semibold">
+                  Pranayama · Cycle {cycleNum}/3
+                </div>
+                <div
+                  className="relative my-6 w-44 h-44 sm:w-52 sm:h-52 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.08) 55%, transparent 80%)",
+                  }}
+                  aria-hidden="true"
+                >
+                  <div
+                    className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-transform duration-1000 ease-in-out"
+                    style={{ transform: `scale(${auraScale})` }}
+                  />
+                  <div className="relative flex flex-col items-center">
+                    <div className="text-2xl sm:text-3xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
+                      {phase}
+                    </div>
+                    <div className="text-6xl sm:text-7xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-1" data-testid="text-breath-countdown">
+                      {phaseRemain}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-[#FFEBB0]/90 max-w-[18rem]">
+                  {phase === "Inhale" ? "Breathe in slowly through the nose"
+                    : phase === "Hold" ? "Hold gently · settle the mind"
+                    : "Release slowly through the mouth"}
+                </div>
+                <div className="text-[11px] uppercase tracking-[0.22em] text-[#D4AF37]/70 mt-4">
+                  {totalRemain}s until chanting
+                </div>
+                <button
+                  type="button"
+                  onClick={skipBreathing}
+                  className="mt-5 text-[12px] uppercase tracking-[0.18em] font-semibold px-4 py-2 rounded-full border border-[#D4AF37]/55 text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                  data-testid="btn-skip-breathing"
+                  aria-label="Skip breathwork and begin chanting now"
+                >
+                  Skip · Begin Chanting
+                </button>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
       {/* Header — replaces the previous "Begin Your Sādhanā" + Focus mode
           + favourite/daily/share cluster with a single, calm centered
           title block. The page H1 was promoted up here as the SEO heading,
@@ -1957,79 +2044,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   </>
                 )}
               </button>
-              {/* Pre-chant 4-7-8 pranayama overlay — auto-runs once on the
-                  first tap of the session. Sits above the orb button so
-                  taps during breathing don't count. Dynamically labelled
-                  Inhale / Hold / Exhale with a live countdown and a soft
-                  scaling aura that paces the breath. */}
-              {breathingActive && (() => {
-                const elapsed = breathTick;
-                const totalRemain = Math.max(0, Math.ceil((BREATH_TOTAL_MS - elapsed) / 1000));
-                const t = elapsed % BREATH_CYCLE_MS;
-                let phase: "Inhale" | "Hold" | "Exhale";
-                let phaseRemain: number;
-                let auraScale: number;
-                if (t < 4000) {
-                  phase = "Inhale";
-                  phaseRemain = Math.max(1, Math.ceil((4000 - t) / 1000));
-                  auraScale = 0.78 + (t / 4000) * 0.27;
-                } else if (t < 11000) {
-                  phase = "Hold";
-                  phaseRemain = Math.max(1, Math.ceil((11000 - t) / 1000));
-                  auraScale = 1.05;
-                } else {
-                  phase = "Exhale";
-                  phaseRemain = Math.max(1, Math.ceil((19000 - t) / 1000));
-                  auraScale = 1.05 - ((t - 11000) / 8000) * 0.27;
-                }
-                const cycleNum = Math.min(3, Math.floor(elapsed / BREATH_CYCLE_MS) + 1);
-                return (
-                  <div
-                    className="absolute inset-7 z-20 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30 select-none"
-                    data-testid="breathing-overlay"
-                    role="status"
-                    aria-live="polite"
-                    aria-label={`${phase} for ${phaseRemain} seconds. Cycle ${cycleNum} of 3.`}
-                  >
-                    <div
-                      className="absolute inset-[12%] rounded-full pointer-events-none transition-transform duration-1000 ease-in-out"
-                      style={{
-                        background: "radial-gradient(circle, rgba(212,175,55,0.30) 0%, rgba(212,175,55,0.10) 55%, transparent 80%)",
-                        transform: `scale(${auraScale})`,
-                      }}
-                      aria-hidden="true"
-                    />
-                    <div className="relative flex flex-col items-center gap-1 px-4">
-                      <div className="text-[10px] sm:text-xs uppercase tracking-[0.32em] text-[#D4AF37] font-semibold">
-                        Pranayama · Cycle {cycleNum}/3
-                      </div>
-                      <div className="text-3xl sm:text-4xl font-serif font-bold text-[#FFFAEC] mt-1" data-testid="text-breath-phase">
-                        {phase}
-                      </div>
-                      <div className="text-6xl sm:text-7xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none my-1" data-testid="text-breath-countdown">
-                        {phaseRemain}
-                      </div>
-                      <div className="text-[10px] sm:text-xs text-[#D4AF37]/85 tracking-wide">
-                        {phase === "Inhale" ? "Breathe in slowly through the nose"
-                          : phase === "Hold" ? "Hold gently · settle the mind"
-                          : "Release slowly through the mouth"}
-                      </div>
-                      <div className="text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]/60 mt-2">
-                        {totalRemain}s until chanting
-                      </div>
-                      <button
-                        type="button"
-                        onClick={skipBreathing}
-                        className="mt-2 text-[11px] uppercase tracking-[0.18em] font-semibold px-3 py-1 rounded-full border border-[#D4AF37]/50 text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
-                        data-testid="btn-skip-breathing"
-                        aria-label="Skip breathwork and begin chanting now"
-                      >
-                        Skip · Begin Chanting
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
               {/* Pace pulse — gentle gold ring flash when tapping faster than a chant cycle. */}
               {paceHint && (
                 <div
