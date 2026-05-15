@@ -1145,32 +1145,21 @@ export default function Home() {
               consultations
             </h2>
 
-            {/* CTAs */}
-            <div className="flex flex-row items-center gap-2 shrink-0 w-full md:w-auto">
-              <Link href="/astrology" className="flex-1 md:flex-none">
-                <Button
-                  size="sm"
-                  className="w-full md:w-auto bg-[#D4AF37] text-[#1a1118] font-semibold gap-1.5 hover:bg-[#D4AF37]"
-                  data-testid="btn-generate-kundli"
-                  aria-label="Generate your free Vedic Kundli"
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  Free Kundli
-                </Button>
-              </Link>
-              <Link href="/astrology" className="flex-1 md:flex-none">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full md:w-auto border-[#D4AF37]/45 bg-white/5 text-white font-semibold gap-1.5 hover:bg-white/10"
-                  data-testid="btn-book-consultation"
-                  aria-label="Book a live astrology consultation"
-                >
-                  <Video className="h-3.5 w-3.5" />
-                  Talk to Astrologer
-                </Button>
-              </Link>
-            </div>
+            {/* Single CTA — dropped the secondary "Talk to Astrologer"
+                button to make this a clean hero strip with one focal
+                action. Free Kundli is the friction-free lead magnet;
+                paid astrologer consultations live on /astrology. */}
+            <Link href="/astrology" className="w-full md:w-auto shrink-0">
+              <Button
+                size="sm"
+                className="w-full md:w-auto bg-[#D4AF37] text-[#1a1118] font-semibold gap-1.5 hover:bg-[#D4AF37]"
+                data-testid="btn-generate-kundli"
+                aria-label="Get your free Vedic Kundli and consult an astrologer"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                Free Kundli &amp; Consult
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
