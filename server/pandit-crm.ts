@@ -180,6 +180,25 @@ export function registerPanditCrmRoutes(app: Express) {
       const [row] = await db.insert(panditPaymentRequests).values({
         ...initialValues, rpLinkId, rpShortUrl,
       } as any).returning();
+
+      // Cross-surface handshake: try to identify the matching customer and
+      // push a notification into their dashboard inbox so they can pay
+      // straight from /dashboard?tab=payments instead of relying on SMS/email.
+      try {
+        const { resolveUserIdForCustomer, notifyUserOnPaymentRequest } = await import("./portal-sync");
+        const userId = await resolveUserIdForCustomer({
+          customerKey: parsed.data.customerKey,
+          customerPhone: parsed.data.customerPhone,
+        });
+        await notifyUserOnPaymentRequest({
+          userId,
+          panditName: pandit?.name || "Your pandit",
+          amountInr: parsed.data.amountInr,
+          purpose: parsed.data.purpose,
+          requestId: row.id,
+        });
+      } catch {}
+
       res.json({ request: row });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
@@ -230,6 +249,29 @@ export function registerPanditCrmRoutes(app: Express) {
             console.warn("[pandit-crm] payment-link cancel failed:", e?.message || e);
           }
         }
+      }
+
+      // If the pandit just marked this paid, push a confirmation into the
+      // customer's dashboard so they see the receipt close on their side too.
+      if (parsed.data.status === "paid") {
+        try {
+          const { resolveUserIdForCustomer } = await import("./portal-sync");
+          const userId = await resolveUserIdForCustomer({
+            customerKey: row.customerKey, customerPhone: row.customerPhone,
+          });
+          if (userId) {
+            const { pushUserNotification } = await import("./dashboard-routes");
+            await pushUserNotification({
+              userId,
+              kind: "payment_request_paid",
+              title: `Payment of ₹${row.amountInr} confirmed`,
+              body: row.purpose,
+              link: "/dashboard?tab=payments",
+              meta: { requestId: row.id },
+              dedupeKey: `payreq:${row.id}:paid`,
+            });
+          }
+        } catch {}
       }
       res.json({ request: row });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }

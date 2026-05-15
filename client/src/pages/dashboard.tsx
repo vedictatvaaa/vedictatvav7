@@ -19,23 +19,26 @@ import MyBookings from "@/pages/my-bookings";
 import Wishlist from "@/pages/wishlist";
 import MyProfile from "@/pages/my-profile";
 import JapCounter from "@/components/JapCounter";
+import PaymentRequestsTab from "@/components/dashboard/PaymentRequestsTab";
+import MyPanditMemoriesCard from "@/components/dashboard/MyPanditMemoriesCard";
 import { listNotifications } from "@/lib/dashboardApi";
 
 type TabId =
-  | "overview" | "bookings" | "wishlist" | "family" | "notifications"
+  | "overview" | "bookings" | "wishlist" | "family" | "notifications" | "payments"
   | "chanting" | "settings";
 
 const NAV: Array<{
   id: TabId; label: string; icon: any; section: "main" | "spiritual" | "account";
   badge?: "unread" | null;
 }> = [
-  { id: "overview",      label: "Overview",       icon: LayoutDashboard, section: "main" },
-  { id: "bookings",      label: "My Bookings",    icon: Calendar,        section: "main" },
-  { id: "wishlist",      label: "Favorites",      icon: Heart,           section: "main" },
-  { id: "family",        label: "Family",         icon: Users2,          section: "main" },
-  { id: "notifications", label: "Notifications",  icon: Bell,            section: "main", badge: "unread" },
-  { id: "chanting",      label: "Jap Counter",    icon: Music2,          section: "spiritual" },
-  { id: "settings",      label: "Settings",       icon: SettingsIcon,    section: "account" },
+  { id: "overview",      label: "Overview",         icon: LayoutDashboard, section: "main" },
+  { id: "bookings",      label: "My Bookings",      icon: Calendar,        section: "main" },
+  { id: "payments",      label: "Payment Requests", icon: IndianRupee,     section: "main" },
+  { id: "wishlist",      label: "Favorites",        icon: Heart,           section: "main" },
+  { id: "family",        label: "Family",           icon: Users2,          section: "main" },
+  { id: "notifications", label: "Notifications",    icon: Bell,            section: "main", badge: "unread" },
+  { id: "chanting",      label: "Jap Counter",      icon: Music2,          section: "spiritual" },
+  { id: "settings",      label: "Settings",         icon: SettingsIcon,    section: "account" },
 ];
 
 const SECTION_LABEL: Record<string, string> = {
@@ -176,6 +179,7 @@ export default function DashboardPage() {
             {tab === "wishlist" && <Wishlist />}
             {tab === "family" && <FamilyProfiles />}
             {tab === "notifications" && <NotificationsInbox />}
+            {tab === "payments" && <PaymentRequestsTab />}
             {tab === "chanting" && (
               <JapCounter
                 ownerKey={`user:${user.id}`}
@@ -225,6 +229,8 @@ function OverviewTab({ unread, setTab }: { unread: number; setTab: (t: TabId) =>
           );
         })}
       </div>
+
+      <MyPanditMemoriesCard />
 
       <Card>
         <CardContent className="p-5">

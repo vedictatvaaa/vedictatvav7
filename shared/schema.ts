@@ -338,6 +338,11 @@ export const panditReviews = pgTable("pandit_reviews", {
   rating: real("rating").notNull(),
   comment: text("comment"),
   serviceType: text("service_type"),
+  // Pandit's public reply to a review. Plain text, surfaced under the
+  // review on the public profile and inside the customer's notification
+  // (when wired). Null until the pandit responds.
+  panditReply: text("pandit_reply"),
+  panditRepliedAt: timestamp("pandit_replied_at"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   panditIdIdx: index("pandit_reviews_pandit_id_idx").on(t.panditId),
@@ -1429,6 +1434,27 @@ export const userNotifications = pgTable("user_notifications", {
 export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({ id: true, createdAt: true, readAt: true });
 export type UserNotification = typeof userNotifications.$inferSelect;
 export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
+
+// Mirror of userNotifications for the Pandit portal inbox. Pandits learn
+// about customer-side actions (booking cancelled, new chat, new review,
+// payment received) without polling every list endpoint.
+export const panditNotifications = pgTable("pandit_notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  kind: text("kind").notNull(), // booking_cancelled | booking_message | review_new | payment_received | payment_request_paid | system
+  title: text("title").notNull(),
+  body: text("body"),
+  link: text("link"),
+  meta: jsonb("meta"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  panditIdIdx: index("pandit_notifications_pandit_id_idx").on(t.panditId),
+  readAtIdx: index("pandit_notifications_read_at_idx").on(t.readAt),
+}));
+export const insertPanditNotificationSchema = createInsertSchema(panditNotifications).omit({ id: true, createdAt: true, readAt: true });
+export type PanditNotification = typeof panditNotifications.$inferSelect;
+export type InsertPanditNotification = z.infer<typeof insertPanditNotificationSchema>;
 
 // Phase 2 — Pandit payout ledger. Admin-recorded payments to pandits.
 // Earnings (computed): completed-booking gross − commission + paid tips.

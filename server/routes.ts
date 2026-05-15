@@ -31,6 +31,7 @@ import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
 import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerPanditCrmRoutes } from "./pandit-crm";
+import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
 import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { registerContentRoutes } from "./content-routes";
@@ -700,6 +701,7 @@ export async function registerRoutes(
   registerPanditEarningsRoutes(app, adminAuthMiddleware);
   registerPanditToolsRoutes(app);
   registerPanditCrmRoutes(app);
+  registerPortalSyncRoutes(app);
   try {
     const ry = await seedTirthYatraTours();
     console.log(`[yatra] tours ready: ${ry.total} (just inserted ${ry.inserted})`);
@@ -2465,6 +2467,15 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       rating: Math.round(avgRating * 10) / 10,
       reviewCount: allReviews.length,
     });
+
+    // Cross-surface handshake: notify the pandit that a new review arrived
+    // so they can reply from the portal. Best-effort; failure never blocks
+    // the customer's review submission.
+    notifyPanditOnNewReview({
+      panditId: review.panditId,
+      reviewerName: review.reviewerName,
+      rating: review.rating,
+    }).catch(() => {});
 
     res.status(201).json(review);
   });

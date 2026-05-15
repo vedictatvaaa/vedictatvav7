@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PanditNotifications from "@/components/pandit/PanditNotifications";
+import PanditReviews from "@/components/pandit/PanditReviews";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarDays, MessageSquare, ClipboardList, CheckCircle2, XCircle, Clock, IndianRupee, LogOut, Plus, Trash2, Send, Lock, Sparkles, MapPin, Phone, Video, Mic, LayoutDashboard, Wallet, Share2, Wrench, Music2, Users, Star, Crown, Bell, Settings as SettingsIcon } from "lucide-react";
@@ -31,14 +33,14 @@ const PANDIT_NAV: Array<{ id: PanditSection; label: string; icon: any; section: 
   { id: "bookings",      label: "Bookings",      icon: CalendarDays,    section: "main" },
   { id: "earnings",      label: "Earnings",      icon: Wallet,          section: "main" },
   { id: "payments",      label: "Payment Requests", icon: IndianRupee,  section: "main" },
-  { id: "notifications", label: "Notifications", icon: Bell,            section: "main", phase: "Phase 2" },
+  { id: "notifications", label: "Notifications", icon: Bell,            section: "main" },
   { id: "storefront",    label: "My Storefront", icon: Share2,          section: "growth" },
   { id: "referrals",     label: "Referrals",     icon: IndianRupee,     section: "growth" },
   { id: "card",          label: "Pandit Card",   icon: Sparkles,        section: "growth" },
   { id: "tools",         label: "Tools",         icon: Wrench,          section: "growth" },
   { id: "japa",          label: "Jap Counter",   icon: Music2,          section: "growth" },
   { id: "customers",     label: "Customers",     icon: Users,           section: "growth" },
-  { id: "reviews",       label: "Reviews",       icon: Star,            section: "growth", phase: "Phase 2" },
+  { id: "reviews",       label: "Reviews",       icon: Star,            section: "growth" },
   { id: "membership",    label: "Membership",    icon: Crown,           section: "account" },
   { id: "settings",      label: "Settings",      icon: SettingsIcon,    section: "account", phase: "Phase 2" },
 ];
@@ -347,6 +349,8 @@ export default function PanditPortalPage() {
               </div>
             )}
             {section === "earnings" && <PanditEarnings />}
+            {section === "notifications" && <PanditNotifications />}
+            {section === "reviews" && <PanditReviews />}
             {section === "payments" && <PanditPayments />}
             {section === "customers" && <PanditCustomers />}
             {section === "tools" && <PanditTools />}
@@ -435,7 +439,8 @@ export default function PanditPortalPage() {
               && section !== "payments"
               && section !== "customers" && section !== "tools" && section !== "membership"
               && section !== "storefront" && section !== "referrals" && section !== "card"
-              && section !== "japa" && section !== "settings" && (
+              && section !== "japa" && section !== "settings"
+              && section !== "notifications" && section !== "reviews" && (
               <PanditComingSoon nav={PANDIT_NAV.find((n) => n.id === section)!} />
             )}
           </main>

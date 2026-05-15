@@ -48,6 +48,34 @@ export async function listNotifications(userId: number, email: string, opts: { l
   const d = await jfetch(`/api/notifications?${q.toString()}`);
   return { items: (d.items || []) as UserNotification[], unread: Number(d.unread || 0) };
 }
+
+// ──────── Pandit-side handshakes (read-only on the customer surface) ────────
+export interface MyPaymentRequest {
+  id: number; panditId: number;
+  pandit: { id: number; name: string; slug: string; image: string | null } | null;
+  amountInr: number; purpose: string; notes: string | null;
+  status: "pending" | "paid" | "cancelled" | "expired";
+  rpShortUrl: string | null; publicToken: string | null;
+  expiresAt: string | null; paidAt: string | null; createdAt: string;
+}
+export async function listMyPaymentRequests(userId: number, email: string) {
+  const d = await jfetch(`/api/my/payment-requests?userId=${userId}&email=${encodeURIComponent(email)}`);
+  return {
+    requests: (d.requests || []) as MyPaymentRequest[],
+    summary: d.summary as { pendingCount: number; pendingValue: number; paidCount: number; paidValue: number },
+  };
+}
+
+export interface MyPanditMemory {
+  id: number; kind: string; label: string; dateText: string | null; tithi: string | null;
+  notes: string | null;
+  pandit: { id: number; name: string; slug: string; image: string | null } | null;
+  nextDate: string | null; daysAway: number | null;
+}
+export async function listMyPanditMemories(userId: number, email: string) {
+  const d = await jfetch(`/api/my/pandit-memories?userId=${userId}&email=${encodeURIComponent(email)}`);
+  return (d.memories || []) as MyPanditMemory[];
+}
 export async function markNotificationRead(id: number, userId: number, identityEmail: string) {
   await jfetch(`/api/notifications/${id}/read`, {
     method: "POST",

@@ -453,6 +453,19 @@ export function registerPanditPortalRoutes(app: Express) {
         senderName: rows[0].contactName,
         message,
       }).returning();
+
+      // Cross-surface handshake: drop a notification into the assigned
+      // pandit's inbox so they don't have to keep refreshing the chat tab.
+      try {
+        const { notifyPanditOnCustomerMessage } = await import("./portal-sync");
+        await notifyPanditOnCustomerMessage({
+          panditId: rows[0].panditId,
+          bookingId: id,
+          customerName: rows[0].contactName,
+          preview: message,
+        });
+      } catch {}
+
       res.json({ message: row });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Validation failed" });
