@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import type { Pandit } from "@shared/schema";
@@ -125,9 +125,9 @@ export default function PujaBooking() {
   return (
     <div className="w-full pb-16 bg-white">
       <PageSeo
-        title="Book Pandit Online for Puja at Home — Verified Vedic Pandits in 75+ Cities | Vedic Tatva"
-        description="Book a verified Vedic pandit online for Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti, Mundan, Namkaran, Wedding & Pind Daan. Authentic mantras, all samagri included, transparent pricing, shubh muhurat suggestions. Available in Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati & 12+ Indian languages across Mumbai, Delhi, Bengaluru, Pune, Hyderabad, Chennai, Kolkata, Ahmedabad, Jaipur, Lucknow."
-        keywords="book pandit online, pandit for puja at home, online pandit booking, griha pravesh puja, satyanarayan katha pandit, lakshmi puja pandit, ganesh sthapana puja, rudra abhishek online, navagraha shanti puja, mundan ceremony pandit, namkaran sanskar, vedic wedding pandit, pind daan online, shradh ceremony pandit, hawan online booking, virtual puja online, puja samagri kit, shubh muhurat for puja, hindi pandit, tamil pandit, telugu pandit, marathi pandit, gujarati pandit, bengali pandit, kannada pandit, pandit in mumbai, pandit in delhi ncr, pandit in bangalore, pandit in pune, pandit in hyderabad, pandit in chennai, vedic puja vidhi, smarta pandit, vaishnava pandit, brahmin pandit booking, pandit dakshina, online vedic ritual"
+        title="Online Puja Booking & Pandit Services — Authentic Vedic Rituals | Vedic Tatva"
+        description="Book authentic online puja services with experienced Vedic pandits at Vedic Tatva. Home puja, havan, astrology remedies, Satyanarayan, Rudrabhishek, Griha Pravesh, Lakshmi, Navgraha, Marriage, Pitra Dosh & Maha Mrityunjaya — across India and for NRIs worldwide. Live video Sankalp, all samagri included, transparent dakshina, shubh muhurat suggestions, multi-language pandits."
+        keywords="online puja booking, book pandit online, online pandit booking, vedic puja services, hindu puja booking, online havan booking, virtual puja services, puja at home booking, certified vedic pandit, astrology puja services, online temple puja, hindu rituals online, vedic rituals booking, spiritual puja services, puja booking India, book Satyanarayan puja online, online griha pravesh puja, marriage puja booking, vastu puja online, Lakshmi puja booking, Ganesh puja online, Navgraha puja booking, Rudrabhishek puja online, Maha Mrityunjaya puja booking, Durga puja pandit booking, online kundli puja remedies, online dosh nivaran puja, online pandit booking in Delhi, online puja services India, best pandit booking website, hindu priest booking near me, book pandit for home puja, temple puja services online, affordable online puja booking services, trusted vedic pandit for home puja, online puja with live video streaming, book experienced hindu pandit online, authentic vedic rituals and pujas, astrology based puja booking platform, online puja for health wealth prosperity, instant puja booking with pandit, online spiritual consultation and puja, complete hindu puja services online, sanatan dharma rituals, vedic spirituality, hindu spiritual healing, divine energy puja, karma cleansing rituals, vedic remedies online, spiritual protection puja, manifestation puja rituals, positive energy havan, chakra healing puja"
         canonical="/puja"
         ogType="website"
         twitterCard="summary_large_image"
@@ -348,8 +348,127 @@ export default function PujaBooking() {
           keywordsBlurb="Book pandit online for puja at home — Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti, Mundan, Namkaran, Wedding ceremonies and shradh. Verified Vedic pandits in Mumbai, Delhi, Bengaluru, Pune, Hyderabad, Chennai, Kolkata, Ahmedabad, Jaipur, Lucknow and 75+ cities. Pandits available in Hindi, English, Sanskrit, Tamil, Telugu, Kannada, Marathi, Gujarati, Bengali. All puja samagri delivery included. Transparent pricing, shubh muhurat suggestions, online booking with secure payment."
         />
 
+        <PujaHashtagStrip />
+
+        <DedicatedPujaPagesGrid />
+
         <RelatedServicesSection context="puja-booking" currentPath="/puja" />
       </div>
     </div>
+  );
+}
+
+const PUJA_HASHTAGS = [
+  "#VedicTatva", "#OnlinePuja", "#PanditBooking", "#HinduRituals", "#VedicPuja",
+  "#SanatanDharma", "#PujaBooking", "#OnlineHavan", "#SpiritualIndia", "#AstrologyRemedies",
+  "#NRIPuja", "#PujaAtHome",
+];
+
+function PujaHashtagStrip() {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState<string | null>(null);
+  const copyText = async (text: string, key: string, successTitle: string, successDesc: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(key);
+      toast({ title: successTitle, description: successDesc });
+      setTimeout(() => setCopied(null), 1400);
+    } catch {
+      toast({ title: "Copy failed", description: "Please copy manually", variant: "destructive" });
+    }
+  };
+  const handleCopy = (tag: string) => copyText(tag, tag, "Copied", `${tag} copied to clipboard`);
+  const handleCopyAll = () => copyText(PUJA_HASHTAGS.join(" "), "all", "All hashtags copied", `${PUJA_HASHTAGS.length} hashtags copied`);
+  return (
+    <section className="mt-16 mb-12" aria-labelledby="puja-hashtag-heading" data-testid="puja-hashtag-strip">
+      <div className="rounded-2xl bg-[#FBF7EE] border border-[#D4AF37]/25 p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Share the divine</div>
+            <h2 id="puja-hashtag-heading" className="text-xl font-serif font-semibold text-[#6D2B35] flex items-center gap-2">
+              <Hash className="w-5 h-5" /> High-ranking spiritual hashtags
+            </h2>
+            <p className="text-[13px] text-[#5a4a3a]/70 mt-1">Tap any tag to copy. Use them when you share your puja photos, reels or testimonials.</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyAll}
+            className="border-[#6D2B35]/30 text-[#6D2B35] hover:bg-[#6D2B35]/5"
+            data-testid="btn-copy-all-hashtags"
+          >
+            {copied === "all" ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+            Copy all
+          </Button>
+        </div>
+        <div className="sr-only" role="status" aria-live="polite" data-testid="hashtag-copy-status">
+          {copied ? (copied === "all" ? "All hashtags copied to clipboard" : `${copied} copied to clipboard`) : ""}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {PUJA_HASHTAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => handleCopy(tag)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-white border border-[#D4AF37]/30 text-[#6D2B35] hover-elevate active-elevate-2 transition"
+              data-testid={`btn-hashtag-${tag.replace("#", "").toLowerCase()}`}
+            >
+              {copied === tag ? <Check className="w-3 h-3 text-emerald-600" /> : null}
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const DEDICATED_PUJA_PAGES: Array<{ href: string; title: string; blurb: string; tag: string }> = [
+  { href: "/satyanarayan-puja", title: "Satyanarayan Puja", blurb: "Purnima vrat, full katha, sapaad bhog. From ₹1,100.", tag: "Most Booked" },
+  { href: "/rudrabhishek-puja", title: "Rudrabhishek", blurb: "Veda-pathi pandit, Rudri Paath, abhishek. From ₹2,100.", tag: "Shiva" },
+  { href: "/griha-pravesh-puja", title: "Griha Pravesh", blurb: "Vastu shanti, kalash sthapana, full housewarming vidhi.", tag: "New Home" },
+  { href: "/lakshmi-puja", title: "Lakshmi Puja", blurb: "Diwali, Friday weekly puja, Sri Sukta paath. Wealth & abundance.", tag: "Wealth" },
+  { href: "/navgraha-puja", title: "Navgraha Puja", blurb: "Sade Sati, Mangal Dosha, planetary shanti homa.", tag: "Dosha" },
+  { href: "/marriage-puja", title: "Marriage Puja", blurb: "Vivah sanskar, kanyadaan, saptapadi, multi-language pandit.", tag: "Wedding" },
+  { href: "/pitra-dosh-puja", title: "Pitra Dosh Puja", blurb: "Tripindi shradh, Narayan Bali, ancestral peace.", tag: "Ancestral" },
+  { href: "/maha-mrityunjaya-jaap", title: "Maha Mrityunjaya Jaap", blurb: "1.25 lakh / 1 crore jaap for health, longevity, protection.", tag: "Healing" },
+];
+
+function DedicatedPujaPagesGrid() {
+  return (
+    <section className="mt-12 mb-8" aria-labelledby="dedicated-pages-heading" data-testid="dedicated-puja-pages">
+      <div className="text-center mb-6">
+        <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Dedicated Puja Guides</div>
+        <h2 id="dedicated-pages-heading" className="text-2xl font-serif font-semibold text-[#6D2B35]">Explore our most-booked pujas in detail</h2>
+        <p className="text-[13px] text-[#5a4a3a]/70 mt-2 max-w-2xl mx-auto">Each page covers the vidhi, samagri, dakshina range, FAQs and lets you book directly with a verified pandit.</p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {DEDICATED_PUJA_PAGES.map((p) => (
+          <Link key={p.href} href={p.href} className="block" data-testid={`link-puja-${p.href.replace("/", "")}`}>
+            <div className="rounded-lg border border-[#D4AF37]/25 bg-white p-4 h-full hover-elevate transition">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="font-serif font-semibold text-[#6D2B35] text-[14px] leading-tight">{p.title}</h3>
+                <span className="text-[9px] uppercase tracking-wider font-semibold text-[#D4AF37] shrink-0">{p.tag}</span>
+              </div>
+              <p className="text-[12px] text-[#5a4a3a]/70 leading-snug">{p.blurb}</p>
+              <div className="text-[11px] font-semibold text-[#6D2B35] mt-3 inline-flex items-center gap-1">
+                Learn more <ChevronRight className="w-3 h-3" />
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -638,6 +638,12 @@ function Router() {
           <Route path="/navratri-puja-vidhi">{() => <SeoLanding slug="navratri-puja-vidhi" />}</Route>
           <Route path="/lakshmi-puja-benefits">{() => <SeoLanding slug="lakshmi-puja-benefits" />}</Route>
           <Route path="/griha-pravesh-muhurat">{() => <SeoLanding slug="griha-pravesh-muhurat" />}</Route>
+          <Route path="/griha-pravesh-puja">{() => <SeoLanding slug="griha-pravesh-puja" />}</Route>
+          <Route path="/lakshmi-puja">{() => <SeoLanding slug="lakshmi-puja" />}</Route>
+          <Route path="/navgraha-puja">{() => <SeoLanding slug="navgraha-puja" />}</Route>
+          <Route path="/marriage-puja">{() => <SeoLanding slug="marriage-puja" />}</Route>
+          <Route path="/pitra-dosh-puja">{() => <SeoLanding slug="pitra-dosh-puja" />}</Route>
+          <Route path="/maha-mrityunjaya-jaap">{() => <SeoLanding slug="maha-mrityunjaya-jaap" />}</Route>
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
           <Route path="/shop" component={Shop} />

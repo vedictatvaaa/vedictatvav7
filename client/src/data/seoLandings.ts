@@ -973,6 +973,497 @@ const GRIHA_PRAVESH_MUHURAT: SeoLandingPageProps = {
 };
 
 // ---------------------------------------------------------------------------
+// DEDICATED PUJA LANDINGS (target: 1 main keyword + 5–10 related per page)
+// ---------------------------------------------------------------------------
+
+const GRIHA_PRAVESH_PUJA: SeoLandingPageProps = {
+  seoTitle: "Griha Pravesh Puja Booking — Vastu Shanti, Verified Pandit | Vedic Tatva",
+  seoDescription:
+    "Book Griha Pravesh Puja online with a verified Vedic pandit. Full Vastu Shanti vidhi, kalash sthapana, navagraha shanti, havan and prasad — at your new home or live online. Personalised muhurat, all samagri included, transparent dakshina from ₹3,500.",
+  seoKeywords:
+    "griha pravesh puja, griha pravesh booking, online griha pravesh puja, vastu shanti puja, housewarming puja, new home puja, vastu puja online, griha pravesh muhurat, griha pravesh vidhi, griha pravesh samagri, pandit for housewarming",
+  canonical: "/griha-pravesh-puja",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Griha Pravesh Puja", url: "/griha-pravesh-puja" },
+  ],
+  eyebrow: "Griha Pravesh Puja",
+  h1: "Griha Pravesh Puja — Vastu Shanti for Your New Home",
+  subtitle:
+    "Begin life in your new home with a complete Vedic housewarming — Vastu Shanti, Navagraha invocation, kalash sthapana and havan, performed by a verified pandit.",
+  heroCTAs: [
+    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Find a Muhurat", href: "/griha-pravesh-muhurat", variant: "outline" },
+  ],
+  trustChips: ["Verified Pandit", "Vastu Shanti Included", "Personalised Muhurat"],
+  intro:
+    "Griha Pravesh is the Vedic ceremony of consecrating a new home before the family enters to live. It pacifies the Vastu Purusha, invokes blessings of the eight directions and the navagraha, and removes any pre-existing dosha left by previous occupants. Vedic Tatva connects you with verified Brahmin pandits who perform the full ceremony — Vastu pujan, kalash sthapana, havan, ksheer-arpan and the first cooking on the new chulha — with all samagri included.",
+  sections: [
+    {
+      heading: "Three Types of Griha Pravesh",
+      bullets: [
+        "Apoorva — first entry into a brand-new home (most elaborate vidhi)",
+        "Sapoorva — re-entry after long absence, renovation or change of city",
+        "Dwandwah — re-entry after the home has been damaged and repaired",
+      ],
+    },
+    {
+      heading: "Full Griha Pravesh Vidhi — What's Included",
+      bullets: [
+        "Sankalp by the head of family in their gotra and the home address",
+        "Ganesh puja, Kalash sthapana at the north-east (Ishanya) corner",
+        "Vastu Purusha invocation and pacification with vastu mandala",
+        "Navagraha shanti homa to balance planetary energies of the home",
+        "Boundary mantras for the eight directions and main door threshold",
+        "First lighting of the chulha (cooking hearth) and ksheer-arpan (milk boiling over)",
+        "Aarti, prasad distribution and Brahmin bhojan (optional)",
+      ],
+    },
+    {
+      heading: "Best Muhurat for Griha Pravesh",
+      bullets: [
+        "Most auspicious months: Magha, Phalguna, Vaishakh, Jyeshtha, Margashirsh",
+        "Shukla paksha is preferred over Krishna paksha",
+        "Best tithis: Dwitiya, Tritiya, Panchami, Saptami, Dashami, Ekadashi, Trayodashi",
+        "Best vaars: Monday, Wednesday, Thursday, Friday (avoid Saturday, Sunday, Tuesday)",
+        "Avoid solar/lunar eclipse periods, Kharmas (Dhanu/Meen sankranti) and Pitru Paksha",
+        "We auto-suggest 3–5 muhurat options for your gotra and city after booking",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Can Griha Pravesh be done online?", a: "Yes — for owners abroad, the pandit performs at your home in India with a family member as proxy yajamana while you take the Sankalp live on video call. Sastra-compliant and widely done by NRI families." },
+    { q: "How much does Griha Pravesh cost?", a: "₹3,500–₹8,500 in metros for the standard 2-hour vidhi with samagri included. Extended Vastu Shanti or multi-day formats range ₹11,000–₹25,000." },
+    { q: "How long does the puja take?", a: "Standard format runs 2–3 hours including kalash sthapana, navagraha shanti, havan and ksheer-arpan. Extended Vastu Shanti format runs 4–5 hours." },
+    { q: "What samagri do I need?", a: "Nothing if you order with samagri included — we deliver the full kit (kalash, coconut, mango leaves, navagraha samidha, havan kund, ghee, kumkum, akshat) the day before." },
+    { q: "What if my muhurat options don't work for my schedule?", a: "We can identify a 'gauna muhurat' (secondary auspicious window) for the same week; the pandit will guide you to a workable slot." },
+  ],
+  finalCtaTitle: "Bless Your New Home With a Verified Pandit",
+  finalCtaSubtitle: "Personalised muhurat, full Vastu Shanti vidhi, all samagri included.",
+  finalCtaButtons: [
+    { label: "Book Griha Pravesh", href: "/puja", variant: "primary" },
+    { label: "Get Muhurat", href: "/griha-pravesh-muhurat", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Online Puja Booking", href: "/online-puja-booking" },
+    { label: "Satyanarayan Puja", href: "/satyanarayan-puja" },
+    { label: "Lakshmi Puja", href: "/lakshmi-puja" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Griha Pravesh Puja Booking" },
+};
+
+const LAKSHMI_PUJA: SeoLandingPageProps = {
+  seoTitle: "Lakshmi Puja Booking — Diwali, Friday Vrat & Sri Sukta Paath | Vedic Tatva",
+  seoDescription:
+    "Book Lakshmi Puja with a verified pandit — Diwali Lakshmi-Ganesh puja, weekly Friday vrat, Sri Sukta and Lakshmi Ashtottara paath. At home or live online. Full samagri kit, kuber yantra sthapana, transparent dakshina from ₹1,500.",
+  seoKeywords:
+    "Lakshmi puja booking, lakshmi puja online, diwali lakshmi puja, friday lakshmi vrat, sri sukta paath, lakshmi ashtottara, kuber puja, dhanteras puja, lakshmi puja vidhi, lakshmi puja samagri, wealth puja",
+  canonical: "/lakshmi-puja",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Lakshmi Puja", url: "/lakshmi-puja" },
+  ],
+  eyebrow: "Lakshmi Puja",
+  h1: "Lakshmi Puja — Booking, Vidhi, Sri Sukta Paath & Samagri",
+  subtitle:
+    "Invoke Goddess Lakshmi for wealth, abundance and prosperity. Book a verified pandit for Diwali, Friday vrat or any auspicious occasion — at home or live online.",
+  heroCTAs: [
+    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Find a Pandit", href: "/pandits", variant: "outline" },
+  ],
+  trustChips: ["Verified Pandit", "Sri Sukta Paath", "Same-Day Booking"],
+  intro:
+    "Lakshmi Puja invokes Mahalakshmi — the Goddess of wealth, prosperity, fortune and well-being. Performed on Diwali Amavasya, every Friday (Vaibhav Lakshmi vrat), Dhanteras, Akshay Tritiya, Sharad Purnima and at the launch of any new business or financial venture. Vedic Tatva pandits perform the complete vidhi with Sri Sukta paath, Lakshmi Ashtottara, Kuber yantra sthapana and aarti — all samagri included.",
+  sections: [
+    {
+      heading: "When to Perform Lakshmi Puja",
+      bullets: [
+        "Diwali Amavasya — the most powerful Lakshmi Puja of the year",
+        "Every Friday — Vaibhav Lakshmi vrat for sustained prosperity",
+        "Dhanteras (2 days before Diwali) — for new gold, silver, vehicle purchase",
+        "Akshay Tritiya, Sharad Purnima, Kojagari Purnima",
+        "Launch of new business, office, factory or shop",
+        "When financial difficulty, debt or wealth-stagnation is felt in the home",
+      ],
+    },
+    {
+      heading: "Full Lakshmi Puja Vidhi",
+      bullets: [
+        "Sankalp by the family in their gotra and intention",
+        "Ganesh puja, kalash sthapana, deepak prajwalan",
+        "Lakshmi-Ganesh-Saraswati murti or photo sthapana with sodasopachara",
+        "Sri Sukta paath (16 mantras from Rig Veda) and Lakshmi Ashtottara (108 names)",
+        "Kuber yantra sthapana for wealth retention",
+        "Mahalakshmi aarti, naivedya offering and prasad distribution",
+        "Kheer or panchamrit naivedya is traditional",
+      ],
+    },
+    {
+      heading: "Lakshmi Puja Samagri Kit",
+      bullets: [
+        "Lakshmi-Ganesh idol or framed photo, silver coin (Lakshmi-Ganesh embossed)",
+        "Red cloth, kalash with mango leaves and coconut",
+        "Lotus flower (or red roses), durva, akshat, kumkum, haldi",
+        "Diyas (minimum 11), ghee, cotton wicks, dhoop, agarbatti",
+        "Kheer or panchamrit ingredients, fruits, paan-supari, dakshina coins",
+        "Sri Yantra and Kuber Yantra (provided as part of premium kit)",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How much does Lakshmi Puja cost?", a: "Friday vrat puja from ₹1,500 (online) and ₹2,500 (at home). Diwali Lakshmi puja with full Sri Sukta paath ranges ₹3,500–₹8,500. Maha Lakshmi Yagna ₹11,000+." },
+    { q: "Can Lakshmi Puja be done weekly online?", a: "Yes — many of our customers book a weekly Friday Lakshmi puja subscription where the same pandit performs at the temple in their name every Friday." },
+    { q: "Should I book Lakshmi Puja for a new business?", a: "Yes — strongly recommended. The puja is performed at the new premises with kalash sthapana, kuber yantra and a special blessing of the cash drawer / accounts ledger." },
+    { q: "What time should Diwali Lakshmi Puja be done?", a: "The most auspicious is the pradosh kaal Lakshmi muhurat (sunset to ~2 hours after) on Diwali Amavasya. The pandit will share the exact muhurat for your city." },
+    { q: "Is there a Diwali samagri kit?", a: "Yes — our Diwali kit includes Lakshmi-Ganesh idols, Sri Yantra, Kuber Yantra, 11 diyas, lotus flowers, kheer ingredients and the Sri Sukta booklet." },
+  ],
+  finalCtaTitle: "Invite Lakshmi Into Your Home",
+  finalCtaSubtitle: "Verified pandit, Sri Sukta paath, full samagri — at home or live online.",
+  finalCtaButtons: [
+    { label: "Book Lakshmi Puja", href: "/puja", variant: "primary" },
+    { label: "Read Lakshmi Benefits", href: "/lakshmi-puja-benefits", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Online Puja Booking", href: "/online-puja-booking" },
+    { label: "Satyanarayan Puja", href: "/satyanarayan-puja" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+    { label: "Lakshmi Puja Benefits", href: "/lakshmi-puja-benefits" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Lakshmi Puja Booking" },
+};
+
+const NAVGRAHA_PUJA: SeoLandingPageProps = {
+  seoTitle: "Navgraha Puja Booking — Sade Sati, Mangal & Kalsarpa Dosha Shanti | Vedic Tatva",
+  seoDescription:
+    "Book Navgraha Shanti Puja online with a verified Vedic pandit. Planetary remedies for Sade Sati, Mangal Dosha, Kalsarpa Yoga, Pitra Dosh and graha-vakri periods. Full navgraha homa, ratna-arpan and mantra jaap. Dakshina from ₹3,500.",
+  seoKeywords:
+    "navgraha puja booking, navgraha shanti, navagraha homa, sade sati remedies, mangal dosha puja, shani shanti, kalsarpa dosha puja, planetary remedies puja, graha shanti, navgraha mantra jaap, dosh nivaran puja",
+  canonical: "/navgraha-puja",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Navgraha Puja", url: "/navgraha-puja" },
+  ],
+  eyebrow: "Navgraha Puja",
+  h1: "Navgraha Puja — Planetary Shanti for Sade Sati, Mangal Dosha & Kalsarpa",
+  subtitle:
+    "A complete Vedic remedy for malefic planetary periods. Verified pandit performs navgraha homa, mantra jaap and ratna-arpan to balance all nine planets in your kundli.",
+  heroCTAs: [
+    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Get a Kundli Reading", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Veda-Pathi Pandit", "Custom to Your Kundli", "Mantra Jaap Included"],
+  intro:
+    "Navgraha Puja is the Vedic remedy for planetary afflictions — Sade Sati of Shani, Dhaiya, Mangal Dosha, Rahu-Ketu Kalsarpa Yoga, Guru-Chandal Yoga, and any malefic dasha or antardasha. The puja invokes all nine planets (Surya, Chandra, Mangal, Budha, Guru, Shukra, Shani, Rahu, Ketu) with their respective mantras, samidhas and offerings to pacify negative influences and amplify benefic ones. Performed at home or online, customised to your birth-chart.",
+  sections: [
+    {
+      heading: "Who Should Book a Navgraha Puja",
+      bullets: [
+        "Anyone undergoing Shani Sade Sati or Shani Dhaiya",
+        "Mangal Dosha — for marriage delay or vivah dosha",
+        "Rahu-Ketu Kalsarpa Yoga (12 variants based on house placement)",
+        "Pitra Dosh combined with Rahu / Shani placements",
+        "Mahadasha or antardasha of a malefic planet",
+        "Repeated obstacles in career, health, marriage or finances",
+        "Before any major life event (marriage, business launch, surgery)",
+      ],
+    },
+    {
+      heading: "Full Navgraha Puja Vidhi",
+      bullets: [
+        "Sankalp by yajamana with kundli reading and gotra",
+        "Ganesh puja, kalash sthapana, punyahavachan",
+        "Navagraha mandala drawing and individual graha invocation",
+        "Mantra jaap of each planet (108 / 1008 / 11000 jaap depending on package)",
+        "Navagraha homa with planet-specific samidha (palash for Surya, durva for Mangal, etc.)",
+        "Ratna-arpan (gemstone offering) and daan to brahmin",
+        "Aarti, prasad and aashirvaad for the yajamana",
+      ],
+    },
+    {
+      heading: "Common Add-Ons",
+      bullets: [
+        "Maha Mrityunjaya Jaap (1.25 lakh / 1 crore) for Shani Sade Sati",
+        "Kuja Shanti Homa for Mangal Dosha (especially before marriage)",
+        "Rahu Ketu Shanti at Kalahasti or Tirunageswaram (proxy puja)",
+        "Pitra Dosh Tripindi Shradh for combined Pitra-Shani or Pitra-Rahu yoga",
+        "Personalised gemstone (ratna) recommendation by our jyotishi",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Do I need to share my kundli for Navgraha Puja?", a: "Yes — share your full birth-chart (date, time, place) so the pandit identifies which planets need extra mantra jaap and which samidha to use." },
+    { q: "How long does the puja take?", a: "Standard format 2–3 hours. Extended format with 11000-jaap version runs 6–8 hours and may be split across two days." },
+    { q: "How much does Navgraha Puja cost?", a: "Basic ₹3,500 (108 jaap each), Standard ₹8,500 (1008 jaap), Maha ₹21,000+ (11000 jaap + extended homa). All include samagri." },
+    { q: "Can it be combined with Mahamrityunjaya Jaap?", a: "Yes — for Shani Sade Sati and serious health issues, the combined Navgraha + Mahamrityunjaya package (₹15,000–₹25,000) is the most powerful remedy." },
+    { q: "Are the mantras and homa really effective?", a: "Vedic remedies work best when paired with right karma. Our pandits are Veda-pathi (formally trained in mantra recitation) so the swara, chhanda and samidha are all sastra-compliant." },
+  ],
+  finalCtaTitle: "Pacify Your Grahas With an Authentic Vedic Remedy",
+  finalCtaSubtitle: "Verified Veda-pathi pandit, custom to your kundli, full samagri included.",
+  finalCtaButtons: [
+    { label: "Book Navgraha Puja", href: "/puja", variant: "primary" },
+    { label: "Get Kundli Reading", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Online Puja Booking", href: "/online-puja-booking" },
+    { label: "Maha Mrityunjaya Jaap", href: "/maha-mrityunjaya-jaap" },
+    { label: "Pitra Dosh Puja", href: "/pitra-dosh-puja" },
+    { label: "Rudrabhishek Puja", href: "/rudrabhishek-puja" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Navgraha Shanti Puja Booking" },
+};
+
+const MARRIAGE_PUJA: SeoLandingPageProps = {
+  seoTitle: "Marriage Puja Booking — Vivah Sanskar with Verified Vedic Pandit | Vedic Tatva",
+  seoDescription:
+    "Book a verified Vedic pandit for marriage / vivah sanskar — kanyadaan, mangal pheras, saptapadi, sindoor daan. North Indian, South Indian, Maharashtrian, Bengali and Gujarati styles. Multi-language pandit, full samagri, transparent dakshina from ₹15,000.",
+  seoKeywords:
+    "marriage puja booking, vivah sanskar, hindu wedding pandit, kanyadaan puja, saptapadi pandit, marriage muhurat, online marriage puja, wedding pandit booking, pandit for marriage, vivah vidhi, hindu wedding ceremony",
+  canonical: "/marriage-puja",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Marriage Puja", url: "/marriage-puja" },
+  ],
+  eyebrow: "Marriage Puja",
+  h1: "Marriage Puja — Vivah Sanskar With a Verified Vedic Pandit",
+  subtitle:
+    "Book a Veda-pathi pandit for the most important sanskar of life. North Indian, South Indian, Maharashtrian, Bengali, Gujarati and Punjabi styles supported.",
+  heroCTAs: [
+    { label: "Book a Wedding Pandit", href: "/puja", variant: "primary" },
+    { label: "Marriage Muhurat", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Multi-Language Pandit", "Sastra-Compliant Vidhi", "Personalised Muhurat"],
+  intro:
+    "Hindu marriage (Vivah) is one of the 16 samskaras and is the most elaborate Vedic ceremony — running 4 to 8 hours across multiple sub-rituals. Vedic Tatva connects you with verified Brahmin pandits who specialise in your specific style — Smarta, Vaishnava, Madhva, Bengali, Maharashtrian, Tamil-Iyer/Iyengar, Telugu, Kannada, Gujarati, Punjabi, Kashmiri or Marwari — and conduct the full vidhi with all samagri arranged.",
+  sections: [
+    {
+      heading: "Sub-Rituals in a Vedic Hindu Marriage",
+      bullets: [
+        "Var Mala / Jaymala — exchange of garlands as the bride enters",
+        "Madhuparka — welcoming the groom with honey-curd-ghee",
+        "Kanyadaan — the bride's father formally gifts her to the groom",
+        "Vivah Homa — fire as witness, samidha and ahuti offerings",
+        "Pani Grahan — joining of hands with mantras",
+        "Shilarohan — bride steps on a stone symbolising stability in marriage",
+        "Laja Homa — offering of puffed rice into the fire by the bride's brother",
+        "Mangal Pheras (4 or 7 in different traditions) around the sacred fire",
+        "Saptapadi — seven steps with seven sacred vows",
+        "Sindoor Daan and Mangalsutra Dharan (varies by tradition)",
+        "Asirvaad — final blessings from elders",
+      ],
+    },
+    {
+      heading: "Why Choose a Vedic Tatva Pandit",
+      bullets: [
+        "Pandit matched to your community's exact tradition (no improvisation)",
+        "Sanskrit mantras with clear regional-language explanation for both families",
+        "Pre-wedding consultation call to align on rituals, timing and samagri",
+        "All samagri arranged — havan kund, samidha, mangalsutra, kanyadaan items",
+        "Personalised muhurat for the lagna based on both kundlis (no extra charge)",
+        "Backup pandit on standby in case of emergency",
+      ],
+    },
+    {
+      heading: "Marriage Muhurat — When to Book",
+      bullets: [
+        "Most auspicious months: Magha, Phalguna, Vaishakh, Jyeshtha, Margashirsh",
+        "Avoid Chaturmas (Ashadha to Karthik), Pitru Paksha, Kharmas",
+        "Best lagnas: Vrishabh, Mithun, Kanya, Tula, Dhanu (varies per kundli)",
+        "Book at least 30 days in advance for peak season (Nov–Feb, Apr–Jun)",
+        "We share 5–7 muhurat options matched to both birth charts",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How much does a marriage puja cost?", a: "₹15,000–₹25,000 for the standard 4-hour vidhi in metros. Multi-day weddings (with separate pandits for engagement, haldi, mehendi, vivah, reception) range ₹50,000–₹1,50,000+. Destination weddings priced separately." },
+    { q: "Can the pandit travel for a destination wedding?", a: "Yes — for Goa, Udaipur, Jaipur, Kerala, Bali and any destination, our pandit travels with samagri. Travel and stay billed at actuals." },
+    { q: "What if our families follow different traditions?", a: "Our senior pandits are trained in inter-community weddings and can blend rituals from both traditions. We do a pre-wedding alignment call with both families." },
+    { q: "Do you provide a Hindi/English translator pandit for NRI weddings?", a: "Yes — for NRI / inter-cultural weddings, the pandit explains every step in English so all guests follow along." },
+    { q: "How early should we book?", a: "For peak season (Nov–Feb), 60–90 days in advance. For off-season, 30 days is comfortable. Same-week bookings possible only on a best-effort basis." },
+  ],
+  finalCtaTitle: "Begin Your Married Life With an Authentic Vedic Ceremony",
+  finalCtaSubtitle: "Veda-pathi pandit matched to your tradition, full samagri, personalised muhurat.",
+  finalCtaButtons: [
+    { label: "Book Marriage Pandit", href: "/puja", variant: "primary" },
+    { label: "View Pandits", href: "/pandits", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Online Puja Booking", href: "/online-puja-booking" },
+    { label: "Griha Pravesh Puja", href: "/griha-pravesh-puja" },
+    { label: "Lakshmi Puja", href: "/lakshmi-puja" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Hindu Marriage Puja Booking" },
+};
+
+const PITRA_DOSH_PUJA: SeoLandingPageProps = {
+  seoTitle: "Pitra Dosh Puja Booking — Tripindi Shradh, Narayan Bali | Vedic Tatva",
+  seoDescription:
+    "Book Pitra Dosh Puja online — Tripindi Shradh, Narayan Bali, Nag Bali and Pind Daan at Gaya, Kashi or Haridwar. Verified pandit, full vidhi for ancestral peace, removal of vansh-vriddhi obstacles and progeny issues. Dakshina from ₹5,100.",
+  seoKeywords:
+    "pitra dosh puja, pitra dosh nivaran, tripindi shradh, narayan bali puja, nag bali puja, pind daan online, pitra paksha shradh, ancestral puja, pitra shanti, pitra dosh remedies, vansh vriddhi puja",
+  canonical: "/pitra-dosh-puja",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Pitra Dosh Puja", url: "/pitra-dosh-puja" },
+  ],
+  eyebrow: "Pitra Dosh Puja",
+  h1: "Pitra Dosh Puja — Tripindi Shradh, Narayan Bali, Pind Daan",
+  subtitle:
+    "Pacify ancestral karmic debts with the most powerful Vedic remedies — Tripindi Shradh, Narayan-Nag Bali and Pind Daan at the sacred Pitru Tirthas.",
+  heroCTAs: [
+    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Pind Daan Locations", href: "/pind-daan", variant: "outline" },
+  ],
+  trustChips: ["At Gaya / Kashi / Haridwar", "Verified Pandit", "Full Tripindi Vidhi"],
+  intro:
+    "Pitra Dosh in the kundli — typically marked by Surya/Rahu in 9th house, Sun-Saturn afflictions, or repeated child loss across generations — indicates unsettled karmic debts of ancestors that obstruct progeny, prosperity and peace in the family. The classical Vedic remedy is a combination of Tripindi Shradh (covers three generations of pitras and pretas), Narayan-Nag Bali (specifically for unnatural deaths in the lineage) and Pind Daan at one of the sacred Pitru Tirthas — Gaya (Vishnupad / Akshayavat), Kashi (Pishachmochan) or Haridwar (Narayani Shila).",
+  sections: [
+    {
+      heading: "Signs of Pitra Dosh in a Family",
+      bullets: [
+        "Repeated miscarriage, stillbirth or progeny delays across generations",
+        "Sudden financial setbacks despite good karma and effort",
+        "Recurring health issues without medical explanation",
+        "Family disputes, broken relationships, vansh-vriddhi obstacles",
+        "Nightmares involving deceased ancestors or unknown elderly figures",
+        "Astrological markers — Surya/Rahu in 9th, Pitra Dosh yoga in kundli",
+      ],
+    },
+    {
+      heading: "What's Included in the Full Pitra Dosh Remedy",
+      bullets: [
+        "Tripindi Shradh — covers ancestors of past 3 generations + un-cremated pretas",
+        "Narayan Bali — for any unnatural death in the lineage (accident, suicide, untimely)",
+        "Nag Bali — for sarpa-dosh component (snake-related curses)",
+        "Pind Daan at sacred Pitru Tirtha (Gaya / Kashi / Haridwar / Trimbakeshwar)",
+        "108 mantra jaap of Pitra Gayatri",
+        "Brahmin bhojan and daan in the name of pitras",
+        "Sankalpa-bound to your gotra — valid for the entire family lineage",
+      ],
+    },
+    {
+      heading: "Best Time to Perform Pitra Dosh Puja",
+      bullets: [
+        "Pitru Paksha (16 days before Sharad Navratri) — most powerful window",
+        "Amavasya every month — particularly Mahalaya Amavasya",
+        "Solar / lunar eclipse days — high karmic clearance potential",
+        "Anytime when family is facing the markers above (no need to wait)",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How do I know if I have Pitra Dosh?", a: "Three indicators: (1) classical kundli markers, (2) family pattern across generations, (3) recurring obstacles in vansh-vriddhi. Our jyotishi can do a kundli reading first if you're unsure." },
+    { q: "Can Pitra Dosh Puja be done online?", a: "Yes — for non-eligible family members the pandit performs the full vidhi at Gaya, Kashi or Haridwar in your gotra and you participate in the Sankalp via video call. We send the photo-video record and prasad-mitti pack." },
+    { q: "How much does the full remedy cost?", a: "Basic Tripindi Shradh ₹5,100. Full Narayan-Nag Bali at Trimbakeshwar ₹15,000–₹21,000. Pind Daan at Gaya (3-day vidhi) ₹15,100. Combined Maha-Pitra Yagna ₹35,000+." },
+    { q: "Should the entire family attend?", a: "Ideal — but if not possible, the eldest male in the gotra (or eldest member if no male) takes the Sankalp on behalf of the family. Phala extends to all members of the lineage." },
+    { q: "Does this need to be repeated annually?", a: "The deep karmic clearance (Tripindi + Narayan Bali + Pind Daan) is once per lifetime per yajamana. Annual Pitru Paksha shradh is a separate yearly observance." },
+  ],
+  finalCtaTitle: "Settle Ancestral Karmic Debts With a Sastra-Compliant Vedic Remedy",
+  finalCtaSubtitle: "Verified pandit at Gaya / Kashi / Haridwar / Trimbakeshwar. Full vidhi for vansh-vriddhi.",
+  finalCtaButtons: [
+    { label: "Book Pitra Dosh Puja", href: "/puja", variant: "primary" },
+    { label: "Pind Daan in Gaya", href: "/pind-daan-gaya", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Pind Daan Gaya", href: "/pind-daan-gaya" },
+    { label: "Pind Daan Kashi", href: "/pind-daan-kashi" },
+    { label: "Pind Daan Haridwar", href: "/pind-daan-haridwar" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Pitra Dosh Puja & Tripindi Shradh Booking" },
+};
+
+const MAHA_MRITYUNJAYA_JAAP: SeoLandingPageProps = {
+  seoTitle: "Maha Mrityunjaya Jaap Booking — 1.25 Lakh / 1 Crore Mantra | Vedic Tatva",
+  seoDescription:
+    "Book Maha Mrityunjaya Jaap online with a verified Veda-pathi pandit. 1.25 lakh, 5 lakh or 1 crore jaap with Rudri Paath and Mahamrityunjaya Homa. For health, longevity, removal of grah-pida and Akal Mrityu Yog. Live online or at temple. Dakshina from ₹5,100.",
+  seoKeywords:
+    "maha mrityunjaya jaap, mahamrityunjaya mantra jaap, mahamrityunjaya homa, mrityunjaya puja booking, online mahamrityunjaya jaap, sava lakh jaap, 1.25 lakh mahamrityunjaya, akal mrityu shanti, health remedy puja, longevity puja, shiva mantra jaap",
+  canonical: "/maha-mrityunjaya-jaap",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Pujas", url: "/puja" },
+    { name: "Maha Mrityunjaya Jaap", url: "/maha-mrityunjaya-jaap" },
+  ],
+  eyebrow: "Maha Mrityunjaya Jaap",
+  h1: "Maha Mrityunjaya Jaap — Sava Lakh, 5 Lakh & 1 Crore Mantra Booking",
+  subtitle:
+    "The supreme Vedic mantra for health, longevity and protection from Akal Mrityu. Veda-pathi pandits perform the full jaap with Rudri Paath and Mahamrityunjaya Homa.",
+  heroCTAs: [
+    { label: "Book This Jaap", href: "/puja", variant: "primary" },
+    { label: "Talk to a Jyotishi", href: "/astrology", variant: "outline" },
+  ],
+  trustChips: ["Veda-Pathi Pandits", "Rudri Paath Included", "Live Sankalp"],
+  intro:
+    "The Maha Mrityunjaya Mantra ('Tryambakam Yajamahe…') from the Rig Veda is considered the most powerful Vedic mantra for health, healing, longevity and protection from untimely death. Booked when a family member is critically ill, before major surgery, during Shani Sade Sati, when Akal Mrityu Yog is present in the kundli, or simply for sustained well-being. Vedic Tatva pandits perform the jaap in three traditional formats — Sava Lakh (1.25 lakh), Maha (5 lakh) and Koti (1 crore) — at sacred Shiva temples with full Rudri Paath and Mahamrityunjaya Homa.",
+  sections: [
+    {
+      heading: "When to Book Maha Mrityunjaya Jaap",
+      bullets: [
+        "Family member is critically ill, in ICU or facing major surgery",
+        "Akal Mrityu Yog or Brahma Shoola yoga in the kundli",
+        "Shani Sade Sati or Mahadasha of a malefic planet",
+        "Recurring serious health issues, accidents or near-misses",
+        "Mental health struggles — depression, anxiety, addiction",
+        "Annual sankalp for sustained family well-being",
+        "Janmotsav (birthday) jaap for longevity blessings",
+      ],
+    },
+    {
+      heading: "The Three Traditional Jaap Counts",
+      bullets: [
+        "Sava Lakh (1.25 lakh) — the standard jaap, completes in 3–5 days, ₹5,100–₹11,000",
+        "Maha (5 lakh) — for serious health issues, completes in 10–15 days, ₹25,000–₹45,000",
+        "Koti (1 crore / 100 lakh) — performed by 11–21 pandits over 30–45 days, ₹2,00,000+",
+        "All formats include Rudri Paath and Mahamrityunjaya Homa with samidha-ahuti",
+        "Daily progress photos, jaap-counter video and final aashirvaad video shared",
+      ],
+    },
+    {
+      heading: "Where the Jaap Is Performed",
+      bullets: [
+        "Trimbakeshwar Jyotirlinga, Mahakaleshwar Ujjain, Kashi Vishwanath",
+        "Omkareshwar, Somnath, Bhimashankar, Ghrishneshwar — any Jyotirlinga of your choice",
+        "Local Shiva temple in your city if you wish to attend in person",
+        "Your home altar — for sankalp-only jaap with daily reporting",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "How long does a 1.25 lakh jaap take?", a: "3–5 days when one pandit performs full-time, or 1 day when 11 pandits do it together (Lakshchandi-style group jaap). The Mahamrityunjaya Homa is done at the end on day 1 or last day." },
+    { q: "Can the patient be in a different country?", a: "Yes — the Sankalp is taken in the patient's name and gotra by a family proxy, and the patient joins the Sankalp video call. Sastra-compliant for NRI families." },
+    { q: "Should I combine with Navgraha Puja?", a: "Strongly recommended for Sade Sati or planetary mahadasha cases. The combined Mahamrityunjaya + Navgraha package (₹15,000–₹25,000) is our most-booked health remedy." },
+    { q: "How quickly will I see effects?", a: "Spiritual remedies work cumulatively. Most yajamana families report subjective improvement within 11–21 days. Critical-care families often book the jaap during the medical treatment period as parallel sastra-support." },
+    { q: "Will I receive any prasad or proof?", a: "Yes — daily WhatsApp photo of the jaap, video of the final homa, and a courier of bibhuti, rudraksha-mala (used for jaap) and prasad pack to your address." },
+  ],
+  finalCtaTitle: "Invoke the Supreme Vedic Mantra for Health & Longevity",
+  finalCtaSubtitle: "Veda-pathi pandits, Sava Lakh / Maha / Koti formats, performed at Jyotirlingas.",
+  finalCtaButtons: [
+    { label: "Book Mahamrityunjaya Jaap", href: "/puja", variant: "primary" },
+    { label: "Get a Kundli Reading", href: "/astrology", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Online Puja Booking", href: "/online-puja-booking" },
+    { label: "Rudrabhishek Puja", href: "/rudrabhishek-puja" },
+    { label: "Navgraha Puja", href: "/navgraha-puja" },
+    { label: "Pitra Dosh Puja", href: "/pitra-dosh-puja" },
+    { label: "Verified Pandits", href: "/pandits" },
+  ],
+  schema: { type: "service", serviceName: "Maha Mrityunjaya Jaap Booking" },
+};
+
+// ---------------------------------------------------------------------------
 // REGISTRY
 // ---------------------------------------------------------------------------
 
@@ -987,6 +1478,12 @@ export const SEO_LANDINGS: Record<string, SeoLandingPageProps> = {
   "navratri-puja-vidhi": NAVRATRI_PUJA_VIDHI,
   "lakshmi-puja-benefits": LAKSHMI_PUJA_BENEFITS,
   "griha-pravesh-muhurat": GRIHA_PRAVESH_MUHURAT,
+  "griha-pravesh-puja": GRIHA_PRAVESH_PUJA,
+  "lakshmi-puja": LAKSHMI_PUJA,
+  "navgraha-puja": NAVGRAHA_PUJA,
+  "marriage-puja": MARRIAGE_PUJA,
+  "pitra-dosh-puja": PITRA_DOSH_PUJA,
+  "maha-mrityunjaya-jaap": MAHA_MRITYUNJAYA_JAAP,
 };
 
 export type SeoLandingSlug = keyof typeof SEO_LANDINGS;
