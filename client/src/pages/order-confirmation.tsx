@@ -1,7 +1,7 @@
 import { Link, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Package, MapPin, Clock, Loader2 } from "lucide-react";
+import { CheckCircle2, Package, MapPin, Clock, Loader2, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function formatCurrency(n: number) {
@@ -12,6 +12,51 @@ export default function OrderConfirmation() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const orderId = params.get("orderId");
+
+  // ICS escape: commas, semicolons, backslashes and newlines are all special.
+  const escIcs = (s: string) => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  const downloadDeliveryIcs = () => {
+    if (!orderId) return;
+    const start = new Date();
+    start.setDate(start.getDate() + 7);
+    start.setHours(10, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(18, 0, 0, 0);
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const uid = `order-${orderId}-delivery@vedictatva.com`;
+    const stamp = fmt(new Date());
+    const body = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Vedic Tatva//Order Delivery//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${escIcs(`Delivery expected — Vedic Tatva order #${orderId}`)}`,
+      `DESCRIPTION:${escIcs(`Estimated delivery window for your Vedic Tatva order #${orderId}. Track at https://vedictatva.com/track-order?orderId=${orderId}`)}`,
+      `URL:https://vedictatva.com/track-order?orderId=${orderId}`,
+      "BEGIN:VALARM",
+      "TRIGGER:-P1D",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${escIcs(`Vedic Tatva order #${orderId} arriving tomorrow`)}`,
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([body], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vedic-tatva-order-${orderId}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   const { data: order, isLoading } = useQuery<any>({
     queryKey: ["/api/orders/public", orderId],
@@ -101,6 +146,17 @@ export default function OrderConfirmation() {
             ))}
           </ul>
         </div>
+
+        {orderId && (
+          <button
+            type="button"
+            onClick={downloadDeliveryIcs}
+            className="w-full flex items-center justify-center gap-2 bg-[#FBF7EE] border border-[#D4AF37]/40 text-[#6D2B35] rounded-md h-10 text-[13px] font-semibold hover-elevate active-elevate-2"
+            data-testid="button-add-delivery-calendar"
+          >
+            <Calendar className="w-4 h-4" /> Add expected delivery to my calendar
+          </button>
+        )}
 
         <div className="flex gap-3">
           <Link href="/order-history" className="flex-1">

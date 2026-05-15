@@ -92,6 +92,15 @@ function useCountUp(target: number, duration = 1500, start = false) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     if (!start) return;
+    // Honour the user's reduced-motion preference: skip the animation entirely.
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      setValue(target);
+      return;
+    }
     let raf = 0;
     const t0 = performance.now();
     const tick = (t: number) => {

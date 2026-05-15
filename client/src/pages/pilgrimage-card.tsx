@@ -66,7 +66,7 @@ export default function PilgrimageCardPage() {
       city: form.city,
       age: form.age ? Number(form.age) : undefined,
       monthlySipInr: sipAmount,
-      totalCommitmentInr: 600000,
+      totalCommitmentInr: totalSavings,
       preferredYatras: yatras,
       message: giftNote + (form.message || ""),
     });
@@ -156,7 +156,7 @@ export default function PilgrimageCardPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { n: "01", t: "Save ₹10,000 every month", d: "For 5 years. That's it. Auto-debit from any bank, like an SIP. Total ₹6,00,000 over 5 years." },
+            { n: "01", t: `Save ${monthlyLabel} every month`, d: `For 5 years. That's it. Auto-debit from any bank, like an SIP. Total ${totalLabel} over 5 years.` },
             { n: "02", t: "Card activates from Year 1", d: "You don't have to wait till Year 5. Start your first yatra from Year 1 itself, while you continue saving." },
             { n: "03", t: "Complete every major tirth — once", d: "Char Dham, 12 Jyotirlinga, Amarnath, Vaishno Devi, Puri, Kashi, Tirupati, Kamakhya — each done once across the 5-year window. All-inclusive, all-sponsored." },
           ].map((s, i) => (
@@ -212,8 +212,8 @@ export default function PilgrimageCardPage() {
 
                 <div className="bg-gradient-to-br from-[#FBF7EE] to-white border border-[#D4AF37]/30 rounded-md p-5 mb-4">
                   <div className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">Monthly SIP</div>
-                  <div className="text-4xl font-serif font-bold text-[#4a1a22] mt-1">₹10,000<span className="text-sm font-normal text-[#5a4a3a]/65">/month</span></div>
-                  <div className="text-xs text-[#5a4a3a]/70 mt-2">× 60 months (5 years) = <strong className="text-[#4a1a22]">₹6,00,000 total</strong></div>
+                  <div className="text-4xl font-serif font-bold text-[#4a1a22] mt-1" data-testid="text-pricing-monthly">{monthlyLabel}<span className="text-sm font-normal text-[#5a4a3a]/65">/month</span></div>
+                  <div className="text-xs text-[#5a4a3a]/70 mt-2">× 60 months (5 years) = <strong className="text-[#4a1a22]" data-testid="text-pricing-total">{totalLabel} total</strong></div>
                   <div className="mt-3 pt-3 border-t border-[#D4AF37]/20">
                     <div className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">Market value of yatras covered</div>
                     <div className="text-xl font-bold text-emerald-700 mt-0.5">₹15,00,000+</div>
@@ -259,7 +259,7 @@ export default function PilgrimageCardPage() {
             <p className="text-sm md:text-base text-[#5a4a3a]/80 mt-3 max-w-2xl mx-auto leading-relaxed">
               Most retired Indians have one quiet wish — to do all the sacred yatras before their time ends. But planning, money, logistics, fitness, the right pandit — it never quite falls into place.
               <br /><br />
-              The Pilgrimage Card removes every one of those obstacles. <strong className="text-[#4a1a22]">You save ₹10K a month. They get to walk every sacred land of Bharat — Char Dham, Kashi, Tirupati, Vaishno, Amarnath, Jyotirlingas — fully cared for.</strong>
+              The Pilgrimage Card removes every one of those obstacles. <strong className="text-[#4a1a22]">You save {monthlyLabel} a month. They get to walk every sacred land of Bharat — Char Dham, Kashi, Tirupati, Vaishno, Amarnath, Jyotirlingas — fully cared for.</strong>
             </p>
           </div>
 
@@ -274,7 +274,7 @@ export default function PilgrimageCardPage() {
               {
                 icon: GraduationCap,
                 title: "For College Retirees",
-                body: "Honor a beloved professor, principal, or HOD on retirement. A college, alumni group, or department can pool ₹10K/month and gift a card that covers their lifetime spiritual journey.",
+                body: `Honor a beloved professor, principal, or HOD on retirement. A college, alumni group, or department can pool ${monthlyLabel}/month and gift a card that covers their lifetime spiritual journey.`,
                 tag: "Group gifting available",
               },
               {
@@ -361,7 +361,7 @@ export default function PilgrimageCardPage() {
             <div className="text-center mb-5">
               <Mountain className="h-10 w-10 text-[#6D2B35] mx-auto mb-2" />
               <h3 className="text-xl md:text-2xl font-serif font-bold text-[#4a1a22]">Get Your Pilgrimage Card</h3>
-              <p className="text-xs text-[#5a4a3a]/70 mt-1">Our team will call you within 24 hours to complete KYC & set up your ₹10,000 monthly auto-debit.</p>
+              <p className="text-xs text-[#5a4a3a]/70 mt-1">Our team will call you within 24 hours to complete KYC & set up your <strong>{monthlyLabel}</strong> monthly auto-debit.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -403,9 +403,9 @@ export default function PilgrimageCardPage() {
                 </div>
               </div>
               <div><Label htmlFor="pc-msg">Anything else we should know?</Label><Textarea id="pc-msg" rows={2} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} data-testid="input-pc-message" /></div>
-              <div className="bg-[#FBF7EE] rounded-md px-3 py-2 text-xs text-[#5a4a3a] flex items-center justify-between">
+              <div className="bg-[#FBF7EE] rounded-md px-3 py-2 text-xs text-[#5a4a3a] flex items-center justify-between" data-testid="text-application-summary">
                 <span>Monthly SIP</span>
-                <span className="font-bold text-[#4a1a22]">₹10,000 × 60 months = ₹6,00,000</span>
+                <span className="font-bold text-[#4a1a22]">{monthlyLabel} × 60 months = {totalLabel}</span>
               </div>
               <Button onClick={submit} disabled={applyMut.isPending} className="w-full bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-bold" data-testid="btn-submit-pc">
                 {applyMut.isPending ? "Submitting..." : purpose === "gift" ? "Submit Gift Application" : "Submit My Application"}

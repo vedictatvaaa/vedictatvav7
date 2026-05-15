@@ -24,6 +24,7 @@ export default function Accessibility() {
         <header className="mb-10">
           <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[#D4AF37] mb-2">Vedic Tatva</p>
           <h1 className="font-serif text-3xl md:text-4xl text-[#6D2B35] mb-3" data-testid="heading-accessibility">Accessibility Statement</h1>
+          <p className="text-[11px] text-[#5a4a3a]/55 mb-3" data-testid="text-last-updated">Last updated: February 2026</p>
           <p className="text-[#5a4a3a] leading-relaxed">
             We believe sacred resources should be available to everyone. Vedic Tatva is built and tested to meet the
             <strong> Web Content Accessibility Guidelines (WCAG) 2.1 Level AA</strong>, and we keep improving as we learn from the community.
