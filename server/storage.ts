@@ -7,7 +7,7 @@ import {
   invoices, dispatches, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
   emailSends, newsletterCampaigns, emailUnsubscribes,
   notificationLog, notificationSettings,
-  familyMembers, userNotifications, panditPayouts,
+  familyMembers, userNotifications, panditPayouts, spiritualJourney,
   panditStorefronts, panditReferrals, panditCardOrders,
   type FamilyMember, type InsertFamilyMember,
   type UserNotification, type InsertUserNotification,
@@ -1853,6 +1853,20 @@ export class DatabaseStorage implements IStorage {
   async deleteSchemaChangelogEntry(id: number): Promise<boolean> {
     const out = await db.delete(schemaChangelog).where(eq(schemaChangelog.id, id)).returning({ id: schemaChangelog.id });
     return out.length > 0;
+  }
+
+  async getSpiritualJourney(userId: number): Promise<any | null> {
+    const [row] = await db.select().from(spiritualJourney).where(eq(spiritualJourney.userId, userId));
+    return row ? row.data : null;
+  }
+
+  async upsertSpiritualJourney(userId: number, data: any): Promise<void> {
+    await db.insert(spiritualJourney)
+      .values({ userId, data, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: spiritualJourney.userId,
+        set: { data, updatedAt: new Date() },
+      });
   }
 }
 

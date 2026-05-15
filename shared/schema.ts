@@ -1581,6 +1581,19 @@ export type AiCoderSession = typeof aiCoderSessions.$inferSelect;
 export type InsertAiCoderSession = z.infer<typeof insertAiCoderSessionSchema>;
 
 // =====================================================================
+// Spiritual Journey — persists a user's sadhana log server-side so
+// progress survives device switches and browser clears.
+// One row per user; `data` stores the full JourneyData JSON blob.
+// =====================================================================
+export const spiritualJourney = pgTable("spiritual_journey", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().unique(),
+  data: jsonb("data").notNull().default("{}"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+export type SpiritualJourney = typeof spiritualJourney.$inferSelect;
+
+// =====================================================================
 // Schema Changelog — human-readable log of every database schema change.
 // Each row records when a change was made, what it was (in plain English),
 // which type of change it was, which table(s) it affected, and who did it.

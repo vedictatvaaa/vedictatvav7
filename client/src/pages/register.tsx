@@ -1,17 +1,5 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/lib/auth";
+import AuthPage from "./login";
 
-export default function RegisterRedirect() {
-  const [, setLocation] = useLocation();
-  const { openAuth, user } = useAuth();
-  useEffect(() => {
-    if (user) {
-      setLocation("/");
-    } else {
-      openAuth("signup");
-      setLocation("/");
-    }
-  }, [openAuth, setLocation, user]);
-  return null;
+export default function RegisterPage() {
+  return <AuthPage initialMode="signup" />;
 }

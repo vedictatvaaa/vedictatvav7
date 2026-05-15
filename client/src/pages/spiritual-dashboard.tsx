@@ -442,12 +442,25 @@ function PersonalizedRecommendations({ journeyData }: { journeyData: JourneyData
   );
 }
 
+/** Push journey data to the server (fire-and-forget; never throws). */
+async function syncToServer(userId: number, email: string, data: JourneyData) {
+  try {
+    await fetch(`/api/spiritual-journey/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-user-email": email },
+      body: JSON.stringify({ data }),
+    });
+  } catch {}
+}
+
 export default function SpiritualDashboard() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [data, setData] = useState<JourneyData>(loadData);
   const [showSetup, setShowSetup] = useState(!data.profile);
   const [setupName, setSetupName] = useState(data.profile?.name || "");
   const [setupGoals, setSetupGoals] = useState<string[]>(data.profile?.goals || []);
+  const [serverSynced, setServerSynced] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const todayLog = data.logs.find(l => l.date === today);
@@ -456,9 +469,53 @@ export default function SpiritualDashboard() {
     templeVisit: false, reading: false, charity: false, puja: false, notes: ""
   });
 
+  // On mount (or when user logs in), fetch server data and merge with local.
+  // Server data wins if it has more logs; local is pushed to server if server is empty.
+  useEffect(() => {
+    if (!user) return;
+    const email = (user as any).email as string;
+    (async () => {
+      try {
+        const res = await fetch(`/api/spiritual-journey/${user.id}`, {
+          headers: { "x-user-email": email },
+        });
+        if (!res.ok) return;
+        const { data: serverData } = await res.json();
+        if (serverData && typeof serverData === "object") {
+          const serverLogs: DailyLog[] = serverData.logs || [];
+          const localData = loadData();
+          const localLogs: DailyLog[] = localData.logs || [];
+          // Merge: keep whichever snapshot has more total logs
+          const merged: JourneyData = serverLogs.length >= localLogs.length
+            ? serverData
+            : localData;
+          setData(merged);
+          saveData(merged);
+          if (serverLogs.length < localLogs.length) {
+            // Push richer local data up to server
+            await syncToServer(user.id, email, localData);
+          }
+          setShowSetup(!merged.profile);
+        } else {
+          // Server has nothing — push local data up
+          const localData = loadData();
+          if (localData.profile || localData.logs.length > 0) {
+            await syncToServer(user.id, email, localData);
+          }
+        }
+      } catch {} finally {
+        setServerSynced(true);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     saveData(data);
+    // Also persist to server when user is logged in
+    if (user && serverSynced) {
+      syncToServer(user.id, (user as any).email, data);
+    }
   }, [data]);
 
   const streak = useMemo(() => getStreak(data.logs), [data.logs]);

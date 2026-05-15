@@ -9047,6 +9047,46 @@ ${accumulatedWisdom}`
     }
   });
 
+  // ---- Spiritual Journey — server-side persistence ----
+  // GET: returns the stored JourneyData for a logged-in user.
+  // Caller must supply x-user-email header matching the user's stored email.
+  app.get("/api/spiritual-journey/:userId", async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (!userId) return res.status(400).json({ message: "Invalid userId" });
+    const emailHeader = (req.headers["x-user-email"] as string || "").toLowerCase().trim();
+    if (!emailHeader) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById(userId);
+      if (!user || user.email.toLowerCase() !== emailHeader) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const data = await storage.getSpiritualJourney(userId);
+      res.json({ data: data || null });
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // PUT: upserts JourneyData for the authenticated user.
+  app.put("/api/spiritual-journey/:userId", async (req, res) => {
+    const userId = parseInt(req.params.userId, 10);
+    if (!userId) return res.status(400).json({ message: "Invalid userId" });
+    const emailHeader = (req.headers["x-user-email"] as string || "").toLowerCase().trim();
+    if (!emailHeader) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = await storage.getUserById(userId);
+      if (!user || user.email.toLowerCase() !== emailHeader) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const { data } = req.body || {};
+      if (!data || typeof data !== "object") return res.status(400).json({ message: "Missing data" });
+      await storage.upsertSpiritualJourney(userId, data);
+      res.json({ ok: true });
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // ---- Personalized Spiritual Journey Recommendations ----
   app.post("/api/spiritual-recommendations", async (req, res) => {
     try {
