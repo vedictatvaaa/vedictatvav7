@@ -1185,13 +1185,23 @@ export default function Home() {
 
       </>)}
 
+      {/* Join as a Panditji — REMOVED from home in this audit pass. The
+          B2B "earn ₹50k+/mo as a verified pandit" section dilutes the
+          B2C funnel on the homepage. It now lives on the dedicated
+          /become-pandit landing (linked from the footer) where intent
+          is qualified. Keep the import path live in case product
+          decides to A/B-test it back in. */}
+
+      {/* Testimonials / Community Stories */}
+      <TestimonialsCarousel />
+
       {/* Vedic Astrology — slim cinematic widescreen banner.
-          Replaces the prior 3-column glass card. Single horizontal strip
-          (~120 px tall on desktop), full-bleed midnight gradient, gold
-          rule top + bottom, animated zodiac glyph on the left, SEO H2 +
-          one-line value prop centre, primary "Generate Kundli" + ghost
-          "Talk to an Astrologer" right. Mobile stacks the row but keeps
-          the same visual rhythm. */}
+          Moved here (after Community Stories) per user request so the
+          social-proof testimonial wall warms the visitor up before the
+          Jyotish ask. Single horizontal strip (~120 px tall on desktop),
+          full-bleed midnight gradient, gold rule top + bottom, animated
+          zodiac glyph on the left, SEO H2 + one-line value prop centre,
+          primary "Free Kundli" + ghost "Talk to Astrologer" right. */}
       <section
         id="vedic-astrology"
         aria-labelledby="astrology-heading"
@@ -1302,16 +1312,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Join as a Panditji — REMOVED from home in this audit pass. The
-          B2B "earn ₹50k+/mo as a verified pandit" section dilutes the
-          B2C funnel on the homepage. It now lives on the dedicated
-          /become-pandit landing (linked from the footer) where intent
-          is qualified. Keep the import path live in case product
-          decides to A/B-test it back in. */}
-
-      {/* Testimonials */}
-      <TestimonialsCarousel />
 
       {false && (<>
       {/* Stats Bar (REMOVED — moved to /about full + footer micro-strip) */}
