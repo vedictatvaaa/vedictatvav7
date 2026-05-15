@@ -7524,6 +7524,56 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     }
   });
 
+  // ---- Investor Relations ----
+  const investorInquiryLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 6,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many inquiries from this IP. Please try again in an hour." },
+  });
+  app.post("/api/investors/inquiry", investorInquiryLimiter, async (req, res) => {
+    try {
+      const schema = z.object({
+        name: z.string().min(1).max(160),
+        email: z.string().email().max(200),
+        firm: z.string().max(200).optional().or(z.literal("")),
+        role: z.string().max(160).optional().or(z.literal("")),
+        // Accept both `checkSize` (UI) and `ticket` (legacy) — store as `ticket`.
+        checkSize: z.string().max(120).optional().or(z.literal("")),
+        ticket: z.string().max(120).optional().or(z.literal("")),
+        message: z.string().max(4000).optional().or(z.literal("")),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
+      }
+      const d = parsed.data;
+      const ticket = d.checkSize || d.ticket || "";
+      console.log("New investor inquiry:", d.firm || "(individual)", "·", d.name, "·", d.email);
+      try {
+        const { sendEmailAsync } = await import("./email");
+        const safe = (s: string) => String(s || "").replace(/[<>]/g, "");
+        const text = [
+          `Name: ${safe(d.name)}`,
+          `Email: ${safe(d.email)}`,
+          d.firm ? `Firm: ${safe(d.firm)}` : "",
+          d.role ? `Role: ${safe(d.role)}` : "",
+          ticket ? `Check size: ${safe(ticket)}` : "",
+          d.message ? `\nNote:\n${safe(d.message)}` : "",
+        ].filter(Boolean).join("\n");
+        sendEmailAsync({
+          to: "investors@vedictatva.com",
+          subject: `[Investors] ${d.firm || d.name} — inquiry`,
+          text,
+        }, "investors.inquiry");
+      } catch { /* email module optional */ }
+      res.status(201).json({ success: true, message: "Thank you. Our founder will respond within 2 business days." });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to submit inquiry" });
+    }
+  });
+
   // ---- Contact Form ----
   app.post("/api/contact", async (req, res) => {
     try {

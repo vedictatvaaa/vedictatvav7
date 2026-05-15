@@ -21,6 +21,14 @@ export async function seedDatabase() {
   }
   await ensurePindDaanSeoPages();
 
+  // Idempotent Q&A seeder — adds 15 evergreen entries (skips on slug conflict).
+  try {
+    const { seedQaQuestions } = await import("./seedQa");
+    await seedQaQuestions();
+  } catch (e: any) {
+    console.warn("[seed] seedQaQuestions failed:", e?.message || "unknown");
+  }
+
   const existingDonations = await db.select().from(donations);
   if (existingDonations.length === 0) {
     console.log("Seeding donations...");

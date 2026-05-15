@@ -150,6 +150,7 @@ const ReviewsSubmit = lazy(() => import("@/pages/reviews-submit"));
 const About = lazy(() => import("@/pages/about"));
 const Contact = lazy(() => import("@/pages/contact"));
 const Careers = lazy(() => import("@/pages/careers"));
+const Investors = lazy(() => import("@/pages/investors"));
 const Franchise = lazy(() => import("@/pages/franchise"));
 const BecomePandit = lazy(() => import("@/pages/become-pandit"));
 const BecomeAstrologer = lazy(() => import("@/pages/become-astrologer"));
@@ -745,6 +746,7 @@ function Router() {
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />
           <Route path="/careers" component={Careers} />
+          <Route path="/investors" component={Investors} />
           <Route path="/franchise" component={Franchise} />
           <Route path="/become-pandit" component={BecomePandit} />
           <Route path="/become-astrologer" component={BecomeAstrologer} />
