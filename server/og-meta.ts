@@ -133,6 +133,168 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
       alt: "Vedic Tatva Prime membership — priority Pandit slots and free samagri delivery",
     },
   },
+
+  // ── Content / blog / kathas ────────────────────────────────────────
+  {
+    match: "/blog",
+    card: {
+      title: "Vedic Wisdom Blog — Pujas, Festivals & Jyotish · Vedic Tatva",
+      description:
+        "Yatha pinde tatha brahmande — what is in the body is in the cosmos. Festival vidhi, mantra meanings, kundli decoded. Written by Pandits & Acharyas.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Vedic Tatva blog — puja vidhi, festival guides, jyotish wisdom from real Pandits",
+    },
+  },
+  {
+    match: `${PREFIX}/kathas`,
+    card: {
+      title: "Sacred Kathas with Audio Narration · Vedic Tatva",
+      description:
+        "Shravanam keertanam — listen and the soul awakens. Satyanarayan, Shiv, Hanuman, Ramayan kathas in Hindi & Sanskrit. Pandit-narrated, free to stream.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Vedic Tatva sacred kathas — audio-narrated Satyanarayan, Shiv, Hanuman stories",
+    },
+  },
+
+  // ── Astrology hub & AI tools ───────────────────────────────────────
+  {
+    match: "/astrology",
+    card: {
+      title: "Vedic Astrology, Kundli & Horoscope Online · Vedic Tatva",
+      description:
+        "Grahaa kalasya kaarana — planets shape your time. Talk to verified Jyotishis, get a free AI Kundli, daily horoscope. 4.8★ from 18,000+ consultations.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Vedic astrology consultations on Vedic Tatva — Kundli, horoscope, verified Jyotishis",
+    },
+  },
+  {
+    match: "/ai-kundli",
+    card: {
+      title: "Free AI Kundli — Janam Patrika in 30 Seconds · Vedic Tatva",
+      description:
+        "Yatha akashe tatha dehe — your sky-pattern is yours alone. Birth-chart, dasha, doshas, remedies. Built on Vedic Parashari rules. 100% free, no signup.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free AI-generated Vedic Kundli on Vedic Tatva — instant, accurate, no signup",
+    },
+  },
+  {
+    match: "/ai-baby-names",
+    card: {
+      title: "AI Baby Names by Nakshatra & Rashi · Vedic Tatva",
+      description:
+        "Naam roopam asti — the name shapes the form. 200+ Sanskrit-rooted names matched to your child's nakshatra, with meaning, gotra fit & numerology.",
+      image: "/og/og-prime-services.jpg",
+      alt: "AI-generated Vedic baby names matched to nakshatra and rashi · Vedic Tatva",
+    },
+  },
+  {
+    match: "/ai-palm-reading",
+    card: {
+      title: "Free AI Palm Reading — Hast Rekha Online · Vedic Tatva",
+      description:
+        "Hasta-rekha bhavishya — your palm holds your sankalp. Upload a photo, get life-line, heart-line, fate-line read by AI trained on classical Samudrika.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free AI palm reading on Vedic Tatva — Vedic Hast Rekha analysis from a photo",
+    },
+  },
+
+  // ── Tirth yatra & temple tourism ───────────────────────────────────
+  {
+    match: "/tirth-yatra",
+    card: {
+      title: "Curated Tirth Yatras — Char Dham, Jyotirling & More · Vedic Tatva",
+      description:
+        "Tirthani charanti yatra — pilgrim feet sanctify the road. Char Dham, 12 Jyotirlings, Sapta Puri tours with Pandits, prasad & vidhi. Confirmed dates 2026.",
+      image: "/og/og-pandit-booking.jpg",
+      alt: "Tirth yatra packages on Vedic Tatva — Char Dham, Jyotirling, Sapta Puri",
+    },
+  },
+  {
+    match: "/temple-tourism",
+    card: {
+      title: "Sacred Temple Tours Across India · Vedic Tatva",
+      description:
+        "Devalayam Brahmandam — every temple, a small cosmos. Curated darshan, priority pujas, Pandit-led history walks at 200+ temples. Festival dates filling.",
+      image: "/og/og-pandit-booking.jpg",
+      alt: "Temple tourism on Vedic Tatva — curated darshan and Pandit-led pilgrimage",
+    },
+  },
+
+  // ── Donations / dakshina / dharma ──────────────────────────────────
+  {
+    match: "/donations",
+    card: {
+      title: "Donate to Temples, Gaushala & Pandits · Vedic Tatva",
+      description:
+        "Daanam param dharmam — giving is the highest dharma. Verified gaushalas, ancient temples, scholar-Pandits. 100% pass-through. Receipt under 80G.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Donate to verified temples, gaushalas and scholar Pandits via Vedic Tatva",
+    },
+  },
+
+  // ── Brand pages (about/contact/careers/franchise) ──────────────────
+  {
+    match: "/about",
+    card: {
+      title: "Our Sankalp — The Vedic Tatva Story",
+      description:
+        "Dharmo rakshati rakshitah — protect the dharma and it protects you. Built by sons of Pandits to bring authentic, transparent Vedic seva to every home.",
+      image: "/og/og-prime-services.jpg",
+      alt: "About Vedic Tatva — our sankalp to bring authentic Vedic seva to every home",
+    },
+  },
+  {
+    match: "/contact",
+    card: {
+      title: "Talk to a Real Acharya — Vedic Tatva Support",
+      description:
+        "Need a Pandit by tomorrow? A custom yatra? Have a doubt about a vidhi? Our Acharya-led support team replies in under 30 minutes, every day, in any language.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Contact Vedic Tatva — Acharya-led support, replies under 30 minutes",
+    },
+  },
+  {
+    match: "/careers",
+    card: {
+      title: "Build the Future of Vedic Seva — Careers · Vedic Tatva",
+      description:
+        "Karmanyevadhikaraste — work with right intention, leave the rest. Engineers, designers, Acharyas, ops. Hybrid Bengaluru / Varanasi / remote. ESOPs.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Careers at Vedic Tatva — engineers, designers, Acharyas, hybrid roles with ESOPs",
+    },
+  },
+  {
+    match: "/franchise",
+    card: {
+      title: "Open a Vedic Tatva Franchise in Your City",
+      description:
+        "Lakshmi-Ganesh in your city — own the local Vedic seva network. Low capex, training, Pandit network access, marketing kit. Limited cities for 2026.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Open a Vedic Tatva franchise — local Vedic seva network with low capex",
+    },
+  },
+  {
+    match: "/become-astrologer",
+    card: {
+      title: "Earn ₹40,000+/mo as a Verified Jyotishi · Vedic Tatva",
+      description:
+        "Jnanam param balam — knowledge is the highest strength. Join our verified Jyotishi network. Free profile, instant payouts, daily incoming consultations.",
+      image: "/og/og-pandit-registration.jpg",
+      alt: "Become a verified Vedic Astrologer on Vedic Tatva — instant payouts, daily clients",
+    },
+  },
+
+  // ── Tools & calendars ──────────────────────────────────────────────
+  {
+    match: "/panchang-calendar",
+    card: {
+      title: "Free Vedic Panchang & Tithi Calendar 2026 · Vedic Tatva",
+      description:
+        "Tithi-vara-nakshatra-yoga-karana — the five limbs of time. Daily Panchang for any city in India, with shubh muhurat, festivals, and rahu-kaal alerts.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Free Vedic Panchang and Tithi calendar for 2026 on Vedic Tatva",
+    },
+  },
 ];
 
 /**

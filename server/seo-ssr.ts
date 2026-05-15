@@ -72,13 +72,32 @@ function buildHeadHtml(h: Head, baseUrl: string): string {
   const robots = h.noindex
     ? "noindex, nofollow"
     : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+  // Build the en/hi hreflang pair so server-rendered HTML matches the
+  // client-side <PageSeo> component (which emits all three alternates).
+  // Without the hi-IN entry here, crawlers see only English alternates and
+  // Google will discard the hreflang cluster for the Hindi pages entirely.
+  // Path layout matches client/src/components/PageSeo.tsx: Hindi pages live
+  // under /hi/<path>, English pages at /<path>; canonical = self.
+  // Normalize trailing slashes so SSR matches the client `PageSeo`
+  // output exactly (`/hi`, never `/hi/`; `/blog`, never `/blog/`).
+  // The single exception is the root `/` which must stay as-is.
+  const rawPath = h.canonical.replace(/^https?:\/\/[^/]+/, "") || "/";
+  const cleanPath = rawPath === "/" ? "/" : rawPath.replace(/\/+$/, "") || "/";
+  const isHindi = cleanPath === "/hi" || cleanPath.startsWith("/hi/");
+  const enPath = isHindi
+    ? (cleanPath === "/hi" ? "/" : cleanPath.replace(/^\/hi/, ""))
+    : cleanPath;
+  const hiPath = isHindi ? cleanPath : (cleanPath === "/" ? "/hi" : `/hi${cleanPath}`);
+  const enHref = enPath.startsWith("http") ? enPath : `${baseUrl}${enPath}`;
+  const hiHref = hiPath.startsWith("http") ? hiPath : `${baseUrl}${hiPath}`;
   const lines = [
     `<title>${escapeHtmlAttr(h.title)}</title>`,
     `<meta name="description" content="${escapeHtmlAttr(h.description)}" />`,
     `<meta name="robots" content="${robots}" />`,
     `<link rel="canonical" href="${escapeHtmlAttr(can)}" />`,
-    `<link rel="alternate" hreflang="en-IN" href="${escapeHtmlAttr(can)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${escapeHtmlAttr(can)}" />`,
+    `<link rel="alternate" hreflang="en-IN" href="${escapeHtmlAttr(enHref)}" />`,
+    `<link rel="alternate" hreflang="hi-IN" href="${escapeHtmlAttr(hiHref)}" />`,
+    `<link rel="alternate" hreflang="x-default" href="${escapeHtmlAttr(enHref)}" />`,
     `<meta property="og:site_name" content="${escapeHtmlAttr(SITE_NAME)}" />`,
     `<meta property="og:title" content="${escapeHtmlAttr(h.title)}" />`,
     `<meta property="og:description" content="${escapeHtmlAttr(h.description)}" />`,

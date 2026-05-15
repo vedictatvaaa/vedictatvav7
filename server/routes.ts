@@ -716,13 +716,38 @@ Disallow: /cart
 Disallow: /order-confirmation
 Disallow: /order-history
 Disallow: /my-profile
+Disallow: /my-puja-booking
+Disallow: /my-bookings
+Disallow: /dashboard
+Disallow: /spiritual-dashboard
 Disallow: /wishlist
 Disallow: /return-ticket
+Disallow: /track-order
+Disallow: /reset-password
+Disallow: /pandit/login
+Disallow: /pandit/portal
+Disallow: /uploads/invoices/
 
 User-agent: Googlebot
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /order-confirmation
+Disallow: /order-history
+Disallow: /my-profile
+Disallow: /my-puja-booking
+Disallow: /my-bookings
+Disallow: /dashboard
+Disallow: /spiritual-dashboard
+Disallow: /wishlist
+Disallow: /return-ticket
+Disallow: /track-order
+Disallow: /reset-password
+Disallow: /pandit/login
+Disallow: /pandit/portal
+Disallow: /uploads/invoices/
 
 User-agent: Googlebot-Image
 Allow: /uploads/
@@ -820,15 +845,23 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/pandits", priority: "0.8", changefreq: "weekly" },
       { loc: "/puja", priority: "0.8", changefreq: "weekly" },
       { loc: "/pind-daan", priority: "0.85", changefreq: "weekly" },
-      { loc: "/pind-daan/kashi", priority: "0.8", changefreq: "weekly" },
-      { loc: "/pind-daan/gaya", priority: "0.8", changefreq: "weekly" },
-      { loc: "/pind-daan/haridwar", priority: "0.8", changefreq: "weekly" },
-      { loc: "/pind-daan/why-important", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pind-daan/sites-in-india", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pind-daan/yearly-remote", priority: "0.7", changefreq: "monthly" },
+      // City landing pages use the hyphenated route convention
+      // (`/pind-daan-gaya` etc.), not slash. The earlier slash variants
+      // here pointed at non-existent URLs and were silently 404-ing in GSC.
+      { loc: "/pind-daan-gaya", priority: "0.9", changefreq: "weekly" },
+      { loc: "/pind-daan-kashi", priority: "0.9", changefreq: "weekly" },
+      { loc: "/pind-daan-haridwar", priority: "0.9", changefreq: "weekly" },
       { loc: "/astrology", priority: "0.8", changefreq: "weekly" },
       { loc: "/donations", priority: "0.7", changefreq: "weekly" },
+      { loc: "/tirth-yatra", priority: "0.75", changefreq: "weekly" },
+      { loc: "/temple-tourism", priority: "0.7", changefreq: "monthly" },
+      { loc: "/puja-kit", priority: "0.7", changefreq: "weekly" },
+      { loc: "/japa", priority: "0.65", changefreq: "monthly" },
+      { loc: "/tools/tithi-calculator", priority: "0.65", changefreq: "monthly" },
+      { loc: "/refer", priority: "0.5", changefreq: "monthly" },
+      { loc: "/blog", priority: "0.7", changefreq: "daily" },
       { loc: "/ai-kundli", priority: "0.7", changefreq: "monthly" },
+      { loc: "/premium-kundli-pdf", priority: "0.65", changefreq: "monthly" },
       { loc: "/ai-baby-names", priority: "0.7", changefreq: "monthly" },
       { loc: "/ai-palm-reading", priority: "0.7", changefreq: "monthly" },
       { loc: "/about", priority: "0.6", changefreq: "monthly" },
@@ -885,6 +918,21 @@ Sitemap: ${baseUrl}/sitemap.xml
         path.startsWith("/blog/") ||
         path.startsWith("/pandit/") ||
         path.startsWith("/astrologer/")
+      ) {
+        continue;
+      }
+      // Skip the legacy slash-style city URLs (`/pind-daan/kashi`,
+      // `/pind-daan/gaya`, `/pind-daan/haridwar`) that were DB-seeded
+      // before the dedicated hyphenated landing pages
+      // (`/pind-daan-kashi` etc.) shipped. Both URLs render the same
+      // intent today, so promoting only the hyphenated route in the
+      // sitemap prevents Google from treating them as duplicate
+      // competitors. The slash routes still resolve via PindDaanDetail
+      // for any inbound links we don't control.
+      if (
+        path === "/pind-daan/kashi" ||
+        path === "/pind-daan/gaya" ||
+        path === "/pind-daan/haridwar"
       ) {
         continue;
       }
