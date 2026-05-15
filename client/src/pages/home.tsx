@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RecommendedForYou } from "@/components/RecommendedForYou";
-import { JoinAsPanditSection } from "@/components/JoinAsPanditSection";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Product } from "@shared/schema";
 import { useCart } from "@/lib/cart";
@@ -116,10 +115,20 @@ const heroSlides: HeroSlide[] = [
 // with prefilled query params so the user lands on the result instantly.
 // ---------------------------------------------------------------------------
 
-function HeroBackground({ current, setCurrent }: { current: number; setCurrent: (i: number) => void }) {
+function HeroBackground({
+  current,
+  setCurrent,
+  isPaused,
+  onTogglePause,
+}: {
+  current: number;
+  setCurrent: (i: number) => void;
+  isPaused: boolean;
+  onTogglePause: () => void;
+}) {
   return (
     <>
-      <div className="absolute inset-0">
+      <div className="absolute inset-0" style={{ aspectRatio: "16 / 9" }}>
         {heroSlides.map((slide, i) => (
           <img
             key={slide.alt}
@@ -140,19 +149,41 @@ function HeroBackground({ current, setCurrent }: { current: number; setCurrent: 
         ))}
       </div>
 
-      {/* Slide indicator dots */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5">
+      {/* Slide indicator dots — wrapped in 32px tap-target buttons so
+          mobile fingers can hit them. The visible dot stays small for
+          aesthetic; the hit area is generous and invisible. */}
+      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5">
         {heroSlides.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
             aria-label={`Go to slide ${i + 1}`}
-            className={`transition-all duration-300 rounded-full ${
-              i === current ? "w-6 h-1.5 bg-[#D4AF37]" : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"
-            }`}
+            className="w-8 h-8 flex items-center justify-center group"
             data-testid={`hero-dot-${i}`}
-          />
+          >
+            <span
+              className={`block transition-all duration-300 rounded-full ${
+                i === current
+                  ? "w-6 h-1.5 bg-[#D4AF37]"
+                  : "w-1.5 h-1.5 bg-white/40 group-hover:bg-white/70"
+              }`}
+            />
+          </button>
         ))}
+        {/* Play / pause toggle — WCAG 2.2.2 compliance for moving content. */}
+        <button
+          onClick={onTogglePause}
+          aria-label={isPaused ? "Resume hero slideshow" : "Pause hero slideshow"}
+          aria-pressed={isPaused}
+          className="ml-2 w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          data-testid="btn-hero-autoplay-toggle"
+        >
+          {isPaused ? (
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z" /></svg>
+          )}
+        </button>
       </div>
     </>
   );
@@ -218,7 +249,7 @@ function TestimonialsCarousel() {
     if (isPaused) return;
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-    }, 4000);
+    }, 7000);
     return () => clearInterval(timer);
   }, [isPaused, maxIndex]);
 
@@ -325,25 +356,25 @@ export default function Home() {
   // pilgrimages (Char Dham, Jyotirlingas, Shakti Peeths, Vaishno Devi).
   const featuredCtas = [
     {
-      label: "Pandit & Puja",
+      label: "Book a Pandit & Puja",
       sub: "Verified pandits, puja at home, pind daan",
       icon: Flame,
       href: "/puja",
     },
     {
-      label: "Astrology",
+      label: "Vedic Astrology",
       sub: "Kundli, rashifal, muhurat, panchang",
       icon: Star,
       href: "/astrology",
     },
     {
-      label: "Puja Essentials",
+      label: "Puja Samagri Shop",
       sub: "Rudraksha, gemstones, samagri, yantras",
       icon: Gem,
       href: "/spiritual-essentials",
     },
     {
-      label: "Tirth Yatra",
+      label: "Tirth Yatra Bookings",
       sub: "Char Dham, Jyotirlingas, Vaishno Devi",
       icon: Map,
       href: "/tirth-yatra",
@@ -421,14 +452,21 @@ export default function Home() {
     [homeFaqSchema, homeItemListSchema],
   );
 
-  // Hero scene rotation — each background pairs with its own headline + CTAs
+  // Hero scene rotation — each background pairs with its own headline +
+  // CTAs. Pauseable via a play/pause toggle in the dot strip (WCAG 2.2.2).
+  // Also pauses automatically when the user prefers reduced motion.
   const [heroIdx, setHeroIdx] = useState(0);
+  const prefersReducedMotion = typeof window !== "undefined"
+    && window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [heroPaused, setHeroPaused] = useState(prefersReducedMotion);
   useEffect(() => {
+    if (heroPaused) return;
     const timer = setInterval(() => {
       setHeroIdx((prev) => (prev + 1) % heroSlides.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroPaused]);
   const scene = heroSlides[heroIdx];
   const Cta1Icon = scene.cta1.icon;
   const Cta2Icon = scene.cta2.icon;
@@ -449,7 +487,12 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
-        <HeroBackground current={heroIdx} setCurrent={setHeroIdx} />
+        <HeroBackground
+          current={heroIdx}
+          setCurrent={setHeroIdx}
+          isPaused={heroPaused}
+          onTogglePause={() => setHeroPaused((p) => !p)}
+        />
 
         {/* Dark wash for legibility (matches Heros guideline regardless of theme) */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/30" />
@@ -638,6 +681,113 @@ export default function Home() {
       <SpiritualSnapshot />
 
       {/* Tabbed Shop — Popular + Trending Near You + New Arrivals (Handpicked) */}
+      {/* Book a Pandit — moved here from below the trust block in this
+          audit pass. Highest-margin booking surface, sits right under
+          Spiritual Snapshot so the city-search converter is the first
+          revenue block users see after the four pillars. */}
+      <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-center max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative order-2 lg:order-1"
+            >
+              <div className="aspect-[4/3] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative">
+                <img
+                  src={optImg(heroBrandImg, 768)}
+                  srcSet={optImgSrcSet(heroBrandImg, [320, 480, 768, 1080])}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  alt="Sacred Puja Ceremony"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/70 via-[#1a0a0e]/10 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 flex-wrap">
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
+                    <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
+                    <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
+                  </div>
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 border border-[#D4AF37]/20">
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
+                  </div>
+                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
+                    <Shield className="h-3 w-3 text-emerald-600" />
+                    <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="space-y-5 order-1 lg:order-2"
+            >
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                  <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
+                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                </div>
+                <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
+                  Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
+                </h2>
+                <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
+                  Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
+                </p>
+              </div>
+
+              {/* City search bar — slim, rounded-md */}
+              <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
+                <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Enter your city…"
+                  className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
+                  data-testid="input-pandit-city"
+                />
+                <Link href="/pandits">
+                  <Button
+                    size="sm"
+                    className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
+                    data-testid="btn-search-pandit"
+                  >
+                    Search
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Popular city chips */}
+              <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
+                <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
+                {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
+                  <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+                    <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
+                      {c}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <Link href="/pandits">
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
+                    Browse all pandits <ArrowRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       <TabbedShop
         featuredProducts={featuredProducts}
         allProducts={products}
@@ -969,109 +1119,8 @@ export default function Home() {
 
       </>)}
 
-      {/* Book a Pandit */}
-      <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-center max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="relative order-2 lg:order-1"
-            >
-              <div className="aspect-[4/3] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative">
-                <img
-                  src={optImg(heroBrandImg, 768)}
-                  srcSet={optImgSrcSet(heroBrandImg, [320, 480, 768, 1080])}
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  alt="Sacred Puja Ceremony"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/70 via-[#1a0a0e]/10 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 flex-wrap">
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
-                    <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
-                    <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
-                  </div>
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 border border-[#D4AF37]/20">
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
-                  </div>
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
-                    <Shield className="h-3 w-3 text-emerald-600" />
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="space-y-5 order-1 lg:order-2"
-            >
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-                  <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
-                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-                </div>
-                <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
-                  Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
-                </h2>
-                <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
-                  Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
-                </p>
-              </div>
-
-              {/* City search bar — slim, rounded-md */}
-              <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
-                <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Enter your city…"
-                  className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
-                  data-testid="input-pandit-city"
-                />
-                <Link href="/pandits">
-                  <Button
-                    size="sm"
-                    className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
-                    data-testid="btn-search-pandit"
-                  >
-                    Search
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Popular city chips */}
-              <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
-                <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
-                {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
-                  <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
-                    <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
-                      {c}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="text-center">
-                <Link href="/pandits">
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
-                    Browse all pandits <ArrowRight className="h-3 w-3" />
-                  </span>
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+      {/* Book a Pandit — RELOCATED to under Spiritual Snapshot (above
+          TabbedShop) in this audit pass for better revenue ordering. */}
 
       {false && (<>
       {/* Puja Booking 3-step (REMOVED — moved to /puja-booking page) */}
@@ -1282,10 +1331,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Join as a Panditji — earnings calculator + value props + apply CTA.
-          Sits before testimonials so prospective karmkandi pandits see the
-          income proof point right after the customer-facing services. */}
-      <JoinAsPanditSection />
+      {/* Join as a Panditji — REMOVED from home in this audit pass. The
+          B2B "earn ₹50k+/mo as a verified pandit" section dilutes the
+          B2C funnel on the homepage. It now lives on the dedicated
+          /become-pandit landing (linked from the footer) where intent
+          is qualified. Keep the import path live in case product
+          decides to A/B-test it back in. */}
 
       {/* Testimonials */}
       <TestimonialsCarousel />
@@ -2037,9 +2088,17 @@ function TabbedShop({
             Puja essentials, <span className="saffron-shimmer italic font-semibold">picked for you</span>
           </h2>
 
-          <div className="inline-flex items-center bg-white rounded-md border border-[#D4AF37]/25 p-1 gap-1 flex-wrap">
+          <div
+            className="inline-flex items-center bg-white rounded-md border border-[#D4AF37]/25 p-1 gap-1 flex-wrap"
+            role="tablist"
+            aria-label="Browse products by collection"
+          >
             <button
               onClick={() => setTab("popular")}
+              role="tab"
+              aria-selected={tab === "popular"}
+              aria-controls="tabbed-shop-panel"
+              id="tabbed-shop-tab-popular"
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "popular" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
               data-testid="tab-popular"
             >
@@ -2048,6 +2107,10 @@ function TabbedShop({
             </button>
             <button
               onClick={() => setTab("trending")}
+              role="tab"
+              aria-selected={tab === "trending"}
+              aria-controls="tabbed-shop-panel"
+              id="tabbed-shop-tab-trending"
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "trending" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
               data-testid="tab-trending"
             >
@@ -2056,6 +2119,10 @@ function TabbedShop({
             </button>
             <button
               onClick={() => setTab("new")}
+              role="tab"
+              aria-selected={tab === "new"}
+              aria-controls="tabbed-shop-panel"
+              id="tabbed-shop-tab-new"
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors ${tab === "new" ? "bg-[#6D2B35] text-white" : "text-[#5a4a3a] hover:text-[#6D2B35]"}`}
               data-testid="tab-new-arrivals"
             >
@@ -2065,7 +2132,20 @@ function TabbedShop({
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+        {!isLoading && productsToShow.length === 0 && (
+          <div className="text-center py-10" data-testid="text-tabbed-shop-empty">
+            <p className="text-sm text-[#5a4a3a]/70">
+              No products to show right now. <Link href="/shop"><span className="text-[#6D2B35] font-semibold underline">Browse the full shop →</span></Link>
+            </p>
+          </div>
+        )}
+        <div
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
+          role="tabpanel"
+          aria-live="polite"
+          id="tabbed-shop-panel"
+          aria-labelledby={`tabbed-shop-tab-${tab}`}
+        >
           {isLoading ? Array(10).fill(0).map((_, i) => (
             <div key={i} className="space-y-3">
               <Skeleton className="aspect-square rounded-lg" />
@@ -2089,7 +2169,7 @@ function TabbedShop({
                 <div className="bg-white rounded-lg overflow-hidden border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 transition-colors flex flex-col h-full" data-testid={`card-tabbed-product-${product.id}`}>
                   <Link href={getProductUrl(product.id, product.name)} className="block">
                     <div className="aspect-square bg-[#F7F2E7] overflow-hidden relative p-3">
-                      <img src={optImg(product.image, 480)} srcSet={optImgSrcSet(product.image, [320, 480, 768, 1080])} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" alt={primaryAlt} loading="lazy" decoding="async" width={600} height={600} className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-500" />
+                      <img src={optImg(product.image, 480)} srcSet={optImgSrcSet(product.image, [320, 480, 768, 1080])} sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw" alt={primaryAlt} loading={idx < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={idx < 2 ? "high" : "low"} width={480} height={480} className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-500" />
                       {tab === "trending" && (
                         <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-md px-1.5 py-0.5 border border-emerald-100">
                           <TrendingUp className="h-2.5 w-2.5 text-emerald-600" />

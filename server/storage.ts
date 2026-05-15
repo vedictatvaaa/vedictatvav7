@@ -1,4 +1,4 @@
-import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gte, lte, lt, count, inArray, isNull, type SQL } from "drizzle-orm";
+import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gt, gte, lte, lt, count, inArray, isNull, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, products, orders, pandits, panditReviews, panditApplications, franchiseApplications, pujaBookings, astrologyBookings,
@@ -691,12 +691,16 @@ export class DatabaseStorage implements IStorage {
     const settings = await this.getSiteSettings();
     const limit = Math.max(1, Math.min(24, settings?.bestsellersLimit ?? 6));
     const mode = settings?.bestsellersMode ?? "auto";
-    const allProducts = await db.select().from(products);
-    const inStock = allProducts.filter((p) => (p.stock ?? 0) > 0);
 
     if (mode === "manual") {
+      // Manual mode still needs the curated id list — fetch only those rows.
       const ids = settings?.bestsellerProductIds ?? [];
-      const byId = new Map(inStock.map((p) => [p.id, p]));
+      if (ids.length === 0) return [];
+      const rows = await db
+        .select()
+        .from(products)
+        .where(and(inArray(products.id, ids), gt(products.stock, 0)));
+      const byId = new Map(rows.map((p) => [p.id, p]));
       const ordered: Product[] = [];
       for (const id of ids) {
         const p = byId.get(id);
@@ -706,9 +710,18 @@ export class DatabaseStorage implements IStorage {
       return ordered;
     }
 
-    return [...inStock]
-      .sort((a, b) => (b.salesCount ?? 0) - (a.salesCount ?? 0))
-      .slice(0, limit);
+    // Auto mode: do the filter + sort + limit at the DB layer instead of
+    // pulling the full catalog into Node and sorting in JS. Saves memory
+    // + scales as the catalog grows. COALESCE(sales_count, 0) keeps
+    // ranking parity with the previous JS `(salesCount ?? 0)` sort —
+    // otherwise Postgres puts NULLs first under DESC and would surface
+    // never-sold products at the top.
+    return await db
+      .select()
+      .from(products)
+      .where(gt(products.stock, 0))
+      .orderBy(dsql`COALESCE(${products.salesCount}, 0) DESC, ${products.id} DESC`)
+      .limit(limit);
   }
 
   async getProductReviews(productId: number, opts: { onlyApproved?: boolean } = {}): Promise<ProductReview[]> {

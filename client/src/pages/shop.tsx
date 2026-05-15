@@ -240,11 +240,13 @@ function ProductTile({ product }: { product: Product }) {
             <Heart className="w-4 h-4" fill={inWishlist ? CREAM : "none"} />
           </button>
 
-          {/* Quick Add (visibility toggle on hover — no layout shift) */}
+          {/* Quick Add — visible on hover (mouse) OR keyboard focus
+              within the card. Pure CSS visibility so keyboard users
+              get the same affordance as mouse users (audit fix:
+              earlier inline style was clobbering group-focus-within). */}
           {!isOutOfStock && (
             <div
-              className="absolute inset-x-3 bottom-3 transition-opacity duration-200 z-20"
-              style={{ visibility: hovered ? "visible" : "hidden", opacity: hovered ? 1 : 0 }}
+              className="absolute inset-x-3 bottom-3 transition-opacity duration-200 z-20 invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
             >
               <button
                 onClick={handleAdd}
@@ -1001,7 +1003,16 @@ export default function Shop() {
             )}
 
             <div className="ml-auto flex items-center gap-3 flex-shrink-0">
-              <span className="text-[11px] hidden sm:inline" style={{ color: `${INK}77` }}>{filtered.length} results</span>
+              <span
+                className="text-[11px] hidden sm:inline"
+                style={{ color: `${INK}77` }}
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                data-testid="text-shop-result-count"
+              >
+                {filtered.length} results
+              </span>
               <div
                 className="inline-flex items-center rounded-md p-0.5 gap-0.5 border"
                 style={{ borderColor: `${INK}22`, background: CREAM_DEEP }}

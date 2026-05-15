@@ -76,7 +76,7 @@ function PromoBar() {
       <div className="absolute right-0 top-0 bottom-0 w-12 z-10" style={{ background: `linear-gradient(to left, ${edge}, transparent)` }} />
       <div className="relative flex items-center py-2">
         {/* Mobile: Tithi + Rahukal + promos only */}
-        <div className="flex sm:hidden animate-marquee whitespace-nowrap">
+        <div className="flex sm:hidden motion-safe:animate-marquee motion-reduce:flex-wrap motion-reduce:justify-center whitespace-nowrap motion-reduce:whitespace-normal">
           {duplicatedMobile.map((msg, i) => {
             const Icon = msg.icon;
             return (
@@ -88,7 +88,7 @@ function PromoBar() {
           })}
         </div>
         {/* Desktop: full panchang strip */}
-        <div className="hidden sm:flex animate-marquee whitespace-nowrap">
+        <div className="hidden sm:flex motion-safe:animate-marquee motion-reduce:flex-wrap motion-reduce:justify-center whitespace-nowrap motion-reduce:whitespace-normal">
           {duplicated.map((msg, i) => {
             const Icon = msg.icon;
             return (
@@ -444,7 +444,7 @@ export default function Navbar() {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <Link href="/" className="flex items-center flex-shrink-0 md:static absolute left-1/2 -translate-x-1/2 md:translate-x-0 gap-2" data-testid="link-home">
+          <Link href="/" className="flex items-center flex-shrink-0 gap-2 min-w-0" data-testid="link-home">
             {settings?.logoUrl ? (
               <img
                 src={settings.logoUrl}

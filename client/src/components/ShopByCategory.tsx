@@ -82,8 +82,8 @@ export default function ShopByCategory({ products }: Props) {
                   {/* Motif emoji watermark */}
                   <div
                     aria-hidden="true"
-                    className="absolute -bottom-6 -right-3 text-[140px] sm:text-[180px] opacity-[0.08] leading-none select-none pointer-events-none font-serif"
-                    style={{ color: "white" }}
+                    className="absolute -bottom-6 -right-3 text-[140px] sm:text-[180px] opacity-[0.18] leading-none select-none pointer-events-none font-serif"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     {theme.motifEmoji}
                   </div>
