@@ -527,7 +527,7 @@
     0 1px 0 rgba(0, 0, 0, 0.35);
   font-family: "Noto Sans Devanagari", "Tiro Devanagari Sanskrit", "Sanskrit Text", serif;
   font-weight: 600;
-  animation: vt-led-scroll 38s linear infinite;
+  animation: vt-led-scroll 26s linear infinite;
   will-change: transform;
 }
 .vt-led-strip:hover .vt-led-track {
