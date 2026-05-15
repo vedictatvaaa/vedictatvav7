@@ -22,6 +22,7 @@ export default function DonationsPage() {
   const [donorForm, setDonorForm] = useState({
     name: "", email: "", phone: "", gotra: "", dedicatedTo: "", occasion: "", message: "",
   });
+  const [recurring, setRecurring] = useState(false);
 
   const { data: donationsList, isLoading } = useQuery<Donation[]>({
     queryKey: ["/api/donations"],
@@ -36,10 +37,16 @@ export default function DonationsPage() {
         body: JSON.stringify(data),
       }).then(r => { if (!r.ok) throw new Error("Failed"); return r.json(); }),
     onSuccess: () => {
-      toast({ title: "Donation Received!", description: "Thank you for your generous contribution. May the divine bless you." });
+      toast({
+        title: recurring ? "Monthly Daan Set Up!" : "Donation Received!",
+        description: recurring
+          ? "Your first donation is processed. We'll send a UPI AutoPay link to set up monthly seva."
+          : "Thank you for your generous contribution. May the divine bless you.",
+      });
       setSelectedDonation(null);
       setSelectedAmount(null);
       setCustomAmount("");
+      setRecurring(false);
       setDonorForm({ name: "", email: "", phone: "", gotra: "", dedicatedTo: "", occasion: "", message: "" });
     },
     onError: () => toast({ title: "Error", description: "Failed to process donation. Please try again.", variant: "destructive" }),
@@ -66,6 +73,7 @@ export default function DonationsPage() {
       dedicatedTo: donorForm.dedicatedTo || null,
       occasion: donorForm.occasion || null,
       message: donorForm.message || null,
+      recurring,
     });
   }
 
@@ -312,10 +320,35 @@ export default function DonationsPage() {
                   </div>
                 </div>
 
+                <label
+                  className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                    recurring ? "border-[#D4AF37] bg-[#FBF7EE]" : "border-[#D4AF37]/25 hover:border-[#D4AF37]/55"
+                  }`}
+                  data-testid="toggle-recurring-donation"
+                >
+                  <input
+                    type="checkbox"
+                    checked={recurring}
+                    onChange={(e) => setRecurring(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#6D2B35] cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-[#6D2B35]">Make this a monthly recurring donation</span>
+                      <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold">10× punya</span>
+                    </div>
+                    <p className="text-[11px] text-[#5a4a3a]/65 mt-0.5 leading-snug">
+                      Auto-debit via UPI AutoPay every month. Cancel anytime. Sustained seva carries 10× the merit of one-time daan in Vedic tradition.
+                    </p>
+                  </div>
+                </label>
+
                 {(selectedAmount || customAmount) && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-md p-4 text-center">
-                    <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">Your Donation</p>
-                    <p className="text-3xl font-bold text-emerald-800 font-serif mt-0.5">₹{(selectedAmount || Number(customAmount)).toLocaleString()}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">{recurring ? "Monthly Recurring" : "Your Donation"}</p>
+                    <p className="text-3xl font-bold text-emerald-800 font-serif mt-0.5">
+                      ₹{(selectedAmount || Number(customAmount)).toLocaleString()}{recurring && <span className="text-base font-normal text-emerald-700/80">/month</span>}
+                    </p>
                     <p className="text-xs text-emerald-700/80 mt-1">for {selectedDonation.name}</p>
                   </div>
                 )}
@@ -327,7 +360,7 @@ export default function DonationsPage() {
                   data-testid="btn-confirm-donate"
                 >
                   <Heart className="h-4 w-4" />
-                  {donateMut.isPending ? "Processing..." : "Donate with Blessings"}
+                  {donateMut.isPending ? "Processing..." : (recurring ? "Set up monthly daan" : "Donate with Blessings")}
                 </Button>
 
                 <p className="text-[11px] text-center text-[#5a4a3a]/55">

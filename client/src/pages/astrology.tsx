@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { Star, Video, FileText, Sparkles, Hand, Baby, Brain, ArrowRight, Heart, Briefcase, Sun, Clock } from "lucide-react";
+import { Star, Video, FileText, Sparkles, Hand, Baby, Brain, ArrowRight, Heart, Briefcase, Sun, Clock, MessageCircle } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
@@ -126,7 +126,7 @@ export default function Astrology() {
             title="Talk to a verified Vedic scholar"
             subtitle="Detailed kundli reports, 1:1 video sessions and Ashtakoot match-making."
           />
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             <Card className={`${slimCard} text-center shadow-none`}>
               <CardContent className="pt-7 pb-6 px-5">
                 <IconTile icon={FileText} className="mx-auto mb-4" />
@@ -180,6 +180,29 @@ export default function Astrology() {
                 >
                   Check match
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card className={`${slimCard} text-center shadow-none`}>
+              <CardContent className="pt-7 pb-6 px-5">
+                <IconTile icon={MessageCircle} className="mx-auto mb-4" />
+                <h3 className="text-base font-serif font-semibold text-[#6D2B35] mb-1.5">Live chat with astrologer</h3>
+                <p className="text-[12.5px] text-[#5a4a3a]/65 mb-5 leading-relaxed">Real-time chat with a verified Vedic astrologer — quick clarity in 10 minutes.</p>
+                <div className="text-xl font-serif font-semibold text-[#5a4a3a] mb-4">₹99<span className="text-xs text-[#5a4a3a]/55 font-normal">/10 min</span></div>
+                <a
+                  href="https://wa.me/918447844702?text=Namaste%2C%20I%20would%20like%20to%20chat%20with%20a%20Vedic%20astrologer%20now."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                >
+                  <Button
+                    variant="outline"
+                    className="w-full border-[#6D2B35]/40 text-[#6D2B35] hover:bg-[#FBF7EE] rounded-md h-10 text-[13px] font-semibold"
+                    data-testid="btn-chat-astrologer"
+                  >
+                    Start chat
+                  </Button>
+                </a>
               </CardContent>
             </Card>
           </div>

@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -13,8 +14,22 @@ export default function Blog() {
     queryFn: () => fetch("/api/blog-posts").then(r => r.json()),
   });
 
-  const featured = posts?.[0];
-  const rest = posts?.slice(1) || [];
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+
+  const categories = useMemo(() => {
+    if (!posts) return [];
+    const set = new Set<string>();
+    posts.forEach((p) => { if (p.category) set.add(p.category); });
+    return ["All", ...Array.from(set).sort()];
+  }, [posts]);
+
+  const filteredPosts = useMemo(() => {
+    if (!posts) return [];
+    return activeCategory === "All" ? posts : posts.filter((p) => p.category === activeCategory);
+  }, [posts, activeCategory]);
+
+  const featured = activeCategory === "All" ? filteredPosts[0] : undefined;
+  const rest = activeCategory === "All" ? filteredPosts.slice(1) : filteredPosts;
 
   return (
     <div className="w-full pb-20 bg-[#FBF7EE]" data-testid="page-blog">
@@ -47,6 +62,30 @@ export default function Blog() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 mt-10">
+        {!isLoading && categories.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2 mb-8" data-testid="filter-categories">
+            {categories.map((cat) => {
+              const isActive = activeCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setActiveCategory(cat)}
+                  className={`inline-flex items-center h-8 px-3.5 rounded-full text-[12px] font-semibold transition-colors ${
+                    isActive
+                      ? "bg-[#6D2B35] text-[#D4AF37] border border-[#6D2B35]"
+                      : "bg-white text-[#5a4a3a] border border-[#D4AF37]/30 hover:border-[#D4AF37]/55 hover:bg-[#FBF7EE]"
+                  }`}
+                  data-testid={`btn-category-${cat.toLowerCase().replace(/\s+/g, "-")}`}
+                  aria-pressed={isActive}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {isLoading && (
           <div className="grid md:grid-cols-3 gap-6">
             {[0, 1, 2].map(i => (

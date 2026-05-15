@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Phone, MapPin, Clock, ChevronDown, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Clock, ChevronDown, Send, MessageCircle } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import { faqPage } from "@/lib/seo-schemas";
 import { Button } from "@/components/ui/button";
@@ -258,7 +258,23 @@ export default function Contact() {
                     <span className="text-[#D4AF37] text-sm font-semibold">Puja Services Only</span>
                   </div>
                 </div>
-                <div className="mt-8 bg-white rounded-2xl p-5 border border-[#6D2B35]/8">
+                <a
+                  href="https://wa.me/918447844702?text=Namaste%20Vedic%20Tatva%2C%20I%20have%20a%20question%20about..."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-6 flex items-center gap-3 bg-[#25D366] hover:bg-[#1DA851] text-white rounded-2xl p-4 transition-colors"
+                  data-testid="link-whatsapp-business"
+                >
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold leading-tight">Chat on WhatsApp</div>
+                    <div className="text-[11px] text-white/80 leading-tight mt-0.5">Fastest reply · usually within 30 minutes</div>
+                  </div>
+                </a>
+
+                <div className="mt-3 bg-white rounded-2xl p-5 border border-[#6D2B35]/8">
                   <h4 className="font-serif text-[#6D2B35] mb-2">Quick Support</h4>
                   <p className="text-[#5a4a3a]/60 text-sm leading-relaxed mb-3">
                     For urgent puja bookings or order issues, call us directly for immediate assistance.

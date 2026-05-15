@@ -677,6 +677,7 @@ export const donationOrders = pgTable("donation_orders", {
   dedicatedTo: text("dedicated_to"),
   occasion: text("occasion"),
   message: text("message"),
+  recurring: boolean("recurring").notNull().default(false),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").defaultNow(),
 });

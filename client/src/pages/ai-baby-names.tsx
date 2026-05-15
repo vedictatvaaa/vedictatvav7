@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
-  Sparkles, Star, Copy, Check, Loader2, Info, User, Hash, Globe, Heart, BookOpen, Moon,
+  Sparkles, Star, Copy, Check, Loader2, Info, User, Hash, Globe, Heart, BookOpen, Moon, MessageCircle, Share2,
   Tag,
 } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
@@ -195,6 +195,19 @@ export default function AIBabyNames() {
     setTimeout(() => setCopiedName(null), 2000);
   };
 
+  const handleShareName = (name: { name: string; nameInScript?: string; meaning: string }) => {
+    const script = name.nameInScript && name.nameInScript !== name.name ? ` (${name.nameInScript})` : "";
+    const text = `✨ Baby name suggestion: *${name.name}*${script}\n\n${name.meaning}\n\nGenerated free with Vedic Tatva — https://vedictatva.com/ai-baby-names`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  const handleShareAll = () => {
+    if (!result) return;
+    const top = result.names.slice(0, 5).map((n, i) => `${i + 1}. ${n.name} — ${n.meaning}`).join("\n");
+    const text = `✨ Baby name shortlist (Nakshatra: ${result.nakshatraInfo.nakshatra} · Rashi: ${result.nakshatraInfo.rashi})\n\n${top}\n\nGenerated free with Vedic Tatva — https://vedictatva.com/ai-baby-names`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   const popularityToken = (p: string) => {
     switch (p.toLowerCase()) {
       case "common": return "bg-emerald-50 text-emerald-700 border border-emerald-200";
@@ -366,9 +379,20 @@ export default function AIBabyNames() {
                 <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.25em] font-medium">Suggested Names</span>
                 <div className="h-px w-6 bg-[#D4AF37]/60" />
               </div>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#6D2B35] mb-5 text-center" data-testid="heading-names-grid">
+              <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#6D2B35] mb-3 text-center" data-testid="heading-names-grid">
                 Names Matched to Your Baby
               </h3>
+              <div className="flex justify-center mb-5">
+                <button
+                  type="button"
+                  onClick={handleShareAll}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-md bg-[#25D366] hover:bg-[#1DA851] text-white text-[12px] font-semibold transition-colors"
+                  data-testid="btn-share-all-wa"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  Share top 5 with family on WhatsApp
+                </button>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="grid-names">
                 {result.names.map((name, i) => (
                   <div key={i} className="bg-white border border-[#D4AF37]/25 rounded-md p-5 hover-elevate transition-all" data-testid={`card-name-${i}`}>
@@ -387,9 +411,14 @@ export default function AIBabyNames() {
                           </p>
                         )}
                       </div>
-                      <button onClick={() => handleCopy(name.name)} className="p-1.5 rounded-md hover:bg-[#FBF7EE] transition-colors shrink-0" title="Copy name" data-testid={`button-copy-${i}`}>
-                        {copiedName === name.name ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#5a4a3a]/50" />}
-                      </button>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button onClick={() => handleShareName(name)} className="p-1.5 rounded-md hover:bg-emerald-50 transition-colors" title="Share on WhatsApp" data-testid={`button-share-wa-${i}`}>
+                          <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        </button>
+                        <button onClick={() => handleCopy(name.name)} className="p-1.5 rounded-md hover:bg-[#FBF7EE] transition-colors" title="Copy name" data-testid={`button-copy-${i}`}>
+                          {copiedName === name.name ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-[#5a4a3a]/50" />}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-[#5a4a3a]/85 mt-2 mb-3 leading-relaxed" data-testid={`text-meaning-${i}`}>{name.meaning}</p>
                     <div className="flex flex-wrap gap-1.5 mb-3">

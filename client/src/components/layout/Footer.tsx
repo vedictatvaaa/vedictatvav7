@@ -7,6 +7,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
 
+const complianceBadges = [
+  { label: "PCI-DSS", sub: "Level 1 secure" },
+  { label: "256-bit SSL", sub: "TLS 1.3" },
+  { label: "80G", sub: "Tax-deductible" },
+  { label: "GSTIN", sub: "GST invoiced" },
+];
+
 const trustBadges = [
   { icon: Truck, label: "Free Shipping", sub: "Orders ₹499+" },
   { icon: ShieldCheck, label: "Authentic", sub: "Lab-certified" },
@@ -205,6 +212,20 @@ export default function Footer() {
                   <div className="text-[10px] text-white/40 leading-tight truncate">{sub}</div>
                 </div>
               </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-3 -mt-1">
+            {complianceBadges.map((b) => (
+              <span
+                key={b.label}
+                className="inline-flex items-center gap-1.5 text-[10px] text-white/55"
+                data-testid={`compliance-${b.label.toLowerCase()}`}
+              >
+                <Lock className="h-3 w-3 text-[#D4AF37]/70" />
+                <span className="text-white/75 font-semibold tracking-wider">{b.label}</span>
+                <span className="text-white/40">·</span>
+                <span className="uppercase tracking-[0.14em]">{b.sub}</span>
+              </span>
             ))}
           </div>
         </div>

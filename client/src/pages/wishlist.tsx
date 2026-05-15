@@ -20,6 +20,16 @@ export default function WishlistPage() {
     });
   }
 
+  function handleMoveAllToCart() {
+    items.forEach((p) => addToCart(p));
+    const count = items.length;
+    clearWishlist();
+    toast({
+      title: `${count} ${count === 1 ? "item" : "items"} moved to cart`,
+      description: "Your wishlist has been cleared. Head to checkout when ready.",
+    });
+  }
+
   function handleRemove(product: Product) {
     removeFromWishlist(product.id);
     toast({
@@ -87,15 +97,25 @@ export default function WishlistPage() {
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            className="rounded-md h-10 text-[13px] text-rose-700 border-rose-200 hover:bg-rose-50 font-semibold"
-            onClick={handleClearAll}
-            data-testid="btn-clear-wishlist"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              className="rounded-md h-10 text-[13px] bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-semibold"
+              onClick={handleMoveAllToCart}
+              data-testid="btn-move-all-to-cart"
+            >
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Move all to cart ({items.length})
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-md h-10 text-[13px] text-rose-700 border-rose-200 hover:bg-rose-50 font-semibold"
+              onClick={handleClearAll}
+              data-testid="btn-clear-wishlist"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
