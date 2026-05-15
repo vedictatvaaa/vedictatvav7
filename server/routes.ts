@@ -929,7 +929,6 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/pitra-dosh-puja", priority: "0.8", changefreq: "weekly" },
       { loc: "/maha-mrityunjaya-jaap", priority: "0.85", changefreq: "weekly" },
       { loc: "/daily-rashifal", priority: "0.9", changefreq: "daily" },
-      { loc: "/daily-rashifal", priority: "0.9", changefreq: "daily" },
       { loc: "/weekly-rashifal", priority: "0.85", changefreq: "weekly" },
       { loc: "/monthly-horoscope", priority: "0.85", changefreq: "monthly" },
       { loc: "/yearly-horoscope-2026", priority: "0.85", changefreq: "monthly" },
