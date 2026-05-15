@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { useMutation } from "@tanstack/react-query";
 import PageSeo from "@/components/PageSeo";
 import {
@@ -31,6 +31,18 @@ import {
   ChevronRight,
   Zap,
   GraduationCap,
+  Hash,
+  Share2,
+  Store,
+  Copy,
+  Check,
+  X as XIcon,
+  BarChart3,
+  Sliders,
+  TrendingDown,
+  Users2,
+  Globe2,
+  Search as SearchIcon,
 } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import { Link } from "wouter";
@@ -229,9 +241,13 @@ export default function BecomePandit() {
 
       <Hero onApply={scrollToId("apply")} onDemo={scrollToId("demo")} />
       <LiveTrustBar />
+      <MarketOpportunitySection />
       <WhyJoinSection />
       <MembershipReachSection onApply={scrollToId("apply")} />
+      <TierComparisonSection onApply={scrollToId("apply")} />
+      <EarningsSimulatorSection onApply={scrollToId("apply")} />
       <DashboardPreviewSection />
+      <PersonalisedStorefrontSection />
       <JapaShowcaseSection />
       <VedicToolsSection />
       <TestimonialsSection />
@@ -245,6 +261,7 @@ export default function BecomePandit() {
         setForm={setForm}
         isPending={submitMutation.isPending}
       />
+      <HashtagShareSection />
       <FinalCTA onApply={scrollToId("apply")} />
 
       <div className="container mx-auto px-4 py-16">
@@ -1792,6 +1809,567 @@ function FinalCTA({ onApply }: { onApply: (e: React.MouseEvent) => void }) {
           </div>
           <p className="text-xs text-white/50 mt-5">Free · No upfront fees · Verified in 48 hours</p>
         </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION: Market Opportunity — TAM, NRI demand, online puja growth
+// ══════════════════════════════════════════════════════════════════════
+function MarketOpportunitySection() {
+  const stats = [
+    { icon: Users2, value: "1.2 Bn", label: "Hindus Worldwide", sub: "your potential devotee base" },
+    { icon: Globe2, value: "32 M+", label: "NRI Hindu Families", sub: "actively seeking pandits abroad" },
+    { icon: TrendingUp, value: "₹1.25 L Cr", label: "Hindu Rituals Market", sub: "annual spend across India" },
+    { icon: SearchIcon, value: "6.5×", label: "Online Puja Searches", sub: "growth in the last 5 years" },
+  ];
+  const insights = [
+    { icon: CalendarIcon, title: "200+ ritual occasions / year", body: "Festivals, samskaras, vrat-katha and weekly sevas — devotees need a trusted pandit on every one of them." },
+    { icon: TrendingDown, title: "87% NRI families struggle", body: "to find a verified pandit who speaks their language and understands their sampradaya. You are the answer." },
+    { icon: Zap, title: "₹3,000–₹50,000 per seva", body: "Average dakshina range across home pujas, weddings and corporate events — paid up-front through the platform." },
+  ];
+  return (
+    <section className="py-16 md:py-24" style={{ background: `linear-gradient(180deg, ${C.cream} 0%, ${C.warmWhite} 100%)` }}>
+      <div className="container mx-auto px-4">
+        <SectionEyebrow>The Pandit Market in 2026</SectionEyebrow>
+        <SectionTitle>Devotees are searching. Be the pandit they find.</SectionTitle>
+        <p className="text-center max-w-2xl mx-auto mt-3 text-sm md:text-base" style={{ color: C.brownSoft }}>
+          The Hindu spiritual services market is undergoing a digital shift — and verified pandits are the most sought-after part of it.
+        </p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5 mt-10 md:mt-12">
+          {stats.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ delay: i * 0.08, duration: 0.5 }}
+              className="rounded-2xl p-4 md:p-5 bg-white text-center"
+              style={{ border: `1px solid ${C.gold}30`, boxShadow: `0 1px 0 ${C.gold}15` }}
+              data-testid={`market-stat-${i}`}
+            >
+              <div className="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-3" style={{ background: `${C.saffron}15`, color: C.saffronDeep, border: `1px solid ${C.saffron}33` }}>
+                <s.icon className="w-5 h-5" />
+              </div>
+              <div className="font-serif text-2xl md:text-3xl" style={{ color: C.maroon }}>{s.value}</div>
+              <div className="text-[11px] md:text-xs uppercase tracking-wider mt-1 font-semibold" style={{ color: C.brown }}>{s.label}</div>
+              <div className="text-[10px] md:text-[11px] mt-1 leading-snug" style={{ color: C.brownSoft }}>{s.sub}</div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4 md:gap-5 mt-8">
+          {insights.map((it, i) => (
+            <motion.div
+              key={it.title}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 + i * 0.08, duration: 0.5 }}
+              className="rounded-2xl p-5"
+              style={{ background: `${C.maroon}08`, border: `1px solid ${C.maroon}15` }}
+            >
+              <it.icon className="w-5 h-5 mb-2" style={{ color: C.maroon }} />
+              <div className="font-semibold text-sm" style={{ color: C.maroon }}>{it.title}</div>
+              <div className="text-xs mt-1.5 leading-relaxed" style={{ color: C.brownSoft }}>{it.body}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION: Tier Comparison Table — full feature matrix
+// ══════════════════════════════════════════════════════════════════════
+type CellVal = boolean | string;
+function TierComparisonSection({ onApply }: { onApply: (e: React.MouseEvent) => void }) {
+  const cols = [
+    { key: "free", name: "Free", icon: CircleDot, accent: C.brown },
+    { key: "silver", name: "Silver", icon: Award, accent: "#7C7C8A" },
+    { key: "gold", name: "Gold", icon: Crown, accent: C.gold, highlight: true },
+    { key: "elite", name: "Guru Elite", icon: Sparkles, accent: C.saffronDeep },
+  ];
+  const groups: { title: string; rows: { label: string; values: [CellVal, CellVal, CellVal, CellVal] }[] }[] = [
+    {
+      title: "Visibility & Reach",
+      rows: [
+        { label: "Profile in pandit directory", values: [true, true, true, true] },
+        { label: "Verified pandit badge", values: [true, true, true, true] },
+        { label: "Search visibility", values: ["Local area", "Full city", "Full state", "National + NRI"] },
+        { label: "Festival-week priority placement", values: [false, "Limited", true, "Top of list"] },
+        { label: "Featured on city landing pages", values: [false, true, true, true] },
+        { label: "International (NRI) booking eligibility", values: [false, false, true, true] },
+      ],
+    },
+    {
+      title: "Personal Brand",
+      rows: [
+        { label: "Personalised storefront URL", values: [false, "vedictatva.com/pandit/you", "Custom URL slug", "Custom URL + SEO"] },
+        { label: "Photo gallery + intro video", values: ["3 photos", "10 photos", "Unlimited + 1 video", "Unlimited + 3 videos"] },
+        { label: "Physical pandit ID card (tricolour)", values: [false, "Digital only", "Physical + digital", "Physical premium + digital"] },
+        { label: "Pandit testimonials & ratings", values: [true, true, true, true] },
+      ],
+    },
+    {
+      title: "Bookings & Earnings",
+      rows: [
+        { label: "Accept online (virtual) puja bookings", values: [false, true, true, true] },
+        { label: "Direct devotee chat & call", values: [false, true, true, true] },
+        { label: "Platform service fee", values: ["Standard", "Reduced", "Lower", "Lowest"] },
+        { label: "Settlement schedule", values: ["Weekly", "Weekly", "48 hours", "24 hours"] },
+        { label: "Affiliate commission on referrals", values: [false, true, true, true] },
+        { label: "Boost (paid promotion) eligibility", values: [false, true, true, "Included credits"] },
+      ],
+    },
+    {
+      title: "Dashboard & Tools",
+      rows: [
+        { label: "Bookings calendar & reminders", values: [true, true, true, true] },
+        { label: "Vedic tools suite (panchang, kundli, muhurat)", values: ["Basic", "Full", "Full", "Full + early access"] },
+        { label: "Audio japa & sankalpa templates", values: [false, true, true, true] },
+        { label: "Earnings analytics & reports", values: ["Last 30 days", "Last 12 months", "Lifetime", "Lifetime + exports"] },
+        { label: "GST invoicing for clients", values: [false, false, true, true] },
+      ],
+    },
+    {
+      title: "Support",
+      rows: [
+        { label: "Onboarding language", values: ["Hindi/English", "+ regional", "+ regional", "Personal manager"] },
+        { label: "Dedicated support channel", values: ["Email", "Chat", "Priority chat", "WhatsApp + phone"] },
+        { label: "Festival-week extended support", values: [false, true, true, true] },
+      ],
+    },
+  ];
+
+  return (
+    <section className="py-16 md:py-24" style={{ background: `linear-gradient(180deg, ${C.warmWhite} 0%, ${C.cream} 100%)` }}>
+      <div className="container mx-auto px-4">
+        <SectionEyebrow>Tier-by-Tier Comparison</SectionEyebrow>
+        <SectionTitle>Pick the tier that matches your seva</SectionTitle>
+        <p className="text-center max-w-2xl mx-auto mt-3 text-sm md:text-base" style={{ color: C.brownSoft }}>
+          Every tier is built around real pandit needs — not arbitrary limits. Start free, upgrade when your bookings grow.
+        </p>
+
+        <div className="mt-10 rounded-2xl bg-white overflow-hidden" style={{ border: `1px solid ${C.gold}30`, boxShadow: `0 1px 0 ${C.gold}15` }}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm" data-testid="tier-comparison-table" aria-label="Pandit tier feature comparison">
+              <caption className="sr-only">Feature comparison across Free, Silver, Gold and Guru Elite pandit tiers.</caption>
+              <thead>
+                <tr style={{ background: `${C.maroon}08`, borderBottom: `1px solid ${C.gold}30` }}>
+                  <th scope="col" className="p-3 md:p-4 font-semibold sticky left-0 z-10" style={{ color: C.maroon, background: `${C.maroon}08`, minWidth: 220 }}>Feature</th>
+                  {cols.map((c) => (
+                    <th key={c.key} scope="col" className="p-3 md:p-4 text-center font-semibold" style={{ color: c.highlight ? C.gold : c.accent, minWidth: 130 }}>
+                      <div className="flex flex-col items-center gap-1">
+                        <c.icon className="w-4 h-4" />
+                        <span>{c.name}</span>
+                        {c.highlight && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: C.gold, color: C.maroonDeep }}>Most Loved</span>
+                        )}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((g) => (
+                  <Fragment key={g.title}>
+                    <tr style={{ background: `${C.gold}10` }}>
+                      <td colSpan={5} className="px-3 md:px-4 py-2 text-[11px] uppercase tracking-wider font-bold" style={{ color: C.maroon }}>{g.title}</td>
+                    </tr>
+                    {g.rows.map((r) => (
+                      <tr key={r.label} className="border-b last:border-b-0" style={{ borderColor: `${C.gold}15` }}>
+                        <th scope="row" className="p-3 md:p-4 font-medium sticky left-0 bg-white z-[1] text-left" style={{ color: C.brown }}>{r.label}</th>
+                        {r.values.map((v, i) => (
+                          <td key={i} className="p-3 md:p-4 text-center" style={{ background: cols[i].highlight ? `${C.gold}06` : "transparent" }}>
+                            {typeof v === "boolean" ? (
+                              v ? (
+                                <Check className="w-4 h-4 mx-auto" style={{ color: "#1f8a4c" }} aria-label="Included" />
+                              ) : (
+                                <XIcon className="w-4 h-4 mx-auto" style={{ color: C.brownSoft, opacity: 0.4 }} aria-label="Not included" />
+                              )
+                            ) : (
+                              <span className="text-xs md:text-sm" style={{ color: C.brown }}>{v}</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="text-center mt-8">
+          <Button asChild size="lg" className="rounded-full px-8 h-12 font-semibold" style={{ background: C.maroon, color: "white" }} data-testid="btn-comparison-apply">
+            <a href="#apply" onClick={onApply}>
+              Start with the Tier You Want
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </a>
+          </Button>
+          <p className="text-xs mt-3" style={{ color: C.brownSoft }}>All tiers include verification, transparent pricing, and zero joining fees.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION: Earnings Simulator — interactive sliders
+// ══════════════════════════════════════════════════════════════════════
+function EarningsSimulatorSection({ onApply }: { onApply: (e: React.MouseEvent) => void }) {
+  const [sevasPerWeek, setSevasPerWeek] = useState(4);
+  const [avgDakshina, setAvgDakshina] = useState(5500);
+  const presets = [
+    { name: "Beginner", sevas: 2, dakshina: 3500 },
+    { name: "Active", sevas: 5, dakshina: 6500 },
+    { name: "Top Pandit", sevas: 9, dakshina: 11000 },
+  ];
+  const weekly = sevasPerWeek * avgDakshina;
+  const monthly = Math.round(weekly * 4.33);
+  const yearly = monthly * 12;
+  const platformShareApprox = Math.round(monthly * 0.85);
+
+  const recommendedTier = monthly >= 80000 ? "Guru Elite" : monthly >= 40000 ? "Gold" : monthly >= 15000 ? "Silver" : "Free";
+  const tierIcon = recommendedTier === "Guru Elite" ? Sparkles : recommendedTier === "Gold" ? Crown : recommendedTier === "Silver" ? Award : CircleDot;
+  const TierIcon = tierIcon;
+
+  const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+
+  return (
+    <section className="py-16 md:py-24" style={{ background: `linear-gradient(180deg, ${C.cream} 0%, ${C.sandalwood} 100%)` }}>
+      <div className="container mx-auto px-4">
+        <SectionEyebrow>Earnings Simulator</SectionEyebrow>
+        <SectionTitle>See what your seva can earn</SectionTitle>
+        <p className="text-center max-w-2xl mx-auto mt-3 text-sm md:text-base" style={{ color: C.brownSoft }}>
+          Adjust sevas per week and average dakshina. The numbers update live based on real platform averages.
+        </p>
+
+        <div className="max-w-5xl mx-auto mt-10 grid lg:grid-cols-5 gap-6">
+          {/* Controls */}
+          <div className="lg:col-span-3 rounded-2xl bg-white p-5 md:p-7" style={{ border: `1px solid ${C.gold}30`, boxShadow: `0 1px 0 ${C.gold}15` }}>
+            <div className="flex items-center gap-2 mb-5">
+              <Sliders className="w-4 h-4" style={{ color: C.maroon }} />
+              <h3 className="font-semibold" style={{ color: C.maroon }}>Your numbers</h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {presets.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => { setSevasPerWeek(p.sevas); setAvgDakshina(p.dakshina); }}
+                  className="text-xs font-medium px-3 py-1.5 rounded-full hover-elevate active-elevate-2"
+                  style={{ background: `${C.maroon}10`, color: C.maroon, border: `1px solid ${C.maroon}25` }}
+                  data-testid={`preset-${p.name.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  {p.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm" style={{ color: C.brown }}>Sevas per week</Label>
+                  <span className="text-sm font-bold" style={{ color: C.maroon }}>{sevasPerWeek}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={15}
+                  step={1}
+                  value={sevasPerWeek}
+                  onChange={(e) => setSevasPerWeek(parseInt(e.target.value, 10))}
+                  className="w-full accent-[#6D2B35]"
+                  data-testid="slider-sevas"
+                  aria-label="Sevas per week"
+                />
+                <div className="flex justify-between text-[10px] mt-1" style={{ color: C.brownSoft }}>
+                  <span>1</span><span>5</span><span>10</span><span>15</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm" style={{ color: C.brown }}>Average dakshina per seva</Label>
+                  <span className="text-sm font-bold" style={{ color: C.maroon }}>{fmt(avgDakshina)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1000}
+                  max={25000}
+                  step={500}
+                  value={avgDakshina}
+                  onChange={(e) => setAvgDakshina(parseInt(e.target.value, 10))}
+                  className="w-full accent-[#6D2B35]"
+                  data-testid="slider-dakshina"
+                  aria-label="Average dakshina per seva"
+                />
+                <div className="flex justify-between text-[10px] mt-1" style={{ color: C.brownSoft }}>
+                  <span>₹1k</span><span>₹10k</span><span>₹25k</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-xl p-4 text-xs leading-relaxed" style={{ background: `${C.gold}10`, color: C.brownSoft, border: `1px solid ${C.gold}25` }}>
+              These are illustrative numbers based on platform averages across home pujas, samskaras and weddings. Actual earnings depend on your tier, city demand and seva mix. The platform service fee is explained transparently during onboarding.
+            </div>
+          </div>
+
+          {/* Output */}
+          <div className="lg:col-span-2 rounded-2xl p-5 md:p-7 text-white" style={{ background: `linear-gradient(135deg, ${C.maroonDeep} 0%, ${C.maroon} 100%)`, border: `1px solid ${C.gold}55` }}>
+            <div className="flex items-center gap-2 mb-5">
+              <BarChart3 className="w-4 h-4" style={{ color: C.gold }} />
+              <h3 className="font-semibold" style={{ color: C.gold }}>Projected earnings</h3>
+            </div>
+
+            <div className="space-y-4">
+              <EarnRow label="Per week" value={fmt(weekly)} testId="earn-weekly" />
+              <EarnRow label="Per month" value={fmt(monthly)} bold testId="earn-monthly" />
+              <EarnRow label="Per year" value={fmt(yearly)} testId="earn-yearly" />
+              <div className="pt-3 border-t" style={{ borderColor: `${C.gold}30` }}>
+                <div className="text-[10px] uppercase tracking-wider opacity-70">After typical platform fee</div>
+                <div className="font-serif text-2xl mt-0.5" style={{ color: C.gold }}>~{fmt(platformShareApprox)}</div>
+                <div className="text-[10px] opacity-60">illustrative — actual fee shared at onboarding</div>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-xl p-3 flex items-center gap-3" style={{ background: `${C.gold}15`, border: `1px solid ${C.gold}40` }}>
+              <TierIcon className="w-5 h-5 shrink-0" style={{ color: C.gold }} />
+              <div className="text-xs leading-tight">
+                <div className="opacity-70">Recommended tier</div>
+                <div className="font-bold" style={{ color: C.gold }} data-testid="recommended-tier">{recommendedTier}</div>
+              </div>
+            </div>
+
+            <Button asChild className="w-full rounded-full font-semibold mt-5" style={{ background: C.gold, color: C.maroonDeep }} data-testid="btn-simulator-apply">
+              <a href="#apply" onClick={onApply}>
+                Apply for {recommendedTier}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EarnRow({ label, value, bold, testId }: { label: string; value: string; bold?: boolean; testId?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3" data-testid={testId}>
+      <span className="text-sm opacity-80">{label}</span>
+      <span className={`font-serif ${bold ? "text-3xl" : "text-xl"}`} style={{ color: bold ? C.gold : "white" }}>{value}</span>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION: Personalised Storefront — your own URL + booking page
+// ══════════════════════════════════════════════════════════════════════
+function PersonalisedStorefrontSection() {
+  const perks = [
+    { icon: Globe, title: "Your own URL", body: "vedictatva.com/pandit/your-name — share on cards, WhatsApp and bio links." },
+    { icon: Heart, title: "Your story, your sevas", body: "Photos, sampradaya, languages, areas served, ritual specialities — all on one page." },
+    { icon: CalendarCheck, title: "Instant booking", body: "Devotees pick a date, pay dakshina, and you get a notification. No back-and-forth." },
+    { icon: Wallet, title: "Donation & prasad links", body: "Optional gurukul donation button or sankalpa-prasad shipping link, fully optional." },
+  ];
+  return (
+    <section className="py-16 md:py-24" style={{ background: `linear-gradient(180deg, ${C.warmWhite} 0%, ${C.cream} 100%)` }}>
+      <div className="container mx-auto px-4">
+        <SectionEyebrow>Your Personal Storefront</SectionEyebrow>
+        <SectionTitle>A booking page that's yours alone</SectionTitle>
+        <p className="text-center max-w-2xl mx-auto mt-3 text-sm md:text-base" style={{ color: C.brownSoft }}>
+          Every Silver+ pandit gets a personalised public page — like a digital visiting card and booking platform combined.
+        </p>
+
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mt-12 max-w-6xl mx-auto">
+          {/* Mock browser */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="rounded-2xl overflow-hidden shadow-2xl"
+            style={{ border: `1px solid ${C.gold}40` }}
+          >
+            {/* browser chrome */}
+            <div className="px-3 py-2 flex items-center gap-2" style={{ background: "#1a1a1a" }}>
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-400/70" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/70" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400/70" />
+              </div>
+              <div className="flex-1 mx-3 px-3 py-1 rounded text-[10px] font-mono truncate" style={{ background: "#2a2a2a", color: "#9bd9a8" }}>
+                vedictatva.com/pandit/<span style={{ color: C.gold }}>ramesh-sharma</span>
+              </div>
+            </div>
+            {/* page body */}
+            <div className="p-5 md:p-6" style={{ background: `linear-gradient(180deg, ${C.warmWhite} 0%, ${C.sandalwood} 100%)` }}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center font-serif text-xl shrink-0" style={{ background: `linear-gradient(135deg, ${C.maroon} 0%, ${C.maroonDeep} 100%)`, color: C.gold, border: `2px solid ${C.gold}` }}>
+                  RS
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-serif text-lg" style={{ color: C.maroon }}>Pt. Ramesh Sharma</h4>
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-flex items-center gap-1" style={{ background: `${C.gold}25`, color: C.goldDeep, border: `1px solid ${C.gold}55` }}>
+                      <ShieldCheck className="w-2.5 h-2.5" /> Verified
+                    </span>
+                  </div>
+                  <div className="text-[11px]" style={{ color: C.brownSoft }}>Smartha · Sanskrit, Hindi, English · Mumbai · 22 yrs</div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 mb-4">
+                {["Satyanarayan Katha", "Griha Pravesh", "Rudra Abhishek", "Wedding", "Mundan", "Antyeshti"].map((s) => (
+                  <span key={s} className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "white", color: C.brown, border: `1px solid ${C.gold}40` }}>{s}</span>
+                ))}
+              </div>
+
+              <div className="rounded-xl p-3 mb-3" style={{ background: "white", border: `1px solid ${C.gold}30` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: C.maroon }}>Next available slot</div>
+                  <span className="text-[10px]" style={{ color: "#1f8a4c" }}>● Online & In-person</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: C.brown }}>Sun, 17 May · 10:00 AM</div>
+                    <div className="text-[10px]" style={{ color: C.brownSoft }}>Satyanarayan Katha · 90 min</div>
+                  </div>
+                  <Button size="sm" className="rounded-full text-[11px] h-8" style={{ background: C.maroon, color: "white" }}>Book</Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[{ k: "★ 4.9", v: "Rating" }, { k: "412", v: "Sevas" }, { k: "98%", v: "On-time" }].map((m) => (
+                  <div key={m.v} className="rounded-lg p-2 text-center" style={{ background: "white", border: `1px solid ${C.gold}25` }}>
+                    <div className="text-sm font-bold" style={{ color: C.maroon }}>{m.k}</div>
+                    <div className="text-[9px] uppercase tracking-wider" style={{ color: C.brownSoft }}>{m.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* perks */}
+          <div>
+            <div className="space-y-4">
+              {perks.map((p, i) => (
+                <motion.div
+                  key={p.title}
+                  initial={{ opacity: 0, x: 16 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  className="flex gap-4"
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: `${C.saffron}15`, color: C.saffronDeep, border: `1px solid ${C.saffron}33` }}>
+                    <p.icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold" style={{ color: C.maroon }}>{p.title}</div>
+                    <div className="text-sm mt-1 leading-relaxed" style={{ color: C.brownSoft }}>{p.body}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-6">
+              <Link href="/pandits">
+                <Button variant="outline" className="rounded-full" style={{ borderColor: C.maroon, color: C.maroon }} data-testid="btn-view-storefront-examples">
+                  <Store className="w-4 h-4 mr-2" />
+                  See live pandit storefronts
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SECTION: Hashtags & Share — copy hashtags, tag the platform
+// ══════════════════════════════════════════════════════════════════════
+function HashtagShareSection() {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState<string | null>(null);
+  const tags = [
+    "#VedicTatvaPandit",
+    "#DigitalDharma",
+    "#SanatanDharma",
+    "#PanditJi",
+    "#OnlinePuja",
+    "#VedicRituals",
+    "#VerifiedPandit",
+    "#NRIPuja",
+    "#HinduWedding",
+    "#PujaSeva",
+    "#PurohitOnline",
+    "#GauravBharat",
+  ];
+  const onCopy = async (t: string) => {
+    try {
+      await navigator.clipboard.writeText(t);
+      setCopied(t);
+      toast({ title: "Copied", description: `${t} ready to paste.` });
+      setTimeout(() => setCopied(null), 1800);
+    } catch {
+      toast({ title: "Couldn't copy", description: "Long-press to copy manually.", variant: "destructive" });
+    }
+  };
+  const onCopyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(tags.join(" "));
+      toast({ title: "All hashtags copied", description: "Paste them with your seva photos." });
+    } catch {
+      toast({ title: "Couldn't copy", variant: "destructive" });
+    }
+  };
+  return (
+    <section className="py-14 md:py-20" style={{ background: `linear-gradient(180deg, ${C.cream} 0%, ${C.warmWhite} 100%)` }}>
+      <div className="container mx-auto px-4">
+        <SectionEyebrow>Share The Dharma</SectionEyebrow>
+        <SectionTitle>Tag us in your seva moments</SectionTitle>
+        <p className="text-center max-w-2xl mx-auto mt-3 text-sm md:text-base" style={{ color: C.brownSoft }}>
+          Use these hashtags when you post puja photos and reels — devotees searching them will discover your verified profile.
+        </p>
+
+        <div className="max-w-4xl mx-auto mt-8 flex flex-wrap justify-center gap-2 md:gap-2.5">
+          {tags.map((t) => {
+            const isCopied = copied === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => onCopy(t)}
+                className="group inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs md:text-sm font-medium hover-elevate active-elevate-2"
+                style={{ background: "white", color: C.maroon, border: `1px solid ${C.gold}40` }}
+                data-testid={`hashtag-${t.replace(/^#/, "").toLowerCase()}`}
+                aria-label={`Copy hashtag ${t}`}
+              >
+                <Hash className="w-3 h-3" style={{ color: C.gold }} />
+                <span>{t.replace(/^#/, "")}</span>
+                {isCopied ? <Check className="w-3.5 h-3.5" style={{ color: "#1f8a4c" }} /> : <Copy className="w-3 h-3 opacity-50 group-hover:opacity-100" />}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="text-center mt-8">
+          <Button onClick={onCopyAll} className="rounded-full" style={{ background: C.maroon, color: "white" }} data-testid="btn-copy-all-hashtags">
+            <Share2 className="w-4 h-4 mr-2" />
+            Copy all hashtags
+          </Button>
+          <p className="text-[11px] mt-3" style={{ color: C.brownSoft }}>Tag <span className="font-semibold" style={{ color: C.maroon }}>@vedictatva</span> on Instagram and YouTube to be featured.</p>
+        </div>
       </div>
     </section>
   );
