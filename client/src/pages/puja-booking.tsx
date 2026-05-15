@@ -395,11 +395,11 @@ function PujaHashtagStrip() {
       <div className="rounded-2xl bg-[#FBF7EE] border border-[#D4AF37]/25 p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Share the divine</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Share your puja</div>
             <h2 id="puja-hashtag-heading" className="text-xl font-serif font-semibold text-[#6D2B35] flex items-center gap-2">
-              <Hash className="w-5 h-5" /> High-ranking spiritual hashtags
+              <Hash className="w-5 h-5" /> Tag your moments
             </h2>
-            <p className="text-[13px] text-[#5a4a3a]/70 mt-1">Tap any tag to copy. Use them when you share your puja photos, reels or testimonials.</p>
+            <p className="text-[13px] text-[#5a4a3a]/70 mt-1">Share photos from your puja with these tags so other devotees can find and bless your journey.</p>
           </div>
           <Button
             variant="outline"
