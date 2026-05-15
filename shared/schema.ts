@@ -1794,3 +1794,44 @@ export const insertPujaMuhuratSchema = createInsertSchema(pujaMuhurats).omit({
 });
 export type PujaMuhurat = typeof pujaMuhurats.$inferSelect;
 export type InsertPujaMuhurat = z.infer<typeof insertPujaMuhuratSchema>;
+
+// ===== Sacred Library: Kindle-style reader for chalisas, mantras, kathas, =====
+// stotras, aartis. One row per text. Lyrics + transliteration + translation
+// all stored together so the reader can toggle scripts. audioUrl points to a
+// /uploads/sacred-audio/... file (uploaded by admin) or an external URL.
+export const sacredTexts = pgTable("sacred_texts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  deity: text("deity").notNull(), // e.g. "Hanuman", "Shiva", "Ganesha"
+  textType: text("text_type").notNull(), // chalisa | mantra | katha | aarti | stotra | book
+  language: text("language").notNull().default("hindi"), // hindi | sanskrit | english
+  lyrics: text("lyrics").notNull(), // Devanagari verses, line-separated
+  transliteration: text("transliteration"), // IAST/Roman
+  translation: text("translation"), // English meaning per verse or paragraph
+  meaning: text("meaning"), // Overall summary / phala-shruti
+  audioUrl: text("audio_url"),
+  coverImage: text("cover_image"),
+  excerpt: text("excerpt"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  durationSeconds: integer("duration_seconds"),
+  verseCount: integer("verse_count"),
+  aiGenerated: boolean("ai_generated").default(false),
+  sourcePrompt: text("source_prompt"),
+  status: text("status").notNull().default("pending"), // pending | published | rejected
+  isPublished: boolean("is_published").default(false),
+  viewCount: integer("view_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  deityIdx: index("sacred_texts_deity_idx").on(t.deity),
+  typeIdx: index("sacred_texts_type_idx").on(t.textType),
+  publishedIdx: index("sacred_texts_published_idx").on(t.isPublished),
+}));
+export const insertSacredTextSchema = createInsertSchema(sacredTexts).omit({
+  id: true, createdAt: true, updatedAt: true, viewCount: true,
+});
+export type SacredText = typeof sacredTexts.$inferSelect;
+export type InsertSacredText = z.infer<typeof insertSacredTextSchema>;

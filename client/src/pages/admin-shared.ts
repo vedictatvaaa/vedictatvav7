@@ -8,7 +8,7 @@ export type TabId =
   | "pandit-payouts" | "pandit-affiliate" | "pandit-memberships"
   | "mantras" | "schema-changelog"
   | "payment-gateways" | "ai-providers"
-  | "blog-ai" | "puja-library" | "community";
+  | "blog-ai" | "puja-library" | "community" | "sacred-library";
 
 export type TabSection =
   | "Overview" | "Catalog" | "Orders & Bookings" | "People" | "Marketing" | "System";

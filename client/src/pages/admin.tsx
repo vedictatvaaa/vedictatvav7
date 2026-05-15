@@ -102,6 +102,7 @@ const MantrasTab            = safeLazy(() => import("./admin-tabs/MantrasTab"));
 const BlogAiQueueTab        = safeLazy(() => import("./admin-tabs/BlogAiQueueTab"));
 const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab"));
 const CommunityTab          = safeLazy(() => import("./admin-tabs/CommunityTab"));
+const SacredLibraryTab      = safeLazy(() => import("./admin-tabs/SacredLibraryTab"));
 
 interface AdminProps {
   adminToken?: string;
@@ -562,6 +563,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "blog-ai" && <BlogAiQueueTab adminToken={adminToken} />}
               {activeTab === "puja-library" && <PujaLibraryTab adminToken={adminToken} />}
               {activeTab === "community" && <CommunityTab adminToken={adminToken} />}
+              {activeTab === "sacred-library" && <SacredLibraryTab adminToken={adminToken} />}
             </Suspense>
           </div>
         </div>

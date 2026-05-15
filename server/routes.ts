@@ -32,6 +32,7 @@ import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
 import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { registerContentRoutes } from "./content-routes";
+import { registerSacredLibraryRoutes } from "./sacred-library";
 import { seedPujaLibrary, seedCommunityQa } from "./content-seeds";
 import { registerWave1Routes, startWave1Scheduler, awardPoints, ensureReferralCode } from "./wave1";
 import { registerPromoteProductRoutes } from "./promote-product";
@@ -683,6 +684,7 @@ export async function registerRoutes(
   startSeoEngine();
   registerSeoSchedulerRoutes(app);
   registerContentRoutes(app);
+  registerSacredLibraryRoutes(app);
   // Idempotent boot-time seeds for the puja library + Q&A — no-op if data exists.
   seedPujaLibrary().catch((e) => console.warn("[seed:puja]", e?.message));
   seedCommunityQa().catch((e) => console.warn("[seed:qa]", e?.message));

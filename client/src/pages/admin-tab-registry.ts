@@ -38,6 +38,7 @@ export const TABS: TabDef[] = [
   { id: "blog-ai",         label: "AI Blog Queue",    icon: Sparkles,      section: "Marketing" },
   { id: "puja-library",    label: "Puja Library",     icon: FileText,      section: "Marketing" },
   { id: "community",       label: "Comments & Q&A",   icon: Megaphone,     section: "Marketing" },
+  { id: "sacred-library",  label: "Sacred Library",   icon: Music,         section: "Marketing" },
   { id: "email-marketing", label: "Email Marketing",  icon: Mail,          section: "Marketing" },
   { id: "mantras",         label: "Mantras & Chants", icon: Music,         section: "Marketing" },
   { id: "seo",             label: "SEO Manager",      icon: Search,        section: "System" },
