@@ -249,6 +249,53 @@ export default function PremiumKundliPDF() {
               ))}
             </div>
 
+            <div data-testid="kundli-sample-preview">
+              <SectionHeader
+                align="left"
+                title="A peek inside your report"
+                subtitle="Three of the nine pages you'll receive — designed for clarity, printed on premium-feel A4."
+              />
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                {[
+                  { label: "Cover & Birth Details", icon: ScrollText, body: "Lagna · Rashi · Nakshatra" },
+                  { label: "D1 & D9 Charts", icon: Star, body: "All 12 bhavas plotted" },
+                  { label: "Dasha & Remedies", icon: Sparkles, body: "120-yr cycle · upayas" },
+                ].map((s) => (
+                  <div
+                    key={s.label}
+                    className="relative aspect-[3/4] rounded-md border bg-gradient-to-br from-[#FBF7EE] to-white overflow-hidden shadow-sm"
+                    data-testid={`sample-tile-${s.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+                  >
+                    <div className="absolute inset-x-0 top-0 h-8 bg-[#6D2B35] flex items-center px-2 gap-1.5">
+                      <span className="text-[7px] uppercase tracking-[0.2em] text-[#D4AF37] font-bold">Vedic Tatva</span>
+                    </div>
+                    <div className="absolute top-3 right-3 inline-flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#D4AF37]/40 text-[#6D2B35]">
+                      <s.icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="absolute inset-x-2 top-12 space-y-1.5">
+                      <div className="h-1.5 rounded-sm bg-[#6D2B35]/20 w-3/4" />
+                      <div className="h-1 rounded-sm bg-[#5a4a3a]/15 w-full" />
+                      <div className="h-1 rounded-sm bg-[#5a4a3a]/15 w-5/6" />
+                      <div className="h-1 rounded-sm bg-[#5a4a3a]/15 w-2/3" />
+                    </div>
+                    <div className="absolute inset-x-2 bottom-10 grid grid-cols-3 gap-1">
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <div key={i} className="aspect-square rounded-sm bg-[#D4AF37]/15 border border-[#D4AF37]/25" />
+                      ))}
+                    </div>
+                    <div className="absolute inset-x-2 bottom-2 text-center">
+                      <p className="text-[8px] sm:text-[9px] font-semibold text-[#6D2B35] leading-tight">{s.label}</p>
+                      <p className="text-[7px] sm:text-[8px] text-[#5a4a3a]/70 truncate">{s.body}</p>
+                    </div>
+                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-white/30 via-transparent to-transparent" aria-hidden="true" />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground italic text-center">
+                Illustrative preview · your actual report uses your birth data and Lahiri ayanamsa.
+              </p>
+            </div>
+
             <Card>
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-center gap-2 text-primary font-semibold">

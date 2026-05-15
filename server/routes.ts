@@ -6517,6 +6517,26 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     res.json(allDonations);
   });
 
+  // Public aggregate — no PII, just totals for the live hero counter.
+  // Must be registered BEFORE the `/:id` route so Express does not capture "stats" as an ID.
+  app.get("/api/donations/stats", async (_req, res) => {
+    try {
+      const orders = await storage.getDonationOrders();
+      const donorEmails = new Set<string>();
+      let totalRaised = 0;
+      for (const o of orders as any[]) {
+        const amt = Number(o.amount || o.totalAmount || 0);
+        if (Number.isFinite(amt) && amt > 0) totalRaised += amt;
+        const email = (o.donorEmail || o.customerEmail || "").toLowerCase().trim();
+        if (email) donorEmails.add(email);
+      }
+      res.set("Cache-Control", "public, max-age=300");
+      res.json({ totalRaised: Math.round(totalRaised), donorCount: donorEmails.size, orderCount: orders.length });
+    } catch {
+      res.json({ totalRaised: 0, donorCount: 0, orderCount: 0 });
+    }
+  });
+
   app.get("/api/donations/:id", async (req, res) => {
     const donation = await storage.getDonation(Number(req.params.id));
     if (!donation) return res.status(404).json({ message: "Donation not found" });

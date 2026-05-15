@@ -29,6 +29,19 @@ export default function DonationsPage() {
     queryFn: () => fetch("/api/donations").then(r => r.json()),
   });
 
+  const { data: stats } = useQuery<{ totalRaised: number; donorCount: number; orderCount: number }>({
+    queryKey: ["/api/donations/stats"],
+    queryFn: () => fetch("/api/donations/stats").then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const formatInr = (n: number) => {
+    if (n >= 10000000) return `₹${(n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 1)}Cr`;
+    if (n >= 100000) return `₹${(n / 100000).toFixed(n % 100000 === 0 ? 0 : 1)}L`;
+    if (n >= 1000) return `₹${Math.round(n / 1000)}K`;
+    return `₹${n}`;
+  };
+
   const donateMut = useMutation({
     mutationFn: (data: any) =>
       fetch("/api/donation-orders", {
@@ -95,6 +108,19 @@ export default function DonationsPage() {
           <p className="text-sm sm:text-[15px] text-white/75 max-w-2xl mx-auto leading-relaxed">
             Earn divine merit through the sacred act of giving. Every donation supports dharma, compassion, and spiritual service.
           </p>
+          {stats && stats.totalRaised > 0 && (
+            <div className="mt-5 inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-2 rounded-md bg-white/10 border border-[#D4AF37]/40" data-testid="strip-donations-live">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <span className="text-[11px] sm:text-xs text-white/85 font-medium tracking-wide">
+                <span className="font-bold text-[#D4AF37]" data-testid="text-raised-total">{formatInr(stats.totalRaised)}</span> raised
+                {" · "}
+                <span className="font-bold text-[#D4AF37]" data-testid="text-donor-count">{stats.donorCount.toLocaleString("en-IN")}</span> {stats.donorCount === 1 ? "devotee" : "devotees"}
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-center gap-3 sm:gap-5 mt-6 text-[11px] sm:text-xs text-white/65 flex-wrap">
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2.2} /> Tax Deductible</span>
             <span className="hidden sm:inline text-white/30">·</span>

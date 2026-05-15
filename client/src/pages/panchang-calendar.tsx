@@ -70,6 +70,57 @@ export default function PanchangCalendar() {
     return data?.days?.find(d => d.date === date);
   };
 
+  const upcomingFestival = (() => {
+    if (!data?.days?.length) return null;
+    const today = new Date();
+    const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+    const fromDate = isCurrentMonth ? today.getDate() : 1;
+    return data.days.find(d => d.festival && d.date >= fromDate) || data.days.find(d => d.festival) || null;
+  })();
+
+  const downloadFestivalIcs = () => {
+    if (!upcomingFestival || !upcomingFestival.festival) return;
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const y = year, m = month, d = upcomingFestival.date;
+    const dtStart = `${y}${pad(m)}${pad(d)}`;
+    const next = new Date(y, m - 1, d + 1);
+    const dtEnd = `${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`;
+    const dtStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const safeTitle = upcomingFestival.festival.replace(/[\r\n,;\\]/g, " ");
+    const desc = `Tithi: ${upcomingFestival.tithi || "—"} · Nakshatra: ${upcomingFestival.nakshatra || "—"} · ${upcomingFestival.paksha || ""}. Source: Vedic Tatva Panchang.`;
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Vedic Tatva//Panchang//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:vt-${y}${pad(m)}${pad(d)}-${safeTitle.replace(/\s+/g, "-").toLowerCase()}@vedictatva.com`,
+      `DTSTAMP:${dtStamp}`,
+      `DTSTART;VALUE=DATE:${dtStart}`,
+      `DTEND;VALUE=DATE:${dtEnd}`,
+      `SUMMARY:${safeTitle}`,
+      `DESCRIPTION:${desc.replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;")}`,
+      "URL:https://vedictatva.com/panchang-calendar",
+      "BEGIN:VALARM",
+      "TRIGGER:-P1D",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:Reminder — ${safeTitle} tomorrow`,
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vedictatva-${safeTitle.replace(/\s+/g, "-").toLowerCase()}-${dtStart}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const generatePDF = async () => {
     if (!data?.days?.length) return;
     setDownloading(true);
@@ -497,6 +548,17 @@ export default function PanchangCalendar() {
                 {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Full Year PDF
               </button>
+              {upcomingFestival && upcomingFestival.festival && (
+                <button
+                  onClick={downloadFestivalIcs}
+                  className="inline-flex items-center gap-2 px-4 h-10 bg-transparent hover:bg-white/10 text-[#D4AF37] font-semibold text-[12px] uppercase tracking-wider rounded-md border border-[#D4AF37]/45 transition-colors"
+                  data-testid="btn-add-festival-calendar"
+                  title={`Add ${upcomingFestival.festival} (${upcomingFestival.date} ${MONTH_NAMES[month - 1]}) to your calendar`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Add {upcomingFestival.festival.length > 16 ? upcomingFestival.festival.slice(0, 16) + "…" : upcomingFestival.festival} to Calendar
+                </button>
+              )}
             </div>
           </div>
         </div>

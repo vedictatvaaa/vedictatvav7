@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Link, useRoute } from "wouter";
-import { Home as HomeIcon, Sparkles, Wheat, Nut, Bell, ChevronRight } from "lucide-react";
+import { Home as HomeIcon, Sparkles, Wheat, Nut, Bell, ChevronRight, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import QuickAnswer from "@/components/QuickAnswer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
@@ -74,8 +77,35 @@ export default function CategoryComingSoon() {
   const [, params] = useRoute<{ slug: string }>("/category/:slug");
   const slug = params?.slug ?? "home-essentials";
   const cat = CATEGORIES[slug] ?? CATEGORIES["home-essentials"];
+  const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   const Icon = cat.Icon;
+
+  async function handleNotify(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      toast({ title: "Please enter a valid email", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), source: `category-${cat.slug}` }),
+      });
+      if (!res.ok && res.status !== 409) throw new Error("failed");
+      setDone(true);
+      toast({ title: "You're on the list", description: `We'll email you the moment ${cat.title} goes live.` });
+    } catch {
+      toast({ title: "Could not save your email", description: "Please try again in a moment.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col">
@@ -155,9 +185,54 @@ export default function CategoryComingSoon() {
               Be first to know when we launch
             </h2>
             <p className="text-sm text-[#5a4a3a] mb-5 max-w-lg mx-auto">
-              We're hand-curating every product in this collection. Drop your details and we'll send you a one-time launch invite — no spam, ever.
+              We're hand-curating every product in this collection. Drop your email and we'll send you a one-time launch invite — no spam, ever.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto">
+
+            {done ? (
+              <div
+                className="flex items-center justify-center gap-2 text-sm font-semibold max-w-lg mx-auto py-3 rounded-md"
+                style={{ background: cat.accentSoft, color: cat.accent }}
+                data-testid={`notify-success-${cat.slug}`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Done — we'll email you when {cat.title} launches.
+              </div>
+            ) : (
+              <form
+                onSubmit={handleNotify}
+                className="flex flex-col sm:flex-row gap-2 max-w-lg mx-auto"
+                data-testid={`form-notify-${cat.slug}`}
+              >
+                <div className="relative flex-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a4a3a]/55 pointer-events-none" aria-hidden="true" />
+                  <Input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-9 h-10"
+                    aria-label="Email address for launch notification"
+                    data-testid={`input-notify-email-${cat.slug}`}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="text-white h-10 px-5"
+                  style={{ background: cat.accent }}
+                  data-testid={`button-notify-${cat.slug}`}
+                >
+                  {submitting ? (
+                    <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Saving</>
+                  ) : (
+                    <><Bell className="w-3.5 h-3.5 mr-1.5" /> Notify me</>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-lg mx-auto mt-4">
               <Link href="/" className="flex-1">
                 <Button
                   variant="outline"
@@ -169,11 +244,11 @@ export default function CategoryComingSoon() {
               </Link>
               <Link href="/shop" className="flex-1">
                 <Button
-                  className="w-full text-white"
-                  style={{ background: cat.accent }}
+                  variant="outline"
+                  className="w-full"
                   data-testid={`button-explore-shop-${cat.slug}`}
                 >
-                  Explore Spiritual Store
+                  Browse Spiritual Store
                 </Button>
               </Link>
             </div>

@@ -84,6 +84,34 @@ export default function About() {
           </div>
         </div>
 
+        <div className="max-w-4xl mx-auto mb-14">
+          <SectionHeader
+            eyebrow="A Note from the Founder"
+            title="Why we built Vedic Tatva"
+            testIdPrefix="founder-note"
+          />
+          <div className={`${slimPanel} p-6 md:p-8 mt-6 bg-[#FBF7EE]`} data-testid="card-founder-note">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 shrink-0 rounded-full bg-[#6D2B35] text-[#D4AF37] font-serif text-xl font-semibold flex items-center justify-center border border-[#D4AF37]/40" aria-hidden="true">
+                VT
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] text-[#5a4a3a]/80 leading-relaxed italic">
+                  "Growing up, finding a trusted pandit for a simple Satyanarayan katha meant calling five relatives,
+                  haggling over dakshina at the door, and still wondering whether the rituals were performed correctly.
+                  We built Vedic Tatva to remove every one of those frictions — verified pandits, fixed and transparent
+                  prices, authentic samagri at the door, and AI-powered jyotish that respects the classical texts. Sanatan
+                  dharma deserves the same sincerity online that we give it in our homes."
+                </p>
+                <p className="mt-4 text-[12px] font-semibold text-[#6D2B35] tracking-wide" data-testid="text-founder-attribution">
+                  — Founders, Vedic Tatva
+                </p>
+                <p className="text-[11px] text-[#5a4a3a]/60">Delhi · Established to serve every devotee, every home.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-14 max-w-5xl mx-auto">
           <SectionHeader
             eyebrow="Core Values"
