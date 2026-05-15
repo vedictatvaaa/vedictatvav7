@@ -1,7 +1,406 @@
-import { useMemo, useState, useRef } from "react";
-import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash, Calendar } from "lucide-react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash, Calendar, Moon, Compass, Clock, ThumbsUp, ShieldAlert, Loader2 } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import { RelatedServicesSection } from "@/components/RelatedServices";
+
+type DailyRashifalResponse = {
+  date: string;
+  sign: { slug: string; name: string; english: string; sanskrit?: string; symbol: string; ruler: string; element: string };
+  system: "vedic" | "western";
+  astro: {
+    weekday: string; weekdayHi: string; weekdayLord: string;
+    tithi: string; tithiHi: string; tithiNumber: number;
+    paksha: string; pakshaHi: string;
+    nakshatra: string; nakshatraHi: string; nakshatraLord: string; nakshatraDeity: string;
+    yoga: string; rahuKaal: string; abhijit: string;
+  };
+  prediction: {
+    dayScore: number; mood: string;
+    overview: string; love: string; career: string; finance: string; health: string;
+    luckyColor: string; luckyNumber: string; luckyTime: string; luckyDirection: string;
+    doToday: string; avoidToday: string;
+  };
+  surprise: { title: string; message: string };
+  source: "ai" | "fallback";
+};
+
+function signSlug(name: string): string {
+  return name.split(" (")[0].trim().toLowerCase();
+}
+
+// ---------- Scratch-to-reveal canvas ----------
+function ScratchToReveal({ title, message }: { title: string; message: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [percent, setPercent] = useState(0);
+  const drawingRef = useRef(false);
+  const erasedAreaRef = useRef(0);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Reset whenever the message changes (e.g. user picks a different sign)
+  useEffect(() => {
+    setRevealed(false);
+    setPercent(0);
+    erasedAreaRef.current = 0;
+    paintCover();
+  }, [message]);
+
+  const paintCover = useCallback(() => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssW = wrap.clientWidth;
+    const cssH = wrap.clientHeight;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = "source-over";
+    const grad = ctx.createLinearGradient(0, 0, cssW, cssH);
+    grad.addColorStop(0, "#D4AF37");
+    grad.addColorStop(0.5, "#F4E4A1");
+    grad.addColorStop(1, "#B8941F");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, cssW, cssH);
+    // Decorative shimmer dots
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 73) % cssW;
+      const y = (i * 41) % cssH;
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Prompt text
+    ctx.fillStyle = "#6D2B35";
+    ctx.font = "600 14px 'Inter', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("✦  SCRATCH HERE TO REVEAL  ✦", cssW / 2, cssH / 2 - 10);
+    ctx.font = "italic 12px 'Inter', sans-serif";
+    ctx.fillStyle = "rgba(109,43,53,0.7)";
+    ctx.fillText("a cosmic surprise just for your sign today", cssW / 2, cssH / 2 + 12);
+  }, []);
+
+  useEffect(() => {
+    paintCover();
+    const onResize = () => paintCover();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [paintCover]);
+
+  const getPos = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const t = "touches" in e ? (e.touches[0] || (e as any).changedTouches?.[0]) : (e as MouseEvent);
+    if (!t) return null;
+    return { x: (t as any).clientX - rect.left, y: (t as any).clientY - rect.top };
+  };
+
+  const erase = (x: number, y: number) => {
+    const canvas = canvasRef.current!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const wrap = wrapRef.current!;
+    const cssW = wrap.clientWidth;
+    const cssH = wrap.clientHeight;
+    const r = 26;
+    ctx.globalCompositeOperation = "destination-out";
+    // If we have a previous point, draw a thick line to fill the gap
+    const last = lastPosRef.current;
+    if (last) {
+      ctx.lineWidth = r * 2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      const dx = x - last.x;
+      const dy = y - last.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      erasedAreaRef.current += dist * r * 2 + Math.PI * r * r;
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      erasedAreaRef.current += Math.PI * r * r;
+    }
+    lastPosRef.current = { x, y };
+    const total = cssW * cssH;
+    const pct = Math.min(100, Math.round((erasedAreaRef.current / total) * 100));
+    if (pct !== percent) setPercent(pct);
+    if (pct >= 38 && !revealed) {
+      setRevealed(true);
+      // Fade the cover out by clearing fully
+      setTimeout(() => {
+        const c = canvasRef.current?.getContext("2d");
+        if (c && canvasRef.current) c.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }, 220);
+    }
+  };
+
+  const onDown = (e: React.MouseEvent | React.TouchEvent) => {
+    if (revealed) return;
+    drawingRef.current = true;
+    lastPosRef.current = null;
+    const p = getPos(e);
+    if (p) erase(p.x, p.y);
+  };
+  const onMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!drawingRef.current || revealed) return;
+    e.preventDefault?.();
+    const p = getPos(e);
+    if (p) erase(p.x, p.y);
+  };
+  const onUp = () => {
+    drawingRef.current = false;
+    lastPosRef.current = null;
+  };
+
+  return (
+    <div className="bg-[#FBF7EE] border border-[#D4AF37]/30 rounded-md p-5 md:p-6" data-testid="scratch-card">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="h-px w-6 bg-[#D4AF37]" />
+        <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.25em] font-semibold">Daily Surprise</span>
+        <div className="h-px w-6 bg-[#D4AF37]" />
+      </div>
+      <h3 className="font-serif text-lg md:text-xl text-[#6D2B35] font-bold mb-1">{title}</h3>
+      <p className="text-[11px] text-[#5a4a3a]/60 mb-4">A sealed cosmic message — scratch the gold to reveal it. Refreshes every 24 hours.</p>
+      <div
+        ref={wrapRef}
+        className="relative w-full h-[180px] md:h-[200px] rounded-md overflow-hidden border border-[#D4AF37]/40 select-none"
+        style={{ touchAction: "none" }}
+      >
+        <div className="absolute inset-0 flex items-center justify-center px-5 md:px-7 text-center bg-gradient-to-br from-white via-[#FBF7EE] to-[#F8EFD9]">
+          <p className="font-serif text-[#6D2B35] text-[14px] md:text-[15px] leading-relaxed" data-testid="scratch-message">
+            <Sparkles className="inline-block w-4 h-4 mr-1.5 text-[#D4AF37] -translate-y-px" strokeWidth={1.6} />
+            {message}
+          </p>
+        </div>
+        <canvas
+          ref={canvasRef}
+          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${revealed ? "opacity-0 pointer-events-none" : "opacity-100 cursor-grab active:cursor-grabbing"}`}
+          onMouseDown={onDown}
+          onMouseMove={onMove}
+          onMouseUp={onUp}
+          onMouseLeave={onUp}
+          onTouchStart={onDown}
+          onTouchMove={onMove}
+          onTouchEnd={onUp}
+          data-testid="scratch-canvas"
+        />
+      </div>
+      <div className="flex items-center justify-between mt-3">
+        <p className="text-[11px] text-[#5a4a3a]/55">
+          {revealed ? "✦ Revealed — may it bless your day" : `Scratched ${percent}%`}
+        </p>
+        {!revealed && (
+          <button
+            type="button"
+            onClick={() => { setRevealed(true); const c = canvasRef.current?.getContext("2d"); if (c && canvasRef.current) c.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); }}
+            className="text-[11px] uppercase tracking-[0.2em] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors"
+            data-testid="btn-reveal-all"
+          >
+            Reveal all
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Daily Rashifal block ----------
+function DailyRashifalBlock({ system, sign }: { system: "vedic" | "western"; sign: { name: string; symbol: string; ruler: string; element: string } }) {
+  const slug = signSlug(sign.name);
+  const { data, isLoading, isError } = useQuery<DailyRashifalResponse>({
+    queryKey: ["/api/daily-rashifal", system, slug],
+    queryFn: async () => {
+      const r = await fetch(`/api/daily-rashifal?system=${system}&sign=${slug}`);
+      if (!r.ok) throw new Error("Failed");
+      return r.json();
+    },
+    staleTime: 1000 * 60 * 60, // 1h client cache
+    retry: 1,
+  });
+
+  const [tab, setTab] = useState<"overview" | "love" | "career" | "finance" | "health">("overview");
+
+  if (isLoading) {
+    return (
+      <div className="bg-white border border-[#D4AF37]/25 rounded-md p-8 text-center" data-testid="daily-rashifal-loading">
+        <Loader2 className="w-6 h-6 text-[#6D2B35] mx-auto mb-3 animate-spin" />
+        <p className="text-sm text-[#5a4a3a]/70">Reading today's planetary positions for {sign.name}…</p>
+      </div>
+    );
+  }
+  if (isError || !data) {
+    return (
+      <div className="bg-white border border-[#D4AF37]/25 rounded-md p-6 text-center" data-testid="daily-rashifal-error">
+        <p className="text-sm text-[#5a4a3a]/70">Today's rashifal is resting. Please try again in a moment.</p>
+      </div>
+    );
+  }
+
+  const p = data.prediction;
+  const a = data.astro;
+  const tabs = [
+    { key: "overview", label: "Overview", text: p.overview, Icon: BookOpen },
+    { key: "love", label: "Love", text: p.love, Icon: Heart },
+    { key: "career", label: "Career", text: p.career, Icon: Briefcase },
+    { key: "finance", label: "Finance", text: p.finance, Icon: Wallet },
+    { key: "health", label: "Health", text: p.health, Icon: Activity },
+  ] as const;
+  const active = tabs.find(t => t.key === tab)!;
+  const ActiveIcon = active.Icon;
+  const ringPct = (p.dayScore / 10) * 100;
+  const todayLabel = new Date(data.date + "T12:00:00Z").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+
+  return (
+    <div className="bg-white border border-[#D4AF37]/25 rounded-md overflow-hidden" data-testid="daily-rashifal-block">
+      {/* Header strip */}
+      <div className="bg-gradient-to-br from-[#6D2B35] to-[#5a1f29] text-white p-5 md:p-6 border-b border-[#D4AF37]/30">
+        <div className="flex items-center gap-4 md:gap-5">
+          {/* Day score ring */}
+          <div className="relative shrink-0 w-16 h-16 md:w-20 md:h-20">
+            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(212,175,55,0.2)" strokeWidth="3" />
+              <circle
+                cx="18" cy="18" r="15.9" fill="none" stroke="#D4AF37" strokeWidth="3"
+                strokeDasharray={`${ringPct} 100`} strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-serif text-xl md:text-2xl font-bold text-[#D4AF37] leading-none">{p.dayScore}</span>
+              <span className="text-[8px] uppercase tracking-[0.2em] text-white/60 mt-0.5">/ 10</span>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">Aaj Ka Rashifal</span>
+              <span className="text-white/40">|</span>
+              <span className="text-[11px] text-white/70">{todayLabel}</span>
+            </div>
+            <h3 className="font-serif text-xl md:text-2xl font-bold leading-tight">
+              {sign.symbol} {sign.name} <span className="text-[#D4AF37]/85 text-base md:text-lg font-normal">— {p.mood}</span>
+            </h3>
+            <p className="text-[11px] text-white/60 mt-0.5">{data.source === "ai" ? "AI-crafted from today's panchang" : "Generated from today's panchang"}</p>
+          </div>
+        </div>
+
+        {/* Astronomy chips */}
+        <div className="flex flex-wrap gap-1.5 mt-4">
+          {data.system === "vedic" && (
+            <>
+              <AstroChip Icon={Moon} label={`${a.tithi} (${a.paksha.split(" ")[0]})`} />
+              <AstroChip Icon={Star} label={`${a.nakshatra} · ${a.nakshatraLord}`} />
+              <AstroChip Icon={Sun} label={`${a.weekday} · ${a.weekdayLord}'s day`} />
+            </>
+          )}
+          {data.system === "western" && (
+            <>
+              <AstroChip Icon={Sun} label={`${a.weekday} · ruled by ${a.weekdayLord}`} />
+              <AstroChip Icon={Star} label={`${sign.element} · ${sign.ruler}`} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="p-5 md:p-6">
+        <div className="flex overflow-x-auto gap-2 mb-4 pb-1">
+          {tabs.map(t => {
+            const isActive = tab === t.key;
+            const Icon = t.Icon;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`inline-flex items-center gap-2 px-3.5 h-9 rounded-md text-xs font-semibold whitespace-nowrap transition-colors border ${
+                  isActive
+                    ? "bg-[#6D2B35] text-white border-[#6D2B35]"
+                    : "bg-[#FBF7EE] text-[#6D2B35] border-[#D4AF37]/25 hover-elevate"
+                }`}
+                data-testid={`btn-daily-tab-${t.key}`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md p-5 mb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-9 h-9 rounded-md bg-white border border-[#D4AF37]/25 flex items-center justify-center">
+              <ActiveIcon className="w-4 h-4 text-[#6D2B35]" />
+            </div>
+            <h4 className="font-serif text-base font-bold text-[#6D2B35]">{active.label}</h4>
+          </div>
+          <p className="text-[#5a4a3a]/85 leading-relaxed text-sm" data-testid={`text-daily-${active.key}`}>{active.text}</p>
+        </div>
+
+        {/* Do / Avoid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+          <div className="bg-white border border-[#D4AF37]/25 rounded-md p-4 flex gap-3">
+            <ThumbsUp className="w-4 h-4 text-[#1f7a3d] mt-0.5 shrink-0" strokeWidth={1.8} />
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#1f7a3d] font-semibold mb-1">Do today</p>
+              <p className="text-[13px] text-[#5a4a3a]/85 leading-snug" data-testid="text-do-today">{p.doToday}</p>
+            </div>
+          </div>
+          <div className="bg-white border border-[#D4AF37]/25 rounded-md p-4 flex gap-3">
+            <ShieldAlert className="w-4 h-4 text-[#9a4d1f] mt-0.5 shrink-0" strokeWidth={1.8} />
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#9a4d1f] font-semibold mb-1">Avoid today</p>
+              <p className="text-[13px] text-[#5a4a3a]/85 leading-snug" data-testid="text-avoid-today">{p.avoidToday}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Lucky panel */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-[#D4AF37]/25 rounded-md overflow-hidden border border-[#D4AF37]/25 mb-5">
+          {[
+            { Icon: Palette, label: "Lucky Color", value: p.luckyColor },
+            { Icon: Hash, label: "Lucky Number", value: p.luckyNumber },
+            { Icon: Clock, label: "Lucky Time", value: p.luckyTime },
+            { Icon: Compass, label: "Direction", value: p.luckyDirection },
+          ].map((item, i) => (
+            <div key={i} className="bg-white p-3.5 text-center">
+              <item.Icon className="w-4 h-4 text-[#D4AF37] mx-auto mb-1.5" strokeWidth={1.6} />
+              <p className="text-[9px] uppercase tracking-[0.2em] text-[#5a4a3a]/55 font-medium mb-0.5">{item.label}</p>
+              <p className="text-[12px] font-semibold text-[#6D2B35] leading-snug">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Scratch surprise */}
+        <ScratchToReveal title={data.surprise.title} message={data.surprise.message} />
+
+        {/* Rahu Kaal note (vedic only) */}
+        {data.system === "vedic" && a.rahuKaal !== "—" && (
+          <p className="text-[11px] text-[#5a4a3a]/55 mt-3 text-center">
+            Today's Rahu Kaal: <span className="text-[#6D2B35] font-medium">{a.rahuKaal}</span> · Abhijit Muhurat: <span className="text-[#6D2B35] font-medium">{a.abhijit}</span>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AstroChip({ Icon, label }: { Icon: any; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 bg-white/10 border border-[#D4AF37]/25 rounded-md px-2.5 py-1 text-[11px] text-white/85">
+      <Icon className="w-3 h-3 text-[#D4AF37]" />
+      {label}
+    </span>
+  );
+}
 
 const PRIMARY_BTN = "bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] rounded-md h-10 px-5 text-[13px] font-semibold transition-colors inline-flex items-center justify-center gap-2";
 
@@ -471,7 +870,17 @@ export default function ZodiacRashifal() {
       </section>
 
       {currentSign && prediction && (
-        <section ref={detailRef} className="pb-12" data-testid="zodiac-detail-section">
+        <section ref={detailRef} className="pb-8" data-testid="daily-rashifal-section">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto mb-8">
+              <DailyRashifalBlock system={system} sign={currentSign} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {currentSign && prediction && (
+        <section className="pb-12" data-testid="zodiac-detail-section">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto bg-white border border-[#D4AF37]/25 rounded-md overflow-hidden">
               <div className="bg-[#6D2B35] text-white p-6 md:p-7 border-b border-[#D4AF37]/30">

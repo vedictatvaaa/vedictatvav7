@@ -1870,6 +1870,71 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
+  // ---- Daily Rashifal: AI + Astronomy ----
+  // GET /api/daily-rashifal?system=vedic|western&sign=<slug>
+  // Combines today's panchang (tithi/nakshatra/weekday lord) with OpenAI to produce a
+  // sign-specific daily horoscope + a "scratch-to-reveal" cosmic surprise message.
+  // 24h in-memory cache keyed by date+system+sign caps OpenAI spend; per-IP rate-limited.
+  const dailyRashifalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || "unknown"),
+    message: { message: "Too many rashifal requests. Please try again shortly." },
+  });
+  const dailyRashifalCache = new Map<string, { date: string; payload: any }>();
+  const dailyRashifalInflight = new Map<string, Promise<any>>(); // singleflight: dedupe concurrent calls per key
+  const DAILY_RASHIFAL_CACHE_MAX = 200;
+  app.get("/api/daily-rashifal", dailyRashifalLimiter, async (req, res) => {
+    try {
+      const system = (String(req.query.system || "vedic").toLowerCase() === "western") ? "western" : "vedic";
+      const slug = String(req.query.sign || "").trim().toLowerCase();
+      if (!slug) return res.status(400).json({ message: "sign is required" });
+
+      // Today in IST (panchang reference)
+      const todayIST = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+      }).format(new Date());
+
+      const cacheKey = `${todayIST}|${system}|${slug}`;
+      const cached = dailyRashifalCache.get(cacheKey);
+      if (cached && cached.date === todayIST) {
+        return res.json(cached.payload);
+      }
+
+      // Singleflight: if a generation for this key is already in-flight, wait on it
+      // instead of firing another OpenAI call. Prevents thundering-herd cost spikes.
+      let inflight = dailyRashifalInflight.get(cacheKey);
+      if (!inflight) {
+        inflight = (async () => {
+          const { generateDailyRashifal } = await import("./jyotish/daily-rashifal");
+          return await generateDailyRashifal(system as any, slug);
+        })().finally(() => {
+          // Always clear the in-flight slot once settled, success or failure
+          dailyRashifalInflight.delete(cacheKey);
+        });
+        dailyRashifalInflight.set(cacheKey, inflight);
+      }
+      const result = await inflight;
+
+      // Bound memory; drop oldest stale entry first
+      if (dailyRashifalCache.size >= DAILY_RASHIFAL_CACHE_MAX) {
+        const firstKey = dailyRashifalCache.keys().next().value;
+        if (firstKey !== undefined) dailyRashifalCache.delete(firstKey);
+      }
+      dailyRashifalCache.set(cacheKey, { date: todayIST, payload: result });
+      res.json(result);
+    } catch (err: any) {
+      console.error("daily-rashifal error:", err);
+      const msg = String(err?.message || "");
+      if (msg.startsWith("Unknown sign")) {
+        return res.status(400).json({ message: "Unknown sign — please pick from the 12 zodiac signs." });
+      }
+      res.status(500).json({ message: "Could not load today's rashifal. Please try again in a moment." });
+    }
+  });
+
   // ---- Puja Essentials: AI Category Advisor ----
   // Single endpoint for all 8 category landings (rudraksha, gemstones, idols, etc.).
   // Public; per-route limiter (15/15min/IP) + 1h in-memory cache to cap OpenAI spend.
