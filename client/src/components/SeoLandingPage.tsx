@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ChevronRight, Sparkles, ShieldCheck, ArrowRight, CheckCircle2, BookOpen } from "lucide-react";
+import { ChevronRight, Sparkles, ShieldCheck, ArrowRight, CheckCircle2, BookOpen, Hash } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +52,11 @@ export interface SeoLandingPageProps {
   finalCtaButtons?: SeoCTA[];
   // Related links shown at the bottom
   relatedLinks?: Array<{ label: string; href: string }>;
+  // A+ content: hashtag block (without the '#' prefix). Shown as a styled chip
+  // cloud with copy-to-clipboard, plus a hidden machine-readable list for SEO.
+  hashtags?: string[];
+  hashtagBlockTitle?: string;
+  hashtagBlockSubtitle?: string;
   // Structured data — pick one
   schema?:
     | { type: "service"; serviceName: string; areaServed?: string[] }
@@ -79,6 +84,9 @@ export default function SeoLandingPage(props: SeoLandingPageProps) {
     finalCtaSubtitle,
     finalCtaButtons = [],
     relatedLinks = [],
+    hashtags = [],
+    hashtagBlockTitle = "Join the Vedic Tatva Community",
+    hashtagBlockSubtitle = "Tag your puja moments with us — every share helps another devotee discover authentic samagri and verified pandits.",
     schema,
   } = props;
 
@@ -315,6 +323,59 @@ export default function SeoLandingPage(props: SeoLandingPageProps) {
                   </Link>
                 </Button>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* A+ Content — hashtag block */}
+      {hashtags.length > 0 && (
+        <section className="container mx-auto px-4 max-w-3xl mt-8" data-testid="section-hashtags">
+          <div className="relative overflow-hidden rounded-md border border-[#D4AF37]/30 bg-gradient-to-br from-[#FBF7EE] via-[#F8EFD9] to-[#F4E4B8] p-5 sm:p-7">
+            <div
+              className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-[#D4AF37]/15 blur-3xl"
+              aria-hidden="true"
+            />
+            <div
+              className="pointer-events-none absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-[#6D2B35]/10 blur-3xl"
+              aria-hidden="true"
+            />
+            <div className="relative">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="h-px w-6 bg-[#D4AF37]/60" />
+                <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-[#6D2B35] font-bold">
+                  <Hash className="w-3 h-3" /> Trending Tags
+                </span>
+                <span className="h-px w-6 bg-[#D4AF37]/60" />
+              </div>
+              <h3 className="font-serif text-lg sm:text-xl text-[#6D2B35] font-semibold text-center mb-1.5">
+                {hashtagBlockTitle}
+              </h3>
+              <p className="text-center text-[13px] sm:text-[14px] text-[#5a4a3a]/85 leading-relaxed max-w-xl mx-auto mb-4">
+                {hashtagBlockSubtitle}
+              </p>
+              <ul className="flex flex-wrap justify-center gap-1.5 sm:gap-2" aria-label="Trending hashtags">
+                {hashtags.map((tag) => {
+                  const clean = tag.replace(/^#/, "");
+                  return (
+                    <li key={clean}>
+                      <a
+                        href={`https://www.instagram.com/explore/tags/${clean.toLowerCase()}/`}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="inline-flex items-center gap-1 rounded-md border border-[#6D2B35]/15 bg-white/80 px-2.5 sm:px-3 h-7 sm:h-8 text-[11.5px] sm:text-[12.5px] font-semibold text-[#6D2B35] hover-elevate active-elevate-2"
+                        data-testid={`tag-${clean.toLowerCase()}`}
+                      >
+                        <Hash className="w-3 h-3 text-[#D4AF37]" />
+                        {clean}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="sr-only">
+                {hashtags.map((t) => `#${t.replace(/^#/, "")}`).join(" ")}
+              </p>
             </div>
           </div>
         </section>

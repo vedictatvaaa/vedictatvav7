@@ -2277,6 +2277,21 @@ const ONLINE_PUJA_STORE: SeoLandingPageProps = {
     { label: "Vastu Products", href: "/vastu-products" },
     { label: "Temple Decor", href: "/temple-decor" },
   ],
+  hashtagBlockTitle: "Share your sacred moments with the Vedic Tatva family",
+  hashtagBlockSubtitle:
+    "Tag us when you light a diya, complete a havan or unbox your puja kit. Every share helps another devotee discover authentic samagri and verified pandits.",
+  hashtags: [
+    "PujaSamagri",
+    "VedicTatva",
+    "SpiritualStore",
+    "HinduRituals",
+    "PujaEssentials",
+    "SanatanDharma",
+    "OnlinePujaStore",
+    "VedicProducts",
+    "TempleEssentials",
+    "SpiritualIndia",
+  ],
   schema: { type: "service", serviceName: "Online Puja Samagri Store" },
 };
 
