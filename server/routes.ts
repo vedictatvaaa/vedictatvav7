@@ -337,7 +337,30 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  // Per-IP+email brute-force limiter for customer login. Admin login has its
+  // own checkAdminLoginLock; this protects /api/auth/login from credential
+  // stuffing (the global 240/min limiter alone is too permissive).
+  const customerLoginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) =>
+      `${ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown")}|${String((req.body || {}).email || "").trim().toLowerCase()}`,
+    message: { message: "Too many login attempts. Please try again in 15 minutes." },
+  });
+  // Per-IP cap on password-reset requests — prevents email-bombing /
+  // SendGrid quota exhaustion.
+  const forgotPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+    message: { message: "Too many password-reset requests. Please try again in an hour." },
+  });
+
+  app.post("/api/auth/login", customerLoginLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -427,7 +450,7 @@ export async function registerRoutes(
   // Always returns success (to avoid email enumeration). If the email exists
   // and has a password (i.e. not Google-only), we generate a one-time token,
   // store it on the user with a 30-min expiry, and email a reset link.
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res) => {
     try {
       const { email } = req.body || {};
       if (!email || typeof email !== "string") {
@@ -3261,6 +3284,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
       if (!keyId || !keySecret) {
+        // Dev-only mock. Production must always hit the real Razorpay path.
+        if (process.env.NODE_ENV === "production") {
+          console.error("[razorpay-create-order] keys missing in production — refusing");
+          return res.status(500).json({ message: "Payment gateway unavailable" });
+        }
         const mockOrderId = "order_mock_" + Date.now();
         return res.json({
           orderId: mockOrderId,
@@ -3302,6 +3330,13 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
       if (!keySecret) {
+        // Mock branch is dev-only. In production, refusing the order is the
+        // only safe response when payment secrets are missing — otherwise an
+        // attacker (or a misconfigured deploy) can confirm unpaid orders.
+        if (process.env.NODE_ENV === "production") {
+          console.error("[razorpay-verify] RAZORPAY_KEY_SECRET missing in production — refusing to confirm order");
+          return res.status(500).json({ success: false, message: "Payment verification unavailable" });
+        }
         const mockItems = await Promise.all(
           ((orderData?.items || []) as any[]).map(async (item: any) => {
             const product = item.productId ? await storage.getProduct(item.productId) : null;
@@ -3340,12 +3375,68 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return res.status(400).json({ success: false, message: "Payment verification failed" });
       }
 
+      // Server-side recompute (price-tampering defense). Mirrors /api/checkout:
+      // pull authoritative prices from the products table, recompute shipping
+      // and COD from server rules, and verify that the amount Razorpay
+      // actually charged matches our recomputed payable. Reject mismatches.
       const enrichedItems = await Promise.all(
         ((orderData?.items || []) as any[]).map(async (item: any) => {
-          const product = item.productId ? await storage.getProduct(item.productId) : null;
-          return { ...item, hsnCode: product?.hsnCode || "", gstPercent: product?.gstPercent || 18 };
+          if (!item.productId) {
+            return { ...item, _untrusted: true, hsnCode: "", gstPercent: 18, price: 0 };
+          }
+          const product = await storage.getProduct(item.productId);
+          if (!product) {
+            return { ...item, _untrusted: true, hsnCode: "", gstPercent: 18, price: 0 };
+          }
+          const trustedPrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
+          return { ...item, price: trustedPrice, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 };
         })
       );
+      if (enrichedItems.some((i: any) => i._untrusted)) {
+        return res.status(400).json({ success: false, message: "Cart contains invalid items" });
+      }
+      const itemsSubtotal = enrichedItems.reduce((s, it: any) => s + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
+      // Server-authoritative coupon revalidation (same as /api/checkout).
+      let safeCouponDiscount = 0;
+      let safeCouponCode: string | null = null;
+      if (orderData?.couponCode && typeof orderData.couponCode === "string" && orderData.couponCode.trim()) {
+        try {
+          const c = await storage.getCouponByCode(orderData.couponCode.toUpperCase().trim());
+          if (c && couponIsCurrentlyValid(c, itemsSubtotal)) {
+            safeCouponDiscount = computeCouponDiscount(c, itemsSubtotal);
+            safeCouponCode = c.code;
+          }
+        } catch {}
+      }
+      const subtotalAfterCoupon = Math.max(0, itemsSubtotal - safeCouponDiscount);
+      const safePrepaidDiscount = (orderData?.paymentMethod || "prepaid") === "prepaid"
+        ? Math.round((subtotalAfterCoupon * 5) / 100)
+        : 0;
+      const safeShipping = itemsSubtotal >= 500 ? 0 : 50;
+      const safeCod = (orderData?.paymentMethod || "prepaid") === "cod" ? 40 : 0;
+      const computedTotal = Math.max(0, itemsSubtotal - safeCouponDiscount - safePrepaidDiscount + safeShipping + safeCod);
+      // Compare against what Razorpay actually charged (ground truth). FAIL
+      // CLOSED: any error here aborts the order so a missing key or network
+      // glitch can never let a tampered total slip through. Uses amount_paid
+      // (what the customer actually paid) rather than amount (what was billed).
+      const rzpKeyId = process.env.RAZORPAY_KEY_ID;
+      if (!rzpKeyId) {
+        console.error("[razorpay-verify] RAZORPAY_KEY_ID missing — refusing to confirm order");
+        return res.status(500).json({ success: false, message: "Payment verification unavailable" });
+      }
+      try {
+        const rzpInstance = new Razorpay({ key_id: rzpKeyId, key_secret: keySecret });
+        const rzpOrder: any = await rzpInstance.orders.fetch(razorpay_order_id);
+        const paidPaise = Number(rzpOrder?.amount_paid ?? rzpOrder?.amount ?? 0);
+        const expectedPaise = computedTotal * 100;
+        if (Math.abs(paidPaise - expectedPaise) > 100) {
+          console.warn(`[razorpay-verify] amount mismatch: paid=${paidPaise}p expected=${expectedPaise}p email=${orderData?.customerEmail}`);
+          return res.status(400).json({ success: false, message: "Order amount mismatch" });
+        }
+      } catch (e: any) {
+        console.error("[razorpay-verify] order-fetch failed — refusing to confirm order:", e?.message);
+        return res.status(502).json({ success: false, message: "Could not verify payment with gateway" });
+      }
       const order = await storage.createOrder({
         customerName: orderData?.customerName || "",
         customerEmail: orderData?.customerEmail || "",
@@ -3353,14 +3444,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         shippingAddress: orderData?.shippingAddress || "",
         billingAddress: orderData?.billingAddress || orderData?.shippingAddress || "",
         customerState: orderData?.customerState || "",
-        totalAmount: orderData?.totalAmount || 0,
+        totalAmount: computedTotal,
         items: enrichedItems,
         paymentMethod: orderData?.paymentMethod || "prepaid",
-        couponCode: orderData?.couponCode || null,
-        couponDiscount: orderData?.couponDiscount || 0,
-        prepaidDiscount: orderData?.prepaidDiscount || 0,
-        shippingCharges: orderData?.shippingCharges || 0,
-        codCharges: orderData?.codCharges || 0,
+        couponCode: safeCouponCode,
+        couponDiscount: safeCouponDiscount,
+        prepaidDiscount: safePrepaidDiscount,
+        shippingCharges: safeShipping,
+        codCharges: safeCod,
         status: "confirmed",
       });
       try { const { notifyOrderConfirmed } = await import("./services/order-notifications"); notifyOrderConfirmed(order); } catch {}
@@ -3461,10 +3552,48 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         (sum, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0),
         0,
       );
-      const safeCouponDiscount = Math.max(0, Number(couponDiscount) || 0);
-      const safePrepaidDiscount = Math.max(0, Number(prepaidDiscount) || 0);
-      const safeShipping = Math.max(0, Number(shippingCharges) || 0);
-      const safeCod = Math.max(0, Number(codCharges) || 0);
+      // Server-authoritative coupon discount: re-validate the code against the
+      // coupons table (active, not expired, not over maxUses, meets minOrder)
+      // and recompute the discount. Ignore any client-supplied amount.
+      let safeCouponDiscount = 0;
+      let safeCouponCode: string | null = null;
+      if (couponCode && typeof couponCode === "string" && couponCode.trim()) {
+        try {
+          const c = await storage.getCouponByCode(couponCode.toUpperCase().trim());
+          if (c && couponIsCurrentlyValid(c, itemsSubtotal)) {
+            safeCouponDiscount = computeCouponDiscount(c, itemsSubtotal);
+            safeCouponCode = c.code;
+          } else if (Number(couponDiscount) > 0) {
+            console.warn(`[checkout] invalid coupon "${couponCode}" requested by ${customerEmail}`);
+          }
+        } catch (e: any) {
+          console.warn("[checkout] coupon revalidation failed:", e?.message);
+        }
+      }
+      // Server-authoritative prepaid discount: 5% of post-coupon subtotal when
+      // paymentMethod === "prepaid" (mirrors PREPAID_DISCOUNT_PERCENT on the
+      // client). Otherwise zero. Client-posted value is ignored.
+      const subtotalAfterCoupon = Math.max(0, itemsSubtotal - safeCouponDiscount);
+      const safePrepaidDiscount = (paymentMethod || "cod") === "prepaid"
+        ? Math.round((subtotalAfterCoupon * 5) / 100)
+        : 0;
+      // Server-side recompute of shipping + COD charges. The client may post
+      // any value; we ignore it and derive from the trusted itemsSubtotal +
+      // paymentMethod, mirroring the rules shown to the user on /checkout
+      // (free shipping ≥ ₹500 else ₹50; COD handling fee ₹40).
+      const safeShipping = itemsSubtotal >= 500 ? 0 : 50;
+      const safeCod = (paymentMethod || "cod") === "cod" ? 40 : 0;
+      // Audit any client/server divergence so we can spot tampering attempts.
+      const clientShipping = Math.max(0, Number(shippingCharges) || 0);
+      const clientCod = Math.max(0, Number(codCharges) || 0);
+      const clientCoupon = Math.max(0, Number(couponDiscount) || 0);
+      const clientPrepaid = Math.max(0, Number(prepaidDiscount) || 0);
+      if (clientShipping !== safeShipping || clientCod !== safeCod ||
+          clientCoupon !== safeCouponDiscount || clientPrepaid !== safePrepaidDiscount) {
+        console.warn(
+          `[checkout] economics overridden: ship ${clientShipping}→${safeShipping} cod ${clientCod}→${safeCod} coupon ${clientCoupon}→${safeCouponDiscount} prepaid ${clientPrepaid}→${safePrepaidDiscount} email=${customerEmail}`,
+        );
+      }
 
       // ----- Loyalty redemption (COD only for safety; prepaid handled separately later) -----
       // Validate user identity, cap by balance and 20% of pre-loyalty total, deduct after order created.
@@ -3509,7 +3638,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         totalAmount: computedTotal,
         items: enrichedItems,
         paymentMethod: paymentMethod || "cod",
-        couponCode: couponCode || null,
+        couponCode: safeCouponCode,
         couponDiscount: safeCouponDiscount,
         prepaidDiscount: safePrepaidDiscount,
         shippingCharges: safeShipping,
