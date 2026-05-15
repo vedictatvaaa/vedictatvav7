@@ -214,20 +214,6 @@ export default function Footer() {
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pb-3 -mt-1">
-            {complianceBadges.map((b) => (
-              <span
-                key={b.label}
-                className="inline-flex items-center gap-1.5 text-[10px] text-white/55"
-                data-testid={`compliance-${b.label.toLowerCase()}`}
-              >
-                <Lock className="h-3 w-3 text-[#D4AF37]/70" />
-                <span className="text-white/75 font-semibold tracking-wider">{b.label}</span>
-                <span className="text-white/40">·</span>
-                <span className="uppercase tracking-[0.14em]">{b.sub}</span>
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -366,6 +352,29 @@ export default function Footer() {
                 {t.footer.madeWith}
               </span>
             </div>
+          </div>
+
+          {/* Compliance badges — moved here (very last footer row) per
+              user request. Was previously stacked under the trust strip
+              at the top of the footer; living below the copyright keeps
+              the trust-rail uncluttered while the legal/compliance
+              cluster sits where regulators expect it. */}
+          <div
+            className="border-t border-white/[0.05] py-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
+            data-testid="footer-compliance-row"
+          >
+            {complianceBadges.map((b) => (
+              <span
+                key={b.label}
+                className="inline-flex items-center gap-1.5 text-[10px] text-white/55"
+                data-testid={`compliance-${b.label.toLowerCase()}`}
+              >
+                <Lock className="h-3 w-3 text-[#D4AF37]/70" />
+                <span className="text-white/75 font-semibold tracking-wider">{b.label}</span>
+                <span className="text-white/40">·</span>
+                <span className="uppercase tracking-[0.14em]">{b.sub}</span>
+              </span>
+            ))}
           </div>
         </div>
       </div>
