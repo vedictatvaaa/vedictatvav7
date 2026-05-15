@@ -1,9 +1,12 @@
 import { Link } from "wouter";
+import { useState } from "react";
 import { Crown, Star, Shield, Sparkles, Check, ArrowRight, Heart, BookOpen, Video, Gift, Users, ChevronRight } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
 import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
+
+const YEARLY_DISCOUNT = 0.20;
 
 const MEMBERSHIP_H1 = "Vedic Tatva Prime Membership — Premium Spiritual Subscription";
 
@@ -86,6 +89,8 @@ const benefits = [
 ];
 
 export default function Membership() {
+  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
+  const yearlySavingsPct = Math.round(YEARLY_DISCOUNT * 100);
   return (
     <div className="w-full pb-20 bg-white min-h-screen">
       <PageSeo
@@ -136,8 +141,37 @@ export default function Membership() {
         </div>
       </section>
 
+      {/* Billing cycle toggle */}
+      <section className="container mx-auto px-4 mt-8">
+        <div className="max-w-5xl mx-auto flex items-center justify-center">
+          <div role="tablist" aria-label="Billing cycle" className="inline-flex items-center bg-[#FBF7EE] border border-[#D4AF37]/30 rounded-md p-1">
+            <button
+              role="tab"
+              aria-selected={billing === "monthly"}
+              onClick={() => setBilling("monthly")}
+              className={`px-4 sm:px-5 h-9 rounded text-[12px] sm:text-[13px] font-semibold transition-colors ${billing === "monthly" ? "bg-[#6D2B35] text-[#D4AF37]" : "text-[#6D2B35] hover:bg-[#f0e9d4]"}`}
+              data-testid="btn-billing-monthly"
+            >
+              Monthly
+            </button>
+            <button
+              role="tab"
+              aria-selected={billing === "yearly"}
+              onClick={() => setBilling("yearly")}
+              className={`px-4 sm:px-5 h-9 rounded text-[12px] sm:text-[13px] font-semibold transition-colors flex items-center gap-2 ${billing === "yearly" ? "bg-[#6D2B35] text-[#D4AF37]" : "text-[#6D2B35] hover:bg-[#f0e9d4]"}`}
+              data-testid="btn-billing-yearly"
+            >
+              Yearly
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${billing === "yearly" ? "bg-[#D4AF37] text-[#6D2B35]" : "bg-[#6D2B35]/10 text-[#6D2B35]"}`}>
+                Save {yearlySavingsPct}%
+              </span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Plan cards */}
-      <section className="container mx-auto px-4 mt-10 sm:mt-12">
+      <section className="container mx-auto px-4 mt-6 sm:mt-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto">
           {plans.map((plan) => {
             const isPopular = plan.popular;
@@ -166,11 +200,36 @@ export default function Membership() {
                   </div>
 
                   <div className="mb-3">
-                    <span className="text-3xl font-bold text-[#6D2B35] font-serif">
-                      {plan.price === 0 ? "Free" : `₹${plan.price}`}
-                    </span>
-                    {plan.price > 0 && <span className="text-xs text-[#5a4a3a]/60 ml-1">{plan.period}</span>}
-                    {plan.price === 0 && <span className="text-xs text-[#5a4a3a]/60 ml-1">{plan.period}</span>}
+                    {plan.price === 0 ? (
+                      <>
+                        <span className="text-3xl font-bold text-[#6D2B35] font-serif">Free</span>
+                        <span className="text-xs text-[#5a4a3a]/60 ml-1">{plan.period}</span>
+                      </>
+                    ) : billing === "yearly" ? (
+                      (() => {
+                        const annual = Math.round(plan.price * 12 * (1 - YEARLY_DISCOUNT));
+                        const perMonth = Math.round(annual / 12);
+                        const fullAnnual = plan.price * 12;
+                        const savings = fullAnnual - annual;
+                        return (
+                          <>
+                            <span className="text-3xl font-bold text-[#6D2B35] font-serif">
+                              ₹{perMonth.toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-xs text-[#5a4a3a]/60 ml-1">/month</span>
+                            <p className="text-[11px] text-[#5a4a3a]/60 mt-0.5">
+                              Billed ₹{annual.toLocaleString("en-IN")}/year ·{" "}
+                              <span className="text-[#6D2B35] font-semibold">save ₹{savings.toLocaleString("en-IN")}</span>
+                            </p>
+                          </>
+                        );
+                      })()
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold text-[#6D2B35] font-serif">₹{plan.price.toLocaleString("en-IN")}</span>
+                        <span className="text-xs text-[#5a4a3a]/60 ml-1">{plan.period}</span>
+                      </>
+                    )}
                   </div>
 
                   <p className="text-sm text-[#5a4a3a]/75 mb-5 leading-relaxed">{plan.description}</p>
@@ -219,14 +278,17 @@ export default function Membership() {
               <thead>
                 <tr className="bg-[#6D2B35] text-white">
                   <th className="text-left px-4 py-3 font-serif font-semibold text-[13px] w-1/2">Feature</th>
-                  {plans.map(p => (
-                    <th key={p.name} className="px-4 py-3 text-center font-serif font-semibold text-[13px]">
-                      <div>{p.name}</div>
-                      <div className="text-[#D4AF37] text-[11px] font-normal mt-0.5">
-                        {p.price === 0 ? "Free" : `₹${p.price}/mo`}
-                      </div>
-                    </th>
-                  ))}
+                  {plans.map(p => {
+                    const effective = billing === "yearly" ? Math.round(p.price * (1 - YEARLY_DISCOUNT)) : p.price;
+                    return (
+                      <th key={p.name} className="px-4 py-3 text-center font-serif font-semibold text-[13px]">
+                        <div>{p.name}</div>
+                        <div className="text-[#D4AF37] text-[11px] font-normal mt-0.5">
+                          {p.price === 0 ? "Free" : `₹${effective.toLocaleString("en-IN")}/mo`}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>

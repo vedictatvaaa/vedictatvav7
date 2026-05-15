@@ -3,7 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Video, Mic, ArrowLeft, Sparkles, Shield, Phone, AlertTriangle, Users, Copy, Share2 } from "lucide-react";
+import { Video, Mic, ArrowLeft, Sparkles, Shield, Phone, AlertTriangle, Users, Copy, Share2, ChevronDown, ChevronUp, ListChecks, Save } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { getPanditToken } from "@/lib/panditAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,56 @@ export default function PujaCallPage() {
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<any>(null);
   const [pandit, setPandit] = useState<any>(null);
+
+  const prepStorageKey = id ? `vt-puja-prep-${id}` : "";
+  const sankalpaStorageKey = id ? `vt-puja-sankalpa-${id}` : "";
+  const PREP_ITEMS = [
+    "Bathed and wearing clean clothes",
+    "Sat facing east or north (if possible)",
+    "Lit a diya / agarbatti near the camera",
+    "Kept water, flowers, akshat (rice + haldi) ready",
+    "Phone charged or plugged in, Wi-Fi stable",
+  ];
+  const [prepOpen, setPrepOpen] = useState(true);
+  const [prepDone, setPrepDone] = useState<boolean[]>(() => PREP_ITEMS.map(() => false));
+  const [sankalpa, setSankalpa] = useState("");
+  const [sankalpaSaved, setSankalpaSaved] = useState(false);
+
+  useEffect(() => {
+    if (!prepStorageKey) return;
+    try {
+      const raw = localStorage.getItem(prepStorageKey);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === PREP_ITEMS.length) setPrepDone(arr.map(Boolean));
+      }
+      const s = localStorage.getItem(sankalpaStorageKey);
+      if (s) setSankalpa(s);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prepStorageKey]);
+
+  useEffect(() => {
+    if (!prepStorageKey) return;
+    try { localStorage.setItem(prepStorageKey, JSON.stringify(prepDone)); } catch {}
+  }, [prepDone, prepStorageKey]);
+
+  const allPrepDone = prepDone.every(Boolean);
+  const prepCount = prepDone.filter(Boolean).length;
+
+  function toggleStep(i: number) {
+    setPrepDone((prev) => prev.map((v, idx) => idx === i ? !v : v));
+  }
+
+  function saveSankalpa() {
+    if (!sankalpaStorageKey) return;
+    try {
+      localStorage.setItem(sankalpaStorageKey, sankalpa);
+      setSankalpaSaved(true);
+      toast({ title: "Sankalpa saved", description: "Your intention is stored on this device — share it with the pandit when the call starts." });
+      setTimeout(() => setSankalpaSaved(false), 2500);
+    } catch {}
+  }
 
   useEffect(() => {
     (async () => {
@@ -156,6 +206,74 @@ export default function PujaCallPage() {
           )}
         </div>
       </div>
+
+      {/* Pre-call checklist + Sankalpa — devotees only, hidden once everything is ticked */}
+      {!isPandit && (
+        <div className="bg-[#FBF7EE] border-b border-[#D4AF37]/30">
+          <div className="max-w-3xl mx-auto px-4 py-2.5">
+            <button
+              onClick={() => setPrepOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-3 text-left"
+              data-testid="btn-prep-toggle"
+              aria-expanded={prepOpen}
+              aria-controls="puja-prep-panel"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <ListChecks className="h-4 w-4 text-[#6D2B35] shrink-0" />
+                <span className="text-[12px] sm:text-[13px] font-semibold text-[#4a1a22] truncate">
+                  Pre-call checklist & Sankalpa
+                </span>
+                <Badge className={`${allPrepDone ? "bg-emerald-700 text-white border-emerald-500" : "bg-[#6D2B35]/10 text-[#6D2B35] border-[#6D2B35]/20"} text-[10px] shrink-0`}>
+                  {prepCount}/{PREP_ITEMS.length}
+                </Badge>
+              </div>
+              {prepOpen ? <ChevronUp className="h-4 w-4 text-[#6D2B35]/70" /> : <ChevronDown className="h-4 w-4 text-[#6D2B35]/70" />}
+            </button>
+
+            {prepOpen && (
+              <div id="puja-prep-panel" className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <ul className="space-y-1.5">
+                  {PREP_ITEMS.map((step, i) => (
+                    <li key={i}>
+                      <label className="flex items-start gap-2 text-[12px] text-[#4a1a22] cursor-pointer hover-elevate rounded-md px-2 py-1.5">
+                        <input
+                          type="checkbox"
+                          checked={prepDone[i]}
+                          onChange={() => toggleStep(i)}
+                          className="mt-0.5 accent-[#6D2B35]"
+                          data-testid={`checkbox-prep-${i}`}
+                        />
+                        <span className={prepDone[i] ? "line-through text-[#5a4a3a]/60" : ""}>{step}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div>
+                  <label htmlFor="puja-sankalpa" className="block text-[11px] uppercase tracking-[0.18em] text-[#5a4a3a]/70 mb-1.5 font-semibold">
+                    Sankalpa <span className="lowercase tracking-normal text-[10px] text-[#5a4a3a]/55 normal-case">— your intention for this puja</span>
+                  </label>
+                  <textarea
+                    id="puja-sankalpa"
+                    value={sankalpa}
+                    onChange={(e) => setSankalpa(e.target.value.slice(0, 600))}
+                    placeholder="e.g., For my mother's good health and a peaceful home..."
+                    className="w-full text-[12px] rounded-md border border-[#D4AF37]/30 bg-white p-2.5 min-h-[72px] resize-y text-[#4a1a22] placeholder:text-[#5a4a3a]/45 focus:outline-none focus:ring-1 focus:ring-[#D4AF37]/50"
+                    data-testid="textarea-sankalpa"
+                    maxLength={600}
+                  />
+                  <div className="flex items-center justify-between gap-2 mt-1.5">
+                    <span className="text-[10px] text-[#5a4a3a]/55">{sankalpa.length}/600 · Saved on this device</span>
+                    <Button size="sm" variant="outline" onClick={saveSankalpa} className="h-7 text-[11px] border-[#D4AF37]/40 text-[#6D2B35]" data-testid="btn-save-sankalpa">
+                      <Save className="h-3 w-3 mr-1" />
+                      {sankalpaSaved ? "Saved" : "Save"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Jitsi iframe */}
       <div className="flex-1 bg-black">

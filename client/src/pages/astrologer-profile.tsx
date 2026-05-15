@@ -195,8 +195,16 @@ export default function AstrologerProfile() {
               <CardContent className="p-5">
                 <div className="text-center mb-4 pb-4 border-b border-[#D4AF37]/15">
                   <p className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Consultation fee</p>
-                  <p className="text-3xl font-serif font-semibold text-[#6D2B35] leading-none">₹{astrologer.fees?.toLocaleString()}</p>
-                  <p className="text-[11px] text-[#5a4a3a]/55 mt-1">per session</p>
+                  <p className="text-3xl font-serif font-semibold text-[#6D2B35] leading-none">₹{astrologer.fees?.toLocaleString("en-IN")}</p>
+                  <p className="text-[11px] text-[#5a4a3a]/55 mt-1">per session (~30 min)</p>
+                  {astrologer.fees ? (
+                    <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/25">
+                      <Clock className="w-3 h-3 text-[#6D2B35]/70" />
+                      <span className="text-[11px] text-[#5a4a3a]/80">
+                        Approx <span className="font-semibold text-[#6D2B35]">₹{Math.max(1, Math.round(astrologer.fees / 30)).toLocaleString("en-IN")}/min</span>
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <Link href={`/astrology?astrologer=${astrologer.id}`}>
