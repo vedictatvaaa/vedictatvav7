@@ -1111,116 +1111,62 @@ export default function Home() {
       {/* Testimonials / Community Stories */}
       <TestimonialsCarousel />
 
-      {/* Vedic Astrology — slim cinematic widescreen banner.
-          Moved here (after Community Stories) per user request so the
-          social-proof testimonial wall warms the visitor up before the
-          Jyotish ask. Single horizontal strip (~120 px tall on desktop),
-          full-bleed midnight gradient, gold rule top + bottom, animated
-          zodiac glyph on the left, SEO H2 + one-line value prop centre,
-          primary "Free Kundli" + ghost "Talk to Astrologer" right. */}
+      {/* Vedic Astrology — declutter pass.
+          Removed: starfield dot pattern, gold radial halo, animated
+          rotating zodiac SVG, eyebrow micro-label, sub-paragraph.
+          Kept: midnight gradient strip, single Sparkles glyph, the SEO
+          H2, both CTAs. Result is a clean ~90 px banner instead of the
+          previous busy ~150 px composition. All testids preserved. */}
       <section
         id="vedic-astrology"
         aria-labelledby="astrology-heading"
-        className="relative overflow-hidden text-white scroll-mt-24 border-y border-[#D4AF37]/30"
+        className="relative text-white scroll-mt-24 border-y border-[#D4AF37]/30"
         style={{
           background:
-            "linear-gradient(90deg, #140b10 0%, #2a1820 35%, #2a1820 65%, #140b10 100%)",
+            "linear-gradient(90deg, #140b10 0%, #2a1820 50%, #140b10 100%)",
         }}
         data-testid="section-astrology"
       >
-        {/* Subtle starfield + horizon halo */}
-        <div
-          className="absolute inset-0 opacity-[0.05] pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, #D4AF37 0.5px, transparent 0.5px)",
-            backgroundSize: "44px 44px",
-          }}
-          aria-hidden="true"
-        />
-        <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1400px] h-[260px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse, rgba(212,175,55,0.18) 0%, rgba(212,175,55,0.05) 50%, transparent 80%)",
-          }}
-          aria-hidden="true"
-        />
+        <div className="container mx-auto px-4 sm:px-6 py-5 md:py-4">
+          <div className="flex flex-col md:flex-row items-center gap-3 md:gap-5 max-w-5xl mx-auto">
+            {/* Glyph */}
+            <div className="w-9 h-9 rounded-full border border-[#D4AF37]/40 bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-4 w-4 text-[#D4AF37]" strokeWidth={1.6} />
+            </div>
 
-        <div className="container mx-auto px-4 sm:px-6 relative z-10 py-6 md:py-5">
-          <div className="flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6 max-w-6xl mx-auto">
-            {/* Left: rotating zodiac glyph */}
-            <div
-              className="relative w-14 h-14 md:w-16 md:h-16 shrink-0"
-              aria-hidden="true"
+            {/* Heading */}
+            <h2
+              id="astrology-heading"
+              className="flex-1 text-center md:text-left font-serif text-base md:text-lg font-semibold leading-snug tracking-tight"
+              data-testid="text-astrology-heading"
             >
-              <div
-                className="absolute -inset-2 rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(212,175,55,0.35) 0%, transparent 70%)",
-                }}
-              />
-              <svg
-                className="absolute inset-0 w-full h-full text-[#D4AF37]/70 ambient-zodiac-rotate"
-                viewBox="0 0 100 100"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="0.7"
-              >
-                <circle cx="50" cy="50" r="46" />
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const angle = (i * 30 * Math.PI) / 180;
-                  const x1 = 50 + Math.cos(angle) * 38;
-                  const y1 = 50 + Math.sin(angle) * 38;
-                  const x2 = 50 + Math.cos(angle) * 46;
-                  const y2 = 50 + Math.sin(angle) * 46;
-                  return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
-                })}
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-[#D4AF37]" strokeWidth={1.4} />
-              </div>
-            </div>
+              Free Kundli, match-making &amp; live{" "}
+              <span className="text-[#D4AF37] whitespace-nowrap">Vedic astrologer</span>{" "}
+              consultations
+            </h2>
 
-            {/* Centre: SEO heading + sub */}
-            <div className="flex-1 text-center md:text-left min-w-0">
-              <div className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold mb-1">
-                Vedic Astrology · Jyotish
-              </div>
-              <h2
-                id="astrology-heading"
-                className="text-xl md:text-[1.6rem] lg:text-[1.8rem] font-serif font-semibold leading-[1.2] tracking-tight"
-                data-testid="text-astrology-heading"
-              >
-                Free Kundli, Match-Making & live consultations with{" "}
-                <span className="text-[#D4AF37] whitespace-nowrap">certified Vedic astrologers</span>
-              </h2>
-              <p className="text-[12.5px] md:text-[13px] text-white/70 mt-1 leading-snug max-w-2xl mx-auto md:mx-0">
-                Birth-chart analysis, dosh remedies, daily horoscope &amp; gemstone guidance — rooted in Parashari Jyotish.
-              </p>
-            </div>
-
-            {/* Right: CTA pair */}
+            {/* CTAs */}
             <div className="flex flex-row items-center gap-2 shrink-0 w-full md:w-auto">
               <Link href="/astrology" className="flex-1 md:flex-none">
                 <Button
-                  className="w-full md:w-auto bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 shadow-[0_0_30px_-8px_rgba(212,175,55,0.7)] border border-[#D4AF37] hover:bg-[#D4AF37]"
+                  size="sm"
+                  className="w-full md:w-auto bg-[#D4AF37] text-[#1a1118] font-semibold gap-1.5 hover:bg-[#D4AF37]"
                   data-testid="btn-generate-kundli"
                   aria-label="Generate your free Vedic Kundli"
                 >
-                  <BookOpen className="h-4 w-4" />
+                  <BookOpen className="h-3.5 w-3.5" />
                   Free Kundli
                 </Button>
               </Link>
               <Link href="/astrology" className="flex-1 md:flex-none">
                 <Button
+                  size="sm"
                   variant="outline"
-                  className="w-full md:w-auto border-[#D4AF37]/45 bg-white/5 text-white font-semibold gap-2 backdrop-blur-sm hover:bg-white/10"
+                  className="w-full md:w-auto border-[#D4AF37]/45 bg-white/5 text-white font-semibold gap-1.5 hover:bg-white/10"
                   data-testid="btn-book-consultation"
                   aria-label="Book a live astrology consultation"
                 >
-                  <Video className="h-4 w-4" />
+                  <Video className="h-3.5 w-3.5" />
                   Talk to Astrologer
                 </Button>
               </Link>
