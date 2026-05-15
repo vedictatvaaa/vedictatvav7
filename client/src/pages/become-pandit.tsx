@@ -1164,8 +1164,78 @@ function DemoSection() {
             </div>
           </div>
           <p className="text-center text-xs mt-4" style={{ color: C.brownSoft }}>
-            Demo video coming soon — meanwhile, tap "Register as Pandit" to get a live walkthrough during onboarding.
+            Demo video coming soon — meanwhile, sign in with the credentials below to explore the live portal.
           </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto mt-8"
+        >
+          <div
+            className="rounded-2xl p-6 md:p-7 border-2 border-dashed shadow-sm"
+            style={{
+              background: `linear-gradient(135deg, ${C.warmWhite} 0%, ${C.cream} 100%)`,
+              borderColor: `${C.gold}99`,
+            }}
+            data-testid="card-demo-credentials"
+          >
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <PlayCircle className="w-5 h-5" style={{ color: C.maroonDeep }} />
+                  <h3 className="text-lg md:text-xl font-serif font-bold" style={{ color: C.maroonDeep }}>
+                    Try the Panditji Portal — live, no signup
+                  </h3>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: C.brownSoft }}>
+                  Sign in with the demo account to experience the full dashboard — bookings, earnings, customer chat, online puja, payment requests and growth tools. Then come back and register your real profile.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+              <div
+                className="rounded-lg px-4 py-3 bg-white border"
+                style={{ borderColor: `${C.gold}66` }}
+              >
+                <div className="text-[11px] uppercase tracking-wide font-semibold mb-1" style={{ color: C.brownSoft }}>
+                  Phone
+                </div>
+                <div className="font-mono text-base md:text-lg font-bold" style={{ color: C.maroonDeep }} data-testid="text-demo-phone-cred">
+                  9000012345
+                </div>
+              </div>
+              <div
+                className="rounded-lg px-4 py-3 bg-white border"
+                style={{ borderColor: `${C.gold}66` }}
+              >
+                <div className="text-[11px] uppercase tracking-wide font-semibold mb-1" style={{ color: C.brownSoft }}>
+                  Password
+                </div>
+                <div className="font-mono text-base md:text-lg font-bold" style={{ color: C.maroonDeep }} data-testid="text-demo-password-cred">
+                  demo1234
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a href="/pandit/login" data-testid="link-demo-portal-login">
+                <Button
+                  size="lg"
+                  className="font-semibold"
+                  style={{ background: C.maroonDeep, color: C.gold }}
+                >
+                  Sign in to Demo Portal
+                </Button>
+              </a>
+              <span className="text-xs self-center" style={{ color: C.brownSoft }}>
+                Public demo — please don't change the password.
+              </span>
+            </div>
+          </div>
         </motion.div>
       </div>
     </section>

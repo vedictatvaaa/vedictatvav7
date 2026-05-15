@@ -29,6 +29,14 @@ export async function seedDatabase() {
     console.warn("[seed] seedQaQuestions failed:", e?.message || "unknown");
   }
 
+  // Idempotent demo pandit seeder — keeps the public demo credentials working.
+  try {
+    const { seedDemoPandit } = await import("./seedDemoPandit");
+    await seedDemoPandit();
+  } catch (e: any) {
+    console.warn("[seed] seedDemoPandit failed:", e?.message || "unknown");
+  }
+
   const existingDonations = await db.select().from(donations);
   if (existingDonations.length === 0) {
     console.log("Seeding donations...");

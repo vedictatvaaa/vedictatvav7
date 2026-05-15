@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Lock, Phone, Info } from "lucide-react";
+import { Sparkles, Lock, Phone, Info, PlayCircle, Copy } from "lucide-react";
 import { panditApi, setPanditToken } from "@/lib/panditAuth";
 
 export default function PanditLoginPage() {
@@ -14,6 +14,10 @@ export default function PanditLoginPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const DEMO_PHONE = "9000012345";
+  const DEMO_PASS = "demo1234";
+  const fillDemo = () => { setPhone(DEMO_PHONE); setPassword(DEMO_PASS); };
 
   const submit = async () => {
     if (!phone || !password) {
@@ -64,6 +68,30 @@ export default function PanditLoginPage() {
               <div>
                 <strong className="text-[#4a1a22]">First-time login?</strong> Use your <strong>10-digit registered phone number as your password</strong>. You'll be prompted to set a new password on the dashboard.
               </div>
+            </div>
+
+            <div className="rounded-md border-2 border-dashed border-[#D4AF37]/60 bg-gradient-to-br from-[#FBF7EE] to-[#fff8e7] p-3.5">
+              <div className="flex items-center gap-2 mb-2">
+                <PlayCircle className="h-4 w-4 text-[#6D2B35]" />
+                <span className="text-xs font-bold text-[#4a1a22]">Try the portal — demo Panditji</span>
+              </div>
+              <p className="text-[11.5px] text-[#5a4a3a]/80 mb-2.5 leading-relaxed">
+                Explore bookings, earnings, online puja and tools with a sample account. No signup needed.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[12px] mb-2.5">
+                <div className="bg-white rounded px-2 py-1.5 border border-[#D4AF37]/30">
+                  <div className="text-[10px] text-[#5a4a3a]/60 uppercase tracking-wide">Phone</div>
+                  <div className="font-mono font-semibold text-[#4a1a22]" data-testid="text-demo-phone">{DEMO_PHONE}</div>
+                </div>
+                <div className="bg-white rounded px-2 py-1.5 border border-[#D4AF37]/30">
+                  <div className="text-[10px] text-[#5a4a3a]/60 uppercase tracking-wide">Password</div>
+                  <div className="font-mono font-semibold text-[#4a1a22]" data-testid="text-demo-password">{DEMO_PASS}</div>
+                </div>
+              </div>
+              <Button size="sm" variant="outline" onClick={fillDemo} className="w-full border-[#6D2B35] text-[#6D2B35] hover:bg-[#6D2B35]/5" data-testid="btn-fill-demo">
+                <Copy className="h-3.5 w-3.5 mr-1.5" />
+                Auto-fill demo credentials
+              </Button>
             </div>
           </div>
         </CardContent>
