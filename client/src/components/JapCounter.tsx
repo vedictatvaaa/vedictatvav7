@@ -1708,7 +1708,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         onOpenChange={(open) => { if (!open) skipBreathing(); }}
       >
         <DialogContent
-          className="max-w-md bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] border-[#D4AF37]/40 text-[#FFFAEC] p-0 overflow-hidden"
+          className="w-[20rem] h-[20rem] sm:w-[24rem] sm:h-[24rem] max-w-none bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] border-[#D4AF37]/40 text-[#FFFAEC] p-0 overflow-hidden rounded-full shadow-[0_0_60px_-10px_rgba(212,175,55,0.45)] [&>button]:hidden"
           data-testid="dialog-pranayama"
         >
           {(() => {
@@ -1733,16 +1733,16 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             }
             const cycleNum = Math.min(3, Math.floor(elapsed / BREATH_CYCLE_MS) + 1);
             return (
-              <div className="relative px-6 py-8 flex flex-col items-center text-center">
+              <div className="relative w-full h-full flex flex-col items-center justify-center text-center px-6 py-6">
                 <DialogTitle className="sr-only">Pranayama breathing</DialogTitle>
                 <DialogDescription className="sr-only">
                   60-second 4-7-8 breathing exercise before chanting begins.
                 </DialogDescription>
-                <div className="text-[10px] sm:text-xs uppercase tracking-[0.32em] text-[#D4AF37] font-semibold">
-                  Pranayama · Cycle {cycleNum}/3
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
+                  Pranayama · {cycleNum}/3
                 </div>
                 <div
-                  className="relative my-6 w-44 h-44 sm:w-52 sm:h-52 rounded-full flex items-center justify-center"
+                  className="relative my-3 sm:my-4 w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center"
                   style={{
                     background: "radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.08) 55%, transparent 80%)",
                   }}
@@ -1753,30 +1753,30 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                     style={{ transform: `scale(${auraScale})` }}
                   />
                   <div className="relative flex flex-col items-center">
-                    <div className="text-2xl sm:text-3xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
+                    <div className="text-lg sm:text-xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
                       {phase}
                     </div>
-                    <div className="text-6xl sm:text-7xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-1" data-testid="text-breath-countdown">
+                    <div className="text-5xl sm:text-6xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-0.5" data-testid="text-breath-countdown">
                       {phaseRemain}
                     </div>
                   </div>
                 </div>
-                <div className="text-sm text-[#FFEBB0]/90 max-w-[18rem]">
+                <div className="text-[11px] sm:text-xs text-[#FFEBB0]/90 max-w-[14rem] leading-snug">
                   {phase === "Inhale" ? "Breathe in slowly through the nose"
                     : phase === "Hold" ? "Hold gently · settle the mind"
                     : "Release slowly through the mouth"}
                 </div>
-                <div className="text-[11px] uppercase tracking-[0.22em] text-[#D4AF37]/70 mt-4">
+                <div className="text-[10px] uppercase tracking-[0.22em] text-[#D4AF37]/70 mt-2">
                   {totalRemain}s until chanting
                 </div>
                 <button
                   type="button"
                   onClick={skipBreathing}
-                  className="mt-5 text-[12px] uppercase tracking-[0.18em] font-semibold px-4 py-2 rounded-full border border-[#D4AF37]/55 text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                  className="mt-3 text-[11px] uppercase tracking-[0.16em] font-semibold px-3.5 py-1.5 rounded-full border border-[#D4AF37]/55 text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
                   data-testid="btn-skip-breathing"
                   aria-label="Skip breathwork and begin chanting now"
                 >
-                  Skip · Begin Chanting
+                  Skip · Begin
                 </button>
               </div>
             );
