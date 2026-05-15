@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check, Video, Sparkles, Star, MessageCircle, Coins, Zap } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import type { Pandit } from "@shared/schema";
@@ -348,6 +348,8 @@ export default function PujaBooking() {
           keywordsBlurb="Book pandit online for puja at home — Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti, Mundan, Namkaran, Wedding ceremonies and shradh. Verified Vedic pandits in Mumbai, Delhi, Bengaluru, Pune, Hyderabad, Chennai, Kolkata, Ahmedabad, Jaipur, Lucknow and 75+ cities. Pandits available in Hindi, English, Sanskrit, Tamil, Telugu, Kannada, Marathi, Gujarati, Bengali. All puja samagri delivery included. Transparent pricing, shubh muhurat suggestions, online booking with secure payment."
         />
 
+        <WhyVedicTatvaSection />
+
         <PujaHashtagStrip />
 
         <DedicatedPujaPagesGrid />
@@ -355,6 +357,97 @@ export default function PujaBooking() {
         <RelatedServicesSection context="puja-booking" currentPath="/puja" />
       </div>
     </div>
+  );
+}
+
+const WHY_VEDICTATVA_FEATURES: { icon: any; title: string; body: string }[] = [
+  {
+    icon: ShieldCheck,
+    title: "Trusted Vedic pandits for home puja",
+    body: "Every pandit is identity-verified, gotra-traced and rated by 1000+ devotees before they reach your sankalp.",
+  },
+  {
+    icon: Video,
+    title: "Online puja with live video streaming",
+    body: "Join the puja in real time over WhatsApp or Zoom — see the agni, hear every mantra, give your sankalp from anywhere.",
+  },
+  {
+    icon: Star,
+    title: "Book experienced Hindu pandits online",
+    body: "Choose from Veda-pathi, Karmakand and Jyotish-trained pandits — most with 15+ years of ritual experience.",
+  },
+  {
+    icon: Sparkles,
+    title: "Authentic Vedic rituals and pujas",
+    body: "Full Sanskrit mantras, traditional samagri and shastra-correct vidhi — no shortcuts, no apartheid in dharma.",
+  },
+  {
+    icon: BookOpen,
+    title: "Astrology-based puja booking platform",
+    body: "Tell us your kundli concern — Mangal dosh, Sade Sati, Pitra dosh — we suggest the exact remedial puja and muhurat.",
+  },
+  {
+    icon: Coins,
+    title: "Online puja for health, wealth & prosperity",
+    body: "Mahalaxmi, Kuber, Mahamrityunjaya, Navagraha and Santan Gopal pujas for every life goal — moksh to grihastha.",
+  },
+  {
+    icon: Zap,
+    title: "Instant puja booking with pandit",
+    body: "Same-day havan and abhishek slots available across 75+ cities — confirmed within 2 hours, samagri arranged.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Online spiritual consultation and puja",
+    body: "Free 10-minute jyotishi consultation before every booking — understand the why before you do the puja.",
+  },
+];
+
+function WhyVedicTatvaSection() {
+  return (
+    <section
+      className="mt-16 mb-12"
+      aria-labelledby="why-vedictatva-heading"
+      data-testid="section-why-vedictatva"
+    >
+      <div className="text-center max-w-3xl mx-auto mb-10">
+        <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-2">
+          Why Vedic Tatva
+        </div>
+        <h2
+          id="why-vedictatva-heading"
+          className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-3"
+        >
+          Complete Hindu puja services online
+        </h2>
+        <p className="text-[15px] text-[#5a4a3a]/80 leading-relaxed">
+          From a 30-minute Lakshmi aarti to a three-day yajna, Vedic Tatva offers
+          affordable online puja booking services with verified pandits, transparent
+          dakshina and full samagri included — for families in India and NRIs across
+          the world.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {WHY_VEDICTATVA_FEATURES.map((f) => {
+          const Icon = f.icon;
+          return (
+            <div
+              key={f.title}
+              className="rounded-xl bg-[#FBF7EE] border border-[#D4AF37]/25 p-5 hover-elevate"
+              data-testid={`card-why-${f.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5" />
+              </div>
+              <h3 className="text-[15px] font-serif font-semibold text-[#6D2B35] mb-1.5 leading-snug">
+                {f.title}
+              </h3>
+              <p className="text-[13px] text-[#5a4a3a]/75 leading-relaxed">{f.body}</p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
