@@ -1422,6 +1422,12 @@ uri = "file://attached_assets/generated_images/cat-gemstones.png"
 type = "image"
 title = "certified gemstones"
 
+[[generated]]
+id = "Zd4Sk9_HL-KFo7mqxutZS"
+uri = "file://attached_assets/generated_images/premium_1200x630_og_share_5e61.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"

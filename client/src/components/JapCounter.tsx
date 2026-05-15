@@ -240,12 +240,19 @@ function loadTarget(ownerKey: string): number {
 //   - a subtle low "hum" partial at half the strike pitch
 // to recreate that feel from pure synthesis.
 // =====================================================================
+// Per-bead click character. "bell" is the metallic ghanta tap (default),
+// "wood" is a short hollow knock — the sound a sandalwood bead makes
+// against your thumbnail. Persisted in localStorage as `vt-jap-click-style`.
+export type ClickStyle = "bell" | "wood";
+
 class BellPlayer {
   private ctx: AudioContext | null = null;
   private enabled = true;
   private noiseBuf: AudioBuffer | null = null;
+  private style: ClickStyle = "bell";
 
   setEnabled(e: boolean) { this.enabled = e; }
+  setStyle(s: ClickStyle) { this.style = s; }
 
   private ensure() {
     if (this.ctx) return this.ctx;
@@ -330,14 +337,58 @@ class BellPlayer {
   }
 
   // Soft per-bead "ting" — small ghanta tap. Short decay so rapid japa
-  // doesn't pile up.
+  // doesn't pile up. When style="wood", routes to a hollow knock instead.
   tap(count: number) {
     if (!this.enabled) return;
+    if (this.style === "wood") { this.wood(count); return; }
     // Gently alternate between two strike pitches so the rhythm feels alive
     // without becoming a melody.
     const pitches = [560, 600];
     const f = pitches[count % pitches.length];
     this.strike(f, 0.18, 0.55);
+  }
+
+  // Wooden bead knock — short, hollow, dry. Built from a tight noise
+  // burst through a high-Q bandpass + a low resonant body tone. Two
+  // pitches alternate so consecutive beads don't feel like a metronome.
+  private wood(count: number) {
+    const ctx = this.ensure();
+    if (!ctx) return;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.value = 1;
+    out.connect(ctx.destination);
+
+    // 1) Click transient — narrow noise burst around 2.6 kHz.
+    const knockHz = count % 2 === 0 ? 2600 : 2350;
+    const nSrc = ctx.createBufferSource();
+    nSrc.buffer = this.noise(ctx);
+    const nBp = ctx.createBiquadFilter();
+    nBp.type = "bandpass";
+    nBp.frequency.value = knockHz;
+    nBp.Q.value = 6;
+    const nGain = ctx.createGain();
+    nGain.gain.setValueAtTime(0.0001, now);
+    nGain.gain.exponentialRampToValueAtTime(0.32, now + 0.002);
+    nGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    nSrc.connect(nBp).connect(nGain).connect(out);
+    nSrc.start(now);
+    nSrc.stop(now + 0.06);
+
+    // 2) Body resonance — a single low partial gives it the "sandalwood
+    //    bead" weight without ringing into the next tap.
+    const bodyHz = count % 2 === 0 ? 220 : 245;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = bodyHz;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.16, now + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    o.connect(g).connect(out);
+    o.start(now);
+    o.stop(now + 0.22);
   }
 
   // Mandir aarti ghanti — rich brass clang on mala completion.
@@ -624,6 +675,19 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
 
   const [soundOn, setSoundOn] = useState(true);
   const [vibrationOn, setVibrationOn] = useState(true);
+  // Per-bead click texture — temple-bell ting (default) or sandalwood
+  // bead knock. Persisted globally (not per-owner) so the chosen feel
+  // follows the devotee across mantras.
+  const [clickStyle, setClickStyle] = useState<ClickStyle>(() => {
+    try {
+      const v = localStorage.getItem(`${STORAGE_PREFIX}:clickStyle`);
+      return v === "wood" ? "wood" : "bell";
+    } catch { return "bell"; }
+  });
+  useEffect(() => {
+    bellPlayer.setStyle(clickStyle);
+    try { localStorage.setItem(`${STORAGE_PREFIX}:clickStyle`, clickStyle); } catch {}
+  }, [clickStyle]);
 
   // Sync taps to audio (default OFF). When ON, the press button is hard-locked
   // while the recorded chant is mid-playback — devotees who want the discipline
@@ -1689,6 +1753,31 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 >
                   {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
+                {/* Click-style toggle — only visible when sound is on, so
+                    we don't show a no-op control. Cycles between the
+                    metallic ghanta tap and the hollow sandalwood bead
+                    knock. Plays a quick preview tap on switch so the
+                    devotee hears the difference immediately. */}
+                {soundOn && (
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => {
+                      setClickStyle((s) => {
+                        const next: ClickStyle = s === "bell" ? "wood" : "bell";
+                        bellPlayer.setStyle(next);
+                        bellPlayer.tap(0);
+                        return next;
+                      });
+                    }}
+                    aria-label={`Click sound: ${clickStyle === "wood" ? "wooden bead" : "temple bell"} (tap to switch)`}
+                    title={`Click: ${clickStyle === "wood" ? "Wood" : "Bell"}`}
+                    data-testid="btn-toggle-click-style"
+                    className="text-[10px] font-bold tracking-wider text-[#6D2B35]"
+                  >
+                    {clickStyle === "wood" ? "WD" : "BL"}
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   variant={vibrationOn ? "default" : "outline"}

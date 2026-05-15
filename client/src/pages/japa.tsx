@@ -6,7 +6,9 @@ import SpiritualShowoffCards from "@/components/SpiritualShowoffCards";
 import { faqPage, breadcrumbList, type Schema } from "@/lib/seo-schemas";
 import { MANTRA_LIBRARY, type LibraryMantra } from "@/data/mantra-library";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Zap, Copy, Check, ChevronDown, Loader2, Flame } from "lucide-react";
+import { Sparkles, Zap, Copy, Check, ChevronDown, Loader2, Flame, Download, X } from "lucide-react";
+import { useInstallPrompt } from "@/lib/pwa";
+import { Button } from "@/components/ui/button";
 
 // Tiny haptic helper. Wraps navigator.vibrate so we can fire short pulses on
 // every meaningful tap (mantra chip, oracle submit, copy, accordion toggle).
@@ -17,6 +19,46 @@ import { Sparkles, Zap, Copy, Check, ChevronDown, Loader2, Flame } from "lucide-
 //   tap       — 10ms      (chip selection, accordion toggle)
 //   confirm   — [12,40,18] (success: oracle returned, copied)
 //   error     — [40,30,40] (oracle failed)
+// Lightweight contextual install prompt for /japa. The site already has a
+// global PWAInstallBanner, but devotees who finish a few malas will want
+// to install for offline use specifically — surface that affordance right
+// next to the counter rather than waiting for the global banner heuristic.
+function JapaInstallHint() {
+  const { canInstall, install, dismiss } = useInstallPrompt();
+  if (!canInstall) return null;
+  return (
+    <div
+      className="mt-2 flex items-center justify-between gap-3 rounded-md border border-[#D4AF37]/40 bg-[#FBF7EE] px-3 py-2 text-[#6D2B35]"
+      role="status"
+      data-testid="japa-install-hint"
+    >
+      <span className="text-xs sm:text-sm font-medium leading-snug">
+        <Download className="inline h-4 w-4 mr-1.5 -mt-0.5" />
+        Install Vedic Tatva for offline japa — your streak stays saved.
+      </span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Button
+          size="sm"
+          onClick={() => { install().catch(() => {}); }}
+          className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#6D2B35]"
+          data-testid="btn-japa-install"
+        >
+          Install
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={dismiss}
+          aria-label="Dismiss install prompt"
+          data-testid="btn-japa-install-dismiss"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function haptic(pattern: number | number[] = 10) {
   if (typeof navigator === "undefined") return;
   const v = (navigator as any).vibrate;
@@ -307,6 +349,7 @@ export default function JapaPage() {
                     title="Mantra Japa Counter"
                     subtitle="Pick a sacred mantra and tap the orb for each repetition. Bell + vibration on every full mala. Streak saved privately on this device."
                   />
+                  <JapaInstallHint />
                   {/* Sadhana stats — restored from previous page. Collapsed
                       by default so the counter stays the visual anchor; the
                       stats live one tap away inside a tight disclosure. */}

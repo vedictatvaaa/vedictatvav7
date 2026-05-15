@@ -305,7 +305,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
       title: "Free 108 Mala Counter — Online Mantra Japa Counter · Vedic Tatva",
       description:
         "Sahasra-namami — chant in rhythm. Free 108-bead jap counter with bell, vibration, daily streak & 30+ Vedic mantras. Mahamrityunjaya, Gayatri, Om Namah Shivaya. Saved on your device.",
-      image: "/og/og-puja-essentials.jpg",
+      image: "/og/og-japa.jpg",
       alt: "Free online japa mala counter with bell, vibration and 30+ Vedic mantras — Vedic Tatva",
     },
   },
