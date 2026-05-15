@@ -628,104 +628,89 @@ export default function Home() {
           revenue block users see after the four pillars. */}
       <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 items-center max-w-6xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="relative order-2 lg:order-1"
-            >
-              <div className="aspect-[4/3] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative">
-                <img
-                  src={optImg(heroBrandImg, 768)}
-                  srcSet={optImgSrcSet(heroBrandImg, [320, 480, 768, 1080])}
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  alt="Sacred Puja Ceremony"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/70 via-[#1a0a0e]/10 to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 flex-wrap">
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
-                    <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
-                    <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
-                  </div>
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 border border-[#D4AF37]/20">
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
-                  </div>
-                  <div className="bg-white/95 backdrop-blur rounded-md px-2 py-1 inline-flex items-center gap-1 border border-[#D4AF37]/20">
-                    <Shield className="h-3 w-3 text-emerald-600" />
-                    <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
-                  </div>
+          {/* Image column removed (per user request — homepage clutter
+              pass). Layout collapsed to a single centered column. The
+              three trust badges that previously overlaid the image
+              (4.9★ · 12K reviews, 500+ Pandits, Verified) are now a
+              slim chip row above the headline so the social proof
+              survives. All testids preserved. */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="space-y-5 max-w-2xl mx-auto"
+          >
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+                <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
+                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+              </div>
+              <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
+                Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
+              </h2>
+              <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
+                Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
+              </p>
+
+              {/* Trust chip row (rescued from the removed image overlay) */}
+              <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
+                <div className="bg-white rounded-md px-2.5 py-1 inline-flex items-center gap-1.5 border border-[#D4AF37]/25">
+                  <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
+                  <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
+                  <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
+                </div>
+                <div className="bg-white rounded-md px-2.5 py-1 border border-[#D4AF37]/25">
+                  <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
+                </div>
+                <div className="bg-white rounded-md px-2.5 py-1 inline-flex items-center gap-1.5 border border-[#D4AF37]/25">
+                  <Shield className="h-3 w-3 text-emerald-600" />
+                  <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="space-y-5 order-1 lg:order-2"
-            >
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-                  <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
-                  <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-                </div>
-                <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
-                  Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
-                </h2>
-                <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
-                  Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
-                </p>
-              </div>
+            {/* City search bar — slim, rounded-md */}
+            <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
+              <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
+              <input
+                type="text"
+                placeholder="Enter your city…"
+                className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
+                data-testid="input-pandit-city"
+              />
+              <Link href="/pandits">
+                <Button
+                  size="sm"
+                  className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
+                  data-testid="btn-search-pandit"
+                >
+                  Search
+                </Button>
+              </Link>
+            </div>
 
-              {/* City search bar — slim, rounded-md */}
-              <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
-                <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Enter your city…"
-                  className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
-                  data-testid="input-pandit-city"
-                />
-                <Link href="/pandits">
-                  <Button
-                    size="sm"
-                    className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
-                    data-testid="btn-search-pandit"
-                  >
-                    Search
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Popular city chips */}
-              <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
-                <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
-                {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
-                  <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
-                    <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
-                      {c}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="text-center">
-                <Link href="/pandits">
-                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
-                    Browse all pandits <ArrowRight className="h-3 w-3" />
+            {/* Popular city chips */}
+            <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
+              <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
+              {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
+                <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+                  <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
+                    {c}
                   </span>
                 </Link>
-              </div>
-            </motion.div>
-          </div>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <Link href="/pandits">
+                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
+                  Browse all pandits <ArrowRight className="h-3 w-3" />
+                </span>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
