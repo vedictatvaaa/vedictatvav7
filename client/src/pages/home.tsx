@@ -608,76 +608,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Four Pillars of Vedic Tatva — slim category banner.
-          Each card opens a deep, SEO-rich landing hub that absorbs all
-          related sub-services (e.g. Pandit & Puja → Book Pandit, Book Puja,
-          Pind Daan, Virtual Puja). Uniform gold grid, 2-col mobile / 4-col
-          desktop. Sits directly under the hero so users see the four
-          primary categories first. */}
-      <section
-        className="relative overflow-hidden bg-white border-t border-[#D4AF37]/15"
-        data-testid="section-services"
-      >
-        <div className="relative w-full">
-          {/* Content — slim padding, white background to match the
-              SpiritualSnapshot above and TabbedShop below. */}
-          <div className="relative z-10 container mx-auto px-4 py-6 md:py-8">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4 }}
-              className="text-center max-w-2xl mx-auto"
-            >
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-                <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Four Pillars of Vedic Tatva</span>
-                <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
-              </div>
-              <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight" data-testid="text-services-heading">
-                Your complete Sanatan
-                <span className="italic font-semibold saffron-shimmer ml-2 md:ml-3">sadhana</span>
-              </h2>
-            </motion.div>
+      {/* Four Pillars block REMOVED (Wave: homepage clutter audit).
+          The hero slideshow above already routes users to all four
+          verticals (Samagri / Puja / Pandit / Astrology / Yatra), and
+          the SEO articles section near the bottom links into the same
+          hubs for crawlers. Removing the duplicate tile grid lets the
+          SpiritualSnapshot follow directly under the hero, cutting
+          ~110 px of redundant scrolling and one cognitive layer. */}
 
-            {/* Four uniform gold cards — each opens a deep, SEO-rich
-                category landing page. 2-up on mobile, 4-across on desktop. */}
-            <div className="mt-4 md:mt-5 max-w-5xl mx-auto">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                {featuredCtas.map((cta, i) => {
-                  const Icon = cta.icon;
-                  return (
-                    <motion.div
-                      key={cta.label}
-                      initial={{ opacity: 0, y: 12 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.1 + i * 0.08, duration: 0.45 }}
-                    >
-                      <Link
-                        href={cta.href}
-                        className="group flex flex-col items-center text-center gap-1.5 rounded-lg text-white px-2 py-3 md:px-3 md:py-3.5 h-full transition-colors hover-elevate active-elevate-2 shadow-md shadow-[#4a1a22]/20 border border-[#D4AF37]/30"
-                        style={{ background: "linear-gradient(135deg, #4a1a22 0%, #6D2B35 30%, #8B3A47 50%, #6D2B35 70%, #4a1a22 100%)" }}
-                        data-testid={`cta-featured-${i}`}
-                      >
-                        <div className="shrink-0 w-9 h-9 md:w-10 md:h-10 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
-                          <Icon className="w-[18px] h-[18px] md:w-5 md:h-5 text-[#D4AF37]" strokeWidth={1.8} />
-                        </div>
-                        <div className="font-serif font-bold text-[13px] md:text-[14px] leading-tight">{cta.label}</div>
-                        <div className="text-[10.5px] md:text-[11px] text-white/75 leading-snug line-clamp-2">{cta.sub}</div>
-                      </Link>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Today's Spiritual Snapshot — slim daily strip, follows the
-          Four Pillars so the daily panchang/sunrise data sits between
-          the categories and the shop. */}
+      {/* Today's Spiritual Snapshot — slim daily strip, sits directly
+          under the hero now that the redundant Four Pillars block is
+          gone. Bridges hero → tabbed shop with daily panchang utility. */}
       <SpiritualSnapshot />
 
       {/* Tabbed Shop — Popular + Trending Near You + New Arrivals (Handpicked) */}
@@ -1474,7 +1415,21 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+          {/* Service descriptions collapsed behind a <details> accordion
+              (Wave: homepage clutter audit). Google indexes content
+              inside <details> normally, so SEO juice is preserved while
+              the page stops repeating the business model for a 4th time
+              in plain sight. City quick-links below stay visible. */}
+          <details className="group rounded-md border border-[#D4AF37]/25 bg-white" data-testid="accordion-seo-services">
+            <summary
+              className="flex items-center justify-between gap-3 px-5 md:px-6 py-3.5 md:py-4 cursor-pointer list-none text-[#6D2B35] font-serif text-base md:text-lg font-semibold hover-elevate"
+              data-testid="accordion-seo-services-trigger"
+            >
+              <span>Read more about our services</span>
+              <ChevronDown className="w-5 h-5 transition-transform group-open:rotate-180 text-[#D4AF37]" />
+            </summary>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 px-5 md:px-6 pb-5 md:pb-6 pt-1">
             <article className="rounded-md border border-[#D4AF37]/25 bg-white p-5 md:p-6">
               <h2 className="font-serif text-lg md:text-xl text-[#6D2B35] mb-2">Online Puja Booking Services</h2>
               <p className="text-[13.5px] md:text-sm text-[#5a4a3a] leading-relaxed mb-3">
@@ -1544,7 +1499,8 @@ export default function Home() {
                 <Link href="/pind-daan" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-pind-daan">Pind Daan</Link>
               </div>
             </article>
-          </div>
+            </div>
+          </details>
 
           <div className="mt-8 md:mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
             <Link href="/pandit-in-delhi" className="rounded-md border border-[#D4AF37]/25 bg-white px-4 py-3 text-[13px] text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-city-delhi">
