@@ -6,6 +6,7 @@ import { CATEGORY_CONTENT } from "@/data/category-content";
 import type { Product } from "@shared/schema";
 
 import { CATEGORY_IMAGE } from "@/data/category-images";
+import { optImg, optImgSrcSet } from "@/lib/optImg";
 
 const MAROON = "#5A1F22";
 const GOLD = "#B8860B";
@@ -87,10 +88,14 @@ export default function ShopByCategory({ products }: Props) {
                   >
                     {theme.motifEmoji}
                   </div>
-                  {/* Representative image — purpose-shot for each category, fills the card */}
+                  {/* Representative image — served via /api/img for AVIF/WebP
+                      negotiation + responsive srcset so mobile gets ~30 KB
+                      tiles instead of full-resolution JPEGs. */}
                   {img && (
                     <img
-                      src={img}
+                      src={optImg(img, 600) || img}
+                      srcSet={optImgSrcSet(img, [240, 400, 600, 800]) || undefined}
+                      sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                       alt={`${theme.label} — ${theme.tagline}`}
                       width={400}
                       height={300}

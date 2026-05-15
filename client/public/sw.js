@@ -1,4 +1,4 @@
-const VERSION = 'v5';
+const VERSION = 'v6';
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const RUNTIME_CACHE = `vt-runtime-${VERSION}`;
 
@@ -48,7 +48,34 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin') || url.pathname.startsWith('/api/auth')) return;
 
   if (isApi(url)) {
-    // Network-first for APIs; fall back to cached response when offline
+    // Stale-while-revalidate for safe, public, idempotent reads. The cached
+    // copy is served instantly (sub-50ms repeat-visit feel) while a fresh
+    // copy is fetched in the background and written to cache for next time.
+    // We keep the legacy network-first behaviour for everything else (orders,
+    // cart-aware endpoints, anything that returns user-specific data).
+    const swrPaths = [
+      '/api/products', '/api/products/',
+      '/api/categories', '/api/category',
+      '/api/site-settings',
+      '/api/blog', '/api/reviews',
+      '/api/pandits', '/api/donations',
+      '/api/social-proof', '/api/coupons/best',
+    ];
+    const isSwr = swrPaths.some((p) => url.pathname === p || url.pathname.startsWith(p + '/') || url.pathname.startsWith(p + '?'));
+    if (isSwr) {
+      event.respondWith(
+        caches.open(RUNTIME_CACHE).then(async (cache) => {
+          const cached = await cache.match(req);
+          const network = fetch(req).then((res) => {
+            if (res.ok) cache.put(req, res.clone());
+            return res;
+          }).catch(() => cached || new Response(JSON.stringify({ offline: true }), { status: 503, headers: { 'Content-Type': 'application/json' } }));
+          return cached || network;
+        })
+      );
+      return;
+    }
+    // Network-first for everything else; fall back to cached response when offline
     event.respondWith(
       fetch(req)
         .then((res) => {
