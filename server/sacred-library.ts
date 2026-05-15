@@ -252,6 +252,7 @@ export function registerSacredLibraryRoutes(app: Express) {
         verseCount: sacredTexts.verseCount,
         durationSeconds: sacredTexts.durationSeconds,
         viewCount: sacredTexts.viewCount,
+        tags: sacredTexts.tags,
       }).from(sacredTexts).where(and(...conds))
         .orderBy(asc(sacredTexts.deity), asc(sacredTexts.textType))
         .limit(limit);

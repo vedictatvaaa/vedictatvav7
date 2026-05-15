@@ -25,6 +25,12 @@ interface SacredTextLite {
   verseCount?: number | null;
   durationSeconds?: number | null;
   viewCount?: number | null;
+  tags?: string[] | null;
+}
+
+function toHashtag(tag: string): string {
+  const cleaned = tag.replace(/[^A-Za-z0-9\u0900-\u097F]+/g, "");
+  return cleaned ? `#${cleaned}` : "";
 }
 
 interface SacredText extends SacredTextLite {
@@ -62,6 +68,11 @@ function Catalog() {
   const [deity, setDeity] = useState<string>("all");
   const [type, setType] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [activeTag, setActiveTag] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const t = new URLSearchParams(window.location.search).get("tag");
+    return t || null;
+  });
 
   const deitiesQuery = useQuery<DeityCount[]>({
     queryKey: ["/api/sacred-texts/deities"],
@@ -79,12 +90,28 @@ function Catalog() {
     },
   });
 
+  const allTags = useMemo(() => {
+    const set = new Map<string, number>();
+    (listQuery.data || []).forEach((t) => (t.tags || []).forEach((tag) => {
+      const h = toHashtag(tag);
+      if (h) set.set(h, (set.get(h) || 0) + 1);
+    }));
+    return Array.from(set.entries()).sort((a, b) => b[1] - a[1]).slice(0, 24).map(([h]) => h);
+  }, [listQuery.data]);
+
   const items = useMemo(() => {
-    const all = listQuery.data || [];
+    let all = listQuery.data || [];
+    if (activeTag) {
+      all = all.filter((t) => (t.tags || []).some((tag) => toHashtag(tag) === activeTag));
+    }
     if (!search.trim()) return all;
     const q = search.toLowerCase();
-    return all.filter((t) => t.title.toLowerCase().includes(q) || t.deity.toLowerCase().includes(q));
-  }, [listQuery.data, search]);
+    return all.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      t.deity.toLowerCase().includes(q) ||
+      (t.tags || []).some((tag) => tag.toLowerCase().includes(q))
+    );
+  }, [listQuery.data, search, activeTag]);
 
   useEffect(() => {
     document.title = "Sacred Library — Chalisas, Mantras, Kathas | Vedic Tatva";
@@ -167,6 +194,39 @@ function Catalog() {
               </Button>
             ))}
           </div>
+
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground mr-1">Hashtags</span>
+              {activeTag && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTag(null)}
+                  className="text-xs px-2 py-1 rounded-md border hover-elevate"
+                  style={{ borderColor: BORDER, color: MAROON }}
+                  data-testid="button-clear-tag"
+                >
+                  Clear {activeTag}
+                </button>
+              )}
+              {allTags.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => setActiveTag(activeTag === h ? null : h)}
+                  className="text-xs px-2 py-1 rounded-md hover-elevate"
+                  style={
+                    activeTag === h
+                      ? { backgroundColor: MAROON, color: BEIGE }
+                      : { color: MAROON, backgroundColor: "rgba(212,175,55,0.12)" }
+                  }
+                  data-testid={`filter-tag-${h.slice(1)}`}
+                >
+                  {h}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {listQuery.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -192,6 +252,26 @@ function Catalog() {
                     {t.title}
                   </h3>
                   {t.excerpt && <p className="text-sm text-muted-foreground line-clamp-3">{t.excerpt}</p>}
+                  {t.tags && t.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {t.tags.slice(0, 5).map((tag, i) => {
+                        const h = toHashtag(tag);
+                        if (!h) return null;
+                        return (
+                          <button
+                            key={`${h}-${i}`}
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveTag(activeTag === h ? null : h); }}
+                            className="text-xs px-1.5 py-0.5 rounded-md hover-elevate"
+                            style={{ color: MAROON, backgroundColor: "rgba(212,175,55,0.12)" }}
+                            data-testid={`tag-${h.slice(1)}-${t.id}`}
+                          >
+                            {h}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 border-t" style={{ borderColor: BORDER }}>
                     {t.verseCount ? <span>{t.verseCount} verses</span> : null}
                     {t.audioUrl ? <span className="flex items-center gap-1"><Music className="w-3 h-3" />Audio</span> : null}
@@ -307,6 +387,25 @@ function Reader({ slug }: { slug: string }) {
             {scriptMode === "all" ? "All scripts" : scriptMode}
           </Button>
         </div>
+        {t.tags && t.tags.length > 0 && (
+          <div className="max-w-3xl mx-auto px-4 pb-2 flex flex-wrap gap-1.5">
+            {t.tags.map((tag, i) => {
+              const h = toHashtag(tag);
+              if (!h) return null;
+              return (
+                <Link key={`${h}-${i}`} href={`/sacred-library?tag=${encodeURIComponent(h)}`}>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-md hover-elevate inline-block cursor-pointer"
+                    style={{ color: MAROON, backgroundColor: "rgba(212,175,55,0.12)" }}
+                    data-testid={`reader-tag-${h.slice(1)}`}
+                  >
+                    {h}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
         {t.audioUrl && (
           <div className="max-w-3xl mx-auto px-4 pb-3">
             <audio controls src={t.audioUrl} className="w-full h-10" data-testid="audio-player" />
