@@ -3187,6 +3187,249 @@ const TEMPLE_DECOR: SeoLandingPageProps = {
 };
 
 // ---------------------------------------------------------------------------
+// STORE CLUSTER — Three new SEO landings requested as separate keyword targets
+// from the broader collection pages. Each is a focused intent page (single
+// product family, deeper specifics) instead of a category overview.
+// ---------------------------------------------------------------------------
+
+const RUDRAKSHA_MALA_DATA: SeoLandingPageProps = {
+  seoTitle: "Original Rudraksha Mala Online — 108-Bead, Lab-Certified, Energised | Vedic Tatva",
+  seoDescription:
+    "Buy original 108-bead rudraksha mala online — lab-certified Nepali and Indonesian beads, hand-knotted with cotton thread, energised by Vedic pandits. 5 mukhi, 1 mukhi, indra mala, panchmukhi siddha mala — for japa, daily wear and protection.",
+  seoKeywords:
+    "rudraksha mala, original rudraksha mala, 108 bead rudraksha mala, 5 mukhi rudraksha mala, panchmukhi mala, nepali rudraksha mala, indonesian rudraksha mala, rudraksha japa mala, energised rudraksha mala, lab certified rudraksha, siddha mala, indra mala, rudraksha mala for men, rudraksha mala for women, rudraksha mala benefits, rudraksha mala price, original 5 mukhi mala",
+  canonical: "/rudraksha-mala",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Rudraksha Mala", url: "/rudraksha-mala" },
+  ],
+  eyebrow: "Lab-Certified Rudraksha Mala",
+  h1: "Original Rudraksha Mala — 108 Beads, Energised by Vedic Pandits",
+  subtitle:
+    "Hand-picked Nepali and Indonesian rudraksha, lab-certified for authenticity and hand-knotted with cotton thread into a true 108+1 sumeru japa mala. Energised by Vedic pandits before dispatch.",
+  heroCTAs: [
+    { label: "Shop Rudraksha Malas", href: "/spiritual-essentials?category=rudraksha", variant: "primary" },
+    { label: "Use the Japa Counter", href: "/digital-japa-counter", variant: "outline" },
+  ],
+  trustChips: ["Lab-Certified Beads", "108 + Sumeru", "Energised by Pandits"],
+  intro:
+    "A rudraksha mala is the most sacred japa tool in Sanatana Dharma — Lord Shiva's own teardrop, strung as 108 beads plus a sumeru, used for mantra chanting, meditation and daily wear. Vedic Tatva sources only original Nepali and Indonesian rudraksha, lab-certified for mukhi count and authenticity, hand-knotted by traditional mala-makers and energised at our partner temples before dispatch. Each mala arrives with a certificate of authenticity, an energisation card and a small pandit-recommended care guide.",
+  sections: [
+    {
+      heading: "Which rudraksha mala is right for you",
+      bullets: [
+        "5 Mukhi Mala — universally wearable, calms the mind, supports any mantra (most popular for daily japa)",
+        "1 Mukhi Mala — Lord Shiva's direct grace, for serious sadhakas and meditation",
+        "Panchmukhi Siddha Mala — combination of 1, 2, 3, 4, 5 mukhi for all-round benefit",
+        "Indra Mala — 108 unique mukhi beads, the rarest and most powerful (collector grade)",
+        "Rudraksha-Sphatik Mala — alternating crystal and rudraksha for cooling, focus and clarity",
+      ],
+    },
+    {
+      heading: "How our rudraksha malas are made",
+      bullets: [
+        "Beads sourced directly from Nepal (Bhadrapur) and Java (Indonesia) — no Chinese fakes",
+        "Each bead lab-tested for natural mukhi (X-ray) and density (water-test) before stringing",
+        "Hand-knotted on pure cotton thread with a knot between every two beads",
+        "108 working beads + 1 sumeru bead at the meeting point (never crossed during japa)",
+        "Energised through 11-round Maha Mrityunjaya jaap by our partner pandits before dispatch",
+      ],
+    },
+    {
+      heading: "How to wear and care for a rudraksha mala",
+      bullets: [
+        "Wear after a bath, ideally on Monday morning after a brief Shiva mantra",
+        "Remove during sleep, sex, alcohol consumption and visiting cremation grounds",
+        "Oil monthly with sandalwood or pure coconut oil to preserve natural sheen",
+        "Re-energise once a year on Mahashivratri or Sawan Somvar with 108 Om Namah Shivaya",
+        "Never share your personal japa mala — it's energetically attuned to you",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is your rudraksha mala original?", a: "Yes — every bead is lab-certified for natural mukhi count using X-ray, and tested for density. We source only from Nepal (Bhadrapur) and Indonesia (Java). Each mala ships with a certificate of authenticity." },
+    { q: "Difference between Nepali and Indonesian rudraksha?", a: "Nepali rudraksha are larger (16–22 mm), more clearly defined mukhis, traditionally considered superior for spiritual practice. Indonesian rudraksha are smaller (5–12 mm), smoother, ideal for everyday wear and bracelets." },
+    { q: "Can women wear a rudraksha mala?", a: "Absolutely — there's no shastric restriction on women wearing rudraksha. The popular myth is incorrect. Women have worn rudraksha for thousands of years in every Hindu tradition." },
+    { q: "Do you energise the mala before sending?", a: "Yes — every mala is taken to our partner temple where pandits perform an 11-round Maha Mrityunjaya jaap on it before it ships. Re-energise yearly for best benefit." },
+    { q: "How long does a rudraksha mala last?", a: "A well-cared-for original rudraksha mala lasts a lifetime — beads only get more lustrous with regular use and oil. Cotton thread should be re-strung every 4–5 years." },
+  ],
+  finalCtaTitle: "Carry Lord Shiva's grace — original 108-bead rudraksha mala",
+  finalCtaSubtitle: "Lab-certified, hand-knotted, energised by Vedic pandits. Free shipping over ₹499.",
+  finalCtaButtons: [
+    { label: "Shop Rudraksha Malas", href: "/spiritual-essentials?category=rudraksha", variant: "primary" },
+    { label: "Try the Japa Counter", href: "/digital-japa-counter", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Rudraksha Collection", href: "/rudraksha-collection" },
+    { label: "Digital Japa Counter", href: "/digital-japa-counter" },
+    { label: "Spiritual Jewelry", href: "/spiritual-jewelry" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+    { label: "Crystal Healing", href: "/crystal-healing" },
+  ],
+  schema: { type: "service", serviceName: "Original 108-bead Rudraksha Mala — Energised" },
+};
+
+const HAVAN_SAMAGRI_DATA: SeoLandingPageProps = {
+  seoTitle: "Havan Samagri Online — Authentic 64-Herb Vedic Yajna Mix | Vedic Tatva",
+  seoDescription:
+    "Buy authentic havan samagri online — traditional 64-herb Vedic yajna mix with pure ghee, samidha, til, jau, kapur and aushadhi. Pre-portioned for daily havan and major puja. Pandit-approved, no chemical fillers.",
+  seoKeywords:
+    "havan samagri online, buy havan samagri, original havan samagri, 64 herb havan samagri, ashtagandha havan, ghee samagri, hawan samagri kit, hawan samagri price, samidha for havan, til jau havan, kapur havan, dasangam havan, panchamrit havan samagri, vedic yajna samagri, navagraha havan samagri",
+  canonical: "/havan-samagri",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Havan Samagri", url: "/havan-samagri" },
+  ],
+  eyebrow: "Authentic 64-Herb Vedic Mix",
+  h1: "Havan Samagri Online — Pure 64-Herb Yajna Mix, Pandit-Approved",
+  subtitle:
+    "Traditional havan samagri hand-blended from 64 Vedic herbs, til, jau, kapur, samidha and pure cow-ghee — no chemical fillers, no synthetic fragrance. Pre-portioned packs for daily, weekly and festival havans.",
+  heroCTAs: [
+    { label: "Shop Havan Samagri", href: "/spiritual-essentials?category=puja-samagri", variant: "primary" },
+    { label: "Browse Havan Cups", href: "/havan-cups", variant: "outline" },
+  ],
+  trustChips: ["64 Vedic Herbs", "No Chemical Fillers", "Pre-Portioned Packs"],
+  intro:
+    "Havan samagri is the heart of every yajna — the carefully balanced mix of 64 Vedic herbs, samidha (mango wood twigs), til (sesame), jau (barley), kapur (camphor), pure cow-ghee and aushadhi that is offered into the sacred fire. Vedic Tatva's havan samagri is hand-blended in small batches at a Vedic patshala in Haridwar, with no chemical extenders, no perfume and no synthetic cow-dung. Every pack is portioned for a specific puja so you don't have to measure — open, pour, offer.",
+  sections: [
+    {
+      heading: "What's inside our havan samagri",
+      bullets: [
+        "64 traditional Vedic herbs including chandan, agar, tagar, jatamansi, brahmi, gugglu",
+        "Samidha — sun-dried mango wood twigs (12 finger-lengths each), 21 sticks per pack",
+        "Til (sesame) and jau (barley) — pre-mixed in shastric proportion",
+        "Pure cow-ghee — 250 ml glass bottle, A2 desi cow milk source",
+        "Kapur (camphor) and pure cow-dung uppals (cakes) for the agni base",
+        "Step-by-step Sanskrit-Hindi havan vidhi card included free",
+      ],
+    },
+    {
+      heading: "Choose the right pack for your puja",
+      bullets: [
+        "Daily Mini Havan — 100 g samagri + 7 samidha sticks (10-min agnihotra)",
+        "Weekly Havan — 250 g samagri + 21 samidha + ghee bottle (45-min puja)",
+        "Festival Havan — 500 g samagri + 51 samidha + ghee + uppals (any major vrat)",
+        "Navagraha Havan — special 9-graha samagri + samidha (Sade Sati, Mangal Dosha)",
+        "Maha Mrityunjaya Havan — 108-pack with bilva patra, for serious health pujas",
+        "Griha Pravesh Havan — bulk pack for housewarming + vastu shanti",
+      ],
+    },
+    {
+      heading: "Why authentic havan samagri matters",
+      bullets: [
+        "The 64 herbs together purify the air — modern studies confirm reduction of airborne bacteria",
+        "Cow-ghee combustion releases beneficial volatile compounds; chemical ghee defeats the entire purpose",
+        "Mango wood samidha burns clean and slow — pine or scrap wood pollutes and is shastrically forbidden",
+        "Synthetic fragrance versions are agni-pradushak — they actually negate the puja's effect",
+        "Always check ingredient list — 'havan samagri' should never include benzoate, perfume or paraffin",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Is your havan samagri pure?", a: "Yes — hand-blended at a Vedic patshala in Haridwar from 64 traditional herbs, with no chemical extenders, no synthetic perfume, no paraffin. Every batch is verified by the patshala's resident pandit." },
+    { q: "Do I need to add anything else for a havan?", a: "Our festival pack includes everything — samagri, samidha, ghee, uppals, kapur and a vidhi card. You only need a small brass havan kund (sold separately) and matchsticks." },
+    { q: "Can I do a havan in an apartment?", a: "Yes, with our Daily Mini Havan or any of the smokeless havan cups. Open a window for ventilation. The 10-minute morning agnihotra is widely done in apartments across Mumbai, Bengaluru and Delhi." },
+    { q: "What's the difference between havan samagri and havan cups?", a: "Samagri is the loose herb mix you offer by hand into a havan kund — the traditional way. Havan cups are pre-filled cup-shaped bricks for instant smokeless havan. Both are authentic; cups are simply more convenient." },
+    { q: "How long does a 250 g pack last?", a: "Roughly 3–4 weekly havans (45 min each) or 12–15 daily mini havans. We recommend keeping the samagri in an airtight glass jar away from sunlight to retain potency." },
+  ],
+  finalCtaTitle: "Light the sacred fire — authentic 64-herb havan samagri",
+  finalCtaSubtitle: "Pre-portioned, pandit-approved, no chemical fillers. Free shipping over ₹499.",
+  finalCtaButtons: [
+    { label: "Shop Havan Samagri", href: "/spiritual-essentials?category=puja-samagri", variant: "primary" },
+    { label: "Browse Havan Cups", href: "/havan-cups", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Havan Cups", href: "/havan-cups" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Sambrani Cups", href: "/sambrani-cups" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Authentic 64-Herb Vedic Havan Samagri" },
+};
+
+const INCENSE_STICKS_DATA: SeoLandingPageProps = {
+  seoTitle: "Incense Sticks Online — Natural Agarbatti, Sandalwood, Loban | Vedic Tatva",
+  seoDescription:
+    "Shop natural incense sticks online — pure sandalwood, loban, mogra, chandan and Vedic herbal agarbatti. Hand-rolled by traditional artisans, no charcoal core, no chemical fragrance. For daily puja, meditation and home aroma.",
+  seoKeywords:
+    "incense sticks online, natural agarbatti, sandalwood incense sticks, loban agarbatti, chandan agarbatti, mogra incense, vedic incense, charcoal-free agarbatti, hand rolled agarbatti, pure incense sticks, masala agarbatti, dhoop sticks, meditation incense, puja agarbatti online, premium incense sticks india, organic agarbatti",
+  canonical: "/incense-sticks",
+  breadcrumbs: [
+    { name: "Home", url: "/" },
+    { name: "Online Puja Store", url: "/online-puja-store" },
+    { name: "Incense Sticks", url: "/incense-sticks" },
+  ],
+  eyebrow: "Hand-Rolled Natural Agarbatti",
+  h1: "Natural Incense Sticks — Pure Sandalwood, Loban & Vedic Herbal Agarbatti",
+  subtitle:
+    "Hand-rolled incense sticks from pure aromatic herbs, sandalwood powder and natural resins — no charcoal core, no chemical fragrance, no synthetic dyes. The fragrance our grandmothers used.",
+  heroCTAs: [
+    { label: "Shop Incense Sticks", href: "/spiritual-essentials?category=incense", variant: "primary" },
+    { label: "Browse Sambrani Cups", href: "/sambrani-cups", variant: "outline" },
+  ],
+  trustChips: ["No Charcoal Core", "Natural Resins Only", "Hand-Rolled in India"],
+  intro:
+    "Most agarbatti sold today is a thin charcoal stick rolled in cheap synthetic perfume — visually identical to the real thing, but spiritually inert and harmful to breathe. Vedic Tatva's incense sticks are hand-rolled the traditional masala way: pure sandalwood powder, halmaddi resin, joss powder, ghee and natural aromatic herbs are kneaded into a fragrant dough, then rolled by hand onto a thin bamboo stick. The result burns longer, smells deeper, leaves no acrid smoke and is genuinely fit for daily puja and meditation.",
+  sections: [
+    {
+      heading: "Our incense stick range",
+      bullets: [
+        "Pure Sandalwood (Chandan) — for daily puja, meditation and Lakshmi worship",
+        "Loban Resin — the temple fragrance, ideal for sandhya and vastu shuddhi",
+        "Mogra (Jasmine) — for evening puja, calming the mind and home aroma",
+        "Rose & Kewra — Friday puja, Lakshmi and feminine deity worship",
+        "Vedic Herbal Blend — 18-herb mix used in patshalas for daily havan after-fragrance",
+        "Nag Champa — meditation, kirtan and bhakti sangat",
+      ],
+    },
+    {
+      heading: "How to spot a real masala incense stick",
+      bullets: [
+        "Break a stick in half — real masala has dough all the way through, not a black charcoal core",
+        "Burn one for 2 minutes — natural incense leaves white-grey ash; charcoal versions leave heavy black residue",
+        "Smell the unlit stick — natural fragrance is mild and complex; chemical perfume is sharp and uniform",
+        "Real natural agarbatti costs ₹2–₹6 per stick; if it's much cheaper, it's almost certainly synthetic",
+        "Look for the words 'masala' or 'hand-rolled' — anything labelled just 'agarbatti' is usually charcoal",
+      ],
+    },
+    {
+      heading: "How to use incense sticks in puja",
+      bullets: [
+        "Light one stick at a time during morning and evening aarti — quality over quantity",
+        "Place in a brass or ceramic incense holder — never directly on furniture or floor",
+        "Wave clockwise around the deity 3 or 7 times during dhoop offering",
+        "Burn during meditation, but step back from the smoke — incense is for the deity, not the lungs",
+        "Always extinguish in sand or by tapping out — never let an unattended stick burn down",
+      ],
+    },
+  ],
+  faqs: [
+    { q: "Are these incense sticks safe for daily use?", a: "Yes — natural masala incense with no charcoal core, no synthetic perfume and no paraffin is the safest form. Always burn in a ventilated room and use one stick at a time. Avoid charcoal-core incense entirely." },
+    { q: "What's the difference between agarbatti and dhoop?", a: "Agarbatti is on a thin bamboo stick (more fragrance, less smoke). Dhoop is solid stick or cone with no bamboo (more smoke, deeper resin notes). Sambrani cups are the third category — pure resin in a cup form." },
+    { q: "How long does one stick burn?", a: "Standard 8-inch masala incense burns 30 to 45 minutes; premium 12-inch sticks burn 60 to 75 minutes. One stick per puja session is the right quantity." },
+    { q: "Can I burn incense during pregnancy?", a: "Mild natural incense (sandalwood, mogra) is fine in a well-ventilated room. Avoid heavy resin-based varieties (loban, dhoop) and any chemical-fragrance products entirely during pregnancy." },
+    { q: "Which incense is best for meditation?", a: "Pure sandalwood and Vedic herbal blends are traditionally used for meditation — they calm the nervous system without being overpowering. Nag champa is excellent for kirtan and bhakti practice." },
+  ],
+  finalCtaTitle: "Real fragrance, real puja — natural hand-rolled incense sticks",
+  finalCtaSubtitle: "Pure sandalwood, loban, mogra and Vedic herbal blends. No charcoal, no chemicals.",
+  finalCtaButtons: [
+    { label: "Shop Incense Sticks", href: "/spiritual-essentials?category=incense", variant: "primary" },
+    { label: "Browse Sambrani Cups", href: "/sambrani-cups", variant: "outline" },
+  ],
+  relatedLinks: [
+    { label: "Sambrani Cups", href: "/sambrani-cups" },
+    { label: "Incense & Dhoop Collection", href: "/incense-dhoop" },
+    { label: "Brass Diyas", href: "/brass-diyas" },
+    { label: "Puja Kits", href: "/puja-kits" },
+    { label: "Online Puja Store", href: "/online-puja-store" },
+  ],
+  schema: { type: "service", serviceName: "Natural Hand-Rolled Incense Sticks & Agarbatti" },
+};
+
+// ---------------------------------------------------------------------------
 // REGISTRY
 // ---------------------------------------------------------------------------
 
@@ -3218,10 +3461,13 @@ export const SEO_LANDINGS: Record<string, SeoLandingPageProps> = {
   "nakshatra-predictions": NAKSHATRA_PREDICTIONS,
   "online-puja-store": ONLINE_PUJA_STORE,
   "rudraksha-collection": RUDRAKSHA_COLLECTION,
+  "rudraksha-mala": RUDRAKSHA_MALA_DATA,
   "brass-diyas": BRASS_DIYAS,
   "sambrani-cups": SAMBRANI_CUPS,
   "havan-cups": HAVAN_CUPS,
+  "havan-samagri": HAVAN_SAMAGRI_DATA,
   "incense-dhoop": INCENSE_DHOOP,
+  "incense-sticks": INCENSE_STICKS_DATA,
   "crystal-healing": CRYSTAL_HEALING,
   "puja-kits": PUJA_KITS,
   "festival-collections": FESTIVAL_COLLECTIONS,
@@ -3231,3 +3477,4 @@ export const SEO_LANDINGS: Record<string, SeoLandingPageProps> = {
 };
 
 export type SeoLandingSlug = keyof typeof SEO_LANDINGS;
+

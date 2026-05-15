@@ -177,7 +177,7 @@ const JapaMantraPage = lazy(() => import("@/pages/japa-mantra"));
  *  with the canonical /japa so internal <Link>s honor canonicalization. */
 function JapaAliasRedirect() {
   const [, navigate] = useLocation();
-  useEffect(() => { navigate("/japa", { replace: true }); }, [navigate]);
+  useEffect(() => { navigate("/digital-japa-counter", { replace: true }); }, [navigate]);
   return null;
 }
 const ZodiacRashifal = lazy(() => import("@/pages/zodiac-rashifal"));
@@ -379,8 +379,8 @@ function MobileBottomNav() {
       color: "#B45F4D", tint: "rgba(180,95,77,0.12)",
     },
     {
-      Icon: MalaIcon as any, label: "Japa", path: "/japa",
-      match: (l: string) => l === "/japa" || l === "/jap" || l === "/japa-counter",
+      Icon: MalaIcon as any, label: "Japa", path: "/digital-japa-counter",
+      match: (l: string) => l === "/digital-japa-counter" || l === "/japa" || l === "/jap" || l === "/japa-counter",
       color: "#6D2B35", tint: "rgba(109,43,53,0.12)",
     },
     {
@@ -655,6 +655,12 @@ function Router() {
           <Route path="/nakshatra-predictions">{() => <SeoLanding slug="nakshatra-predictions" />}</Route>
           <Route path="/online-puja-store">{() => <SeoLanding slug="online-puja-store" />}</Route>
           <Route path="/rudraksha-collection">{() => <SeoLanding slug="rudraksha-collection" />}</Route>
+          <Route path="/rudraksha-mala">{() => <SeoLanding slug="rudraksha-mala" />}</Route>
+          <Route path="/havan-samagri">{() => <SeoLanding slug="havan-samagri" />}</Route>
+          <Route path="/incense-sticks">{() => <SeoLanding slug="incense-sticks" />}</Route>
+          <Route path="/brass-diya">{() => <SeoLanding slug="brass-diyas" />}</Route>
+          <Route path="/numerology-prediction">{() => <SeoLanding slug="numerology-predictions" />}</Route>
+          <Route path="/digital-japa-counter" component={JapaPage} />
           <Route path="/brass-diyas">{() => <SeoLanding slug="brass-diyas" />}</Route>
           <Route path="/sambrani-cups">{() => <SeoLanding slug="sambrani-cups" />}</Route>
           <Route path="/havan-cups">{() => <SeoLanding slug="havan-cups" />}</Route>
@@ -796,7 +802,7 @@ type RibbonItem = {
 };
 
 export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
-  { id: "japa-counter", iconName: "Music2", eyebrow: "Free tool", title: "Japa Counter — Mantra Mala Online", detail: "Tap to chant · 12 sacred mantras · Streaks saved on your device", href: "/japa", cta: "Chant" },
+  { id: "japa-counter", iconName: "Music2", eyebrow: "Free tool", title: "Japa Counter — Mantra Mala Online", detail: "Tap to chant · 12 sacred mantras · Streaks saved on your device", href: "/digital-japa-counter", cta: "Chant" },
   { id: "tithi-calculator", iconName: "CalendarDays", eyebrow: "Free tool", title: "Pitru Tithi & Annual Shradh Calculator", detail: "Pitru Paksha or Pratisamvatsarik · Free yearly reminders", href: "/tools/tithi-calculator", cta: "Open" },
   { id: "pind-daan-gaya", iconName: "Flame", eyebrow: "Sacred seva", title: "Online Pind Daan at Gaya", detail: "Verified Gayawal Pandits · Live Sankalp · Worldwide prasad", href: "/pind-daan-gaya", cta: "Book" },
   { id: "book-pandit", iconName: "UserRound", eyebrow: "On demand", title: "Book a verified Pandit at home", detail: "Satyanarayan, Griha Pravesh, Rudrabhishek & more", href: "/book-pandit", cta: "Book" },

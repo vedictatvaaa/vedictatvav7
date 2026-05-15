@@ -69,7 +69,7 @@ export default function JapaMantraPage() {
       mantra
         ? breadcrumbList([
             { name: "Home", url: "/" },
-            { name: "Japa", url: "/japa" },
+            { name: "Japa", url: "/digital-japa-counter" },
             { name: mantra.label, url: `/japa/${mantra.id}` },
           ])
         : null,
@@ -141,7 +141,7 @@ export default function JapaMantraPage() {
         {/* Slim crumb back to the hub */}
         <div className="px-3 sm:px-5 max-w-3xl mx-auto w-full">
           <Link
-            href="/japa"
+            href="/digital-japa-counter"
             className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-[#D4AF37]/80 hover:text-[#D4AF37]"
             data-testid="link-back-japa"
           >
@@ -248,7 +248,7 @@ export default function JapaMantraPage() {
                   </Link>
                 ))}
               <Link
-                href="/japa"
+                href="/digital-japa-counter"
                 className="inline-flex items-center rounded-md border border-[#D4AF37]/60 bg-[#6D2B35] px-3 py-1.5 text-xs sm:text-sm text-[#D4AF37] hover-elevate active-elevate-2"
                 data-testid="link-all-mantras"
               >

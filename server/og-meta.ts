@@ -524,7 +524,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
   // landings /japa/<slug> are handled by buildMantraOgCard() below so
   // each share preview shows the specific mantra's name + deity.
   {
-    match: /^\/(japa|jap|japa-counter)\/?$/,
+    match: /^\/(digital-japa-counter|japa|jap|japa-counter)\/?$/,
     card: {
       title: "Free 108 Mala Counter — Online Mantra Japa Counter · Vedic Tatva",
       description:

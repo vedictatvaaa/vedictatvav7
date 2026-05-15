@@ -182,9 +182,9 @@ export async function registerRoutes(
     "/puja-kits-collection": "/puja-kits",
     "/book-panditji": "/pandits",
     "/astrology-services": "/astrology",
-    // Japa counter — consolidate ranking signal on /japa.
-    "/jap": "/japa",
-    "/japa-counter": "/japa",
+    // Japa counter — consolidate ranking signal on /digital-japa-counter.
+    "/jap": "/digital-japa-counter",
+    "/japa-counter": "/digital-japa-counter",
   };
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
@@ -859,7 +859,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/tirth-yatra", priority: "0.75", changefreq: "weekly" },
       { loc: "/temple-tourism", priority: "0.7", changefreq: "monthly" },
       { loc: "/puja-kit", priority: "0.7", changefreq: "weekly" },
-      { loc: "/japa", priority: "0.85", changefreq: "weekly" },
+      { loc: "/digital-japa-counter", priority: "0.9", changefreq: "weekly" },
       // Per-mantra japa landings — 30 entries, one per MANTRA_LIBRARY id.
       // Lower priority than the hub but still high enough to crawl weekly
       // since the underlying counter and FAQ content rarely changes.
@@ -935,11 +935,16 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/zodiac-compatibility", priority: "0.8", changefreq: "monthly" },
       { loc: "/lucky-number-today", priority: "0.8", changefreq: "daily" },
       { loc: "/numerology-predictions", priority: "0.8", changefreq: "monthly" },
+      { loc: "/numerology-prediction", priority: "0.8", changefreq: "monthly" },
       { loc: "/kundli-matching", priority: "0.9", changefreq: "monthly" },
       { loc: "/nakshatra-predictions", priority: "0.8", changefreq: "monthly" },
       { loc: "/online-puja-store", priority: "0.85", changefreq: "weekly" },
       { loc: "/rudraksha-collection", priority: "0.85", changefreq: "weekly" },
+      { loc: "/rudraksha-mala", priority: "0.85", changefreq: "weekly" },
       { loc: "/brass-diyas", priority: "0.8", changefreq: "weekly" },
+      { loc: "/brass-diya", priority: "0.8", changefreq: "weekly" },
+      { loc: "/havan-samagri", priority: "0.85", changefreq: "weekly" },
+      { loc: "/incense-sticks", priority: "0.8", changefreq: "weekly" },
       { loc: "/sambrani-cups", priority: "0.8", changefreq: "weekly" },
       { loc: "/havan-cups", priority: "0.8", changefreq: "weekly" },
       { loc: "/incense-dhoop", priority: "0.8", changefreq: "weekly" },

@@ -271,7 +271,7 @@ export default function JapaPage() {
   const faqSchema = useMemo(() => faqPage(FAQS, "japa-faq"), []);
   const breadcrumb = useMemo(() => breadcrumbList([
     { name: "Home", url: "/" },
-    { name: "Japa Sadhana", url: "/japa" },
+    { name: "Japa Sadhana", url: "/digital-japa-counter" },
   ]), []);
 
   // SoftwareApplication JSON-LD positions the page as a free PWA tool —
@@ -286,7 +286,7 @@ export default function JapaPage() {
       name: "Vedic Tatva Japa Counter",
       applicationCategory: "LifestyleApplication",
       operatingSystem: "Any (PWA)",
-      url: "https://vedictatva.com/japa",
+      url: "https://vedictatva.com/digital-japa-counter",
       description:
         "Free online japa mala counter (108 / 54 / 27 beads) with temple bell, haptic vibration, daily streaks, and 30+ Vedic mantras. Works offline as a Progressive Web App.",
       offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
@@ -314,7 +314,7 @@ export default function JapaPage() {
         title="Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva"
         description="Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device."
         keywords="japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप"
-        canonical="/japa"
+        canonical="/digital-japa-counter"
         ogType="website"
         twitterCard="summary_large_image"
         schemas={[breadcrumb, howToSchema, faqSchema, softwareAppSchema]}

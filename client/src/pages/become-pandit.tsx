@@ -924,7 +924,7 @@ function JapaShowcaseSection() {
               </div>
             ))}
           </div>
-          <Link href="/japa" data-testid="link-try-japa">
+          <Link href="/digital-japa-counter" data-testid="link-try-japa">
             <Button
               size="lg"
               className="rounded-full px-7"
@@ -1008,7 +1008,7 @@ function VedicToolsSection() {
     { icon: ScrollText, name: "Panchang Dashboard", desc: "Tithi, nakshatra, yoga, karana — daily", href: "/panchang-calendar" },
     { icon: Compass, name: "Vastu Tool", desc: "Direction analysis for puja and home", href: "/vastu-compass" },
     { icon: Heart, name: "Kundali Matching", desc: "Guna milan and dosha check", href: "/astrology" },
-    { icon: GraduationCap, name: "Sankalp Generator", desc: "Custom sankalpa with gotra and nakshatra", href: "/japa" },
+    { icon: GraduationCap, name: "Sankalp Generator", desc: "Custom sankalpa with gotra and nakshatra", href: "/digital-japa-counter" },
     { icon: Calculator, name: "Dosha Calculator", desc: "Identify and remedy doshas", href: "/astrology" },
     { icon: Sparkles, name: "Samagri Calculator", desc: "Auto-list puja samagri by ritual", href: "/spiritual-essentials" },
   ];

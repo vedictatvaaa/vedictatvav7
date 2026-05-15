@@ -67,7 +67,7 @@ export function useShakeToJapa() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const path = (location.split("?")[0] || "").replace(/\/+$/, "") || "/";
-    const onJapa = path === "/japa" || path === "/jap" || path === "/japa-counter";
+    const onJapa = path === "/digital-japa-counter" || path === "/japa" || path === "/jap" || path === "/japa-counter";
     if (shakeToJapaDisabled()) return;
     if (!("DeviceMotionEvent" in window)) return;
 
@@ -106,7 +106,7 @@ export function useShakeToJapa() {
         lastFire.current = now;
         events.current = [];
         try { (navigator as any).vibrate?.(80); } catch {}
-        navigate("/japa");
+        navigate("/digital-japa-counter");
       }
     };
 
