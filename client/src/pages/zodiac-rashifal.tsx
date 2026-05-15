@@ -1,8 +1,12 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash, Calendar, Moon, Compass, Clock, ThumbsUp, ShieldAlert, Loader2 } from "lucide-react";
+import { Link } from "wouter";
+import { Download, Star, Sun, Sparkles, Gem, Heart, Briefcase, Wallet, Activity, BookOpen, Palette, Hash, Calendar, Moon, Compass, Clock, ThumbsUp, ShieldAlert, Loader2, Copy, Check, ArrowRight } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
+import PageSeo from "@/components/PageSeo";
 import { RelatedServicesSection } from "@/components/RelatedServices";
+import { useToast } from "@/hooks/use-toast";
+import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, abs } from "@/lib/seo-schemas";
 
 type DailyRashifalResponse = {
   date: string;
@@ -774,19 +778,38 @@ export default function ZodiacRashifal() {
 
   return (
     <div className="min-h-screen bg-white">
+      <PageSeo
+        title="Aaj Ka Rashifal & Zodiac Predictions — Daily, Weekly, Monthly, Yearly Horoscope | Vedic Tatva"
+        description="Read accurate daily rashifal in Hindi & English for all 12 zodiac signs. Aaj ka rashifal, weekly, monthly and yearly horoscope predictions covering love, career, finance and health — Vedic Jyotish & Western astrology, lucky number, lucky colour, lucky gemstone, kundli-based forecasts and astrology remedies."
+        keywords="zodiac signs, astrology predictions, horoscope today, daily horoscope, weekly horoscope, monthly horoscope, yearly horoscope, vedic astrology, rashifal today, rashifal in hindi, horoscope prediction, zodiac compatibility, zodiac personality traits, future prediction astrology, online astrology guidance, aaj ka rashifal, kal ka rashifal, saptahik rashifal, maasik rashifal, varshik rashifal, mesh rashi today, vrishabh rashi prediction, mithun rashifal, kark rashi today, singh rashi future, kanya rashi career, tula rashi love life, vrishchik rashi today, dhanu rashi prediction, makar rashi astrology, kumbh rashi rashifal, meen rashi today, Aries horoscope today, Taurus horoscope today, Gemini horoscope today, Cancer horoscope today, Leo horoscope today, Virgo horoscope today, Libra horoscope today, Scorpio horoscope today, Sagittarius horoscope today, Capricorn horoscope today, Aquarius horoscope today, Pisces horoscope today, today horoscope for all zodiac signs, accurate vedic astrology predictions, free daily rashifal online, zodiac sign future prediction, love marriage astrology prediction, career horoscope by zodiac sign, money horoscope today, health astrology predictions, lucky color and lucky number today, astrology remedies for zodiac signs, best zodiac compatibility guide, kundli based horoscope prediction, mercury retrograde effects, saturn transit predictions, rahu ketu transit, shani sade sati prediction, numerology and zodiac, moon sign astrology, vedic moon horoscope, lucky gemstone astrology, zodiac lucky color today"
+        canonical="/zodiac-rashifal"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbListSchema([
+            { name: "Home", url: abs("/") },
+            { name: "Zodiac & Rashifal", url: abs("/zodiac-rashifal") },
+          ]),
+          faqPageSchema([
+            { question: "What is the difference between Vedic and Western rashifal?", answer: "Vedic rashifal uses your Moon sign (Chandra Rashi) calculated from your birth time and is considered more accurate for personal predictions. Western horoscope uses your Sun sign based on date of birth alone." },
+            { question: "How accurate is aaj ka rashifal?", answer: "Daily rashifal gives the cosmic 'weather forecast' for your sign. For deeper life predictions, pair it with a full Vedic kundli reading." },
+            { question: "Is the daily horoscope free?", answer: "Yes — Vedic Tatva offers free daily, weekly, monthly and yearly rashifal for all 12 zodiac signs in both Vedic and Western systems." },
+          ], "rashifal-faq"),
+        ]}
+      />
       <section className="bg-[#6D2B35] text-white border-b border-[#D4AF37]/30">
         <div className="container mx-auto px-4 py-10 sm:py-14 max-w-4xl text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
             <div className="h-px w-8 bg-[#D4AF37]/60" />
             <Star className="h-3.5 w-3.5 text-[#D4AF37]" />
-            <span className="text-[#D4AF37] text-[11px] uppercase tracking-[0.25em] font-medium">Yearly Rashifal 2026</span>
+            <span className="text-[#D4AF37] text-[11px] uppercase tracking-[0.25em] font-medium">Aaj Ka Rashifal · Daily Horoscope · Yearly Forecast 2026</span>
             <div className="h-px w-8 bg-[#D4AF37]/60" />
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-3" data-testid="zodiac-heading">
-            Zodiac & Rashifal
+            Aaj Ka Rashifal & Zodiac Predictions
           </h1>
           <p className="text-white/75 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed mb-6">
-            Explore detailed yearly predictions for all 12 zodiac signs in both Vedic (Indian) and Western astrology systems.
+            Free daily, weekly, monthly and yearly horoscope for all 12 zodiac signs — accurate Vedic Jyotish and Western astrology predictions for love, career, finance and health.
           </p>
 
           <div className="inline-flex bg-white/5 rounded-md p-1 border border-[#D4AF37]/30" data-testid="zodiac-system-toggle">
@@ -1151,6 +1174,12 @@ export default function ZodiacRashifal() {
         </section>
       )}
 
+      <TrendingAstrologyTopics />
+
+      <MoreAstrologyTools />
+
+      <RashifalHashtagStrip />
+
       <PageAPlusContent
         eyebrow="Why Read Your Rashifal Daily"
         title="Aaj Ka Rashifal — Daily Horoscope for All 12 Zodiac Signs"
@@ -1192,5 +1221,183 @@ export default function ZodiacRashifal() {
         <RelatedServicesSection context="rashifal" currentPath="/zodiac-rashifal" />
       </div>
     </div>
+  );
+}
+
+const TRENDING_TOPICS: { icon: any; title: string; body: string }[] = [
+  { icon: Compass, title: "Mercury Retrograde Effects", body: "Communication slows, contracts get re-read, ex-lovers reappear. The Vedic remedy: chant Budh Beej Mantra and avoid signing fresh agreements during Vakri Budh." },
+  { icon: Clock, title: "Saturn Transit Predictions", body: "Shani Gochar through your rashi tests discipline and karma. Know which house Saturn is moving through and what it means for your career and dharma." },
+  { icon: Moon, title: "Rahu Ketu Transit", body: "The Nodal axis shifts every 18 months and rewires desire and detachment. See how the current Rahu-Ketu transit reshapes your moon sign." },
+  { icon: ShieldAlert, title: "Shani Sade Sati Prediction", body: "The 7.5-year Sade Sati phase touches Vrishchik, Dhanu and Makar rashis. Know your phase, the lessons, and the right Shani remedies." },
+  { icon: Hash, title: "Numerology & Zodiac", body: "Your moolank (birth number) and bhagyank (destiny number) combine with your rashi to reveal your most favourable career path and compatible partners." },
+  { icon: Moon, title: "Moon Sign Astrology", body: "In Vedic astrology your Janma Rashi (Moon sign) is more accurate than your Sun sign. Use our Janma Rashi calculator above to know yours." },
+  { icon: Gem, title: "Lucky Gemstone Astrology", body: "Each rashi has a primary gemstone — ruby for Singh, pearl for Kark, blue sapphire for Makar. Wear yours after a proper energising puja." },
+  { icon: Palette, title: "Zodiac Lucky Color Today", body: "Your rashi's lucky colour shifts daily based on the planetary lord of the day. Wearing the right shade aligns you with the day's energy." },
+];
+
+function TrendingAstrologyTopics() {
+  return (
+    <section className="py-12 bg-white" aria-labelledby="trending-astro-heading" data-testid="section-trending-astrology">
+      <div className="container mx-auto px-4">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-2">Trending in Vedic Astrology</div>
+          <h2 id="trending-astro-heading" className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-3">
+            Planetary transits shaping your rashifal right now
+          </h2>
+          <p className="text-[15px] text-[#5a4a3a]/80 leading-relaxed">
+            From Mercury retrograde to Shani Sade Sati, here's the Vedic context behind every aaj ka rashifal — the actual planetary movements driving your daily horoscope.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {TRENDING_TOPICS.map((t) => {
+            const Icon = t.icon;
+            return (
+              <div
+                key={t.title}
+                className="rounded-xl bg-[#FBF7EE] border border-[#D4AF37]/25 p-5 hover-elevate"
+                data-testid={`card-trending-${t.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center mb-3">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <h3 className="text-[15px] font-serif font-semibold text-[#6D2B35] mb-1.5 leading-snug">{t.title}</h3>
+                <p className="text-[13px] text-[#5a4a3a]/75 leading-relaxed">{t.body}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const MORE_TOOLS: { href: string; icon: any; title: string; body: string }[] = [
+  { href: "/ai-kundli", icon: BookOpen, title: "Free Kundli & Birth Chart", body: "Generate your full Vedic kundli with dasha, yogas and remedies in 30 seconds." },
+  { href: "/premium-kundli-pdf", icon: Sparkles, title: "Premium Kundli PDF", body: "60-page astrologer-grade horoscope PDF for marriage, career and life predictions." },
+  { href: "/panchang-calendar", icon: Calendar, title: "Panchang Today", body: "Tithi, nakshatra, yoga, karana, rahu kaal and abhijit muhurat for every date." },
+  { href: "/muhurat-finder", icon: Clock, title: "Shubh Muhurat Finder", body: "Find auspicious timings for marriage, griha pravesh, business, travel and namkaran." },
+  { href: "/astrology", icon: Compass, title: "Talk to a Vedic Astrologer", body: "1-on-1 consultation with verified jyotishis — call, chat or video, in your language." },
+  { href: "/ai-baby-names", icon: Heart, title: "Nakshatra Baby Names", body: "Auspicious baby names matched to your child's nakshatra and rashi at birth." },
+  { href: "/ai-palm-reading", icon: Star, title: "AI Palm Reading", body: "Upload a palm photo for an instant Hast Rekha reading — life, love and career lines." },
+  { href: "/vastu-compass", icon: Globe2Fallback, title: "Vastu Compass", body: "Check your home or office direction alignment for prosperity and harmony." },
+];
+
+function Globe2Fallback(props: any) {
+  return <Compass {...props} />;
+}
+
+function MoreAstrologyTools() {
+  return (
+    <section className="py-12 bg-[#FBF7EE] border-y border-[#D4AF37]/15" aria-labelledby="more-tools-heading" data-testid="section-more-astrology-tools">
+      <div className="container mx-auto px-4">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-2">More from Vedic Tatva</div>
+          <h2 id="more-tools-heading" className="text-2xl md:text-3xl font-serif font-semibold text-[#6D2B35] mb-3">
+            Beyond the daily rashifal — your full astrology toolkit
+          </h2>
+          <p className="text-[15px] text-[#5a4a3a]/80 leading-relaxed">
+            Kundli matching, panchang, muhurat, nakshatra naming and 1-on-1 astrologer consultations — every Vedic tool you need to plan your life.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {MORE_TOOLS.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="group block rounded-xl bg-white border border-[#D4AF37]/25 p-5 hover-elevate"
+                data-testid={`link-tool-${tool.href.replace(/^\//, "").replace(/\//g, "-")}`}
+              >
+                <div className="flex items-start gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-[15px] font-serif font-semibold text-[#6D2B35] leading-snug pt-1.5">{tool.title}</h3>
+                </div>
+                <p className="text-[13px] text-[#5a4a3a]/75 leading-relaxed mb-3">{tool.body}</p>
+                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] group-hover:gap-1.5 transition-all">
+                  Open <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const RASHIFAL_HASHTAGS = [
+  "#Rashifal", "#HoroscopeToday", "#ZodiacSigns", "#VedicAstrology", "#AajKaRashifal",
+  "#AstrologyPrediction", "#DailyHoroscope", "#SanatanAstrology", "#VedicTatva", "#LuckyNumberToday",
+];
+
+function RashifalHashtagStrip() {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState<string | null>(null);
+  const copyText = async (text: string, key: string, successTitle: string, successDesc: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(key);
+      toast({ title: successTitle, description: successDesc });
+      setTimeout(() => setCopied(null), 1400);
+    } catch {
+      toast({ title: "Copy failed", description: "Please copy manually", variant: "destructive" });
+    }
+  };
+  const handleCopy = (tag: string) => copyText(tag, tag, "Copied", `${tag} copied to clipboard`);
+  const handleCopyAll = () => copyText(RASHIFAL_HASHTAGS.join(" "), "all", "All hashtags copied", `${RASHIFAL_HASHTAGS.length} hashtags copied`);
+  return (
+    <section className="container mx-auto px-4 py-8" aria-labelledby="rashifal-hashtag-heading" data-testid="rashifal-hashtag-strip">
+      <div className="rounded-2xl bg-[#FBF7EE] border border-[#D4AF37]/25 p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.3em] font-semibold text-[#D4AF37] mb-1">Share your rashifal</div>
+            <h2 id="rashifal-hashtag-heading" className="text-xl font-serif font-semibold text-[#6D2B35] flex items-center gap-2">
+              <Hash className="w-5 h-5" /> Tag your reading
+            </h2>
+            <p className="text-[13px] text-[#5a4a3a]/70 mt-1">Tap any tag to copy — share your daily rashifal with friends and family.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopyAll}
+            className="inline-flex items-center justify-center h-9 px-4 rounded-md border border-[#6D2B35]/40 text-[#6D2B35] text-[13px] font-semibold hover-elevate"
+            data-testid="btn-copy-all-rashifal-hashtags"
+          >
+            {copied === "all" ? <Check className="w-4 h-4 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
+            Copy all
+          </button>
+        </div>
+        <div className="sr-only" role="status" aria-live="polite" data-testid="rashifal-hashtag-copy-status">
+          {copied ? (copied === "all" ? "All hashtags copied to clipboard" : `${copied} copied to clipboard`) : ""}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {RASHIFAL_HASHTAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => handleCopy(tag)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-white border border-[#D4AF37]/30 text-[13px] font-medium text-[#6D2B35] hover-elevate active-elevate-2"
+              data-testid={`hashtag-${tag.replace("#", "").toLowerCase()}`}
+            >
+              {copied === tag ? <Check className="w-3.5 h-3.5 text-[#D4AF37]" /> : null}
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
