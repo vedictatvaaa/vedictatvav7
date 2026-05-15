@@ -833,7 +833,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/sitemap.xml", (req, res) => {
     const baseUrl = sitemapBase(req);
     const today = new Date().toISOString().split("T")[0];
-    const sections = ["pages", "products", "categories", "people", "festivals", "blog", "puja-cities"];
+    const sections = ["pages", "products", "categories", "people", "festivals", "blog", "puja-cities", "sacred-library"];
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
     for (const sec of sections) {
       xml += `  <sitemap>\n    <loc>${baseUrl}/sitemap-${sec}.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n`;
@@ -918,6 +918,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/virtual-puja", priority: "0.7", changefreq: "monthly" },
       { loc: "/compare", priority: "0.5", changefreq: "monthly" },
       { loc: "/kathas", priority: "0.7", changefreq: "weekly" },
+      { loc: "/sacred-library", priority: "0.85", changefreq: "weekly" },
       { loc: "/membership", priority: "0.6", changefreq: "monthly" },
       // SEO keyword landing pages (top-level URLs)
       { loc: "/online-puja-booking", priority: "0.85", changefreq: "weekly" },
@@ -1244,6 +1245,28 @@ Sitemap: ${baseUrl}/sitemap.xml
           ? `    <image:image>\n      <image:loc>${escapeXml(sitemapAbsImg(baseUrl, post.coverImage))}</image:loc>\n      <image:title>${escapeXml(post.title)}</image:title>\n      <image:caption>${escapeXml(cleanText(post.excerpt) || post.title)}</image:caption>\n      <image:license>${escapeXml(imageLicenseUrl)}</image:license>\n    </image:image>\n`
           : "";
         xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}/blog/${post.slug}`)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.75</priority>\n${imageBlock}  </url>\n`;
+      }
+    } catch {}
+    xml += `</urlset>\n`;
+    res.type("application/xml").send(xml);
+  });
+
+  // ---- SEO: sitemap-sacred-library.xml — chalisas/mantras/aartis/stotras ----
+  app.get("/sitemap-sacred-library.xml", async (req, res) => {
+    const baseUrl = sitemapBase(req);
+    const today = new Date().toISOString().split("T")[0];
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+    xml += `  <url>\n    <loc>${baseUrl}/sacred-library</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
+    try {
+      const { db } = await import("./db");
+      const { sacredTexts } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const rows = await db.select({ slug: sacredTexts.slug, updatedAt: sacredTexts.updatedAt })
+        .from(sacredTexts)
+        .where(and(eq(sacredTexts.isPublished, true), eq(sacredTexts.status, "published")));
+      for (const r of rows) {
+        const lastmod = r.updatedAt ? new Date(r.updatedAt).toISOString().split("T")[0] : today;
+        xml += `  <url>\n    <loc>${baseUrl}/sacred-library/${escapeXml(r.slug)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       }
     } catch {}
     xml += `</urlset>\n`;

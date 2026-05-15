@@ -233,6 +233,7 @@ export function registerSacredLibraryRoutes(app: Express) {
   // ---------- Public ----------
   app.get("/api/sacred-texts", async (req: Request, res: Response) => {
     try {
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=86400");
       const deity = req.query.deity ? String(req.query.deity) : null;
       const type = req.query.type ? String(req.query.type) : null;
       const limit = Math.min(120, parseInt(String(req.query.limit || "60")) || 60);
@@ -264,6 +265,7 @@ export function registerSacredLibraryRoutes(app: Express) {
 
   app.get("/api/sacred-texts/deities", async (_req: Request, res: Response) => {
     try {
+      res.setHeader("Cache-Control", "public, max-age=600, stale-while-revalidate=86400");
       const rows = await db.select({
         deity: sacredTexts.deity,
         c: sql<number>`count(*)::int`,
@@ -283,8 +285,12 @@ export function registerSacredLibraryRoutes(app: Express) {
       if (!row || !row.isPublished || row.status !== "published") {
         return res.status(404).json({ message: "Not found" });
       }
-      db.update(sacredTexts).set({ viewCount: sql`${sacredTexts.viewCount} + 1` })
-        .where(eq(sacredTexts.id, row.id)).catch(() => {});
+      res.setHeader("Cache-Control", "public, max-age=600, stale-while-revalidate=86400");
+      // Skip view counter on hover/touch prefetches — only count real reader loads.
+      if (req.query.prefetch !== "1") {
+        db.update(sacredTexts).set({ viewCount: sql`${sacredTexts.viewCount} + 1` })
+          .where(eq(sacredTexts.id, row.id)).catch(() => {});
+      }
       res.json(row);
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });

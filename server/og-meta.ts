@@ -155,6 +155,16 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
       alt: "Vedic Tatva sacred kathas — audio-narrated Satyanarayan, Shiv, Hanuman stories",
     },
   },
+  {
+    match: /^\/sacred-library(\/|$|\?)/,
+    card: {
+      title: "Sacred Library — Chalisas, Mantras, Aartis, Stotras · Vedic Tatva",
+      description:
+        "Vagartha viva sampriktau — words and meaning, inseparable. Read every Chalisa, Mantra, Aarti, Katha and Stotra with Devanagari, transliteration, English meaning and Pandit-narrated audio.",
+      image: "/og/og-prime-services.jpg",
+      alt: "Vedic Tatva Sacred Library — chalisas, mantras, aartis, stotras with audio",
+    },
+  },
 
   // ── Astrology hub & AI tools ───────────────────────────────────────
   {

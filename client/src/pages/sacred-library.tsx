@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
+import PageSeo from "@/components/PageSeo";
+import { breadcrumbList, abs } from "@/lib/seo-schemas";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,9 +76,23 @@ function Catalog() {
     return t || null;
   });
 
+  const qc = useQueryClient();
   const deitiesQuery = useQuery<DeityCount[]>({
     queryKey: ["/api/sacred-texts/deities"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
+  const prefetchText = (slug: string) => {
+    qc.prefetchQuery({
+      queryKey: ["/api/sacred-texts", slug],
+      queryFn: async () => {
+        const r = await fetch(`/api/sacred-texts/${slug}?prefetch=1`);
+        if (!r.ok) throw new Error("Not found");
+        return r.json();
+      },
+      staleTime: 10 * 60 * 1000,
+    });
+  };
 
   const listQuery = useQuery<SacredTextLite[]>({
     queryKey: ["/api/sacred-texts", deity, type],
@@ -88,6 +104,8 @@ function Catalog() {
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const allTags = useMemo(() => {
@@ -113,12 +131,58 @@ function Catalog() {
     );
   }, [listQuery.data, search, activeTag]);
 
-  useEffect(() => {
-    document.title = "Sacred Library — Chalisas, Mantras, Kathas | Vedic Tatva";
-  }, []);
+  const seoTitle = "Sacred Library — Chalisas, Mantras, Aartis, Kathas, Stotras | Vedic Tatva";
+  const seoDesc = "Read every Hindu Chalisa, Mantra, Aarti, Katha and Stotra with Devanagari script, transliteration, English meaning and Pandit-narrated audio. Free Kindle-style sacred reader from Vedic Tatva.";
+  const itemListSchema = useMemo(() => {
+    const data = (listQuery.data || []).slice(0, 30);
+    if (data.length === 0) return null;
+    return {
+      id: "sacred-library-list",
+      payload: {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        name: "Sacred Library — Chalisas, Mantras, Aartis, Kathas, Stotras",
+        numberOfItems: data.length,
+        itemListElement: data.map((t, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: t.title,
+          url: abs(`/sacred-library/${t.slug}`),
+        })),
+      },
+    };
+  }, [listQuery.data]);
+  const collectionSchema = {
+    id: "sacred-library-collection",
+    payload: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: seoTitle,
+      description: seoDesc,
+      url: abs("/sacred-library"),
+      isPartOf: { "@type": "WebSite", name: "Vedic Tatva", url: abs("/") },
+      inLanguage: ["en-IN", "hi-IN"],
+    },
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: BEIGE }}>
+      <PageSeo
+        title={seoTitle}
+        description={seoDesc}
+        keywords="hindu chalisa, hanuman chalisa lyrics, sanskrit mantra meaning, aarti pdf, durga stotra, ram katha, vedic library online"
+        canonical="/sacred-library"
+        ogType="website"
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbList([
+            { name: "Home", url: abs("/") },
+            { name: "Sacred Library", url: abs("/sacred-library") },
+          ]),
+          collectionSchema,
+          itemListSchema,
+        ]}
+      />
       <header className="py-12 px-4 text-center border-b" style={{ borderColor: BORDER }}>
         <h1 className="font-serif text-4xl md:text-5xl font-bold mb-3" style={{ color: MAROON }}>
           Sacred Library
@@ -242,7 +306,13 @@ function Catalog() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((t) => (
             <Link key={t.id} href={`/sacred-library/${t.slug}`}>
-              <Card className="h-full cursor-pointer hover-elevate" style={{ borderColor: BORDER, backgroundColor: "#fff" }} data-testid={`card-text-${t.slug}`}>
+              <Card
+                className="h-full cursor-pointer hover-elevate"
+                style={{ borderColor: BORDER, backgroundColor: "#fff" }}
+                data-testid={`card-text-${t.slug}`}
+                onMouseEnter={() => prefetchText(t.slug)}
+                onTouchStart={() => prefetchText(t.slug)}
+              >
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <Badge variant="outline" style={{ borderColor: GOLD, color: MAROON }}>{t.deity}</Badge>
@@ -297,6 +367,8 @@ function Reader({ slug }: { slug: string }) {
       if (!res.ok) throw new Error("Not found");
       return res.json();
     },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const [fontSize, setFontSize] = useState<number>(() => {
@@ -311,11 +383,6 @@ function Reader({ slug }: { slug: string }) {
   useEffect(() => { window.localStorage.setItem("sl-font-size", String(fontSize)); }, [fontSize]);
   useEffect(() => { window.localStorage.setItem("sl-script-mode", scriptMode); }, [scriptMode]);
 
-  useEffect(() => {
-    if (textQuery.data) {
-      document.title = textQuery.data.metaTitle || `${textQuery.data.title} — Vedic Tatva`;
-    }
-  }, [textQuery.data]);
 
   const verses = useMemo(() => {
     const t = textQuery.data;
@@ -343,8 +410,58 @@ function Reader({ slug }: { slug: string }) {
   const showTrans = (scriptMode === "all" || scriptMode === "transliteration") && !!t.transliteration;
   const showMean = (scriptMode === "all" || scriptMode === "translation") && !!t.translation;
 
+  const seoTitle = t.metaTitle || `${t.title} — Lyrics, Meaning & Audio | Vedic Tatva`;
+  const seoDesc = t.metaDescription
+    || t.excerpt
+    || `Read the full ${t.title} (${TYPE_LABEL[t.textType] || t.textType} of ${t.deity}) in Devanagari with English transliteration, meaning and Pandit-narrated audio. Free on Vedic Tatva.`;
+  const creativeWorkSchema = {
+    id: "sacred-text",
+    payload: {
+      "@context": "https://schema.org",
+      "@type": "CreativeWork",
+      name: t.title,
+      headline: t.title,
+      description: seoDesc,
+      url: abs(`/sacred-library/${t.slug}`),
+      inLanguage: t.language || "sa",
+      genre: TYPE_LABEL[t.textType] || t.textType,
+      about: { "@type": "Thing", name: t.deity },
+      ...(t.audioUrl
+        ? {
+            associatedMedia: {
+              "@type": "AudioObject",
+              contentUrl: t.audioUrl.startsWith("http") ? t.audioUrl : abs(t.audioUrl),
+              encodingFormat: "audio/mpeg",
+              name: `${t.title} — audio`,
+            },
+          }
+        : {}),
+      isPartOf: { "@type": "CollectionPage", name: "Vedic Tatva Sacred Library", url: abs("/sacred-library") },
+      publisher: { "@type": "Organization", name: "Vedic Tatva", url: abs("/") },
+      keywords: (t.tags || []).join(", ") || undefined,
+    },
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: BEIGE }}>
+      <PageSeo
+        title={seoTitle}
+        description={seoDesc}
+        keywords={(t.tags || []).join(", ")}
+        canonical={`/sacred-library/${t.slug}`}
+        ogType="article"
+        ogImage={t.coverImage || undefined}
+        twitterCard="summary_large_image"
+        schemas={[
+          breadcrumbList([
+            { name: "Home", url: abs("/") },
+            { name: "Sacred Library", url: abs("/sacred-library") },
+            { name: t.deity, url: abs(`/sacred-library?deity=${encodeURIComponent(t.deity)}`) },
+            { name: t.title, url: abs(`/sacred-library/${t.slug}`) },
+          ]),
+          creativeWorkSchema,
+        ]}
+      />
       {/* Sticky reader controls */}
       <div className="sticky top-0 z-50 border-b backdrop-blur" style={{ borderColor: BORDER, backgroundColor: "rgba(251,247,238,0.95)" }}>
         <div className="max-w-3xl mx-auto px-4 py-3 flex flex-row items-center gap-2 flex-wrap">
