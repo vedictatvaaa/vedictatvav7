@@ -845,9 +845,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/", priority: "1.0", changefreq: "daily" },
       { loc: "/spiritual-essentials", priority: "0.8", changefreq: "weekly" },
       { loc: "/shop", priority: "0.8", changefreq: "weekly" },
-      { loc: "/pandits", priority: "0.8", changefreq: "weekly" },
-      { loc: "/puja", priority: "0.8", changefreq: "weekly" },
-      { loc: "/pind-daan", priority: "0.85", changefreq: "weekly" },
+      { loc: "/online-pandit-booking", priority: "0.9", changefreq: "weekly" },
+      { loc: "/online-puja-booking", priority: "0.9", changefreq: "weekly" },
+      { loc: "/online-pind-daan", priority: "0.9", changefreq: "weekly" },
       // City landing pages use the hyphenated route convention
       // (`/pind-daan-gaya` etc.), not slash. The earlier slash variants
       // here pointed at non-existent URLs and were silently 404-ing in GSC.
@@ -905,7 +905,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/careers", priority: "0.5", changefreq: "monthly" },
       { loc: "/become-pandit", priority: "0.5", changefreq: "monthly" },
       { loc: "/become-astrologer", priority: "0.5", changefreq: "monthly" },
-      { loc: "/panchang-calendar", priority: "0.7", changefreq: "daily" },
+      { loc: "/today-panchang", priority: "0.85", changefreq: "daily" },
       { loc: "/spiritual-dashboard", priority: "0.6", changefreq: "monthly" },
       { loc: "/virtual-puja", priority: "0.7", changefreq: "monthly" },
       { loc: "/compare", priority: "0.5", changefreq: "monthly" },
@@ -928,7 +928,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/marriage-puja", priority: "0.85", changefreq: "weekly" },
       { loc: "/pitra-dosh-puja", priority: "0.8", changefreq: "weekly" },
       { loc: "/maha-mrityunjaya-jaap", priority: "0.85", changefreq: "weekly" },
-      { loc: "/zodiac-rashifal", priority: "0.9", changefreq: "daily" },
+      { loc: "/daily-rashifal", priority: "0.9", changefreq: "daily" },
       { loc: "/daily-rashifal", priority: "0.9", changefreq: "daily" },
       { loc: "/weekly-rashifal", priority: "0.85", changefreq: "weekly" },
       { loc: "/monthly-horoscope", priority: "0.85", changefreq: "monthly" },

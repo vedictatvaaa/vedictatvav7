@@ -782,7 +782,7 @@ export default function ZodiacRashifal() {
         title="Rashifal & Zodiac Hub — All 12 Sign Predictions in One Place | Vedic Tatva"
         description="Free Vedic + Western rashifal hub for all 12 zodiac signs. Pick your rashi to read love, career, money and health predictions, find compatible signs, your janma nakshatra and your lucky pack — start here."
         keywords="rashifal, zodiac signs, vedic astrology, horoscope hub, all zodiac signs predictions, rashi predictions, vedic jyotish, indian astrology, vedic vs western astrology, mesh rashi, vrishabh rashi, mithun rashi, kark rashi, singh rashi, kanya rashi, tula rashi, vrishchik rashi, dhanu rashi, makar rashi, kumbh rashi, meen rashi, Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces, janma rashi calculator, moon sign astrology, vedic horoscope guide"
-        canonical="/zodiac-rashifal"
+        canonical="/daily-rashifal"
         ogType="website"
         twitterCard="summary_large_image"
         schemas={[

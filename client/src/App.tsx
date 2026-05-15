@@ -678,11 +678,14 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/pandits" component={PanditDirectory} />
+          <Route path="/online-pandit-booking" component={PanditDirectory} />
           <Route path="/puja" component={PujaBooking} />
+          <Route path="/online-puja-booking" component={PujaBooking} />
           <Route path="/puja/:type/:city" component={PujaCity} />
           <Route path="/puja/:slug">{() => <ServiceLanding vertical="puja" pattern="/puja/:slug" />}</Route>
           <Route path="/tools/tithi-calculator" component={TithiCalculator} />
           <Route path="/pind-daan" component={PindDaanHub} />
+          <Route path="/online-pind-daan" component={PindDaanHub} />
           <Route path="/pind-daan-gaya" component={PindDaanGayaLanding} />
           <Route path="/pind-daan-kashi" component={PindDaanKashiLanding} />
           <Route path="/pind-daan-haridwar" component={PindDaanHaridwarLanding} />
@@ -731,6 +734,7 @@ function Router() {
           <Route path="/become-pandit" component={BecomePandit} />
           <Route path="/become-astrologer" component={BecomeAstrologer} />
           <Route path="/panchang-calendar" component={PanchangCalendar} />
+          <Route path="/today-panchang" component={PanchangCalendar} />
           <Route path="/spiritual-dashboard" component={SpiritualDashboard} />
           <Route path="/virtual-puja" component={VirtualPuja} />
           <Route path="/compare" component={ProductCompare} />
@@ -758,6 +762,7 @@ function Router() {
           <Route path="/jap"><JapaAliasRedirect /></Route>
           <Route path="/japa-counter"><JapaAliasRedirect /></Route>
           <Route path="/zodiac-rashifal" component={ZodiacRashifal} />
+          <Route path="/daily-rashifal" component={ZodiacRashifal} />
           <Route path="/temple-tourism" component={TempleTourism} />
           <Route path="/scripture-search" component={ScriptureSearch} />
           <Route path="/route-planner" component={RoutePlanner} />

@@ -323,12 +323,12 @@ export default function Navbar() {
   }, [searchOpen]);
 
   const links = [
-    { href: "/pandits", label: t.nav.bookPandit, icon: Users },
-    { href: "/puja", label: t.nav.bookPuja, icon: Flame },
-    { href: "/pind-daan", label: "Pind Daan", icon: Flame },
+    { href: "/online-pandit-booking", label: t.nav.bookPandit, icon: Users },
+    { href: "/online-puja-booking", label: t.nav.bookPuja, icon: Flame },
+    { href: "/online-pind-daan", label: "Pind Daan", icon: Flame },
     { href: "/astrology", label: t.nav.astrology, icon: Sparkles },
-    { href: "/zodiac-rashifal", label: t.nav.zodiac, icon: Star },
-    { href: "/panchang-calendar", label: t.nav.panchang, icon: Calendar },
+    { href: "/daily-rashifal", label: t.nav.zodiac, icon: Star },
+    { href: "/today-panchang", label: t.nav.panchang, icon: Calendar },
   ];
 
   const navSections: { title: string; items: { href: string; label: string; icon: any; comingSoon?: boolean }[] }[] = [
@@ -345,10 +345,10 @@ export default function Navbar() {
     {
       title: "Puja & Pandit",
       items: [
-        { href: "/pandits", label: t.nav.bookPandit, icon: Users },
-        { href: "/puja", label: t.nav.bookPuja, icon: Flame },
+        { href: "/online-pandit-booking", label: t.nav.bookPandit, icon: Users },
+        { href: "/online-puja-booking", label: t.nav.bookPuja, icon: Flame },
         { href: "/virtual-puja", label: "Virtual Puja", icon: Sunrise },
-        { href: "/pind-daan", label: "Pind Daan", icon: Flame },
+        { href: "/online-pind-daan", label: "Pind Daan", icon: Flame },
       ],
     },
     {
@@ -358,13 +358,13 @@ export default function Navbar() {
         { href: "/ai-kundli", label: "AI Kundli", icon: Star },
         { href: "/ai-baby-names", label: "Baby Names", icon: Heart },
         { href: "/ai-palm-reading", label: "Palm Reading", icon: Wand2 },
-        { href: "/zodiac-rashifal", label: t.nav.zodiac, icon: Star },
+        { href: "/daily-rashifal", label: t.nav.zodiac, icon: Star },
       ],
     },
     {
       title: "Calendar & Remedies",
       items: [
-        { href: "/panchang-calendar", label: t.nav.panchang, icon: Calendar },
+        { href: "/today-panchang", label: t.nav.panchang, icon: Calendar },
         { href: "/muhurat-finder", label: "Muhurat Finder", icon: Calendar },
         { href: "/vastu-compass", label: "Vastu Compass", icon: MapPin },
       ],

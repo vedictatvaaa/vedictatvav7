@@ -124,7 +124,7 @@ function CityChooser() {
         title="Book a Verified Vedic Pandit Online — Same-Day Puja Booking | Vedic Tatva"
         description="Book a verified Vedic pandit online for Satyanarayan Puja, Griha Pravesh, Wedding, Rudrabhishek, Mundan, Namkaran, Navagraha Shanti and 50+ ceremonies across Delhi NCR, Mumbai, Bengaluru, Pune, Chennai, Kolkata, Hyderabad and 75+ Indian cities. Same-day booking, transparent dakshina, multi-language pandits (Sanskrit, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada). 100% identity-verified, scripture-trained Brahmin pandits."
         keywords="book pandit online, pandit near me, verified pandit booking, brahmin pandit, satyanarayan puja pandit, griha pravesh pandit, wedding pandit, rudrabhishek pandit, mundan pandit, namkaran pandit, navagraha shanti, same-day pandit, sanskrit pandit, hindi pandit, tamil pandit, marathi pandit, telugu pandit, bengali pandit, gujarati pandit, pandit in delhi, pandit in mumbai, pandit in bangalore, pandit in pune, pandit in chennai, pandit in hyderabad, pandit in kolkata"
-        canonical="/pandits"
+        canonical="/online-pandit-booking"
         ogType="website"
         twitterCard="summary_large_image"
         schemas={[
@@ -477,7 +477,7 @@ function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: strin
         title={`Verified Vedic Pandits in ${cityLabel} — Same-Day Puja Booking | Vedic Tatva`}
         description={`Book a verified Vedic pandit in ${cityLabel} for Satyanarayan Puja, Griha Pravesh, Wedding, Rudrabhishek, Mundan, Namkaran, Navagraha Shanti and 50+ ceremonies. Same-day booking, transparent pricing, multi-language pandits (Sanskrit, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati). Identity-verified, scripture-trained Brahmin pandits with reviews.`}
         keywords={`pandit in ${cityLabel.toLowerCase()}, ${cityLabel.toLowerCase()} pandit booking, verified pandit ${cityLabel.toLowerCase()}, same-day pandit, satyanarayan puja, griha pravesh, wedding pandit, rudrabhishek, brahmin pandit ${cityLabel.toLowerCase()}`}
-        canonical={`/pandits?city=${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}`}
+        canonical={`/online-pandit-booking?city=${(cityLabel || '').toLowerCase().replace(/\s+/g, '-')}`}
         ogType="website"
         twitterCard="summary_large_image"
         schemas={[

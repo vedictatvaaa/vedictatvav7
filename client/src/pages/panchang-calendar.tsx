@@ -507,7 +507,7 @@ export default function PanchangCalendar() {
       <PageSeo
         title="Hindu Panchang Calendar — Tithi, Nakshatra, Festivals & Muhurat | Vedic Tatva"
         description="Free Hindu Panchang calendar with daily tithi, nakshatra, yoga, karana, sunrise/sunset, festivals, vrat days and shubh muhurat — covering every month of the Hindu year."
-        canonical="/panchang-calendar"
+        canonical="/today-panchang"
       />
       <section className="bg-[#6D2B35] text-white relative border-b border-[#D4AF37]/30">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" aria-hidden="true" />

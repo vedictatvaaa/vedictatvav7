@@ -783,7 +783,7 @@ export function PindDaanHub() {
       <PageSeo
         title="Online Pind Daan, Tarpan & Shradh — Gaya, Kashi, Haridwar | Vedic Tatva"
         description="Book authentic Pind Daan, Tarpan and Shradh online at Gaya, Kashi, Haridwar or as a yearly remote service from anywhere. Verified Tirth Purohits, live video Sankalp, full proof and worldwide prasad delivery."
-        canonical="/pind-daan"
+        canonical="/online-pind-daan"
         twitterCard="summary_large_image"
         schemas={[faqPage(HUB_FAQS.map((f) => ({ question: f.q, answer: f.a })))]}
       />

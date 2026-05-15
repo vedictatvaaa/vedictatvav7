@@ -46,10 +46,10 @@ const popularCities = [
 ];
 
 const popularSearches = [
-  { href: "/puja", label: "Online Puja Booking" },
-  { href: "/pandits", label: "Pandit Near Me" },
+  { href: "/online-puja-booking", label: "Online Puja Booking" },
+  { href: "/online-pandit-booking", label: "Pandit Near Me" },
   { href: "/astrology", label: "Free Astrology Consultation" },
-  { href: "/panchang-calendar", label: "Today's Panchang" },
+  { href: "/today-panchang", label: "Today's Panchang" },
   { href: "/muhurat-finder", label: "Shubh Muhurat" },
   { href: "/spiritual-essentials?category=rudraksha", label: "Original Rudraksha" },
   { href: "/virtual-puja", label: "Virtual Puja Online" },
@@ -97,8 +97,8 @@ export default function Footer() {
   };
 
   const services = [
-    { href: "/pandits", label: t.footer.findPandit, testid: "footer-link-pandits" },
-    { href: "/puja", label: t.footer.bookPuja, testid: "footer-link-puja" },
+    { href: "/online-pandit-booking", label: t.footer.findPandit, testid: "footer-link-pandits" },
+    { href: "/online-puja-booking", label: t.footer.bookPuja, testid: "footer-link-puja" },
     { href: "/virtual-puja", label: t.footer.virtualPuja, testid: "footer-link-virtual-puja" },
     { href: "/astrology", label: t.footer.astrology, testid: "footer-link-astrology" },
     { href: "/donations", label: t.footer.donations, testid: "footer-link-donations" },
@@ -106,7 +106,7 @@ export default function Footer() {
   ];
 
   const tools = [
-    { href: "/panchang-calendar", label: t.footer.panchangCalendar, testid: "footer-link-panchang" },
+    { href: "/today-panchang", label: t.footer.panchangCalendar, testid: "footer-link-panchang" },
     { href: "/muhurat-finder", label: t.footer.muhuratFinder, testid: "footer-link-muhurat" },
     { href: "/vastu-compass", label: t.footer.vastuCompass, testid: "footer-link-vastu" },
     { href: "/kathas", label: t.footer.sacredKathas, testid: "footer-link-kathas" },

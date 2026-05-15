@@ -76,7 +76,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
 
   // ── Pandit booking ─────────────────────────────────────────────────
   {
-    match: `${PREFIX}/pandits`,
+    match: /^\/(online-pandit-booking|pandits)(\/|$|\?)/,
     card: {
       title: "Book a Verified Vedic Pandit Near You · Vedic Tatva",
       description:
@@ -86,7 +86,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
   {
-    match: `${PREFIX}/puja`,
+    match: /^\/(online-puja-booking|puja)(\/|$|\?)/,
     card: {
       title: "Online Puja with Live Vedic Pandits · Vedic Tatva",
       description:
@@ -100,7 +100,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
   // Matches /pind-daan, /pind-daan/anything, AND the hyphenated city
   // landing routes /pind-daan-gaya|kashi|haridwar.
   {
-    match: /^\/pind-daan(-(gaya|kashi|haridwar))?(\/|$)/,
+    match: /^\/(online-pind-daan|pind-daan(-(gaya|kashi|haridwar))?)(\/|$)/,
     card: {
       title: "Sacred Pind Daan in Gaya, Kashi & Haridwar · Vedic Tatva",
       description:
@@ -286,7 +286,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
 
   // ── Tools & calendars ──────────────────────────────────────────────
   {
-    match: "/panchang-calendar",
+    match: /^\/(today-panchang|panchang-calendar)(\/|$|\?)/,
     card: {
       title: "Free Vedic Panchang & Tithi Calendar 2026 · Vedic Tatva",
       description:
@@ -297,7 +297,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
   },
   // ── Rashifal / Horoscope hub + 9 zodiac SEO landings ──────────────
   {
-    match: "/zodiac-rashifal",
+    match: /^\/(daily-rashifal|zodiac-rashifal)(\/|$|\?)/,
     card: {
       title: "Aaj Ka Rashifal & Zodiac Predictions · Vedic Tatva",
       description:
