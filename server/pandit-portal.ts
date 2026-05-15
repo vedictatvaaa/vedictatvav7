@@ -145,6 +145,33 @@ export function registerPanditPortalRoutes(app: Express) {
     res.json({ ok: true });
   });
 
+  // On-leave toggle. Persists to DB so the public listing + admin tools see
+  // it across devices; complements (does not replace) the in-memory heartbeat.
+  app.post("/api/pandit/availability/leave", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    try {
+      const schema = z.object({
+        onLeave: z.boolean(),
+        leaveNote: z.string().max(240).optional().or(z.literal("")),
+      });
+      const body = schema.parse(req.body || {});
+      const note = (body.leaveNote || "").trim();
+      const now = new Date();
+      await db.update(pandits)
+        .set({
+          onLeave: body.onLeave,
+          leaveNote: body.onLeave ? (note || null) : null,
+          leaveStartedAt: body.onLeave ? now : null,
+        })
+        .where(eq(pandits.id, req.panditId!));
+      // While on leave, drop any active heartbeat so the public "online" dot
+      // turns off immediately without waiting for the 5-min TTL.
+      if (body.onLeave) heartbeats.delete(req.panditId!);
+      res.json({ ok: true, onLeave: body.onLeave, leaveNote: body.onLeave ? (note || null) : null });
+    } catch (e: any) {
+      res.status(400).json({ error: e?.message || "Invalid request" });
+    }
+  });
+
   // ----- Bookings list (calendar + dashboard) -----
   app.get("/api/pandit/bookings", panditAuthMiddleware, async (req: PanditRequest, res) => {
     try {

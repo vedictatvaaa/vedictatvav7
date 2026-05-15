@@ -2069,9 +2069,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         const expired = p.tierExpiresAt && new Date(p.tierExpiresAt as any) < new Date();
         const effectiveTier = expired ? "free" : ((p.tier || "free").toLowerCase() === "platinum" ? "guru_elite" : (p.tier || "free").toLowerCase());
         // Strip contact + credential fields from the public bulk list,
-        // mirroring publicPanditDto used on the single-id endpoint.
-        const { phone: _ph, email: _em, passwordHash: _pw, lastLoginAt: _ll, ...safe } = p as any;
-        return { ...safe, distance, tier: effectiveTier, isOnline: isPanditOnline(p.id) };
+        // mirroring publicPanditDto used on the single-id endpoint. Also
+        // strip the internal leaveNote — the public listing only needs the
+        // boolean onLeave to render an "Off duty" badge, not the team note.
+        const { phone: _ph, email: _em, passwordHash: _pw, lastLoginAt: _ll, leaveNote: _ln, ...safe } = p as any;
+        // On-leave pandits never show as "online" publicly, regardless of
+        // any stale heartbeat the in-memory map may still have.
+        const isOnline = !p.onLeave && isPanditOnline(p.id);
+        return { ...safe, distance, tier: effectiveTier, isOnline };
       })
       .filter(p => passesReach(p, p.distance))
       .sort((a, b) => {
@@ -2084,11 +2089,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(out);
   });
 
-  // Public-safe pandit DTO — strips contact/credential fields.
+  // Public-safe pandit DTO — strips contact/credential fields. The internal
+  // leaveNote is also stripped; the public boolean `onLeave` is preserved
+  // so the listing card can render an "Off duty" badge.
   function publicPanditDto(p: any, isOnline: boolean) {
     if (!p) return p;
-    const { phone, email, passwordHash, lastLoginAt, ...safe } = p;
-    return { ...safe, isOnline };
+    const { phone, email, passwordHash, lastLoginAt, leaveNote, ...safe } = p;
+    const effectiveOnline = !p.onLeave && isOnline;
+    return { ...safe, isOnline: effectiveOnline };
   }
 
   app.get("/api/pandits/:id", async (req, res) => {

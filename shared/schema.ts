@@ -256,6 +256,13 @@ export const pandits = pgTable("pandits", {
   // pandit (incl. seeded fixtures) gets immediate access; admin can revoke.
   cardIssued: boolean("card_issued").notNull().default(true),
   cardIssuedAt: timestamp("card_issued_at"),
+  // Server-synced leave status. When true, the pandit is hidden from the
+  // public "Online now" indicator and the bulk listing surfaces an off-duty
+  // signal. Set + cleared via /api/pandit/availability/leave from the
+  // pandit portal Settings tab.
+  onLeave: boolean("on_leave").notNull().default(false),
+  leaveNote: text("leave_note"),
+  leaveStartedAt: timestamp("leave_started_at"),
 }, (t) => ({
   cityIdx: index("pandits_city_idx").on(t.city),
   stateIdx: index("pandits_state_idx").on(t.state),

@@ -75,22 +75,32 @@ export default function PanditPortalPage() {
   const [showPwdDlg, setShowPwdDlg] = useState(false);
   const [newPwd, setNewPwd] = useState("");
   const [calMonth, setCalMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [onLeave, setOnLeave] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("pandit:onLeave") === "1";
-  });
-  const [leaveNote, setLeaveNote] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return window.localStorage.getItem("pandit:leaveNote") || "";
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("pandit:onLeave", onLeave ? "1" : "0");
-  }, [onLeave]);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("pandit:leaveNote", leaveNote);
-  }, [leaveNote]);
+  // Server-synced leave status — hydrated from /api/pandit/me below and
+  // round-tripped via /api/pandit/availability/leave so it propagates to
+  // the public listing and other devices.
+  const [onLeave, setOnLeaveLocal] = useState<boolean>(false);
+  const [leaveNote, setLeaveNoteLocal] = useState<string>("");
+  const [leaveSaving, setLeaveSaving] = useState(false);
+  const saveLeave = async (next: { onLeave: boolean; leaveNote?: string }) => {
+    setLeaveSaving(true);
+    try {
+      const r = await panditApi("POST", "/api/pandit/availability/leave", {
+        onLeave: next.onLeave,
+        leaveNote: next.onLeave ? (next.leaveNote ?? leaveNote).slice(0, 240) : "",
+      });
+      setOnLeaveLocal(!!r?.onLeave);
+      setLeaveNoteLocal(r?.leaveNote || "");
+    } catch {
+      // Surface a soft retry hint by leaving the prior state intact; the
+      // settings panel exposes the toggle so the user can try again.
+    } finally {
+      setLeaveSaving(false);
+    }
+  };
+  const setOnLeave = (next: boolean) => { void saveLeave({ onLeave: next }); };
+  const commitLeaveNote = () => {
+    if (onLeave) void saveLeave({ onLeave: true, leaveNote });
+  };
 
   // Initial load
   useEffect(() => {
@@ -100,6 +110,8 @@ export default function PanditPortalPage() {
     }
     panditApi("GET", "/api/pandit/me").then((r) => {
       setMe(r.pandit);
+      setOnLeaveLocal(!!r.pandit?.onLeave);
+      setLeaveNoteLocal(r.pandit?.leaveNote || "");
       if (r.mustChangePassword) setShowPwdDlg(true);
     }).catch(() => { clearPanditToken(); setLocation("/pandit/login"); });
     refreshAll();
@@ -376,8 +388,9 @@ export default function PanditPortalPage() {
                         role="switch"
                         aria-checked={onLeave}
                         aria-label={onLeave ? "Currently on leave — click to resume accepting bookings" : "Currently accepting bookings — click to mark on leave"}
-                        onClick={() => setOnLeave(v => !v)}
-                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${onLeave ? "bg-[#6D2B35]" : "bg-stone-300"}`}
+                        onClick={() => setOnLeave(!onLeave)}
+                        disabled={leaveSaving}
+                        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${onLeave ? "bg-[#6D2B35]" : "bg-stone-300"} ${leaveSaving ? "opacity-60 cursor-wait" : ""}`}
                         data-testid="toggle-on-leave"
                       >
                         <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${onLeave ? "translate-x-6" : "translate-x-1"}`} />
@@ -389,17 +402,18 @@ export default function PanditPortalPage() {
                         <textarea
                           id="leave-note"
                           value={leaveNote}
-                          onChange={(e) => setLeaveNote(e.target.value.slice(0, 240))}
+                          onChange={(e) => setLeaveNoteLocal(e.target.value.slice(0, 240))}
+                          onBlur={commitLeaveNote}
                           placeholder="e.g. Out for personal yatra till 25 Mar — please redirect urgent pujas to Pandit Sharma."
                           maxLength={240}
                           className="w-full min-h-[64px] resize-none rounded-md border border-[#D4AF37]/30 bg-white p-2.5 text-[12px] text-[#4a1a22] focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30"
                           data-testid="textarea-leave-note"
                         />
-                        <p className="text-[10px] text-[#5a4a3a]/55 text-right">{leaveNote.length}/240</p>
+                        <p className="text-[10px] text-[#5a4a3a]/55 text-right">{leaveNote.length}/240 · saves when you click away</p>
                       </div>
                     )}
                     <p className="text-[10.5px] text-[#5a4a3a]/55 mt-3 leading-relaxed">
-                      Note: this status is currently visible only inside your portal — sync to public listings is coming soon. For now, please also inform the team via WhatsApp so we can route urgent customer requests.
+                      Saved on the server and synced across your devices. Your "Online now" dot is hidden from the public listing within seconds of going on leave.
                     </p>
                   </div>
 
