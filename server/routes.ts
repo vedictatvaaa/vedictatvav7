@@ -12,6 +12,7 @@ import fs from "fs";
 import { auditSite, auditPage } from "./seo-auditor";
 import { autoFillMissingSeo, generateSeoForPage, KNOWN_SEO_PATHS } from "./seo-ai";
 import { pingIndexNow, pingIndexNowAsync, pingSitemap, getIndexNowKey } from "./indexnow";
+import { notifyPublish, notifyUnpublish, getGoogleQuotaState } from "./publish-notify";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
 import { adminAuthMiddleware as sharedAdminAuth, validateAdminSession as sharedValidateAdminSession } from "./admin-auth";
 import { startDeploy, startRollback, getDeployState, getDeployHistory, isDeployEnabled } from "./deploy-runner";
@@ -1357,6 +1358,23 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Manual on-demand push to Google Indexing API + IndexNow.
+  // Body: { urls: string[] } — paths or absolute URLs.
+  app.post("/api/admin/seo/notify", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const urls = Array.isArray(req.body?.urls) ? req.body.urls.filter((u: any) => typeof u === "string") : [];
+      if (urls.length === 0) return res.status(400).json({ message: "urls[] required" });
+      notifyPublish(req, urls, { pingSitemap: true });
+      res.json({ ok: true, queued: urls.length, googleQuota: getGoogleQuotaState() });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  app.get("/api/admin/seo/notify-status", adminAuthMiddleware, async (_req, res) => {
+    res.json({ google: getGoogleQuotaState() });
+  });
+
   app.post("/api/admin/seo/ping", adminAuthMiddleware, async (req, res) => {
     try {
       const baseUrl = process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
@@ -2182,9 +2200,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (typeof data.description === "string") data.description = sanitizeProductHtml(data.description);
     if (typeof data.richDescription === "string") data.richDescription = sanitizeProductHtml(data.richDescription);
     const product = await storage.createProduct(data);
-    // Notify search engines of new product (best-effort)
-    const baseUrl = process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
-    pingIndexNowAsync([`${baseUrl}/product/${product.slug || product.id}`, `${baseUrl}/sitemap.xml`]);
+    notifyPublish(req, [`/product/${product.slug || product.id}`], { pingSitemap: true });
     res.status(201).json(product);
   });
 
@@ -2196,14 +2212,15 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (typeof data.richDescription === "string") data.richDescription = sanitizeProductHtml(data.richDescription);
     const product = await storage.updateProduct(Number(req.params.id), data);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    const baseUrl = process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
-    pingIndexNowAsync([`${baseUrl}/product/${product.slug || product.id}`]);
+    notifyPublish(req, [`/product/${product.slug || product.id}`]);
     res.json(product);
   });
 
   app.delete("/api/products/:id", adminAuthMiddleware, async (req, res) => {
+    const existing = await storage.getProduct(Number(req.params.id));
     const deleted = await storage.deleteProduct(Number(req.params.id));
     if (!deleted) return res.status(404).json({ message: "Product not found" });
+    if (existing) notifyUnpublish(req, [`/product/${existing.slug || existing.id}`]);
     res.json({ message: "Product deleted" });
   });
 
@@ -2404,6 +2421,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const parsed = validate(insertPanditSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
     const pandit = await storage.createPandit(parsed.data);
+    notifyPublish(req, [`/pandit/${pandit.id}`, `/pandits`], { pingSitemap: true });
     res.status(201).json(pandit);
   });
 
@@ -2412,12 +2430,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
     const pandit = await storage.updatePandit(Number(req.params.id), partial.data);
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    notifyPublish(req, [`/pandit/${pandit.id}`]);
     res.json(pandit);
   });
 
   app.delete("/api/pandits/:id", adminAuthMiddleware, async (req, res) => {
     const deleted = await storage.deletePandit(Number(req.params.id));
     if (!deleted) return res.status(404).json({ message: "Pandit not found" });
+    notifyUnpublish(req, [`/pandit/${req.params.id}`]);
     res.json({ message: "Pandit deleted" });
   });
 
@@ -9231,6 +9251,7 @@ ${accumulatedWisdom}`
       const parsed = insertSeoPageSchema.partial().safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const page = await storage.createSeoPage(parsed.data as any);
+      if (page?.pagePath) notifyPublish(req, [page.pagePath]);
       res.status(201).json(page);
     } catch (error: any) {
       if (error?.message?.includes("duplicate")) {
@@ -9246,6 +9267,7 @@ ${accumulatedWisdom}`
       if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
       const page = await storage.updateSeoPage(parseInt(req.params.id), partial.data as any);
       if (!page) return res.status(404).json({ message: "SEO page not found" });
+      if (page.pagePath) notifyPublish(req, [page.pagePath]);
       res.json(page);
     } catch (error) {
       res.status(500).json({ message: "Failed to update SEO page" });
@@ -9305,6 +9327,7 @@ ${accumulatedWisdom}`
       const parsed = insertBlogPostSchema.partial().safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const post = await storage.createBlogPost(parsed.data as any);
+      if (post?.isPublished && post.slug) notifyPublish(req, [`/blog/${post.slug}`, `/blog`], { pingSitemap: true });
       res.status(201).json(post);
     } catch (error: any) {
       if (error?.message?.includes("duplicate")) return res.status(409).json({ message: "A post with this slug already exists." });
@@ -9318,6 +9341,7 @@ ${accumulatedWisdom}`
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const post = await storage.updateBlogPost(parseInt(req.params.id), parsed.data as any);
       if (!post) return res.status(404).json({ message: "Blog post not found" });
+      if (post.isPublished && post.slug) notifyPublish(req, [`/blog/${post.slug}`]);
       res.json(post);
     } catch {
       res.status(500).json({ message: "Failed to update blog post" });

@@ -10,6 +10,7 @@ import { sacredTexts, insertSacredTextSchema } from "@shared/schema";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { adminAuthMiddleware } from "./admin-auth";
 import { sanitizeRichHtml } from "./html-sanitizer";
+import { notifyPublish } from "./publish-notify";
 
 const TEXT_TYPES = ["chalisa", "mantra", "katha", "aarti", "stotra", "book"] as const;
 type TextType = typeof TEXT_TYPES[number];
@@ -329,6 +330,9 @@ export function registerSacredLibraryRoutes(app: Express) {
       const data = sanitizeTextPayload(parsed.data as any);
       if (!data.slug) data.slug = slugify(`${data.deity}-${data.textType}-${Date.now()}`);
       const [created] = await db.insert(sacredTexts).values(data).returning();
+      if (created?.isPublished && created?.status === "published") {
+        notifyPublish(req, [`/sacred-library/${created.slug}`, `/sacred-library`], { pingSitemap: true });
+      }
       res.json(created);
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -347,6 +351,9 @@ export function registerSacredLibraryRoutes(app: Express) {
         .where(eq(sacredTexts.id, id))
         .returning();
       if (!u) return res.status(404).json({ message: "Not found" });
+      if (u.isPublished && u.status === "published") {
+        notifyPublish(req, [`/sacred-library/${u.slug}`]);
+      }
       res.json(u);
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -371,6 +378,7 @@ export function registerSacredLibraryRoutes(app: Express) {
         .set({ status: "published", isPublished: true, updatedAt: new Date() })
         .where(eq(sacredTexts.id, id)).returning();
       if (!u) return res.status(404).json({ message: "Not found" });
+      notifyPublish(req, [`/sacred-library/${u.slug}`, `/sacred-library`], { pingSitemap: true });
       res.json(u);
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
