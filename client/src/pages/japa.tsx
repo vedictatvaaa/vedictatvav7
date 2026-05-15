@@ -376,7 +376,39 @@ export default function JapaPage() {
                 className="relative bg-[#FBF7EE] rounded-2xl sm:rounded-none overflow-hidden"
                 style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
               >
-                <div className="px-2 sm:px-6 py-3 sm:py-8 max-w-3xl mx-auto space-y-3 text-[#2c2c2c]">
+                {/* Inside-card spiritual ambience — the cream area around
+                    the orb is no longer a blank canvas. We layer a soft
+                    saffron→gold radial wash, a faint maroon ॐ glyph
+                    behind the orb, and two dotted gold mandala rings
+                    that drift slowly. All at very low opacity so the
+                    orb stays the hero. */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "radial-gradient(ellipse at 50% 35%, rgba(212,175,55,0.12) 0%, transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(109,43,53,0.06) 0%, transparent 50%), radial-gradient(ellipse at 100% 0%, rgba(255,210,122,0.10) 0%, transparent 45%)",
+                    }}
+                  />
+                  <span
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-serif text-[#6D2B35]/[0.05] select-none vt-japa-om"
+                    style={{ fontSize: "clamp(280px, 44vw, 560px)", lineHeight: 1 }}
+                  >
+                    ॐ
+                  </span>
+                  <svg
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 vt-japa-mandala hidden sm:block"
+                    width="640"
+                    height="640"
+                    viewBox="0 0 640 640"
+                    fill="none"
+                  >
+                    <circle cx="320" cy="320" r="300" stroke="#6D2B35" strokeOpacity="0.07" strokeWidth="1" strokeDasharray="2 12" />
+                    <circle cx="320" cy="320" r="240" stroke="#D4AF37" strokeOpacity="0.10" strokeWidth="1" strokeDasharray="1 16" />
+                    <circle cx="320" cy="320" r="180" stroke="#6D2B35" strokeOpacity="0.06" strokeWidth="1" />
+                  </svg>
+                </div>
+                <div className="relative px-2 sm:px-6 py-3 sm:py-8 max-w-3xl mx-auto space-y-3 text-[#2c2c2c]">
                   <JapCounter
                     ownerKey="public"
                     title="Mantra Japa Counter"
