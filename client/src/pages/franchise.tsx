@@ -305,7 +305,7 @@ export default function Franchise() {
           <SectionHeader
             eyebrow="Your Earnings"
             title="How much can you really earn?"
-            subtitle="Real numbers from our partners during Diwali 2025."
+            subtitle="Real numbers from our partners during last festival season."
             testIdPrefix="earnings"
             font="sans"
           />

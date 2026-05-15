@@ -5,7 +5,35 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, X } from "lucide-react";
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null;
+  const hasLen = password.length >= 8;
+  const hasNum = /[0-9]/.test(password);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+  const score = [hasLen, hasNum, hasSpecial].filter(Boolean).length;
+  const bars = ["bg-rose-400", "bg-amber-400", "bg-emerald-500"];
+  const label = ["Weak", "Fair", "Strong"][score - 1] ?? "";
+  const color = ["text-rose-600", "text-amber-600", "text-emerald-600"][score - 1] ?? "";
+  return (
+    <div className="mt-1.5 space-y-1">
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < score ? bars[score - 1] : "bg-[#D4AF37]/20"}`} />
+        ))}
+      </div>
+      <div className="flex justify-between items-start gap-2">
+        {score > 0 && <span className={`text-[10px] font-semibold ${color}`}>{label}</span>}
+        <ul className="text-[10px] text-[#5a4a3a]/65 space-y-0.5 text-right ml-auto">
+          <li className={hasLen ? "line-through text-[#5a4a3a]/40" : ""}>8+ characters</li>
+          <li className={hasNum ? "line-through text-[#5a4a3a]/40" : ""}>1 number</li>
+          <li className={hasSpecial ? "line-through text-[#5a4a3a]/40" : ""}>1 special character</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 export default function ResetPasswordPage() {
   const [, setLocation] = useLocation();
@@ -30,8 +58,8 @@ export default function ResetPasswordPage() {
       toast({ title: "Passwords don't match", description: "Please re-enter the same password in both fields.", variant: "destructive" });
       return;
     }
-    if (password.length < 6) {
-      toast({ title: "Password too short", description: "Use at least 6 characters.", variant: "destructive" });
+    if (password.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -60,7 +88,7 @@ export default function ResetPasswordPage() {
           </div>
           <h1 className="text-[15px] font-medium text-[#6D2B35] mt-3 font-sans">Choose a new password</h1>
           <p className="text-[11px] text-[#6D2B35]/65 mt-0.5">
-            Enter a new password for your account
+            Reset links expire after 30 minutes. Enter a strong password below.
           </p>
         </div>
 
@@ -102,7 +130,7 @@ export default function ResetPasswordPage() {
                     type={showPwd ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
+                    placeholder="At least 8 characters"
                     className="pl-8 pr-8 h-9 text-[13px]"
                     autoComplete="new-password"
                     required
@@ -117,6 +145,7 @@ export default function ResetPasswordPage() {
                     {showPwd ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
+                <PasswordStrength password={password} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="confirm-password" className="text-[11px] text-[#6D2B35]/80 font-medium">Confirm new password</Label>

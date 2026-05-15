@@ -186,6 +186,13 @@ export default function OrderHistory() {
   const [code, setCode] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[] | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((v) => Math.max(0, v - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const requestOtpMut = useMutation({
     mutationFn: async () => {
@@ -198,6 +205,7 @@ export default function OrderHistory() {
     },
     onSuccess: () => {
       setStep("otp");
+      setResendCooldown(60);
       toast({
         title: "Check your email",
         description: "If we have orders for that address, a 6-digit code is on its way (valid for 10 minutes).",
@@ -361,12 +369,12 @@ export default function OrderHistory() {
                 <span className="text-gray-300">•</span>
                 <button
                   type="button"
-                  onClick={() => requestOtpMut.mutate()}
-                  disabled={requestOtpMut.isPending}
-                  className="text-[#6D2B35] underline disabled:opacity-50"
+                  onClick={() => { requestOtpMut.mutate(); setResendCooldown(60); }}
+                  disabled={requestOtpMut.isPending || resendCooldown > 0}
+                  className="text-[#6D2B35] underline disabled:opacity-50 disabled:no-underline"
                   data-testid="button-resend-code"
                 >
-                  Resend code
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend code"}
                 </button>
               </div>
             </CardContent>

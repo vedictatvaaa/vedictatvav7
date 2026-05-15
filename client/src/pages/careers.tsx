@@ -1,6 +1,89 @@
-import { Wifi, Heart, TrendingUp, Users, MapPin, Briefcase, Clock, Mail, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { Wifi, Heart, TrendingUp, Users, MapPin, Briefcase, Clock, Mail, ArrowRight, Send, Linkedin, FileText } from "lucide-react";
 import { PageHero, SectionHeader, slimPanel } from "@/components/ui/section-primitives";
 import PageSeo from "@/components/PageSeo";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+type ApplyDialogProps = {
+  role: { id: string; title: string; department: string } | null;
+  onClose: () => void;
+};
+
+function ApplyDialog({ role, onClose }: ApplyDialogProps) {
+  const [form, setForm] = useState({ name: "", email: "", linkedin: "", message: "" });
+  const [sent, setSent] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name || !form.email) return;
+    const body = [
+      `Name: ${form.name}`,
+      `Email: ${form.email}`,
+      form.linkedin ? `LinkedIn: ${form.linkedin}` : "",
+      form.message ? `\nCover note:\n${form.message}` : "",
+    ].filter(Boolean).join("\n");
+    const subject = `Application for ${role?.title} — Vedic Tatva`;
+    window.location.href = `mailto:careers@vedictatva.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setSent(true);
+  };
+
+  const handleClose = () => { setForm({ name: "", email: "", linkedin: "", message: "" }); setSent(false); onClose(); };
+
+  return (
+    <Dialog open={!!role} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-serif text-[#6D2B35]">
+            Apply — {role?.title}
+          </DialogTitle>
+          <p className="text-[12px] text-[#5a4a3a]/65 mt-0.5">{role?.department} · Vedic Tatva</p>
+        </DialogHeader>
+        {sent ? (
+          <div className="py-4 text-center space-y-2">
+            <div className="w-12 h-12 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30 flex items-center justify-center mx-auto">
+              <Send className="w-5 h-5 text-[#6D2B35]" />
+            </div>
+            <p className="text-[13px] text-[#5a4a3a] font-medium">Your email client has opened with your application pre-filled.</p>
+            <p className="text-[12px] text-[#5a4a3a]/65">Send the email to complete your application. We'll respond within 3–5 business days.</p>
+            <Button onClick={handleClose} className="mt-2 bg-[#6D2B35] text-[#D4AF37] rounded-md">Close</Button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#6D2B35]/80 font-medium">Full name *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" className="h-9 text-[13px]" required data-testid="input-apply-name" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#6D2B35]/80 font-medium">Email address *</Label>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" className="h-9 text-[13px]" required data-testid="input-apply-email" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#6D2B35]/80 font-medium inline-flex items-center gap-1"><Linkedin className="w-3 h-3" /> LinkedIn URL</Label>
+              <Input value={form.linkedin} onChange={(e) => setForm({ ...form, linkedin: e.target.value })} placeholder="linkedin.com/in/yourprofile" className="h-9 text-[13px]" data-testid="input-apply-linkedin" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#6D2B35]/80 font-medium inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Why do you want to join? (optional)</Label>
+              <Textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="A few lines about yourself and what excites you about this role..." className="text-[13px] min-h-[80px] resize-none" data-testid="textarea-apply-message" />
+            </div>
+            <p className="text-[10px] text-[#5a4a3a]/55">Submitting will open your email client with your details pre-filled — just hit send. Please also attach your resume to the email.</p>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button type="button" variant="outline" onClick={handleClose} className="rounded-md h-9 text-[12px]">Cancel</Button>
+              <Button type="submit" className="bg-[#6D2B35] text-[#D4AF37] rounded-md h-9 text-[12px]" data-testid="btn-submit-apply">
+                <Send className="h-3.5 w-3.5 mr-1.5" /> Prepare application
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const benefits = [
   { icon: Wifi, title: "Remote-first", description: "Work from anywhere in India. Great work happens when you're comfortable." },
@@ -21,6 +104,7 @@ const primaryBtn = "inline-flex items-center justify-center gap-1.5 h-10 px-5 ro
 const outlineBtn = "inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-[12px] font-semibold bg-white text-[#6D2B35] border border-[#D4AF37]/30 hover:bg-[#FBF7EE] transition-colors";
 
 export default function Careers() {
+  const [applyRole, setApplyRole] = useState<typeof positions[number] | null>(null);
   return (
     <div className="w-full pb-16 bg-white">
       <PageSeo
@@ -92,13 +176,14 @@ export default function Careers() {
                       </span>
                     </div>
                   </div>
-                  <a
-                    href={`mailto:careers@vedictatva.com?subject=Application for ${encodeURIComponent(position.title)}`}
+                  <button
+                    type="button"
+                    onClick={() => setApplyRole(position)}
                     className={`${outlineBtn} shrink-0`}
                     data-testid={`btn-apply-${position.id}`}
                   >
                     Apply now <ArrowRight className="h-3 w-3" strokeWidth={1.8} />
-                  </a>
+                  </button>
                 </div>
               </div>
             ))}
@@ -141,6 +226,7 @@ export default function Careers() {
           </div>
         </div>
       </div>
+      <ApplyDialog role={applyRole} onClose={() => setApplyRole(null)} />
     </div>
   );
 }

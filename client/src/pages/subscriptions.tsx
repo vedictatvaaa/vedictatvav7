@@ -77,7 +77,7 @@ export default function SubscriptionsPage() {
   });
 
   const skipMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id }: { id: number; nextDelivery?: string | null }) => {
       const res = await fetch(`/api/subscriptions/${id}/skip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,9 +86,14 @@ export default function SubscriptionsPage() {
       if (!res.ok) throw new Error((await res.json()).message || "Failed to skip");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, { nextDelivery }) => {
       queryClient.invalidateQueries({ queryKey });
-      toast({ title: "Next delivery skipped" });
+      let description: string | undefined;
+      if (nextDelivery) {
+        const skippedDate = new Date(nextDelivery).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+        description = `The ${skippedDate} shipment has been skipped — your next delivery will follow the one after.`;
+      }
+      toast({ title: "Next delivery skipped", description });
     },
     onError: (e: any) => toast({ title: "Could not skip", description: e?.message, variant: "destructive" }),
   });
@@ -236,7 +241,7 @@ export default function SubscriptionsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => skipMutation.mutate(sub.id)}
+                          onClick={() => skipMutation.mutate({ id: sub.id, nextDelivery: sub.nextDelivery })}
                           disabled={skipMutation.isPending}
                           className="rounded-md h-9 text-[12px] text-[#6D2B35] border-[#D4AF37]/40 hover:bg-[#FBF7EE] font-semibold"
                           data-testid={`btn-skip-sub-${sub.id}`}

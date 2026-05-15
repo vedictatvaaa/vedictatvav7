@@ -7,7 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Ticket, Sparkles, Calendar, Clock, MapPin, Gift, Mountain, Snowflake, Landmark, Flame, Crown } from "lucide-react";
+import { Trophy, Ticket, Sparkles, Calendar, Clock, MapPin, Gift, Mountain, Snowflake, Landmark, Flame, Crown, ExternalLink } from "lucide-react";
+
+function useTabVisibility() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const onChange = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  return hidden;
+}
+
+const prefersReducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const PRIZE_ICONS = [Crown, Trophy, Snowflake, Landmark, Mountain, Flame];
 
@@ -36,7 +48,11 @@ function useCountdown(target: Date) {
 
 export default function LuckyDrawPage() {
   const { toast } = useToast();
+  const tabHidden = useTabVisibility();
   const [form, setForm] = useState({ name: "", phone: "", email: "", productSerial: "", productName: "", orderId: "", preferredYatra: "" });
+  const spinStyle = (duration: string, reverse = false) => ({
+    animation: prefersReducedMotion || tabHidden ? "none" : `spin ${duration} linear infinite${reverse ? " reverse" : ""}`,
+  });
 
   const drawYear = new Date().getFullYear() + 1;
   const drawDate = useMemo(() => new Date(`${drawYear}-01-02T11:00:00+05:30`), [drawYear]);
@@ -108,9 +124,9 @@ export default function LuckyDrawPage() {
             {/* Tombola */}
             <div className="flex justify-center">
               <div className="relative w-64 h-64 md:w-80 md:h-80">
-                <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, #D4AF37, #6D2B35, #D4AF37, #4a1a22, #D4AF37, #6D2B35, #D4AF37)", animation: "spin 20s linear infinite" }} />
+                <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(from 0deg, #D4AF37, #6D2B35, #D4AF37, #4a1a22, #D4AF37, #6D2B35, #D4AF37)", ...spinStyle("20s") }} />
                 <div className="absolute inset-3 rounded-full bg-gradient-to-br from-[#1a0a14] to-[#0a0511] border-4 border-[#D4AF37]/40 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle at 30% 30%, rgba(212,175,55,0.18), transparent 60%)", animation: "spin 30s linear infinite reverse" }} />
+                  <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle at 30% 30%, rgba(212,175,55,0.18), transparent 60%)", ...spinStyle("30s", true) }} />
                   <div className="text-center relative z-10">
                     <Trophy className="h-12 w-12 md:h-16 md:w-16 text-[#D4AF37] mx-auto mb-2 drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]" />
                     <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37]/80">Drawing</div>
@@ -197,6 +213,13 @@ export default function LuckyDrawPage() {
                 {enterMut.isPending ? "Entering..." : `Enter the ${drawYear} Draw`}
               </Button>
               <p className="text-[10px] text-white/50 text-center">One entry per serial number. Winners notified via call & WhatsApp on 2 Jan {drawYear}.</p>
+              <p className="text-[10px] text-white/40 text-center">
+                By entering you agree to the{" "}
+                <a href="/lucky-draw-terms" className="text-[#D4AF37]/80 underline underline-offset-2 hover:text-[#D4AF37] inline-flex items-center gap-0.5">
+                  Lucky Draw Terms & Conditions <ExternalLink className="h-2.5 w-2.5" />
+                </a>
+                . Promotional draw — no purchase necessary for entry.
+              </p>
             </div>
           </CardContent>
         </Card>

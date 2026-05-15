@@ -21,11 +21,20 @@ const YATRA_OPTIONS = [
   "Maa Kamakhya (Guwahati)",
 ];
 
+function formatInr(v: number) {
+  if (v >= 100000) return `₹${(v / 100000).toFixed(v % 100000 === 0 ? 0 : 1)}L`;
+  return `₹${v.toLocaleString("en-IN")}`;
+}
+
 export default function PilgrimageCardPage() {
   const { toast } = useToast();
   const [yatras, setYatras] = useState<string[]>([]);
   const [form, setForm] = useState({ name: "", phone: "", email: "", city: "", age: "", giftFor: "", message: "" });
   const [purpose, setPurpose] = useState<"self" | "gift">("self");
+  const [sipAmount, setSipAmount] = useState(10000);
+  const totalSavings = sipAmount * 60;
+  const monthlyLabel = formatInr(sipAmount);
+  const totalLabel = formatInr(totalSavings);
 
   const applyMut = useMutation({
     mutationFn: async (payload: any) => {
@@ -56,7 +65,7 @@ export default function PilgrimageCardPage() {
       email: form.email,
       city: form.city,
       age: form.age ? Number(form.age) : undefined,
-      monthlySipInr: 10000,
+      monthlySipInr: sipAmount,
       totalCommitmentInr: 600000,
       preferredYatras: yatras,
       message: giftNote + (form.message || ""),
@@ -75,12 +84,38 @@ export default function PilgrimageCardPage() {
               Vedic Tatva <span className="text-[#D4AF37]">Pilgrimage Card</span>
             </h1>
             <p className="text-base md:text-lg text-white/85 mt-3 max-w-2xl">
-              Save just <strong className="text-[#D4AF37]">₹10,000 a month for 5 years</strong> — and complete <strong className="text-[#D4AF37]">every major Hindu yatra of your life</strong>, fully sponsored by Vedic Tatva. Travel, stay, food, pandit, puja — all included.
+              Save just <strong className="text-[#D4AF37]">{monthlyLabel} a month for 5 years</strong> — and complete <strong className="text-[#D4AF37]">every major Hindu yatra of your life</strong>, fully sponsored by Vedic Tatva. Travel, stay, food, pandit, puja — all included.
             </p>
+
+            {/* SIP Slider */}
+            <div className="mt-5 max-w-md bg-white/10 backdrop-blur-sm border border-white/20 rounded-md p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] uppercase tracking-widest text-white/65 font-semibold">Monthly SIP</span>
+                <span className="text-xl font-serif font-bold text-[#D4AF37]" data-testid="text-sip-amount">{monthlyLabel}</span>
+              </div>
+              <input
+                type="range"
+                min={500}
+                max={20000}
+                step={500}
+                value={sipAmount}
+                onChange={(e) => setSipAmount(Number(e.target.value))}
+                className="w-full accent-[#D4AF37] cursor-pointer"
+                aria-label="Monthly SIP amount"
+                data-testid="slider-sip"
+              />
+              <div className="flex justify-between text-[10px] text-white/50 mt-1">
+                <span>₹500</span>
+                <span>₹20,000</span>
+              </div>
+              <p className="text-[12px] text-emerald-300/90 mt-2 font-semibold">
+                In 5 years you'll save <span className="text-white font-bold">{totalLabel}</span> — enough for all 8 major yatras, fully covered.
+              </p>
+            </div>
 
             <div className="grid grid-cols-3 gap-2 mt-6 max-w-xl">
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md py-3 px-2 text-center">
-                <div className="text-2xl font-serif font-bold text-[#D4AF37]">₹10K</div>
+                <div className="text-2xl font-serif font-bold text-[#D4AF37]" data-testid="text-stat-monthly">{monthlyLabel}</div>
                 <div className="text-[10px] text-white/80 uppercase tracking-wide">per month</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md py-3 px-2 text-center">
@@ -88,8 +123,8 @@ export default function PilgrimageCardPage() {
                 <div className="text-[10px] text-white/80 uppercase tracking-wide">to save</div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-md py-3 px-2 text-center">
-                <div className="text-2xl font-serif font-bold text-[#D4AF37]">8+</div>
-                <div className="text-[10px] text-white/80 uppercase tracking-wide">tirth yatras</div>
+                <div className="text-2xl font-serif font-bold text-[#D4AF37]" data-testid="text-stat-total">{totalLabel}</div>
+                <div className="text-[10px] text-white/80 uppercase tracking-wide">total saved</div>
               </div>
             </div>
 

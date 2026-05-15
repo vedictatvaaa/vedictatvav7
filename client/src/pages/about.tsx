@@ -120,7 +120,7 @@ export default function About() {
                   data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, "-")}`}
                 >
                   <div className="text-2xl md:text-3xl font-serif font-semibold text-[#D4AF37] mb-1">{stat.value}</div>
-                  <div className="text-white/75 text-[11px] uppercase tracking-[0.2em] font-semibold">{stat.label}</div>
+                  <div className="text-white/75 text-[12px] uppercase tracking-[0.2em] font-semibold">{stat.label}</div>
                 </div>
               ))}
             </div>
