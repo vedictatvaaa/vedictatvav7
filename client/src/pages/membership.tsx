@@ -202,6 +202,71 @@ export default function Membership() {
         </div>
       </section>
 
+      {/* Feature comparison table */}
+      <section className="container mx-auto px-4 pt-12 pb-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2.5 mb-3">
+              <span className="h-px w-6 bg-[#D4AF37]" />
+              <span className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">Compare Plans</span>
+              <span className="h-px w-6 bg-[#D4AF37]" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-serif text-[#6D2B35] font-semibold tracking-tight">What's included</h2>
+          </div>
+
+          <div className="overflow-x-auto rounded-md border border-[#D4AF37]/25">
+            <table className="w-full text-sm" data-testid="table-plan-comparison">
+              <thead>
+                <tr className="bg-[#6D2B35] text-white">
+                  <th className="text-left px-4 py-3 font-serif font-semibold text-[13px] w-1/2">Feature</th>
+                  {plans.map(p => (
+                    <th key={p.name} className="px-4 py-3 text-center font-serif font-semibold text-[13px]">
+                      <div>{p.name}</div>
+                      <div className="text-[#D4AF37] text-[11px] font-normal mt-0.5">
+                        {p.price === 0 ? "Free" : `₹${p.price}/mo`}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { label: "Browse products & services",       vals: [true, true, true] },
+                  { label: "Book pandits & puja",              vals: [true, true, true] },
+                  { label: "Astrology consultations",          vals: [true, true, true] },
+                  { label: "Order tracking",                   vals: [true, true, true] },
+                  { label: "Discount on all products",         vals: [false, "5%", "15%"] },
+                  { label: "Priority pandit booking",          vals: [false, true, true] },
+                  { label: "Free shipping on all orders",      vals: [false, false, true] },
+                  { label: "Monthly Kundli report",            vals: [false, true, true] },
+                  { label: "Personal astrology advisor",       vals: [false, false, true] },
+                  { label: "VIP pandit access",                vals: [false, false, true] },
+                  { label: "Monthly personalised puja",        vals: [false, false, true] },
+                  { label: "Exclusive spiritual retreats",     vals: [false, false, true] },
+                  { label: "Customer support",                 vals: ["Basic", "Priority", "Dedicated"] },
+                ].map((row, i) => (
+                  <tr key={i} className={i % 2 === 0 ? "bg-white" : "bg-[#FBF7EE]"}>
+                    <td className="px-4 py-2.5 text-[#4a1a22] font-medium">{row.label}</td>
+                    {row.vals.map((v, j) => (
+                      <td key={j} className="px-4 py-2.5 text-center">
+                        {v === true ? (
+                          <Check className="h-4 w-4 text-emerald-600 mx-auto" strokeWidth={2.5} />
+                        ) : v === false ? (
+                          <span className="text-[#5a4a3a]/25 text-lg leading-none">—</span>
+                        ) : (
+                          <span className="text-[#6D2B35] font-semibold text-[13px]">{v}</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-center text-xs text-[#5a4a3a]/50 mt-3">Sadhak &amp; Siddha plans launching soon — join the waitlist above.</p>
+        </div>
+      </section>
+
       {/* Benefits grid */}
       <section className="container mx-auto px-4 py-16 sm:py-20">
         <div className="text-center mb-10">

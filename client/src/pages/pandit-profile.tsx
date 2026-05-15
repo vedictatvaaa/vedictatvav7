@@ -62,7 +62,10 @@ export default function PanditProfile() {
       return r.json();
     },
     enabled: panditId > 0 && !!user?.email,
-    refetchInterval: 5000,
+    // Poll every 10 s, but stop entirely when the tab is in the background
+    // to save battery and server load.
+    refetchInterval: () => (document.hidden ? false : 10_000),
+    refetchIntervalInBackground: false,
   });
 
   useEffect(() => {

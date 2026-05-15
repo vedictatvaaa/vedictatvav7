@@ -2199,6 +2199,30 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Orders ----
+  // Public summary for the order-confirmation page — only exposes non-sensitive fields.
+  app.get("/api/orders/:id/public-summary", async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: "Invalid order id" });
+    try {
+      const order = await storage.getOrder(id);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      // Only expose safe summary fields — no customer PII, no payment details
+      res.json({
+        id: order.id,
+        totalAmount: order.totalAmount,
+        status: order.status,
+        paymentMethod: order.paymentMethod,
+        items: (order.items as any[]).map((item: any) => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      });
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Protected: full order list (PII). Used by admin dashboard for "recent" lists.
   app.get("/api/orders", adminAuthMiddleware, async (_req, res) => {
     const orders = await storage.getOrders();

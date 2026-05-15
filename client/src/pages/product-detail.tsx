@@ -115,25 +115,23 @@ function useViewerCount(settings: SocialProofSettings | undefined) {
   useEffect(() => {
     if (!settings) return;
     const { viewMin, viewMax } = settings;
-    setCount(Math.floor(Math.random() * (viewMax - viewMin + 1)) + viewMin);
+    // Pick a stable starting value seeded from the current hour so it doesn't
+    // jump erratically on every render or page refresh.
+    const hourSeed = new Date().getHours();
+    const range = Math.max(1, viewMax - viewMin);
+    const stable = viewMin + (hourSeed % range);
+    setCount(stable);
 
-    const tick = () => {
+    // Drift by at most ±1 every 90 seconds, and only when the tab is visible.
+    const interval = setInterval(() => {
+      if (document.hidden) return;
       setCount(prev => {
-        const delta = Math.floor(Math.random() * 7) - 3;
+        const delta = Math.random() < 0.5 ? 1 : -1;
         return Math.max(viewMin, Math.min(viewMax, prev + delta));
       });
-    };
+    }, 90_000);
 
-    let timer: ReturnType<typeof setTimeout>;
-    const schedule = () => {
-      const delay = (Math.random() * 7 + 8) * 1000;
-      timer = setTimeout(() => {
-        tick();
-        schedule();
-      }, delay);
-    };
-    schedule();
-    return () => clearTimeout(timer);
+    return () => clearInterval(interval);
   }, [settings]);
 
   return count;

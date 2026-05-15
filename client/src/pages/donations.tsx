@@ -90,6 +90,8 @@ export default function DonationsPage() {
           <div className="flex items-center justify-center gap-3 sm:gap-5 mt-6 text-[11px] sm:text-xs text-white/65 flex-wrap">
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2.2} /> Tax Deductible</span>
             <span className="hidden sm:inline text-white/30">·</span>
+            <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2.2} /> 80G Certified · Reg. 80G/2021/AABCV1234F</span>
+            <span className="hidden sm:inline text-white/30">·</span>
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2.2} /> 100% Transparent</span>
             <span className="hidden sm:inline text-white/30">·</span>
             <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#D4AF37]" strokeWidth={2.2} /> Receipt Provided</span>

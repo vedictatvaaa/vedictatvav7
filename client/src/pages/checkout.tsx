@@ -269,7 +269,8 @@ export default function Checkout() {
           );
           (window as any).__vt_orderCompleted = true;
           clearCart();
-          setLocation("/order-confirmation");
+          const codOrderId = placed?.id ?? placed?.orderId;
+          setLocation(codOrderId ? `/order-confirmation?orderId=${codOrderId}` : "/order-confirmation");
         } else {
           toast({ title: "Error", description: "Failed to place order. Please try again.", variant: "destructive" });
         }
@@ -360,7 +361,8 @@ export default function Checkout() {
               );
               (window as any).__vt_orderCompleted = true;
               clearCart();
-              setLocation("/order-confirmation");
+              const rpOrderId = verifyData.orderId;
+              setLocation(rpOrderId ? `/order-confirmation?orderId=${rpOrderId}` : "/order-confirmation");
             } else {
               toast({ title: "Payment Failed", description: "Payment verification failed. Please contact support.", variant: "destructive" });
             }

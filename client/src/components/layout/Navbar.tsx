@@ -48,7 +48,18 @@ function PromoBar() {
     ...panchangMessages,
     ...promoMessages.map((text) => ({ icon: Star, text })),
   ];
+
+  // On mobile show only Tithi and Rahukal to reduce cognitive load; desktop gets everything.
+  const mobileMessages: TickerItem[] = [
+    ...(panchang ? [
+      { icon: Calendar, text: `${panchang.tithi} · ${panchang.nakshatra}` },
+      { icon: Moon, text: `राहुकाल: ${panchang.rahu_kaal}` },
+    ] : []),
+    ...promoMessages.map((text) => ({ icon: Star, text })),
+  ];
+
   const duplicated = [...allMessages, ...allMessages];
+  const duplicatedMobile = [...mobileMessages, ...mobileMessages];
 
   const fest = festival;
   const bg = fest
@@ -64,14 +75,27 @@ function PromoBar() {
       <div className="absolute left-0 top-0 bottom-0 w-12 z-10" style={{ background: `linear-gradient(to right, ${edge}, transparent)` }} />
       <div className="absolute right-0 top-0 bottom-0 w-12 z-10" style={{ background: `linear-gradient(to left, ${edge}, transparent)` }} />
       <div className="relative flex items-center py-2">
-        <div className="flex animate-marquee whitespace-nowrap">
+        {/* Mobile: Tithi + Rahukal + promos only */}
+        <div className="flex sm:hidden animate-marquee whitespace-nowrap">
+          {duplicatedMobile.map((msg, i) => {
+            const Icon = msg.icon;
+            return (
+              <span key={i} className="inline-flex items-center mx-5 text-[12px] tracking-wide text-white/85 font-medium">
+                <Icon className="mr-1.5 h-3 w-3" style={{ color: accent }} />
+                {msg.text}
+              </span>
+            );
+          })}
+        </div>
+        {/* Desktop: full panchang strip */}
+        <div className="hidden sm:flex animate-marquee whitespace-nowrap">
           {duplicated.map((msg, i) => {
             const Icon = msg.icon;
             return (
-            <span key={i} className="inline-flex items-center mx-6 text-[12px] sm:text-[13px] tracking-wide text-white/85 font-medium">
-              <Icon className="mr-2 h-3.5 w-3.5" style={{ color: accent }} />
-              {msg.text}
-            </span>
+              <span key={i} className="inline-flex items-center mx-6 text-[13px] tracking-wide text-white/85 font-medium">
+                <Icon className="mr-2 h-3.5 w-3.5" style={{ color: accent }} />
+                {msg.text}
+              </span>
             );
           })}
         </div>

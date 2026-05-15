@@ -10,7 +10,7 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarInset,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard, Calendar, Heart, Users2, Bell, Music2, Award,
+  LayoutDashboard, Calendar, Heart, Users2, Bell, Music2,
   Settings as SettingsIcon, Sparkles, ArrowRight, IndianRupee, MapPin, Receipt,
 } from "lucide-react";
 import NotificationsInbox from "@/components/dashboard/NotificationsInbox";
@@ -23,11 +23,11 @@ import { listNotifications } from "@/lib/dashboardApi";
 
 type TabId =
   | "overview" | "bookings" | "wishlist" | "family" | "notifications"
-  | "chanting" | "certificates" | "settings";
+  | "chanting" | "settings";
 
 const NAV: Array<{
   id: TabId; label: string; icon: any; section: "main" | "spiritual" | "account";
-  badge?: "unread" | null; comingSoon?: string;
+  badge?: "unread" | null;
 }> = [
   { id: "overview",      label: "Overview",       icon: LayoutDashboard, section: "main" },
   { id: "bookings",      label: "My Bookings",    icon: Calendar,        section: "main" },
@@ -35,7 +35,6 @@ const NAV: Array<{
   { id: "family",        label: "Family",         icon: Users2,          section: "main" },
   { id: "notifications", label: "Notifications",  icon: Bell,            section: "main", badge: "unread" },
   { id: "chanting",      label: "Jap Counter",    icon: Music2,          section: "spiritual" },
-  { id: "certificates",  label: "Certificates",   icon: Award,           section: "spiritual", comingSoon: "Phase 4 — Sankalp & Jaap PDFs" },
   { id: "settings",      label: "Settings",       icon: SettingsIcon,    section: "account" },
 ];
 
@@ -185,11 +184,6 @@ export default function DashboardPage() {
                 subtitle="Choose a mantra, tap the mala for each japa. Sound and vibration follow every count."
               />
             )}
-            {tab === "certificates" && <ComingSoonPanel title="Sacred Certificates" phase="Phase 4" lines={[
-              "Sankalp PDF generated when your puja is confirmed",
-              "Jaap completion certificate after each anushthan",
-              "Beautifully typeset, downloadable, share-ready",
-            ]} />}
             {tab === "settings" && <MyProfile />}
           </main>
         </SidebarInset>
@@ -255,22 +249,3 @@ function QA({ href, icon: Icon, label }: { href: string; icon: any; label: strin
   );
 }
 
-function ComingSoonPanel({ title, phase, lines }: { title: string; phase: string; lines: string[] }) {
-  return (
-    <Card>
-      <CardContent className="p-8">
-        <Badge variant="outline" className="mb-3 text-[10px] uppercase tracking-wide">{phase}</Badge>
-        <h2 className="text-2xl font-serif font-bold text-[#4a1a22] mb-2">{title}</h2>
-        <p className="text-sm text-[#5a4a3a]/70 mb-4">Coming soon. Here's what we're building:</p>
-        <ul className="space-y-2 text-sm text-[#4a1a22]">
-          {lines.map((l, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <Sparkles className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
-              <span>{l}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}

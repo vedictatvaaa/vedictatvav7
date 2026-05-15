@@ -101,8 +101,11 @@ export default function Contact() {
       toast({ title: "Message Sent!", description: "Thank you for reaching out. We'll get back to you within 24 hours." });
       setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
     } catch {
-      toast({ title: "Message Sent!", description: "Thank you for reaching out. We'll get back to you within 24 hours." });
-      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+      toast({
+        title: "Something went wrong",
+        description: "We couldn't send your message. Please try again or email us directly at ecom@vedictatva.com.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
