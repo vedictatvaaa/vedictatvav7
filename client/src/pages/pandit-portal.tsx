@@ -14,6 +14,7 @@ import { clearPanditToken, getPanditToken, panditApi } from "@/lib/panditAuth";
 import PanditEarnings from "@/components/pandit/PanditEarnings";
 import PanditCustomers from "@/components/pandit/PanditCustomers";
 import PanditTools from "@/components/pandit/PanditTools";
+import PanditPayments from "@/components/pandit/PanditPayments";
 import JapCounter from "@/components/JapCounter";
 import PanditMembership from "@/components/pandit/PanditMembership";
 import { PanditStorefrontEditor, PanditCardOrders, PanditReferralsPanel } from "@/components/pandit/PanditStorefrontPanel";
@@ -23,12 +24,13 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarInset,
 } from "@/components/ui/sidebar";
 
-type PanditSection = "dashboard" | "bookings" | "earnings" | "storefront" | "card" | "referrals" | "tools" | "japa" | "customers" | "reviews" | "membership" | "notifications" | "settings";
+type PanditSection = "dashboard" | "bookings" | "earnings" | "payments" | "storefront" | "card" | "referrals" | "tools" | "japa" | "customers" | "reviews" | "membership" | "notifications" | "settings";
 
 const PANDIT_NAV: Array<{ id: PanditSection; label: string; icon: any; section: "main" | "growth" | "account"; phase?: string }> = [
   { id: "dashboard",     label: "Dashboard",     icon: LayoutDashboard, section: "main" },
   { id: "bookings",      label: "Bookings",      icon: CalendarDays,    section: "main" },
   { id: "earnings",      label: "Earnings",      icon: Wallet,          section: "main" },
+  { id: "payments",      label: "Payment Requests", icon: IndianRupee,  section: "main" },
   { id: "notifications", label: "Notifications", icon: Bell,            section: "main", phase: "Phase 2" },
   { id: "storefront",    label: "My Storefront", icon: Share2,          section: "growth" },
   { id: "referrals",     label: "Referrals",     icon: IndianRupee,     section: "growth" },
@@ -345,6 +347,7 @@ export default function PanditPortalPage() {
               </div>
             )}
             {section === "earnings" && <PanditEarnings />}
+            {section === "payments" && <PanditPayments />}
             {section === "customers" && <PanditCustomers />}
             {section === "tools" && <PanditTools />}
             {section === "membership" && <PanditMembership />}
@@ -429,6 +432,7 @@ export default function PanditPortalPage() {
               </Card>
             )}
             {section !== "bookings" && section !== "dashboard" && section !== "earnings"
+              && section !== "payments"
               && section !== "customers" && section !== "tools" && section !== "membership"
               && section !== "storefront" && section !== "referrals" && section !== "card"
               && section !== "japa" && section !== "settings" && (

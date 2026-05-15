@@ -30,6 +30,7 @@ import { registerAiCoderRoutes } from "./ai-coder";
 import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
 import { registerPanditToolsRoutes } from "./pandit-tools";
+import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
 import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { registerContentRoutes } from "./content-routes";
@@ -698,6 +699,7 @@ export async function registerRoutes(
   registerPanditStorefrontRoutes(app, adminAuthMiddleware);
   registerPanditEarningsRoutes(app, adminAuthMiddleware);
   registerPanditToolsRoutes(app);
+  registerPanditCrmRoutes(app);
   try {
     const ry = await seedTirthYatraTours();
     console.log(`[yatra] tours ready: ${ry.total} (just inserted ${ry.inserted})`);

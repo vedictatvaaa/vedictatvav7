@@ -432,6 +432,71 @@ export const insertPanditChatSchema = createInsertSchema(panditChats).omit({ id:
 export type PanditChat = typeof panditChats.$inferSelect;
 export type InsertPanditChat = z.infer<typeof insertPanditChatSchema>;
 
+// Pandit-curated memory of important dates per yajamana (client). Auto-seeded
+// from past bookings + manually added by the pandit. Used to surface upcoming
+// anniversaries / shradh tithis in the dashboard so the pandit can proactively
+// reach out. customerKey mirrors the pandit-tools customer aggregation keys
+// ("u:<userId>" or "p:<phone>") so a single client maps to one row set.
+export const panditClientMemories = pgTable("pandit_client_memories", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  customerKey: text("customer_key").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone"),
+  // birthday | anniversary | shradh | naamkaran | mundan | griha_pravesh | other
+  kind: text("kind").notNull(),
+  label: text("label").notNull(),
+  // Either an ISO date (YYYY-MM-DD) or a free-text tithi like "Krishna Paksha
+  // Trayodashi". `dateText` is canonical; `tithi` is the human label when the
+  // date repeats by lunar calendar.
+  dateText: text("date_text"),
+  tithi: text("tithi"),
+  // Days before the date that the pandit wants a reminder. 0 = on the day.
+  notifyDaysBefore: integer("notify_days_before").notNull().default(3),
+  notes: text("notes"),
+  // Updated by the reminder cron so we don't double-send within the same year.
+  lastNotifiedYear: integer("last_notified_year"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const insertPanditClientMemorySchema = createInsertSchema(panditClientMemories).omit({ id: true, createdAt: true, lastNotifiedYear: true });
+export type PanditClientMemory = typeof panditClientMemories.$inferSelect;
+export type InsertPanditClientMemory = z.infer<typeof insertPanditClientMemorySchema>;
+
+// Payment requests a pandit raises against a yajamana for dakshina, samagri,
+// or out-of-band services. Backed by a Razorpay Payment Link (short_url) so
+// the client can pay over WhatsApp/email without a custom checkout page.
+// Status transitions: pending -> paid (webhook or pandit mark) | cancelled.
+export const panditPaymentRequests = pgTable("pandit_payment_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull(),
+  customerKey: text("customer_key"),
+  customerName: text("customer_name").notNull(),
+  customerPhone: text("customer_phone").notNull(),
+  customerEmail: text("customer_email"),
+  amountInr: integer("amount_inr").notNull(),
+  purpose: text("purpose").notNull(),
+  notes: text("notes"),
+  status: text("status").notNull().default("pending"),
+  // Razorpay Payment Link references.
+  // Random opaque token used in the public lookup URL so the row cannot be
+  // enumerated by sequential id. 32 hex chars from crypto.randomBytes(16).
+  publicToken: text("public_token").unique(),
+  rpLinkId: text("rp_link_id"),
+  rpShortUrl: text("rp_short_url"),
+  rpPaymentId: text("rp_payment_id"),
+  paidAt: timestamp("paid_at"),
+  // Pandit-side note explaining a manual mark-as-paid (cash/UPI direct).
+  manualPaidNote: text("manual_paid_note"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export const insertPanditPaymentRequestSchema = createInsertSchema(panditPaymentRequests).omit({
+  id: true, createdAt: true, paidAt: true, status: true, publicToken: true,
+  rpLinkId: true, rpShortUrl: true, rpPaymentId: true, manualPaidNote: true,
+});
+export type PanditPaymentRequest = typeof panditPaymentRequests.$inferSelect;
+export type InsertPanditPaymentRequest = z.infer<typeof insertPanditPaymentRequestSchema>;
+
 export const pujaTips = pgTable("puja_tips", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   bookingId: integer("booking_id").notNull(),
