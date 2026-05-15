@@ -296,11 +296,11 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
   // ── Japa Counter (free PWA tool, ranks for "online jap counter" cluster) ──
-  // Matches /japa, /jap, /japa-counter. Server 301s redirect /jap and
-  // /japa-counter to /japa, but list all three patterns as a safety net
-  // for direct social shares of the alias URLs.
+  // Matches /japa, /jap, /japa-counter — exact only. Per-mantra
+  // landings /japa/<slug> are handled by buildMantraOgCard() below so
+  // each share preview shows the specific mantra's name + deity.
   {
-    match: /^\/(japa|jap|japa-counter)(\/|$)/,
+    match: /^\/(japa|jap|japa-counter)\/?$/,
     card: {
       title: "Free 108 Mala Counter — Online Mantra Japa Counter · Vedic Tatva",
       description:
@@ -310,6 +310,38 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
 ];
+
+// ── Per-mantra share cards for /japa/<slug> ──────────────────────────
+// Built dynamically from the canonical MANTRA_LIBRARY so any mantra
+// added there automatically gets a bespoke OG title/description on
+// social shares. Image stays the flagship /og/og-japa.jpg until we
+// commission per-mantra art.
+import { MANTRA_LIBRARY } from "../shared/mantra-library";
+
+const MANTRA_SLUGS = new Set(MANTRA_LIBRARY.map((m) => m.id));
+
+export function buildMantraOgCard(slug: string): OgCard | null {
+  const m = MANTRA_LIBRARY.find((x) => x.id === slug);
+  if (!m) return null;
+  // Title: ≤ 65 chars, deity-anchored. Description: ≤ 155 chars,
+  // includes recommended count + WhatsApp-friendly Sanskrit cue.
+  const title = `${m.label} — Online Japa Counter · Vedic Tatva`.slice(0, 80);
+  const description = `Chant ${m.label} (${m.deity}) on a free ${m.recommendedCount}-bead mala counter. Bell, vibration, daily streak. ${m.meaning.slice(0, 60)}…`.slice(0, 200);
+  return {
+    title,
+    description,
+    image: "/og/og-japa.jpg",
+    alt: `${m.label} japa mala counter — ${m.deity} · Vedic Tatva`,
+  };
+}
+
+/** Lowercase, trimmed slug if path matches /japa/<slug>. */
+export function matchMantraSlug(pathname: string): string | null {
+  const m = pathname.match(/^\/japa\/([a-z0-9-]+)\/?$/);
+  if (!m) return null;
+  const slug = m[1];
+  return MANTRA_SLUGS.has(slug) ? slug : null;
+}
 
 /**
  * Flagship card — used for the homepage `/` and every unmatched HTML route.
@@ -336,6 +368,13 @@ export const FLAGSHIP_CARD: OgCard = {
 export function resolveExplicitOgCard(pathname: string): OgCard | null {
   const clean = pathname.split("?")[0].split("#")[0].replace(/\/+$/, "") || "/";
   if (clean === "/") return FLAGSHIP_CARD;
+  // Per-mantra landings — checked before the static map so a request
+  // for /japa/mahamrityunjaya doesn't fall through to the generic card.
+  const mantraSlug = matchMantraSlug(clean);
+  if (mantraSlug) {
+    const c = buildMantraOgCard(mantraSlug);
+    if (c) return c;
+  }
   for (const { match, card } of ROUTE_CARDS) {
     if (typeof match === "string") {
       if (match.startsWith(PREFIX)) {

@@ -563,16 +563,22 @@ export type JapCounterProps = {
   /** Display name of the signed-in devotee — used to personalise the
    *  Tathastu ashirvad popup. Omit or pass empty for guests. */
   devoteeName?: string;
+  /** When set (e.g. /japa/<slug> landing pages), force this mantra as
+   *  the initially selected one and persist it to the active key, so the
+   *  picker reflects the URL the devotee landed on. The user can still
+   *  pick a different mantra inside the picker — this just sets the
+   *  starting point. */
+  initialMantraId?: string;
 };
 
-export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", subtitle, devoteeName }: JapCounterProps) {
+export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", subtitle, devoteeName, initialMantraId }: JapCounterProps) {
   const { toast } = useToast();
 
   // Owner-scoped state. Re-hydrate from localStorage whenever ownerKey changes
   // so a parent that resolves the owner async (e.g. pandit:self → pandit:42)
   // doesn't leak state between owners.
   const [customMantras, setCustomMantras] = useState<Mantra[]>(() => loadCustomMantras(ownerKey));
-  const [mantraId, setMantraId] = useState<string>(() => loadActiveMantraId(ownerKey));
+  const [mantraId, setMantraId] = useState<string>(() => initialMantraId || loadActiveMantraId(ownerKey));
   const [target, setTarget] = useState<number>(() => loadTarget(ownerKey));
 
   // Hydration gate prevents the "save" effect from firing with stale state from
@@ -586,14 +592,16 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   useEffect(() => {
     hydratingRef.current = true;
     setCustomMantras(loadCustomMantras(ownerKey));
-    setMantraId(loadActiveMantraId(ownerKey));
+    // Per-mantra landing pages (/japa/<slug>) take precedence over the
+    // last-active mantra so the URL is the source of truth on first paint.
+    setMantraId(initialMantraId || loadActiveMantraId(ownerKey));
     setTarget(loadTarget(ownerKey));
     setFavorites(loadFavorites(ownerKey));
     setDailyRitual(loadDailyRitual(ownerKey));
     // hydration completes after the next paint
     const id = setTimeout(() => { hydratingRef.current = false; }, 0);
     return () => clearTimeout(id);
-  }, [ownerKey]);
+  }, [ownerKey, initialMantraId]);
 
   // Admin-managed global mantras — every visitor sees these merged into
   // the picker. Their audio URLs (if any) are registered with the audio

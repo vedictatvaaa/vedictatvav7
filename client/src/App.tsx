@@ -171,6 +171,7 @@ const MatrimonyProfiles = lazy(() => import("@/pages/matrimony-profiles"));
 const MatrimonyProfileDetail = lazy(() => import("@/pages/matrimony-profile-detail"));
 const MuhuratFinder = lazy(() => import("@/pages/muhurat-finder"));
 const JapaPage = lazy(() => import("@/pages/japa"));
+const JapaMantraPage = lazy(() => import("@/pages/japa-mantra"));
 
 /** Tiny redirector for /jap and /japa-counter SPA hits — replaces the URL
  *  with the canonical /japa so internal <Link>s honor canonicalization. */
@@ -721,6 +722,7 @@ function Router() {
           <Route path="/matrimony/profile/:id" component={MatrimonyProfileDetail} />
           <Route path="/muhurat-finder" component={MuhuratFinder} />
           <Route path="/japa" component={JapaPage} />
+          <Route path="/japa/:slug" component={JapaMantraPage} />
           {/* In-app navigation safety net for the SEO aliases — server
               already 301s these on initial HTTP load, but a client-side
               <Link href="/jap"> would otherwise stay on the alias URL.
