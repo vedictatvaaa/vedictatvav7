@@ -413,7 +413,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
           {onLogout && (
             <button
               onClick={() => {
-                fetch("/api/admin/logout", { method: "POST", headers: { "x-admin-token": adminToken || "" } });
+                fetch("/api/admin/logout", { method: "POST", credentials: "include", headers: adminToken ? { "x-admin-token": adminToken } : {} });
                 onLogout();
               }}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-destructive hover-elevate"

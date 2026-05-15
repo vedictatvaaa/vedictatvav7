@@ -322,21 +322,20 @@ function ProtectedAdmin() {
   const [adminToken, setAdminToken] = useState("");
 
   const checkSession = useCallback(async () => {
-    const token = localStorage.getItem("adminToken");
-    if (!token) { setChecking(false); return; }
-    try {
-      const res = await fetch("/api/admin/verify-session", {
-        headers: { "x-admin-token": token },
-      });
-      if (res.ok) {
-        setAdminToken(token);
-        setAuthed(true);
-      } else {
-        localStorage.removeItem("adminToken");
-      }
-    } catch {
-      localStorage.removeItem("adminToken");
+    // Cookie-only flow (15B). The httpOnly cookie set on login is sent
+    // automatically by the browser via credentials:"include"; JS can't
+    // read it, so localStorage is no longer involved. We also clean up
+    // any legacy localStorage token left over from pre-15B sessions.
+    if (typeof window !== "undefined") {
+      try { window.localStorage.removeItem("adminToken"); } catch {}
     }
+    try {
+      const res = await fetch("/api/admin/verify-session", { credentials: "include" });
+      if (res.ok) {
+        setAdminToken("");
+        setAuthed(true);
+      }
+    } catch { /* unauth → stay on login */ }
     setChecking(false);
   }, []);
 
@@ -357,14 +356,14 @@ function ProtectedAdmin() {
           <div className="animate-spin h-8 w-8 border-4 border-[#6D2B35] border-t-transparent rounded-full" />
         </div>
       }>
-        <AdminLogin onLogin={(token) => { setAdminToken(token); setAuthed(true); }} />
+        <AdminLogin onLogin={() => { setAdminToken(""); setAuthed(true); }} />
       </Suspense>
     );
   }
 
   return (
     <AdminErrorBoundary>
-      <Admin adminToken={adminToken} onLogout={() => { localStorage.removeItem("adminToken"); setAuthed(false); setAdminToken(""); }} />
+      <Admin adminToken={adminToken} onLogout={() => { setAuthed(false); setAdminToken(""); }} />
     </AdminErrorBoundary>
   );
 }

@@ -34,6 +34,33 @@ export function adminAuthMiddleware(req: AdminRequest, res: Response, next: Next
     res.status(401).json({ message: "Admin authentication required" });
     return;
   }
+
+  // CSRF guard (15B). The vt_admin_token cookie is SameSite=Strict, which
+  // already prevents the browser from attaching it to a cross-site form POST
+  // — but defence-in-depth: for any state-changing method authenticated
+  // ONLY by the cookie (no explicit x-admin-token header), require the
+  // request's Origin (or Referer fallback) to match the host the API is
+  // serving on. The header path is CSRF-immune by design (cross-origin JS
+  // can't set a custom header without a successful CORS preflight, and we
+  // don't allow cross-origin admin calls).
+  const isMutation = req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
+  if (isMutation && !headerToken) {
+    const origin = req.headers.origin as string | undefined;
+    const referer = req.headers.referer as string | undefined;
+    const host = req.headers.host as string | undefined;
+    let okOrigin = false;
+    if (host) {
+      const expected = new Set([`https://${host}`, `http://${host}`]);
+      if (origin && expected.has(origin)) okOrigin = true;
+      else if (!origin && referer) {
+        try { okOrigin = expected.has(new URL(referer).origin); } catch {}
+      }
+    }
+    if (!okOrigin) {
+      res.status(403).json({ message: "CSRF check failed: cross-origin request rejected" });
+      return;
+    }
+  }
   validateAdminSession(token)
     .then((userId) => {
       if (!userId) {

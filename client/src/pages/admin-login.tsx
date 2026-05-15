@@ -120,7 +120,8 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
         setStep("2fa");
         toast({ title: "Verification Required", description: "Enter the code from your authenticator app" });
       } else {
-        localStorage.setItem("adminToken", data.token);
+        // Cookie-only auth (15B): server set httpOnly vt_admin_token via Set-Cookie.
+        // We no longer write the session token to localStorage where XSS can steal it.
         onLogin(data.token, data.user);
         toast({ title: "Welcome back!", description: "Admin login successful" });
       }
@@ -149,7 +150,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
         toast({ title: "Verification Failed", description: data.message || "Invalid code", variant: "destructive" });
         return;
       }
-      localStorage.setItem("adminToken", data.token);
+      // Cookie-only auth (15B): server set httpOnly vt_admin_token via Set-Cookie.
       onLogin(data.token, data.user);
       toast({ title: "Welcome back!", description: "Admin login successful" });
     } catch {
