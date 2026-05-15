@@ -1535,6 +1535,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const undo = undoLastTap;
 
   const resetMala = () => {
+    // Hard-stop any in-flight chant audio so the devotee doesn't hear
+    // the previous bead finish chanting after the count returns to 0.
+    // Without this the user hits Reset, sees "0" but the mantra audio
+    // (which can run several seconds per bead) keeps playing — visually
+    // inconsistent and acoustically jarring. The synthesized bell is a
+    // ~200 ms one-shot so it doesn't need an explicit stop.
+    try { mantraAudio.stop(); } catch {}
     setPersist((prev) => ({ ...prev, count: 0 }));
     setSessionStartTs(null);
     setMilestoneFlash(null);
@@ -1543,6 +1550,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
 
   const resetAll = () => {
     if (!confirm(`Reset ALL stats for "${mantra.label}"? This cannot be undone.`)) return;
+    try { mantraAudio.stop(); } catch {}
     setPersist(emptyPersist());
     toast({ title: "Stats reset" });
   };
