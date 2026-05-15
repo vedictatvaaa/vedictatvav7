@@ -7,12 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bell, BellOff, CircleDot, Vibrate, RotateCcw, Plus, Sparkles, Flame,
+  BellOff, Vibrate, RotateCcw, Plus, Sparkles, Flame,
   Volume2, VolumeX, Undo2, Trophy, Music2, Trash2,
   Maximize2, Minimize2, Lock, LockOpen, X,
   Heart, Share2, CalendarCheck, Headphones, Play, Square,
   Info, ChevronDown, ChevronUp, Shuffle,
-  Captions, CaptionsOff,
 } from "lucide-react";
 import mahamrityunjayaAudioUrl from "@assets/oms-uravarakabnathhanama_1DPkLkXi_1778219722131.mp3";
 import omNamahShivayaAudioUrl from "@assets/om-namah-shivaya-chant_XTVuqww6_1778237342624.mp3";
@@ -1804,63 +1803,49 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col items-center select-none">
             <div className="relative flex flex-row items-center justify-center w-full">
-              {/* Toggle strip — vertical rail pinned to the left wall.
-                  Reorganised into 4 logical groups (Audio · Haptics ·
-                  Chant · Display) separated by hairline dividers so the
-                  rail reads as a tabla, not a wall of buttons. Single
-                  maroon→gold colour system across every active state.
-                  Touch targets are 44px on mobile (WCAG 2.5.5) and snug
-                  36px on tablet+. The active gold (#F5D078) hits AAA
-                  contrast against the maroon background — kinder on
-                  older eyes and on color-blind devotees. */}
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col items-center shrink-0 z-10" role="group" aria-label="Counter controls" data-testid="counter-toggle-strip">
-                {/* — Audio group — */}
-                <div className="flex flex-col items-center gap-1.5">
+              {/* Toggle strip — always vertical, pinned to the left wall. Orb stays centered in the card. Sound / Vibration / Sync to audio / Auto-chant / Mix all. */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 shrink-0 z-10" role="group" aria-label="Counter controls" data-testid="counter-toggle-strip">
+                <Button
+                  size="icon"
+                  variant={soundOn ? "default" : "outline"}
+                  className={soundOn ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
+                  onClick={() => setSoundOn((s) => !s)}
+                  aria-pressed={soundOn}
+                  aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
+                  title={`Sound: ${soundOn ? "On" : "Off"}`}
+                  data-testid="btn-toggle-sound"
+                >
+                  {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+                {/* Click-style toggle — only visible when sound is on, so
+                    we don't show a no-op control. Cycles between the
+                    metallic ghanta tap and the hollow sandalwood bead
+                    knock. Plays a quick preview tap on switch so the
+                    devotee hears the difference immediately. */}
+                {soundOn && (
                   <Button
                     size="icon"
-                    variant={soundOn ? "default" : "outline"}
-                    className={`h-11 w-11 sm:h-9 sm:w-9 ${soundOn ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
-                    onClick={() => setSoundOn((s) => !s)}
-                    aria-pressed={soundOn}
-                    aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
-                    title={`Sound: ${soundOn ? "On" : "Off"}`}
-                    data-testid="btn-toggle-sound"
+                    variant="outline"
+                    onClick={() => {
+                      setClickStyle((s) => {
+                        const next: ClickStyle = s === "bell" ? "wood" : "bell";
+                        bellPlayer.setStyle(next);
+                        bellPlayer.tap(0);
+                        return next;
+                      });
+                    }}
+                    aria-label={`Click sound: ${clickStyle === "wood" ? "wooden bead" : "temple bell"} (tap to switch)`}
+                    title={`Click: ${clickStyle === "wood" ? "Wood" : "Bell"}`}
+                    data-testid="btn-toggle-click-style"
+                    className="text-[10px] font-bold tracking-wider text-[#6D2B35]"
                   >
-                    {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                    {clickStyle === "wood" ? "WD" : "BL"}
                   </Button>
-                  {/* Click-style toggle — only when sound is on (no-op
-                      otherwise). Now uses proper Bell / CircleDot icons
-                      to match the rest of the rail, instead of the
-                      odd-one-out "BL/WD" text label. */}
-                  {soundOn && (
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => {
-                        setClickStyle((s) => {
-                          const next: ClickStyle = s === "bell" ? "wood" : "bell";
-                          bellPlayer.setStyle(next);
-                          bellPlayer.tap(0);
-                          return next;
-                        });
-                      }}
-                      aria-label={`Click sound: ${clickStyle === "wood" ? "wooden bead" : "temple bell"} (tap to switch)`}
-                      title={`Click: ${clickStyle === "wood" ? "Wood" : "Bell"}`}
-                      data-testid="btn-toggle-click-style"
-                      className="h-11 w-11 sm:h-9 sm:w-9 border-[#6D2B35]/30 text-[#6D2B35]"
-                    >
-                      {clickStyle === "wood" ? <CircleDot className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="h-3 w-px bg-[#6D2B35]/15 my-2" aria-hidden="true" />
-
-                {/* — Haptics group — */}
+                )}
                 <Button
                   size="icon"
                   variant={vibrationOn ? "default" : "outline"}
-                  className={`h-11 w-11 sm:h-9 sm:w-9 ${vibrationOn ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
+                  className={vibrationOn ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
                   onClick={() => {
                     setVibrationOn((s) => {
                       const next = !s;
@@ -1884,101 +1869,60 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 >
                   {vibrationOn ? <Vibrate className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
                 </Button>
-
-                <div className="h-3 w-px bg-[#6D2B35]/15 my-2" aria-hidden="true" />
-
-                {/* — Chant group — */}
-                <div className="flex flex-col items-center gap-1.5">
-                  <Button
-                    size="icon"
-                    variant={syncTapsToAudio ? "default" : "outline"}
-                    className={`h-11 w-11 sm:h-9 sm:w-9 ${syncTapsToAudio ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
-                    onClick={() => setSyncTapsToAudio((s) => !s)}
-                    aria-pressed={syncTapsToAudio}
-                    aria-label={syncTapsToAudio ? "Stop syncing taps to audio" : "Sync taps to audio"}
-                    title={`Sync to audio: ${syncTapsToAudio ? "On" : "Off"} — when on, the press button waits for each chant to finish before accepting the next tap.`}
-                    data-testid="btn-toggle-sync-audio"
-                  >
-                    <Headphones className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant={autoMode ? "default" : "outline"}
-                    className={`h-11 w-11 sm:h-9 sm:w-9 ${autoMode ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
-                    onClick={toggleAutoMode}
-                    aria-pressed={autoMode}
-                    aria-label={autoMode ? "Stop auto-chant" : "Arm auto-chant"}
-                    title={`Auto-chant: ${autoMode ? "On" : "Off"} — arm hands-free chanting; tap the mala to start.`}
-                    data-testid="btn-toggle-auto-chant"
-                  >
-                    {autoMode ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  {/* Mix is a no-op without Auto — render only when Auto
-                      is armed, mirroring the BL/WD hide-when-Sound-off
-                      pattern above. Keeps the rail visually quiet for
-                      the 95% of devotees who never touch Mix. */}
-                  {autoMode && (
-                    <Button
-                      size="icon"
-                      variant={mixMode ? "default" : "outline"}
-                      className={`h-11 w-11 sm:h-9 sm:w-9 ${mixMode ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
-                      onClick={() => setMixMode((m) => !m)}
-                      aria-pressed={mixMode}
-                      aria-label={mixMode ? "Stop mixing all mantras" : "Mix all mantras during auto-chant"}
-                      title={`Mix all: ${mixMode ? "On" : "Off"} — cycle through every mantra during auto-chant.`}
-                      data-testid="btn-toggle-mix-mode"
-                    >
-                      <Shuffle className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="h-3 w-px bg-[#6D2B35]/15 my-2" aria-hidden="true" />
-
-                {/* — Display group — LED caption toggle, now with proper
-                    Captions / CaptionsOff icons matching the rest of
-                    the rail. Active state uses the same maroon→gold
-                    treatment as every other button. */}
+                <Button
+                  size="icon"
+                  variant={syncTapsToAudio ? "default" : "outline"}
+                  className={syncTapsToAudio ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
+                  onClick={() => setSyncTapsToAudio((s) => !s)}
+                  aria-pressed={syncTapsToAudio}
+                  aria-label={syncTapsToAudio ? "Stop syncing taps to audio" : "Sync taps to audio"}
+                  title={`Sync to audio: ${syncTapsToAudio ? "On" : "Off"} — when on, the press button waits for each chant to finish before accepting the next tap.`}
+                  data-testid="btn-toggle-sync-audio"
+                >
+                  <Headphones className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant={autoMode ? "default" : "outline"}
+                  className={autoMode ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
+                  onClick={toggleAutoMode}
+                  aria-pressed={autoMode}
+                  aria-label={autoMode ? "Stop auto-chant" : "Arm auto-chant"}
+                  title={`Auto-chant: ${autoMode ? "On" : "Off"} — arm hands-free chanting; tap the mala to start.`}
+                  data-testid="btn-toggle-auto-chant"
+                >
+                  {autoMode ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant={mixMode ? "default" : "outline"}
+                  className={mixMode ? "bg-[#D4AF37] hover:bg-[#D4AF37] text-[#6D2B35]" : ""}
+                  onClick={() => setMixMode((m) => !m)}
+                  aria-pressed={mixMode}
+                  aria-label={mixMode ? "Stop mixing all mantras" : "Mix all mantras during auto-chant"}
+                  title={`Mix all: ${mixMode ? "On" : "Off"} — cycle through every mantra during auto-chant.`}
+                  data-testid="btn-toggle-mix-mode"
+                >
+                  <Shuffle className="h-4 w-4" />
+                </Button>
+                {/* LED caption toggle — text label "CC" mirrors the BL/WD
+                    convention above so the strip reads as a single
+                    family of typographic toggles. Hover-pause is built
+                    into the strip itself; this button only flips it
+                    on/off. */}
                 <Button
                   size="icon"
                   variant={captionOn ? "default" : "outline"}
-                  className={`h-11 w-11 sm:h-9 sm:w-9 ${captionOn ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#F5D078] border border-[#D4AF37]/40" : "border-[#6D2B35]/30 text-[#6D2B35]"}`}
+                  className={captionOn ? "bg-[#0a0202] hover:bg-[#0a0202] text-[#ffd766] text-[10px] font-bold tracking-wider border border-[#D4AF37]/40" : "text-[10px] font-bold tracking-wider text-[#6D2B35]"}
                   onClick={() => setCaptionOn((c) => !c)}
                   aria-pressed={captionOn}
                   aria-label={captionOn ? "Hide LED caption strip" : "Show LED caption strip with mantra transliteration"}
                   title={`LED caption: ${captionOn ? "On" : "Off"} — sing-along transliteration scrolls below the orb.`}
                   data-testid="btn-toggle-led-caption"
                 >
-                  {captionOn ? <Captions className="h-4 w-4" /> : <CaptionsOff className="h-4 w-4" />}
+                  CC
                 </Button>
               </div>
-            {/* "Now chanting" pill — single line above the orb so the
-                devotee always sees what's selected without scrolling
-                back up to the picker (which lives below the counter
-                in the new orb-first layout). Hidden when the LED
-                caption strip is enabled to avoid duplicating the
-                same data twice in the same eye-line. */}
-            {!captionOn && (
-              <div
-                className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full border border-[#D4AF37]/40 bg-[#FFFAEC] px-3 py-1 shadow-sm"
-                data-testid="now-chanting-pill"
-              >
-                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-[#6D2B35]">Now</span>
-                <span className="text-[12px] font-semibold text-[#6D2B35] truncate max-w-[150px] sm:max-w-[260px]">{mantra.label}</span>
-                {mantra.sanskrit && (
-                  <>
-                    <span className="text-[#D4AF37]" aria-hidden="true">·</span>
-                    <span
-                      className="text-[13px] text-[#4a1a22] truncate max-w-[130px] sm:max-w-[220px]"
-                      style={{ fontFamily: "'Tiro Devanagari Sanskrit', serif" }}
-                      data-testid="text-now-chanting-devanagari"
-                    >
-                      {mantra.sanskrit.split(/\s+/).slice(0, 3).join(" ")}
-                    </span>
-                  </>
-                )}
-              </div>
-            )}
             <div className="relative shrink-0 animate-japa-orb-enter" style={{ width: RING_SIZE, height: RING_SIZE, maxWidth: "100%" }}>
               {/* Devanagari watermark — large, very low opacity, sits behind
                   the mala garland. Reinforces the active mantra subliminally
@@ -2031,7 +1975,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 onPointerCancel={handleOrbPointerEnd}
                 disabled={autoChanting || (audioLocked && syncTapsToAudio)}
                 aria-busy={(autoChanting || (audioLocked && syncTapsToAudio)) || undefined}
-                className={`absolute inset-7 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] transition-transform focus:outline-none focus-visible:ring-4 focus-visible:ring-[#FFE082] focus-visible:ring-offset-4 focus-visible:ring-offset-[#FBF7EE] ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
+                className={`absolute inset-7 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
                 aria-label={autoMode && !autoChanting ? "Tap to start auto-chant" : autoChanting ? "Auto-chant is playing — press Stop to chant manually" : (audioLocked && syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa")}
                 data-testid="btn-tap"
               >

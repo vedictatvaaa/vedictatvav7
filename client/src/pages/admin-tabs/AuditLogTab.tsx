@@ -10,6 +10,41 @@ import { Badge } from "@/components/ui/badge";
 
 import { createFetcher } from "../admin-shared";
 
+// Keys we never display in the audit-log details column. The audit
+// helper writes whatever the route hands it as `details`, so a future
+// caller could accidentally include a token, secret, password, or full
+// PII payload — we redact those before rendering, both inline and in
+// the hover tooltip. This is defence-in-depth: routes should still
+// avoid putting secrets in the audit blob in the first place.
+const SENSITIVE_DETAIL_KEYS = new Set([
+  "password", "token", "secret", "apiKey", "api_key", "authorization",
+  "twoFactorSecret", "two_factor_secret", "sessionToken", "session_token",
+  "razorpayKeySecret", "razorpay_key_secret", "openaiApiKey", "openai_api_key",
+  "msg91AuthKey", "msg91_auth_key", "shiprocketToken", "shiprocket_token",
+  "googleClientSecret", "google_client_secret", "sessionSecret", "session_secret",
+  "unsubscribeSecret", "unsubscribe_secret",
+  "creditCard", "cardNumber", "cvv", "ssn", "panCard", "aadhaar",
+]);
+function sanitizeDetails(value: any): any {
+  if (value === null || value === undefined) return value;
+  if (Array.isArray(value)) return value.map(sanitizeDetails);
+  if (typeof value === "object") {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (SENSITIVE_DETAIL_KEYS.has(k) || /password|secret|token|apikey|auth/i.test(k)) {
+        out[k] = "[REDACTED]";
+      } else {
+        out[k] = sanitizeDetails(v);
+      }
+    }
+    return out;
+  }
+  return value;
+}
+function renderDetails(value: any): string {
+  try { return JSON.stringify(sanitizeDetails(value)); } catch { return "[unrenderable]"; }
+}
+
 function AuditLogTab({ adminToken }: { adminToken?: string }) {
   const fetcher = createFetcher(adminToken);
   const [filter, setFilter] = useState("");
@@ -69,8 +104,8 @@ function AuditLogTab({ adminToken }: { adminToken?: string }) {
                 <div className="col-span-3">
                   <Badge variant="secondary" className="font-mono text-[10px]">{log.action}</Badge>
                   {log.details && (
-                    <div className="mt-1 text-[11px] text-muted-foreground truncate" title={JSON.stringify(log.details)}>
-                      {JSON.stringify(log.details)}
+                    <div className="mt-1 text-[11px] text-muted-foreground truncate" title={renderDetails(log.details)}>
+                      {renderDetails(log.details)}
                     </div>
                   )}
                 </div>

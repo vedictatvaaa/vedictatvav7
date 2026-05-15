@@ -21,7 +21,15 @@ export interface AdminRequest extends Request {
 }
 
 export function adminAuthMiddleware(req: AdminRequest, res: Response, next: NextFunction) {
-  const token = req.headers["x-admin-token"] as string | undefined;
+  // Accept the admin session token from either the legacy `x-admin-token`
+  // header (still used by every admin tab today) or the new `vt_admin_token`
+  // httpOnly cookie set on login. The cookie is the secure path forward —
+  // it is XSS-stealable only if the attacker can run `document.cookie`,
+  // which httpOnly forbids. The header is kept for one release while we
+  // migrate every admin call site away from localStorage.
+  const headerToken = req.headers["x-admin-token"] as string | undefined;
+  const cookieToken = (req as any).cookies?.vt_admin_token as string | undefined;
+  const token = headerToken || cookieToken;
   if (!token) {
     res.status(401).json({ message: "Admin authentication required" });
     return;

@@ -105,6 +105,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
@@ -140,6 +141,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       const res = await fetch("/api/admin/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ tempToken, code: twoFACode, userId }),
       });
       const data = await res.json();

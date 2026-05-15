@@ -3620,6 +3620,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   app.delete("/api/admin/product-questions/:id", adminAuthMiddleware, async (req, res) => {
     const ok = await storage.deleteProductQuestion(Number(req.params.id));
+    try { await auditAdmin(req, "product-question.delete", `qa:${req.params.id}`, { ok }); } catch {}
     res.json({ ok });
   });
 
@@ -4436,6 +4437,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         if (typeof req.body?.[k] === "boolean") patch[k] = req.body[k];
       }
       const updated = await storage.updateNotificationSettings(patch);
+      try { await auditAdmin(req, "notifications.settings.update", "notificationSettings", { keys: Object.keys(patch) }); } catch {}
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ message: err?.message || "settings update failed" });
@@ -4561,13 +4563,84 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
+  // Brute-force protection for /api/admin/login. Per-IP counter with
+  // exponential lockout: 1st block after 5 fails → 1 min, doubles each
+  // subsequent block (cap 15 min). Successful login clears the counter.
+  // In-process Map is intentional — the admin login surface is tiny
+  // (a handful of admins) and a single Express process serves prod, so
+  // a Redis backend would be overkill. If we ever scale horizontally,
+  // swap to a shared store.
+  const adminLoginAttempts = new Map<string, { fails: number; blocks: number; lockedUntil: number }>();
+  function adminLoginIp(req: any): string {
+    // Trust ONLY Express's resolved req.ip — it honours the trust-proxy
+    // setting on the app, so a spoofed x-forwarded-for from an attacker
+    // is ignored. Reading XFF directly would let a single attacker rotate
+    // fake IPs and evade the lockout entirely.
+    return req.ip || req.socket?.remoteAddress || "unknown";
+  }
+  function checkAdminLoginLock(ip: string): { locked: boolean; retryAfterSec: number } {
+    const rec = adminLoginAttempts.get(ip);
+    if (!rec) return { locked: false, retryAfterSec: 0 };
+    const now = Date.now();
+    if (rec.lockedUntil > now) return { locked: true, retryAfterSec: Math.ceil((rec.lockedUntil - now) / 1000) };
+    return { locked: false, retryAfterSec: 0 };
+  }
+  function recordAdminLoginFailure(ip: string) {
+    const rec = adminLoginAttempts.get(ip) || { fails: 0, blocks: 0, lockedUntil: 0 };
+    rec.fails += 1;
+    if (rec.fails >= 5) {
+      rec.blocks += 1;
+      // 60s · 2^(blocks-1), capped at 15 min.
+      const lockMs = Math.min(60_000 * Math.pow(2, rec.blocks - 1), 15 * 60_000);
+      rec.lockedUntil = Date.now() + lockMs;
+      rec.fails = 0;
+    }
+    adminLoginAttempts.set(ip, rec);
+  }
+  function clearAdminLoginFailures(ip: string) {
+    adminLoginAttempts.delete(ip);
+  }
+  // Garbage-collect old entries every 30 min so the map cannot grow
+  // unbounded under a sustained scan.
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, rec] of adminLoginAttempts.entries()) {
+      if (rec.lockedUntil < now - 60 * 60_000) adminLoginAttempts.delete(ip);
+    }
+  }, 30 * 60_000).unref();
+
+  // httpOnly cookie helper — every admin login path (password, 2FA, future
+  // SSO) sets the cookie with the same options so logout / middleware can
+  // trust a single shape. SameSite=Strict because the admin surface is
+  // never embedded cross-site.
+  const ADMIN_COOKIE = "vt_admin_token";
+  function setAdminCookie(res: any, token: string) {
+    res.cookie(ADMIN_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+  }
+  function clearAdminCookie(res: any) {
+    res.clearCookie(ADMIN_COOKIE, { path: "/" });
+  }
+
   app.post("/api/admin/login", async (req, res) => {
     try {
+      const ip = adminLoginIp(req);
+      const lock = checkAdminLoginLock(ip);
+      if (lock.locked) {
+        res.setHeader("Retry-After", String(lock.retryAfterSec));
+        return res.status(429).json({ message: `Too many failed attempts. Try again in ${Math.ceil(lock.retryAfterSec / 60)} min.` });
+      }
       const { email, password } = req.body;
       if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
       const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
       if (user.length === 0 || !user[0].password || user[0].role !== "admin") {
+        recordAdminLoginFailure(ip);
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
 
@@ -4585,10 +4658,13 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         await db.update(users).set({ password: newHash }).where(eq(users.id, user[0].id));
       }
       if (!valid) {
+        recordAdminLoginFailure(ip);
         return res.status(401).json({ message: "Invalid admin credentials" });
       }
 
       if (user[0].twoFactorEnabled) {
+        // Don't clear the failure counter yet — the 2FA step still has to
+        // succeed. We only clear on a fully-authenticated session.
         const tempToken = crypto.randomBytes(32).toString("hex");
         const tempExpiry = new Date(Date.now() + 5 * 60 * 1000);
         await db.insert(adminSessions).values({ userId: user[0].id, token: `2fa-pending-${tempToken}`, expiresAt: tempExpiry });
@@ -4603,6 +4679,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const token = crypto.randomBytes(48).toString("hex");
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await db.insert(adminSessions).values({ userId: user[0].id, token, expiresAt });
+      setAdminCookie(res, token);
+      clearAdminLoginFailures(ip);
 
       const { password: _, twoFactorSecret: __, ...safeUser } = user[0];
       res.json({ token, user: safeUser, requires2FA: false });
@@ -4629,10 +4707,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (!verifyResult.valid) return res.status(401).json({ message: "Invalid verification code" });
 
       await db.delete(adminSessions).where(eq(adminSessions.token, `2fa-pending-${tempToken}`));
+      clearAdminLoginFailures(adminLoginIp(req));
 
       const token = crypto.randomBytes(48).toString("hex");
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await db.insert(adminSessions).values({ userId: user[0].id, token, expiresAt });
+      setAdminCookie(res, token);
 
       const { password: _, twoFactorSecret: __, ...safeUser } = user[0];
       res.json({ token, user: safeUser });
@@ -4932,15 +5012,21 @@ If you did not request this reset, you can ignore this email — your password w
   });
 
   app.post("/api/admin/logout", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
-    if (token) {
-      await db.delete(adminSessions).where(eq(adminSessions.token, token));
+    // Revoke whichever token authenticated this caller — header OR cookie.
+    // A cookie-only client (post-migration) would otherwise leave its
+    // server session row intact until the 24h expiry, defeating logout.
+    const headerToken = req.headers["x-admin-token"] as string | undefined;
+    const cookieToken = (req as any).cookies?.vt_admin_token as string | undefined;
+    const tokens = Array.from(new Set([headerToken, cookieToken].filter(Boolean) as string[]));
+    for (const t of tokens) {
+      await db.delete(adminSessions).where(eq(adminSessions.token, t));
     }
+    clearAdminCookie(res);
     res.json({ message: "Logged out" });
   });
 
   app.get("/api/admin/verify-session", async (req, res) => {
-    const token = req.headers["x-admin-token"] as string;
+    const token = (req.headers["x-admin-token"] as string | undefined) || (req as any).cookies?.vt_admin_token;
     if (!token) return res.status(401).json({ valid: false });
     const userId = await validateAdminSession(token);
     if (!userId) return res.status(401).json({ valid: false });
@@ -5824,6 +5910,7 @@ If you did not request this reset, you can ignore this email — your password w
       if (body.notes !== undefined) update.notes = body.notes ? String(body.notes) : null;
       const row = await storage.updateSchemaChangelogEntry(id, update as any);
       if (!row) return res.status(404).json({ message: "Entry not found" });
+      try { await auditAdmin(req, "schema.changelog.update", String(id), { fields: Object.keys(update) }); } catch {}
       res.json(row);
     } catch (err: any) {
       res.status(500).json({ message: err?.message || "Failed to update changelog entry" });
@@ -6494,6 +6581,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   app.delete("/api/admin/abandoned-carts/:id", adminAuthMiddleware, async (req, res) => {
     const ok = await storage.deleteAbandonedCart(Number(req.params.id));
     if (!ok) return res.status(404).json({ message: "Not found" });
+    try { await auditAdmin(req, "abandoned-cart.delete", `cart:${req.params.id}`, {}); } catch {}
     res.json({ ok: true });
   });
 
