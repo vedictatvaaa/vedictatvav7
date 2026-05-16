@@ -219,7 +219,7 @@ function CityChooser() {
             );
             if (tile.live) {
               return (
-                <Link key={tile.slug} href={`/pandits?city=${tile.slug}`} className="block h-full">
+                <Link key={tile.slug} href={`/pandits/${tile.slug}`} className="block h-full">
                   {Inner}
                 </Link>
               );
@@ -302,7 +302,7 @@ function CityChooser() {
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
-            <Button variant="outline" onClick={() => { setComingSoonCity(null); navigate("/pandits?city=delhi-ncr"); }} className="rounded-md h-10 text-[13px]" data-testid="btn-try-delhi">
+            <Button variant="outline" onClick={() => { setComingSoonCity(null); navigate("/pandits/delhi-ncr"); }} className="rounded-md h-10 text-[13px]" data-testid="btn-try-delhi">
               Browse Delhi NCR Instead
             </Button>
             <Button onClick={() => { setComingSoonCity(null); navigate("/puja?mode=online"); }} className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] rounded-md h-10 text-[13px] font-semibold" data-testid="btn-book-online-from-city">
@@ -317,12 +317,19 @@ function CityChooser() {
 
 export default function PanditDirectory() {
   const searchString = useSearch();
+  const [, navigate] = useLocation();
   const cityParam = new URLSearchParams(searchString).get("city") || "";
-  const cityTile = CITY_TILES.find(c => c.slug === cityParam && c.live);
+  const knownTile = CITY_TILES.find(c => c.slug === cityParam);
 
-  if (!cityTile) return <CityChooser />;
+  // Legacy URL ?city=<slug> → canonical /pandits/<slug> (avoid duplicate
+  // content with the per-city landing pages). Replace in history so back
+  // button doesn't re-bounce.
+  useEffect(() => {
+    if (knownTile) navigate(`/pandits/${knownTile.slug}`, { replace: true });
+  }, [knownTile, navigate]);
 
-  return <PanditDirectoryForCity defaultCity={cityTile.defaultCity} cityLabel={cityTile.name} />;
+  if (knownTile) return null;
+  return <CityChooser />;
 }
 
 // Listing view extracted to its own component (advanced features:

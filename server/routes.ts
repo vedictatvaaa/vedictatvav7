@@ -886,6 +886,15 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/spiritual-essentials", priority: "0.8", changefreq: "weekly" },
       { loc: "/shop", priority: "0.8", changefreq: "weekly" },
       { loc: "/online-pandit-booking", priority: "0.9", changefreq: "weekly" },
+      // Per-city pandit landings — each gets full SEO content, A+ blocks,
+      // FAQs and JSON-LD via client/src/pages/pandit-city-landing.tsx.
+      { loc: "/pandits/delhi-ncr", priority: "0.9", changefreq: "weekly" },
+      { loc: "/pandits/mumbai", priority: "0.7", changefreq: "monthly" },
+      { loc: "/pandits/bangalore", priority: "0.7", changefreq: "monthly" },
+      { loc: "/pandits/chennai", priority: "0.7", changefreq: "monthly" },
+      { loc: "/pandits/kolkata", priority: "0.7", changefreq: "monthly" },
+      { loc: "/pandits/guwahati", priority: "0.65", changefreq: "monthly" },
+      { loc: "/pandits/lucknow", priority: "0.7", changefreq: "monthly" },
       { loc: "/online-puja-booking", priority: "0.9", changefreq: "weekly" },
       { loc: "/online-pind-daan", priority: "0.9", changefreq: "weekly" },
       // City landing pages use the hyphenated route convention
