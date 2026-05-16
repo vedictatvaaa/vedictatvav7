@@ -2050,3 +2050,72 @@ export const insertSacredTextSchema = createInsertSchema(sacredTexts).omit({
 });
 export type SacredText = typeof sacredTexts.$inferSelect;
 export type InsertSacredText = z.infer<typeof insertSacredTextSchema>;
+
+// =====================================================================
+// Karma & Dharma — gamified spiritual activity tracker.
+//   - spiritualActivities: append-only log of every action (japa rounds,
+//     charity ₹, fasting day, temple visit, gauseva, pind daan).
+//   - festivals: editable calendar of festivals; the daily reminder
+//     scheduler picks rows that are exactly 7 days away.
+//   - festivalReminderLog: dedupes reminder emails so the scheduler can
+//     run safely every hour without re-sending.
+// Karma + Dharma scores are derived sums (computed by the API), not
+// denormalized — keeps writes simple and avoids drift.
+// =====================================================================
+export const SPIRITUAL_ACTIVITY_TYPES = [
+  "japa", "charity", "fasting", "temple", "gauseva", "pind_daan",
+] as const;
+export type SpiritualActivityType = (typeof SPIRITUAL_ACTIVITY_TYPES)[number];
+
+export const spiritualActivities = pgTable("spiritual_activities", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  activityType: text("activity_type").notNull(),
+  // Free-form numeric value: japa rounds, ₹ donated, days fasted, etc.
+  value: integer("value").notNull().default(1),
+  // Pre-computed at write time so dashboards stay O(1) per row.
+  karmaPoints: integer("karma_points").notNull().default(0),
+  dharmaPoints: integer("dharma_points").notNull().default(0),
+  notes: text("notes"),
+  performedAt: timestamp("performed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("spiritual_act_user_idx").on(t.userId),
+  perfIdx: index("spiritual_act_performed_idx").on(t.performedAt),
+}));
+export const insertSpiritualActivitySchema = createInsertSchema(spiritualActivities).omit({
+  id: true, karmaPoints: true, dharmaPoints: true, createdAt: true,
+});
+export type SpiritualActivity = typeof spiritualActivities.$inferSelect;
+export type InsertSpiritualActivity = z.infer<typeof insertSpiritualActivitySchema>;
+
+export const festivals = pgTable("festivals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  // Stored as YYYY-MM-DD so we can compare without timezone games.
+  date: text("date").notNull(),
+  description: text("description"),
+  preparationNotes: text("preparation_notes"),
+  importance: text("importance").notNull().default("medium"), // low|medium|high
+  notifyPandits: boolean("notify_pandits").notNull().default(true),
+  notifyUsers: boolean("notify_users").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  dateIdx: index("festivals_date_idx").on(t.date),
+}));
+export const insertFestivalSchema = createInsertSchema(festivals).omit({ id: true, createdAt: true });
+export type Festival = typeof festivals.$inferSelect;
+export type InsertFestival = z.infer<typeof insertFestivalSchema>;
+
+export const festivalReminderLog = pgTable("festival_reminder_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  festivalId: integer("festival_id").notNull(),
+  recipientType: text("recipient_type").notNull(), // user|pandit
+  recipientId: integer("recipient_id").notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+}, (t) => ({
+  // Idempotency: each (festival, recipient) pair gets exactly one reminder.
+  unq: uniqueIndex("festival_reminder_unq").on(t.festivalId, t.recipientType, t.recipientId),
+}));

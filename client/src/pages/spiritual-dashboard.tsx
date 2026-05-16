@@ -14,6 +14,7 @@ import { getInteractionSummary, getJourneyDataForAI } from "@/lib/spiritual-trac
 import { useAuth } from "@/lib/auth";
 import { LoyaltyCard } from "@/components/LoyaltyCard";
 import PageSeo from "@/components/PageSeo";
+import KarmaTracker from "@/components/KarmaTracker";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface SpiritualProfile {
@@ -734,6 +735,11 @@ export default function SpiritualDashboard() {
       </div>
 
       <div className="container mx-auto px-4 py-6 sm:py-8">
+        {/* CLUSTER 0: Karma & Dharma tracker — server-backed score + activity log */}
+        <section className="mb-8" data-testid="section-karma-dharma">
+          <KarmaTracker />
+        </section>
+
         {/* CLUSTER 1: Your Sadhana — identity + level + stats + loyalty in one card */}
         <section className="bg-white rounded-2xl border border-[#6D2B35]/8 shadow-sm mb-8 overflow-hidden" data-testid="section-your-sadhana">
           <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#6D2B35]/8">

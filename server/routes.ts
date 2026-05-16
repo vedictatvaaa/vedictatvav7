@@ -27,6 +27,7 @@ import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords"
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
 import { registerPanditPortalRoutes } from "./pandit-portal";
 import { registerAstroRealtimeRoutes } from "./astro-realtime";
+import { registerSpiritualTrackerRoutes } from "./spiritual-tracker";
 import { registerAiCoderRoutes } from "./ai-coder";
 import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
@@ -719,6 +720,7 @@ export async function registerRoutes(
   registerYatraPilgrimageRoutes(app);
   registerPanditPortalRoutes(app);
   registerAstroRealtimeRoutes(app);
+  registerSpiritualTrackerRoutes(app);
   registerAiCoderRoutes(app, adminAuthMiddleware);
   registerDashboardRoutes(app);
   const { registerPanditStorefrontRoutes } = await import("./pandit-storefront");

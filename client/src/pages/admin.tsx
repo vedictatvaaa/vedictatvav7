@@ -65,6 +65,7 @@ const OrdersTab             = safeLazy(() => import("./admin-tabs/OrdersTab"));
 const PanditsTab            = safeLazy(() => import("./admin-tabs/PanditsTab"));
 const PanditApplicationsTab = safeLazy(() => import("./admin-tabs/PanditApplicationsTab"));
 const AstrologersTab        = safeLazy(() => import("./admin-tabs/AstrologersTab"));
+const FestivalsTab           = safeLazy(() => import("./admin-tabs/FestivalsTab"));
 const BookingsTab           = safeLazy(() => import("./admin-tabs/BookingsTab"));
 const ReviewsTabContent     = safeLazy(() => import("./admin-tabs/ReviewsTabContent"));
 const ReturnTicketsTab      = safeLazy(() => import("./admin-tabs/ReturnTicketsTab"));
@@ -525,6 +526,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "pandits" && <PanditsTab />}
               {activeTab === "pandit-apps" && <PanditApplicationsTab adminToken={adminToken} />}
               {activeTab === "astrologers" && <AstrologersTab />}
+              {activeTab === "festivals" && <FestivalsTab />}
               {activeTab === "bookings" && <BookingsTab />}
               {activeTab === "reviews" && <ReviewsTabContent />}
               {activeTab === "returns" && <ReturnTicketsTab adminToken={adminToken} />}

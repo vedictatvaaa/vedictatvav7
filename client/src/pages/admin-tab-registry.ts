@@ -41,6 +41,7 @@ export const TABS: TabDef[] = [
   { id: "sacred-library",  label: "Sacred Library",   icon: Music,         section: "Marketing" },
   { id: "email-marketing", label: "Email Marketing",  icon: Mail,          section: "Marketing" },
   { id: "mantras",         label: "Mantras & Chants", icon: Music,         section: "Marketing" },
+  { id: "festivals",       label: "Festivals",        icon: Calendar,      section: "Marketing" },
   { id: "seo",             label: "SEO Manager",      icon: Search,        section: "System" },
   { id: "site-settings",   label: "Site Settings",    icon: Settings,      section: "System" },
   { id: "integrations",    label: "Integrations",     icon: Truck,         section: "System" },

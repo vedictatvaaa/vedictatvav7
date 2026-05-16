@@ -304,6 +304,24 @@ app.use((req, res, next) => {
     if (typeof (t as any).unref === "function") (t as any).unref();
   }, 7 * 60 * 1000);
 
+  // Festival reminder sweep — runs hourly, scans for festivals exactly
+  // 7 days out, emails users + pandits once each (idempotent via the
+  // festival_reminder_log unique index).
+  const { runFestivalReminderSweep } = await import("./spiritual-tracker");
+  const runFestivalReminders = async () => {
+    try {
+      const r = await runFestivalReminderSweep();
+      if (r.sent > 0) log(`festival reminders: sent=${r.sent} skipped=${r.skipped}`);
+    } catch (err: any) {
+      console.error("[festival-reminders] failed:", err?.message || err);
+    }
+  };
+  setTimeout(() => {
+    runFestivalReminders();
+    const t = setInterval(runFestivalReminders, 60 * 60 * 1000);
+    if (typeof (t as any).unref === "function") (t as any).unref();
+  }, 8 * 60 * 1000);
+
   app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
