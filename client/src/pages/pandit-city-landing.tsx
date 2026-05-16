@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import PageSeo from "@/components/PageSeo";
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
+import { BecomePanditBanner, BecomePanditStrip } from "@/components/pandit/BecomePanditBanner";
 import {
   PANDIT_CITIES_BY_SLUG,
   PANDIT_CITIES,
@@ -306,6 +307,7 @@ export default function PanditCityLanding() {
 
   return (
     <div className="min-h-screen bg-background">
+      <BecomePanditStrip />
       <PageSeo
         title={city.metaTitle}
         description={city.metaDescription}
@@ -333,6 +335,7 @@ export default function PanditCityLanding() {
       <CrossPromoGrid city={city} />
       <CityFAQs city={city} />
       <OtherCitiesStrip currentSlug={city.slug} />
+      <BecomePanditBanner />
 
       {/* Keywords blurb — for SEO crawlers, low visual weight */}
       <div className="container max-w-7xl mx-auto px-4 pb-10">

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import PageSeo from "@/components/PageSeo";
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
+import { BecomePanditBanner, BecomePanditStrip } from "@/components/pandit/BecomePanditBanner";
 import {
   PANDIT_CITIES_BY_SLUG,
   PANDIT_CITIES,
@@ -99,6 +100,7 @@ export default function PanditCityPujaLanding() {
 
   return (
     <div className="min-h-screen bg-background">
+      <BecomePanditStrip />
       <PageSeo
         title={metaTitle}
         description={metaDescription}
@@ -292,6 +294,8 @@ export default function PanditCityPujaLanding() {
           </div>
         </div>
       </section>
+
+      <BecomePanditBanner />
 
       {/* FAQs */}
       <section className="container max-w-3xl mx-auto px-4 py-12">
