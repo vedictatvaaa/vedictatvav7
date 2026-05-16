@@ -551,6 +551,41 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
 // social shares. Image stays the flagship /og/og-japa.jpg until we
 // commission per-mantra art.
 import { MANTRA_LIBRARY } from "../shared/mantra-library";
+import { PANDIT_CITY_BY_SLUG, slugifyPuja } from "./pandit-cities-map";
+
+// ── Per-city + per-(city, puja) pandit share cards ────────────────
+// Returns a bespoke OG card for /pandits/:citySlug and
+// /pandits/:citySlug/:pujaSlug. Returns null otherwise so the
+// flagship pandit RegExp in ROUTE_CARDS still wins for /pandits.
+export function buildPanditCityOgCard(pathname: string): OgCard | null {
+  const m = pathname.match(/^\/pandits\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
+  if (!m) return null;
+  const city = PANDIT_CITY_BY_SLUG[m[1]];
+  if (!city) return null;
+  const pujaSlug = m[2];
+
+  if (pujaSlug) {
+    const pujaName = city.popularPujaNames.find((n) => slugifyPuja(n) === pujaSlug);
+    if (!pujaName) return null;
+    const title = `${pujaName} Pandit in ${city.name} · Vedic Tatva`.slice(0, 80);
+    const description = `Book a verified, scripture-trained Vedic Pandit for ${pujaName} in ${city.name}. Transparent pricing, samagri kit option, free reschedule. ${city.live ? "Same-day slots available." : "Live online puja while we expand to your city."}`.slice(0, 200);
+    return {
+      title,
+      description,
+      image: "/og/og-pandit-booking.jpg",
+      alt: `${pujaName} pandit booking in ${city.name} — Vedic Tatva`,
+    };
+  }
+
+  const title = `Book a Verified Vedic Pandit in ${city.name} · Vedic Tatva`.slice(0, 80);
+  const description = `Identity-verified, scripture-trained pandits in ${city.name}, ${city.state} for Satyanarayan, Griha Pravesh, Vivah, Rudrabhishek and more. Transparent pricing, samagri included, free reschedule.`.slice(0, 200);
+  return {
+    title,
+    description,
+    image: "/og/og-pandit-booking.jpg",
+    alt: `Verified Vedic Pandits in ${city.name} — book on Vedic Tatva`,
+  };
+}
 
 const MANTRA_SLUGS = new Set(MANTRA_LIBRARY.map((m) => m.id));
 
@@ -609,6 +644,11 @@ export function resolveExplicitOgCard(pathname: string): OgCard | null {
     const c = buildMantraOgCard(mantraSlug);
     if (c) return c;
   }
+  // Per-city pandit landings (and per-(city, puja) long-tail pages).
+  // Checked before the generic /pandits RegExp so each city/puja
+  // gets its own bespoke share preview.
+  const cityCard = buildPanditCityOgCard(clean);
+  if (cityCard) return cityCard;
   for (const { match, card } of ROUTE_CARDS) {
     if (typeof match === "string") {
       if (match.startsWith(PREFIX)) {

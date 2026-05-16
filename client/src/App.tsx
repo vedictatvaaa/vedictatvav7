@@ -120,6 +120,7 @@ const AdminLogin = lazy(() => import("@/pages/admin-login"));
 const Shop = lazy(() => import("@/pages/shop"));
 const PanditDirectory = lazy(() => import("@/pages/pandit-directory"));
 const PanditCityLanding = lazy(() => import("@/pages/pandit-city-landing"));
+const PanditCityPujaLanding = lazy(() => import("@/pages/pandit-city-puja-landing"));
 const PujaBooking = lazy(() => import("@/pages/puja-booking"));
 const Astrology = lazy(() => import("@/pages/astrology"));
 const Admin = lazy(() => import("@/pages/admin"));
@@ -698,6 +699,7 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/pandits" component={PanditDirectory} />
+          <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
           <Route path="/pandits/:citySlug" component={PanditCityLanding} />
           <Route path="/online-pandit-booking" component={PanditDirectory} />
           <Route path="/puja" component={PujaBooking} />

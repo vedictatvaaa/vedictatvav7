@@ -19,6 +19,7 @@ import {
   PANDIT_CITIES,
   type PanditCityConfig,
 } from "@/data/pandit-cities";
+import { slugifyPujaName } from "@/data/pandit-puja-slugs";
 import {
   faqPage as faqPageSchema,
   service as serviceSchema,
@@ -143,21 +144,28 @@ function PopularPujasGrid({ city }: { city: PanditCityConfig }) {
         These are the ceremonies our pandits perform most often for {city.name} households.
       </p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {city.popularPujas.map((p, i) => (
-          <Card key={p.name} data-testid={`card-popular-puja-${i}`}>
-            <CardContent className="p-5">
-              <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="font-serif text-lg font-semibold">{p.name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{p.description}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {city.popularPujas.map((p, i) => {
+          const slug = slugifyPujaName(p.name);
+          return (
+            <Link key={p.name} href={`/pandits/${city.slug}/${slug}`}>
+              <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-popular-puja-${i}`}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-lg font-semibold flex items-center gap-1">
+                        {p.name} <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{p.description}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

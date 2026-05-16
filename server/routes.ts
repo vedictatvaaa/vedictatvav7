@@ -23,6 +23,7 @@ import { registerProductSeoRoutes } from "./seo-products";
 import { registerMerchantHealthRoutes } from "./seo-merchant-health";
 import { registerSearchSuggestRoutes } from "./seo-search";
 import { registerBacklinkRoutes } from "./seo-backlinks";
+import { PANDIT_CITY_SUMMARIES, slugifyPuja } from "./pandit-cities-map";
 import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords";
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
 import { registerPanditPortalRoutes } from "./pandit-portal";
@@ -886,15 +887,27 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/spiritual-essentials", priority: "0.8", changefreq: "weekly" },
       { loc: "/shop", priority: "0.8", changefreq: "weekly" },
       { loc: "/online-pandit-booking", priority: "0.9", changefreq: "weekly" },
-      // Per-city pandit landings — each gets full SEO content, A+ blocks,
-      // FAQs and JSON-LD via client/src/pages/pandit-city-landing.tsx.
-      { loc: "/pandits/delhi-ncr", priority: "0.9", changefreq: "weekly" },
-      { loc: "/pandits/mumbai", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pandits/bangalore", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pandits/chennai", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pandits/kolkata", priority: "0.7", changefreq: "monthly" },
-      { loc: "/pandits/guwahati", priority: "0.65", changefreq: "monthly" },
-      { loc: "/pandits/lucknow", priority: "0.7", changefreq: "monthly" },
+      // Per-city pandit landings + per-(city, puja) long-tail landings.
+      // Generated from server/pandit-cities-map.ts so the sitemap stays
+      // in sync with the actual route table.
+      ...(() => {
+        const out: Array<{ loc: string; priority: string; changefreq: string }> = [];
+        for (const c of PANDIT_CITY_SUMMARIES) {
+          out.push({
+            loc: `/pandits/${c.slug}`,
+            priority: c.live ? "0.9" : "0.7",
+            changefreq: c.live ? "weekly" : "monthly",
+          });
+          for (const pn of c.popularPujaNames) {
+            out.push({
+              loc: `/pandits/${c.slug}/${slugifyPuja(pn)}`,
+              priority: c.live ? "0.75" : "0.55",
+              changefreq: "monthly",
+            });
+          }
+        }
+        return out;
+      })(),
       { loc: "/online-puja-booking", priority: "0.9", changefreq: "weekly" },
       { loc: "/online-pind-daan", priority: "0.9", changefreq: "weekly" },
       // City landing pages use the hyphenated route convention
