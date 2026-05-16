@@ -322,7 +322,7 @@ export default function PanditCityLanding() {
       <div className="container max-w-7xl mx-auto px-4 py-8">
         {city.live ? (
           <div className="-mx-4 sm:-mx-0">
-            <PanditDirectoryView defaultCity={city.apiCity} cityLabel={city.name} />
+            <PanditDirectoryView defaultCity={city.apiCity} cityLabel={city.name} embedded />
           </div>
         ) : (
           <ComingSoonCallout city={city} />

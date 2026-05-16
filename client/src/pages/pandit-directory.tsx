@@ -107,15 +107,37 @@ function CityChooser() {
     }
   }, [comingSoonCity]);
 
-  const handleNotify = (e: React.FormEvent) => {
+  const [notifySubmitting, setNotifySubmitting] = useState(false);
+  const handleNotify = async (e: React.FormEvent) => {
     e.preventDefault();
     const email = notifyEmail.trim();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast({ title: "Please enter a valid email", variant: "destructive" });
       return;
     }
-    setNotifySent(true);
-    toast({ title: `We'll notify you when ${comingSoonCity} goes live`, description: "Until then, you can book any puja online — performed live by verified pandits." });
+    setNotifySubmitting(true);
+    try {
+      const r = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, language: "en" }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data?.ok === false) {
+        toast({ title: "Couldn't add you to the list", description: data?.message || "Please try again in a moment.", variant: "destructive" });
+        return;
+      }
+      setNotifySent(true);
+      toast({
+        title: data?.alreadySubscribed
+          ? `You're already subscribed — we'll email you when ${comingSoonCity} goes live`
+          : `You're on the list — we'll email you when ${comingSoonCity} goes live`,
+      });
+    } catch {
+      toast({ title: "Network error", description: "Please check your connection and try again.", variant: "destructive" });
+    } finally {
+      setNotifySubmitting(false);
+    }
   };
 
   return (
@@ -295,8 +317,8 @@ function CityChooser() {
                     data-testid="input-notify-email"
                   />
                 </div>
-                <Button type="submit" variant="outline" className="rounded-md h-10 border-[#6D2B35]/30 text-[#6D2B35] font-semibold text-[13px]" data-testid="btn-notify-me">
-                  Notify Me
+                <Button type="submit" variant="outline" disabled={notifySubmitting} className="rounded-md h-10 border-[#6D2B35]/30 text-[#6D2B35] font-semibold text-[13px]" data-testid="btn-notify-me">
+                  {notifySubmitting ? "Adding..." : "Notify Me"}
                 </Button>
               </form>
             )}

@@ -174,7 +174,7 @@ export default function PanditCityPujaLanding() {
               </h2>
               <Badge className="bg-green-100 text-green-800 border-green-300">Live now</Badge>
             </div>
-            <PanditDirectoryView defaultCity={city.apiCity} cityLabel={city.name} />
+            <PanditDirectoryView defaultCity={city.apiCity} cityLabel={city.name} embedded />
           </>
         ) : (
           <Card className="border-primary/30">
@@ -294,8 +294,6 @@ export default function PanditCityPujaLanding() {
         </div>
       </section>
 
-      <BecomePanditBanner />
-
       {/* FAQs */}
       <section className="container max-w-3xl mx-auto px-4 py-12">
         <h2 className="text-2xl sm:text-3xl font-serif font-semibold text-center mb-8">
@@ -317,6 +315,8 @@ export default function PanditCityPujaLanding() {
           ))}
         </div>
       </section>
+
+      <BecomePanditBanner />
     </div>
   );
 }

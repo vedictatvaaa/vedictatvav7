@@ -22,10 +22,15 @@
 //   10. Price transparency — fees rendered with from-price + dakshina note
 //
 // Data shape: /api/pandits returns sanitized Pandit + { isOnline, distance }
+//
+// Embedded mode: when this component is rendered inside a city or city×puja
+// landing page, pass `embedded` to suppress the duplicate H1 + mini-hero
+// (the parent page already provides those).
 // =====================================================================
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useAuth } from "@/lib/auth";
 import {
   Search, MapPin, Star, ShieldCheck, Crown, Filter, X, Languages,
   Sparkles, Map as MapIcon, List as ListIcon, Loader2,
@@ -395,6 +400,7 @@ function PanditCard({
   const langCount = (p.languages || "").split(",").filter(Boolean).length;
   const isOnline = !!p.isOnline && !p.onLeave;
   const dist = formatDistance(p.distance);
+  const { requireAuth } = useAuth();
 
   return (
     <Card
@@ -514,13 +520,18 @@ function PanditCard({
               Compare
             </label>
             <Link href={p.slug ? `/pandit/${p.slug}` : `/pandit/${p.id}`}>
-              <Button variant="outline" size="sm" data-testid={`button-view-${p.id}`}>View</Button>
+              <Button variant="outline" size="sm" data-testid={`button-view-${p.id}`}>View Profile</Button>
             </Link>
-            <Link href={p.slug ? `/pandit/${p.slug}` : `/pandit/${p.id}`}>
-              <Button size="sm" data-testid={`button-book-${p.id}`}>
-                <MessageCircle className="h-4 w-4 mr-1.5" /> Book Now
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              data-testid={`button-book-${p.id}`}
+              onClick={() => requireAuth(
+                () => { window.location.href = `/puja?pandit=${p.id}`; },
+                { title: "Sign in to book", description: `Please sign in to book ${p.name}` }
+              )}
+            >
+              <Calendar className="h-4 w-4 mr-1.5" /> Book Now
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -671,7 +682,7 @@ function PanditMap({
 // =====================================================================
 // Main directory view
 // =====================================================================
-export function PanditDirectoryView({ defaultCity, cityLabel }: { defaultCity: string; cityLabel: string }) {
+export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }: { defaultCity: string; cityLabel: string; embedded?: boolean }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sortBy, setSortBy] = useState<"best" | "online" | "rating" | "price-low" | "price-high" | "distance" | "experience">("best");
   const [view, setView] = useState<"list" | "map">("list");
@@ -705,9 +716,14 @@ export function PanditDirectoryView({ defaultCity, cityLabel }: { defaultCity: s
     return params.toString();
   }, [defaultCity, filters.tradition, userLocation]);
 
-  const { data: pandits, isLoading } = useQuery<PanditWithMeta[]>({
+  const { data: pandits, isLoading, isError, refetch, isFetching } = useQuery<PanditWithMeta[]>({
     queryKey: ["/api/pandits", queryParams],
-    queryFn: () => fetch(`/api/pandits?${queryParams}`).then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/pandits?${queryParams}`);
+      if (!r.ok) throw new Error(`Failed to load pandits (${r.status})`);
+      return r.json();
+    },
+    retry: 1,
   });
 
   // Client-side filter chain (server already handled city/region)
@@ -798,37 +814,76 @@ export function PanditDirectoryView({ defaultCity, cityLabel }: { defaultCity: s
   const center: [number, number] = CITY_CENTROIDS[defaultCity] || [28.6139, 77.2090];
 
   return (
-    <div className="bg-background min-h-screen pb-32">
-      {/* Top header — quick stats + AI CTA */}
-      <div className="bg-gradient-to-b from-primary/5 to-background border-b">
-        <div className="container max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-end justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-foreground">
-                Verified Pandits in {cityLabel}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-3 flex-wrap">
-                <span>{(pandits || []).length} pandits available</span>
-                {onlineCount > 0 && (
-                  <span className="flex items-center gap-1.5 text-green-700">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
-                      <span className="relative rounded-full h-2 w-2 bg-green-500" />
+    <div className={embedded ? "bg-background pb-32" : "bg-background min-h-screen pb-32"}>
+      {/* Top header — quick stats + AI CTA. Hidden in embedded mode
+          since the parent landing page already provides H1 + hero. */}
+      {!embedded && (
+        <div className="bg-gradient-to-b from-primary/5 to-background border-b">
+          <div className="container max-w-7xl mx-auto px-4 py-6">
+            <div className="flex items-end justify-between gap-4 flex-wrap">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-foreground">
+                  Verified Pandits in {cityLabel}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1 flex items-center gap-3 flex-wrap">
+                  <span>{(pandits || []).length} pandits available</span>
+                  {onlineCount > 0 && (
+                    <span className="flex items-center gap-1.5 text-green-700">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+                        <span className="relative rounded-full h-2 w-2 bg-green-500" />
+                      </span>
+                      {onlineCount} online now
                     </span>
-                    {onlineCount} online now
-                  </span>
-                )}
-                {userLocation && <span className="flex items-center gap-1"><Navigation className="h-3 w-3" /> Sorted by distance available</span>}
-              </p>
+                  )}
+                  {userLocation && <span className="flex items-center gap-1"><Navigation className="h-3 w-3" /> Sorted by distance available</span>}
+                </p>
+              </div>
+              <Button onClick={() => setAiOpen(true)} variant="outline" className="gap-2" data-testid="button-open-ai">
+                <Wand2 className="h-4 w-4 text-primary" />
+                Not sure which puja? <span className="text-primary">Ask AI</span>
+              </Button>
             </div>
-            <Button onClick={() => setAiOpen(true)} variant="outline" className="gap-2" data-testid="button-open-ai">
+
+            {aiSuggestion && (
+              <div className="mt-4 rounded-md bg-primary/10 border border-primary/20 px-3 py-2 text-sm flex items-center gap-2 flex-wrap" data-testid="banner-ai-applied">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Showing pandits for <strong>{aiSuggestion}</strong>.</span>
+                <button
+                  className="text-xs underline text-primary ml-auto"
+                  onClick={() => { setAiSuggestion(null); setFilters({ ...filters, specialization: "" }); }}
+                >Clear</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Embedded-mode compact stats strip (no H1) — keeps online count
+          and AI helper visible without duplicating the parent hero. */}
+      {embedded && (
+        <div className="container max-w-7xl mx-auto px-4 pt-2">
+          <div className="flex items-center justify-between gap-3 flex-wrap text-sm">
+            <p className="text-muted-foreground flex items-center gap-3 flex-wrap" data-testid="text-embedded-stats">
+              <span>{(pandits || []).length} pandits available</span>
+              {onlineCount > 0 && (
+                <span className="flex items-center gap-1.5 text-green-700">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+                    <span className="relative rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  {onlineCount} online now
+                </span>
+              )}
+              {userLocation && <span className="flex items-center gap-1"><Navigation className="h-3 w-3" /> Sorted by distance</span>}
+            </p>
+            <Button onClick={() => setAiOpen(true)} variant="outline" size="sm" className="gap-2" data-testid="button-open-ai">
               <Wand2 className="h-4 w-4 text-primary" />
-              Not sure which puja? <span className="text-primary">Ask AI</span>
+              Ask AI
             </Button>
           </div>
-
           {aiSuggestion && (
-            <div className="mt-4 rounded-md bg-primary/10 border border-primary/20 px-3 py-2 text-sm flex items-center gap-2 flex-wrap" data-testid="banner-ai-applied">
+            <div className="mt-3 rounded-md bg-primary/10 border border-primary/20 px-3 py-2 text-sm flex items-center gap-2 flex-wrap" data-testid="banner-ai-applied">
               <Sparkles className="h-4 w-4 text-primary" />
               <span>Showing pandits for <strong>{aiSuggestion}</strong>.</span>
               <button
@@ -838,7 +893,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel }: { defaultCity: s
             </div>
           )}
         </div>
-      </div>
+      )}
 
       <div className="container max-w-7xl mx-auto px-4 py-6 grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Sticky filter sidebar (desktop) */}
@@ -928,13 +983,48 @@ export function PanditDirectoryView({ defaultCity, cityLabel }: { defaultCity: s
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 w-full" />)}
             </div>
+          ) : isError ? (
+            <Card data-testid="state-pandits-error">
+              <CardContent className="p-12 text-center">
+                <X className="h-10 w-10 mx-auto text-destructive mb-3" />
+                <p className="font-semibold">We couldn't load the pandit list</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                  This is usually a temporary network issue. Please try again — if it keeps happening, you can reach us on WhatsApp.
+                </p>
+                <div className="flex gap-2 justify-center mt-4 flex-wrap">
+                  <Button onClick={() => refetch()} disabled={isFetching} data-testid="button-retry-pandits">
+                    {isFetching ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+                    Try again
+                  </Button>
+                  <Link href="/puja">
+                    <Button variant="outline" data-testid="button-fallback-online-puja">Book online puja instead</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           ) : sorted.length === 0 ? (
-            <Card>
+            <Card data-testid="state-pandits-empty">
               <CardContent className="p-12 text-center">
                 <Search className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                <p className="font-semibold">No pandits match these filters</p>
-                <p className="text-sm text-muted-foreground mt-1">Try clearing filters or expanding the price range.</p>
-                <Button variant="outline" className="mt-4" onClick={() => setFilters(DEFAULT_FILTERS)}>Reset filters</Button>
+                <p className="font-semibold">
+                  {(pandits || []).length === 0
+                    ? `No pandits onboarded in ${cityLabel} yet`
+                    : "No pandits match these filters"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {(pandits || []).length === 0
+                    ? `We're verifying our first batch of ${cityLabel} pandits — until then you can book the same ritual via a live online puja.`
+                    : "Try clearing filters or expanding the price range."}
+                </p>
+                <div className="flex gap-2 justify-center mt-4 flex-wrap">
+                  {(pandits || []).length === 0 ? (
+                    <Link href="/puja">
+                      <Button data-testid="button-empty-online-puja">Book online puja</Button>
+                    </Link>
+                  ) : (
+                    <Button variant="outline" onClick={() => setFilters(DEFAULT_FILTERS)}>Reset filters</Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ) : view === "map" ? (
