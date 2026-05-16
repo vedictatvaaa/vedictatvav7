@@ -148,7 +148,7 @@ export default function ServiceLandingTemplate({ entry }: Props) {
             : `Buy ${entry.name}`,
       href:
         entry.vertical === "puja"
-          ? "/puja"
+          ? "/online-puja-booking"
           : entry.vertical === "astrology"
             ? "/astrology"
             : "/shop",

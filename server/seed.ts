@@ -371,7 +371,7 @@ async function seedSeoPages() {
       isActive: true,
     },
     {
-      pagePath: "/puja",
+      pagePath: "/online-puja-booking",
       metaTitle: "Book Puja Ceremonies Online - Satyanarayan, Griha Pravesh & More | Vedic Tatva",
       metaDescription: "Schedule sacred puja ceremonies with verified pandits. Satyanarayan Puja, Griha Pravesh, Navagraha Shanti, Rudrabhishek & more. Online booking with transparent pricing.",
       metaKeywords: "book puja online, satyanarayan puja, griha pravesh, navagraha shanti, rudrabhishek, online puja booking, puja ceremony",

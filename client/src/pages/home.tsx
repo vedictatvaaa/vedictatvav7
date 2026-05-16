@@ -70,7 +70,7 @@ const heroSlides: HeroSlide[] = [
     title2: "Services Across ",
     title2Highlight: "India",
     subtitle: "Book Satyanarayan Puja, Rudrabhishek, Navratri Puja, Griha Pravesh, and festival pujas with verified pandits.",
-    cta1: { label: "Book Puja", href: "/puja", icon: ShoppingBag },
+    cta1: { label: "Book Puja", href: "/online-puja-booking", icon: ShoppingBag },
     cta2: { label: "Explore Rituals", href: "/online-puja-booking", icon: Sparkles },
   },
   {
@@ -361,7 +361,7 @@ export default function Home() {
       label: "Book a Pandit & Puja",
       sub: "Verified pandits, puja at home, pind daan",
       icon: Flame,
-      href: "/puja",
+      href: "/online-puja-booking",
     },
     {
       label: "Vedic Astrology",
@@ -1094,7 +1094,7 @@ export default function Home() {
           </div>
 
           <div className="text-center">
-            <Link href="/puja">
+            <Link href="/online-puja-booking">
               <Button
                 className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-6 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
                 data-testid="btn-schedule-puja"

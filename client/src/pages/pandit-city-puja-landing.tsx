@@ -189,7 +189,7 @@ export default function PanditCityPujaLanding() {
                 pandit — or book in our live city.
               </p>
               <div className="flex flex-wrap gap-3 justify-center mt-6">
-                <Link href="/puja">
+                <Link href="/online-puja-booking">
                   <Button data-testid="button-online-puja">
                     <Wand2 className="h-4 w-4 mr-2" /> Book a live online puja
                   </Button>

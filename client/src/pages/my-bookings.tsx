@@ -83,7 +83,7 @@ function EmptyState() {
         <Sparkles className="h-10 w-10 text-[#D4AF37] mx-auto mb-2" />
         <p className="text-sm font-semibold text-[#4a1a22]">No active puja bookings yet.</p>
         <p className="text-xs text-[#5a4a3a]/60 mt-1 mb-4">Book a puja with a verified pandit — online or at home.</p>
-        <Link href="/puja"><Button className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]" data-testid="btn-book-puja">Browse Pujas</Button></Link>
+        <Link href="/online-puja-booking"><Button className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]" data-testid="btn-book-puja">Browse Pujas</Button></Link>
       </CardContent>
     </Card>
   );

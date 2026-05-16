@@ -194,6 +194,9 @@ export async function registerRoutes(
     // Japa counter — consolidate ranking signal on /digital-japa-counter.
     "/jap": "/digital-japa-counter",
     "/japa-counter": "/digital-japa-counter",
+    // Puja booking — canonical URL is /online-puja-booking. Old /puja
+    // permalink consolidates here so we don't fragment ranking signal.
+    "/puja": "/online-puja-booking",
   };
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
@@ -9866,7 +9869,7 @@ ${accumulatedWisdom}`
           luckyGem: "Ruby (Manik)", luckyNumber: 1, luckyDirection: "East",
           serviceHints: [
             { title: "Check Your Surya Position", description: "Is Sun weak in your kundli? Get AI-powered kundli analysis to know your planetary strengths.", link: "/ai-kundli", linkLabel: "Generate Free Kundli", icon: "brain" },
-            { title: "Book Surya Graha Shanti Puja", description: "A Surya Graha Shanti Puja removes Sun-related doshas and brings success in career and health.", link: "/puja", linkLabel: "Book Puja Now", icon: "flame" },
+            { title: "Book Surya Graha Shanti Puja", description: "A Surya Graha Shanti Puja removes Sun-related doshas and brings success in career and health.", link: "/online-puja-booking", linkLabel: "Book Puja Now", icon: "flame" },
             { title: "Talk to an Astrologer", description: "Get personalized remedies for weak Sun placement from our verified Vedic astrologers.", link: "/astrology", linkLabel: "Consult Astrologer", icon: "sparkles" },
           ],
         },
@@ -9883,7 +9886,7 @@ ${accumulatedWisdom}`
           luckyGem: "Pearl (Moti)", luckyNumber: 2, luckyDirection: "North-West",
           serviceHints: [
             { title: "Personalized Vedic Predictions", description: "Discover your Moon sign, emotional patterns, and best remedies with AI-powered predictions.", link: "/my-profile", linkLabel: "Get My Predictions", icon: "sparkles" },
-            { title: "Book Rudrabhishek Puja", description: "Rudrabhishek is the most powerful Shiva puja for removing obstacles, diseases, and negative energies.", link: "/puja", linkLabel: "Book Rudrabhishek", icon: "flame" },
+            { title: "Book Rudrabhishek Puja", description: "Rudrabhishek is the most powerful Shiva puja for removing obstacles, diseases, and negative energies.", link: "/online-puja-booking", linkLabel: "Book Rudrabhishek", icon: "flame" },
             { title: "Find a Pandit Near You", description: "Need a pandit for Shiva puja at home? Book a verified pandit in your city within minutes.", link: "/pandits", linkLabel: "Find Pandit", icon: "user" },
           ],
         },
@@ -9900,7 +9903,7 @@ ${accumulatedWisdom}`
           luckyGem: "Red Coral (Moonga)", luckyNumber: 9, luckyDirection: "South",
           serviceHints: [
             { title: "Check Your Mangal Dosha", description: "Is Mangal dosha affecting your marriage? Get instant AI kundli analysis with dosha details.", link: "/ai-kundli", linkLabel: "Check Kundli Now", icon: "brain" },
-            { title: "Book Mangal Shanti Puja", description: "Mangal Graha Shanti puja neutralizes Mars-related issues in marriage, health, and property.", link: "/puja", linkLabel: "Book Puja", icon: "flame" },
+            { title: "Book Mangal Shanti Puja", description: "Mangal Graha Shanti puja neutralizes Mars-related issues in marriage, health, and property.", link: "/online-puja-booking", linkLabel: "Book Puja", icon: "flame" },
             { title: "Sacred Hanuman Items", description: "Shop authentic Hanuman Chalisa yantra, sindoor, and puja essentials for your Tuesday worship.", link: "/spiritual-essentials", linkLabel: "Shop Now", icon: "shopping" },
           ],
         },
@@ -9917,7 +9920,7 @@ ${accumulatedWisdom}`
           luckyGem: "Emerald (Panna)", luckyNumber: 5, luckyDirection: "North",
           serviceHints: [
             { title: "AI Baby Name Generator", description: "Find the perfect baby name based on rashi, nakshatra, and numerology — powered by Vedic astrology AI.", link: "/ai-baby-names", linkLabel: "Find Baby Names", icon: "baby" },
-            { title: "Book Ganesha Puja", description: "Start any new venture with Lord Ganesha's blessings. Book a Ganesh puja performed by verified pandits.", link: "/puja", linkLabel: "Book Puja", icon: "flame" },
+            { title: "Book Ganesha Puja", description: "Start any new venture with Lord Ganesha's blessings. Book a Ganesh puja performed by verified pandits.", link: "/online-puja-booking", linkLabel: "Book Puja", icon: "flame" },
             { title: "Consult for Business Growth", description: "Get Mercury-related career and business guidance from experienced Vedic astrologers.", link: "/astrology", linkLabel: "Talk to Astrologer", icon: "sparkles" },
           ],
         },
@@ -9934,7 +9937,7 @@ ${accumulatedWisdom}`
           luckyGem: "Yellow Sapphire (Pukhraj)", luckyNumber: 3, luckyDirection: "North-East",
           serviceHints: [
             { title: "Full Vedic Kundli Report", description: "Get a complete analysis of Jupiter's placement in your chart — know your wealth, marriage, and spiritual potential.", link: "/ai-kundli", linkLabel: "Generate Kundli", icon: "brain" },
-            { title: "Book Satyanarayan Puja", description: "Thursday is ideal for Satyanarayan Katha — the most popular Vishnu puja for family prosperity.", link: "/puja", linkLabel: "Book Satyanarayan", icon: "flame" },
+            { title: "Book Satyanarayan Puja", description: "Thursday is ideal for Satyanarayan Katha — the most popular Vishnu puja for family prosperity.", link: "/online-puja-booking", linkLabel: "Book Satyanarayan", icon: "flame" },
             { title: "Sacred Donations", description: "Make a sacred donation for temple construction, gau seva, or Brahmin bhojan through our verified causes.", link: "/donations", linkLabel: "Donate Now", icon: "heart" },
           ],
         },
@@ -9951,7 +9954,7 @@ ${accumulatedWisdom}`
           luckyGem: "Diamond (Heera)", luckyNumber: 6, luckyDirection: "South-East",
           serviceHints: [
             { title: "Vastu for Wealth", description: "Is your home Vastu-compliant for attracting wealth? Use our AI Vastu Compass to check room directions.", link: "/vastu-compass", linkLabel: "Check Vastu", icon: "compass" },
-            { title: "Book Lakshmi Puja", description: "Invite Goddess Lakshmi's blessings with a traditional Lakshmi puja at home by a verified pandit.", link: "/puja", linkLabel: "Book Lakshmi Puja", icon: "flame" },
+            { title: "Book Lakshmi Puja", description: "Invite Goddess Lakshmi's blessings with a traditional Lakshmi puja at home by a verified pandit.", link: "/online-puja-booking", linkLabel: "Book Lakshmi Puja", icon: "flame" },
             { title: "Palm Reading for Love", description: "Curious about your love line? Get AI-powered palm analysis revealing relationship insights.", link: "/ai-palm-reading", linkLabel: "Read My Palm", icon: "hand" },
           ],
         },
@@ -9968,7 +9971,7 @@ ${accumulatedWisdom}`
           luckyGem: "Blue Sapphire (Neelam)", luckyNumber: 8, luckyDirection: "West",
           serviceHints: [
             { title: "Is Shani Affecting You?", description: "Going through Sade Sati or Shani Dasha? Get your AI kundli to know exact Saturn placement and remedies.", link: "/ai-kundli", linkLabel: "Check Saturn Now", icon: "brain" },
-            { title: "Book Shani Shanti Puja", description: "Shani Graha Shanti puja is essential during Sade Sati — book a powerful puja by an experienced pandit.", link: "/puja", linkLabel: "Book Shani Puja", icon: "flame" },
+            { title: "Book Shani Shanti Puja", description: "Shani Graha Shanti puja is essential during Sade Sati — book a powerful puja by an experienced pandit.", link: "/online-puja-booking", linkLabel: "Book Shani Puja", icon: "flame" },
             { title: "Read Spiritual Kathas", description: "Read the story of Shani Dev and understand karmic lessons through our AI-narrated spiritual kathas.", link: "/kathas", linkLabel: "Read Kathas", icon: "book" },
           ],
         },

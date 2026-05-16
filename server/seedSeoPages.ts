@@ -186,7 +186,7 @@ const ENTRIES: SeoEntry[] = [
     },
   },
   {
-    pagePath: "/puja",
+    pagePath: "/online-puja-booking",
     metaTitle: "Book Online Puja - Satyanarayan, Griha Pravesh, Rudrabhishek | Vedic Tatva",
     metaDescription:
       "Book sacred puja ceremonies online with verified pandits. Satyanarayan, Griha Pravesh, Rudrabhishek, Navagraha Shanti & more. Includes samagri, transparent pricing.",
@@ -206,7 +206,7 @@ const ENTRIES: SeoEntry[] = [
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Book Puja", path: "/puja" },
+          { name: "Book Puja", path: "/online-puja-booking" },
         ]),
         faqSchema([
           {

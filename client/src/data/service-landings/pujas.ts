@@ -104,7 +104,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2–2.5 hours",
     schemaType: "Service",
     relatedSlugs: ["griha-pravesh", "rudrabhishek", "navagraha-shanti"],
-    primaryCta: { label: "Book Satyanarayan Katha", href: "/puja" },
+    primaryCta: { label: "Book Satyanarayan Katha", href: "/online-puja-booking" },
     hi: {
       name: "सत्यनारायण कथा",
       eyebrow: "सबसे लोकप्रिय गृह पूजा · घर पर पंडित",
@@ -153,7 +153,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "कुल कितना मूल्य?", a: "₹3,500 से शुरू (पंडित दक्षिणा + सम्पूर्ण सामग्री + परिवहन + रिकॉर्डिंग सहित)। विष्णु सहस्रनाम पाठ या हवन सहित प्रीमियम विकल्प: ₹5,500–₹9,500।" },
         { q: "क्या मैं बिना पंडित के सत्यनारायण कथा कर सकता हूँ?", a: "गुरु से विधि सीखकर गृहस्थ सरल संस्करण कर सकते हैं। तथापि पूर्ण विधि के लिए संस्कृत पाठ, कलश स्थापना मंत्र और उचित संकल्प आवश्यक हैं — यह प्रशिक्षित पंडित से ही श्रेष्ठ है।" },
       ],
-      primaryCta: { label: "सत्यनारायण कथा बुक करें", href: "/puja" },
+      primaryCta: { label: "सत्यनारायण कथा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -219,7 +219,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1–3 hours (Laghu / Maha)",
     schemaType: "Service",
     relatedSlugs: ["mahamrityunjaya-jaap", "kaal-sarp-dosh-nivaran", "navagraha-shanti"],
-    primaryCta: { label: "Book Rudrabhishek", href: "/puja" },
+    primaryCta: { label: "Book Rudrabhishek", href: "/online-puja-booking" },
     hi: {
       name: "रुद्राभिषेक",
       eyebrow: "सर्वाधिक शक्तिशाली शिव पूजा · सावन विशेष",
@@ -278,7 +278,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "सावन रुद्राभिषेक क्या है?", a: "श्रावण माह (जुलाई-अगस्त) में, विशेषकर सावन सोमवार को किया गया रुद्राभिषेक। स्कंद पुराण के अनुसार किसी भी शिव पूजा के लिए यह सर्वाधिक शुभ समय है।" },
         { q: "ऑनलाइन रुद्राभिषेक कैसे होता है?", a: "काशी विश्वनाथ, महाकाल उज्जैन या किसी भी ज्योतिर्लिंग से HD वीडियो कॉल पर लाइव संपन्न। संकल्प आपके नाम-गोत्र से लिया जाता है; प्रसाद एवं भस्म 3 दिनों में भेजा जाता है।" },
       ],
-      primaryCta: { label: "रुद्राभिषेक बुक करें", href: "/puja" },
+      primaryCta: { label: "रुद्राभिषेक बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -345,7 +345,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2.5–5 hours",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "vastu-shanti", "navagraha-shanti"],
-    primaryCta: { label: "Book Griha Pravesh", href: "/puja" },
+    primaryCta: { label: "Book Griha Pravesh", href: "/online-puja-booking" },
     hi: {
       name: "गृह प्रवेश पूजा",
       eyebrow: "गृहारंभ · वास्तु शांति · नई शुरुआत",
@@ -396,7 +396,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या गृह प्रवेश से पहले सारा सामान ले आना चाहिए?", a: "परंपरागत रूप से नहीं। पूजा से पूर्व केवल आवश्यक वस्तुएँ लाएँ — पलंग, रसोई के बर्तन, देवी-देवताओं की मूर्तियाँ एवं किराना। बड़ा सामान पूजा के बाद आता है।" },
         { q: "2026 के लिए सर्वोत्तम गृह प्रवेश मुहूर्त माह?", a: "माघ (जन-फर), फाल्गुन (फर-मार्च), वैशाख (अप्रैल-मई) और ज्येष्ठ (मई-जून) 2026 सबसे शुभ हैं। विशिष्ट तिथियाँ परिवार के गोत्रों पर निर्भर करती हैं — प्रत्येक बुकिंग के साथ हम मुहूर्त चयन निःशुल्क प्रदान करते हैं।" },
       ],
-      primaryCta: { label: "गृह प्रवेश बुक करें", href: "/puja" },
+      primaryCta: { label: "गृह प्रवेश बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -460,7 +460,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "7 days",
     schemaType: "Service",
     relatedSlugs: ["rudrabhishek", "navagraha-shanti", "satyanarayan-katha"],
-    primaryCta: { label: "Book Sava Lakh Jaap", href: "/puja" },
+    primaryCta: { label: "Book Sava Lakh Jaap", href: "/online-puja-booking" },
     hi: {
       name: "महामृत्युंजय जाप",
       eyebrow: "सवा लाख मंत्र जाप · स्वास्थ्य एवं दीर्घायु",
@@ -517,7 +517,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या 1 लाख पर्याप्त है या सवा लाख आवश्यक?", a: "1 लाख (100,000) मानक संख्या है। सवा लाख (125,000 — अतिरिक्त 25,000 देवता को 'दक्षिणा') पूर्ण शास्त्रीय गणना है और गंभीर मामलों में हम इसी की अनुशंसा करते हैं। 1 लाख से कम उप-शास्त्रीय है।" },
         { q: "हमेशा सवा लाख क्यों, ठीक 1 लाख क्यों नहीं?", a: "वैदिक परंपरा में हर यज्ञ या जाप में 25% अतिरिक्त (मंत्र की दक्षिणा) सम्मिलित होती है — इसीलिए सवा लाख, सवा करोड़ इत्यादि। यह सुनिश्चित करता है कि यदि कोई आवृत्ति उच्चारण या छंद में अपूर्ण रही हो तो भी पूर्णता सिद्ध हो।" },
       ],
-      primaryCta: { label: "सवा लाख जाप बुक करें", href: "/puja" },
+      primaryCta: { label: "सवा लाख जाप बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -576,7 +576,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "3–4 hours",
     schemaType: "Service",
     relatedSlugs: ["kaal-sarp-dosh-nivaran", "mangal-dosh-nivaran", "rudrabhishek"],
-    primaryCta: { label: "Book Navagraha Shanti", href: "/puja" },
+    primaryCta: { label: "Book Navagraha Shanti", href: "/online-puja-booking" },
     hi: {
       name: "नवग्रह शांति पूजा",
       eyebrow: "सभी 9 ग्रह · दोष निवारण · पूर्ण ज्योतिषीय पुनर्संतुलन",
@@ -628,7 +628,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "सर्वोत्तम दिन कौन-सा है?", a: "रविवार (सूर्य-प्रमुख शांति हेतु) या शुक्ल पक्ष का कोई भी दिन। अमावस्या, ग्रहण के दिन और व्यक्तिगत अशौच से बचें।" },
         { q: "क्या यह ऑनलाइन हो सकती है?", a: "हाँ — मंदिर से HD वीडियो पर लाइव संपन्न। संकल्प आपके नाम से, प्रसाद 3 दिनों में डिलीवर।" },
       ],
-      primaryCta: { label: "नवग्रह शांति बुक करें", href: "/puja" },
+      primaryCta: { label: "नवग्रह शांति बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -698,7 +698,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2.5–3 hours",
     schemaType: "Service",
     relatedSlugs: ["griha-pravesh", "navagraha-shanti", "satyanarayan-katha"],
-    primaryCta: { label: "Book Vastu Shanti Puja", href: "/puja" },
+    primaryCta: { label: "Book Vastu Shanti Puja", href: "/online-puja-booking" },
     hi: {
       name: "वास्तु शांति पूजा",
       eyebrow: "वास्तु पुरुष की शांति · नया घर एवं निर्माण",
@@ -757,7 +757,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या सभी 81 देवताओं का आह्वान आवश्यक है?", a: "पूर्ण शास्त्रोक्त वास्तु शांति के लिए, हाँ। सरलीकृत संस्करण में केवल 8 दिशा-स्वामी आह्वान होते हैं, परंतु वे गंभीर दोषों के लिए पर्याप्त प्रभावी नहीं माने जाते।" },
         { q: "यदि मेरे घर में बड़ा वास्तु दोष हो जो भौतिक रूप से ठीक नहीं हो सकता तो?", a: "ऐसी स्थितियों में वास्तु शांति ही शास्त्रोक्त उपाय है। जहाँ भौतिक सुधार संभव नहीं (किराये का घर, संरचनात्मक सीमाएँ), वहाँ नियमित वास्तु शांति, दिशा यंत्र और पिरामिड स्थापना ऊर्जात्मक संतुलन प्रदान करते हैं।" },
       ],
-      primaryCta: { label: "वास्तु शांति पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "वास्तु शांति पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -812,7 +812,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "7 days",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "akhand-ramayan", "vishnu-sahasranama"],
-    primaryCta: { label: "Book Bhagwat Saptah", href: "/puja" },
+    primaryCta: { label: "Book Bhagwat Saptah", href: "/online-puja-booking" },
     hi: {
       name: "भागवत कथा सप्ताह",
       eyebrow: "सात दिवसीय श्रीमद् भागवत पाठ · व्यास-पीठ विधि",
@@ -857,7 +857,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या अतिथियों को प्रतिदिन उपस्थित होना आवश्यक?", a: "नहीं — अधिकांश अतिथि चयनात्मक रूप से आते हैं (उद्घाटन, कृष्ण लीला दिन एवं अंतिम दिन सर्वाधिक लोकप्रिय)। मेज़बान परिवार प्रायः सभी 7 दिन उपस्थित रहता है।" },
         { q: "कहाँ आयोजित हो सकता है?", a: "घर पर (बड़ा बैठक कक्ष या छत), सामुदायिक हॉल, मंदिर प्रांगण, अथवा तंबू स्थापना। आवश्यकता हो तो वेदिक तत्त्व स्थल व्यवस्था में सहायता कर सकता है।" },
       ],
-      primaryCta: { label: "भागवत सप्ताह बुक करें", href: "/puja" },
+      primaryCta: { label: "भागवत सप्ताह बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -911,7 +911,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2.5 hours",
     schemaType: "Service",
     relatedSlugs: ["hanuman-chalisa-path", "satyanarayan-katha", "rudrabhishek"],
-    primaryCta: { label: "Book Sundarkand Path", href: "/puja" },
+    primaryCta: { label: "Book Sundarkand Path", href: "/online-puja-booking" },
     hi: {
       name: "सुंदरकांड पाठ",
       eyebrow: "हनुमान जी का सुंदर कांड · बाधा निवारण · मंगल/शनिवार",
@@ -955,7 +955,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "पाठ में कितना समय लगता है?", a: "पाठ हेतु लगभग 2 घंटे, साथ में 30 मिनट पूजा, आरती एवं प्रसाद — कुल 2.5 घंटे।" },
         { q: "क्या यह सामुदायिक हॉल या मंदिर में हो सकता है?", a: "हाँ — अनेक सुंदरकांड मंडलियाँ मंदिर या सोसायटी हॉल पसंद करती हैं। वेदिक तत्त्व पूर्ण व्यवस्था का समन्वय कर सकता है।" },
       ],
-      primaryCta: { label: "सुंदरकांड पाठ बुक करें", href: "/puja" },
+      primaryCta: { label: "सुंदरकांड पाठ बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1008,7 +1008,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "3 hours",
     schemaType: "Service",
     relatedSlugs: ["sundarkand-path", "rudrabhishek", "satyanarayan-katha"],
-    primaryCta: { label: "Book Hanuman Chalisa Path", href: "/puja" },
+    primaryCta: { label: "Book Hanuman Chalisa Path", href: "/online-puja-booking" },
     hi: {
       name: "हनुमान चालीसा पाठ (108 बार)",
       eyebrow: "108 बार हनुमान चालीसा · मंगल/शनि व्रत",
@@ -1051,7 +1051,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या हनुमान जयंती पर हो सकता है?", a: "अत्यंत अनुशंसित। हनुमान जयंती (चैत्र पूर्णिमा, मार्च-अप्रैल) चालीसा पाठ हेतु सर्वाधिक पुण्य-समृद्ध दिन है। 30 दिन पूर्व बुकिंग करें।" },
         { q: "क्या मुझे साथ जप करना होगा?", a: "नहीं — परंतु मेज़बान परिवार प्रायः कम से कम उद्घाटन, मध्य एवं समापन चक्रों में सम्मिलित होता है। सम्पूर्ण चालीसा पाठ सभी को प्रदान किया जाता है।" },
       ],
-      primaryCta: { label: "हनुमान चालीसा पाठ बुक करें", href: "/puja" },
+      primaryCta: { label: "हनुमान चालीसा पाठ बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1105,7 +1105,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "4 hours (single day) / 9 days",
     schemaType: "Service",
     relatedSlugs: ["chandi-path", "navagraha-shanti", "satyanarayan-katha"],
-    primaryCta: { label: "Book Saptashati Path", href: "/puja" },
+    primaryCta: { label: "Book Saptashati Path", href: "/online-puja-booking" },
     hi: {
       name: "दुर्गा सप्तशती पाठ",
       eyebrow: "देवी महात्म्य · 700 श्लोक · नवरात्रि विशेष",
@@ -1149,7 +1149,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या यह घर पर हो सकता है?", a: "हाँ — अधिकांश पूजाएँ घर पर। हम प्रीमियम ग्राहकों हेतु देवी मंदिरों (वैष्णो देवी, कामाख्या, महालक्ष्मी मुंबई) में भी समन्वय कर सकते हैं।" },
         { q: "कन्या-पूजन क्या है?", a: "दिन 9 को नौ कन्याएँ (9 देवियों की प्रतीक) आमंत्रित की जाती हैं, उनके चरण धोए जाते हैं, पूरी-चना-हलवा खिलाया जाता है एवं उपहार दिए जाते हैं। आवश्यकता हो तो वेदिक तत्त्व कन्याओं की व्यवस्था में सहायता कर सकता है।" },
       ],
-      primaryCta: { label: "सप्तशती पाठ बुक करें", href: "/puja" },
+      primaryCta: { label: "सप्तशती पाठ बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1203,7 +1203,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "5–6 hours (Single) / 11–41 days (Sata/Sahasra)",
     schemaType: "Service",
     relatedSlugs: ["durga-saptashati-path", "navagraha-shanti", "rudrabhishek"],
-    primaryCta: { label: "Book Chandi Path", href: "/puja" },
+    primaryCta: { label: "Book Chandi Path", href: "/online-puja-booking" },
     hi: {
       name: "चंडी पाठ / चंडी हवन",
       eyebrow: "देवी चंडी · महायज्ञ · शत्रुओं से रक्षा",
@@ -1247,7 +1247,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "कहाँ सर्वोत्तम होती है?", a: "एकल चंडी हेतु घर पर; सत- एवं सहस्र-चंडी हेतु देवी मंदिर (कामाख्या, वैष्णो देवी, महालक्ष्मी) में। हम सभी प्रमुख शक्ति पीठों में समन्वय कर सकते हैं।" },
         { q: "क्या ऑनलाइन हो सकती है?", a: "हाँ — एकल चंडी वाराणसी या कामाख्या के मंदिर से HD वीडियो द्वारा। सत- एवं सहस्र-चंडी प्रत्यक्ष ही श्रेष्ठ।" },
       ],
-      primaryCta: { label: "चंडी पाठ बुक करें", href: "/puja" },
+      primaryCta: { label: "चंडी पाठ बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1300,7 +1300,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "ekadashi-vrat", "bhagwat-katha"],
-    primaryCta: { label: "Book Sahasranama Path", href: "/puja" },
+    primaryCta: { label: "Book Sahasranama Path", href: "/online-puja-booking" },
     hi: {
       name: "विष्णु सहस्रनाम पाठ",
       eyebrow: "विष्णु जी के 1000 नाम · महाभारत भीष्म पर्व",
@@ -1343,7 +1343,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मैं घर पर दैनिक पाठ कर सकता हूँ?", a: "हाँ — अनेक श्रद्धालु गृहस्थ प्रातः स्नान के बाद दैनिक पाठ करते हैं। पंडित-नेतृत्व संस्करण बड़े अवसरों के लिए।" },
         { q: "क्या यह सत्यनारायण कथा जितना प्रभावी है?", a: "वे भिन्न प्रयोजन सेवा करते हैं। सत्यनारायण कथा नए आरंभ एवं समृद्धि हेतु। विष्णु सहस्रनाम मोक्ष, दीर्घायु एवं पारिवारिक-कर्म शुद्धि हेतु।" },
       ],
-      primaryCta: { label: "सहस्रनाम पाठ बुक करें", href: "/puja" },
+      primaryCta: { label: "सहस्रनाम पाठ बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1397,7 +1397,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1.5–2 hours",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "navagraha-shanti", "ganesh-puja"],
-    primaryCta: { label: "Book Lakshmi Puja", href: "/puja" },
+    primaryCta: { label: "Book Lakshmi Puja", href: "/online-puja-booking" },
     hi: {
       name: "लक्ष्मी पूजा",
       eyebrow: "धन · समृद्धि · दीवाली विशेष",
@@ -1441,7 +1441,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या प्रत्येक दीवाली नई लक्ष्मी मूर्ति लेनी चाहिए?", a: "परंपरा प्रत्येक दीवाली नई मिट्टी/रजत लक्ष्मी-गणेश मूर्ति की अनुशंसा करती है; पिछले वर्ष की मूर्ति दीवाली के दिन बहते जल में विसर्जित। स्थायी रजत/स्वर्ण मूर्तियाँ उचित सफाई के साथ हर वर्ष प्रयुक्त की जा सकती हैं।" },
         { q: "क्या लक्ष्मी पूजा एवं लक्ष्मी-गणेश पूजा एक हैं?", a: "व्यवहारिक रूप से हाँ — देवी लक्ष्मी का सदा गणेश जी (बाधा-निवारक) एवं सरस्वती जी (बुद्धि) के साथ आह्वान होता है। यह त्रिमूर्ति सुनिश्चित करती है कि धन उस परिवार के पास जाए जो उसका विवेकपूर्ण उपयोग कर सके।" },
       ],
-      primaryCta: { label: "लक्ष्मी पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "लक्ष्मी पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1495,7 +1495,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1.5 hours",
     schemaType: "Service",
     relatedSlugs: ["lakshmi-puja", "ganesh-puja", "satyanarayan-katha"],
-    primaryCta: { label: "Book Saraswati Puja", href: "/puja" },
+    primaryCta: { label: "Book Saraswati Puja", href: "/online-puja-booking" },
     hi: {
       name: "सरस्वती पूजा",
       eyebrow: "ज्ञान · शिक्षा · वसंत पंचमी",
@@ -1539,7 +1539,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "अक्षर आरंभ क्या है?", a: "बच्चे (प्रायः 3–5 वर्ष) को अक्षरों में दीक्षित करने का वैदिक संस्कार। पंडित/वरिष्ठ बच्चे के हाथ से चावल थाली में पहले अक्षर ('ॐ' एवं 'अ-आ-क-ख') लिखवाते हैं। अकादमिक अध्ययन का औपचारिक आरंभ।" },
         { q: "क्या यह विद्यालय में हो सकती है?", a: "हाँ — वेदिक तत्त्व भारत भर के विद्यालयों में वार्षिक सरस्वती पूजा करवाता है। समूह दरें लागू।" },
       ],
-      primaryCta: { label: "सरस्वती पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "सरस्वती पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1593,7 +1593,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1 hour",
     schemaType: "Service",
     relatedSlugs: ["lakshmi-puja", "saraswati-puja", "satyanarayan-katha"],
-    primaryCta: { label: "Book Ganesh Puja", href: "/puja" },
+    primaryCta: { label: "Book Ganesh Puja", href: "/online-puja-booking" },
     hi: {
       name: "गणेश पूजा",
       eyebrow: "विघ्नहर्ता · नए आरंभ · गणेश चतुर्थी",
@@ -1637,7 +1637,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मैं चतुर्थी के बाद मिट्टी गणेश मूर्ति रख सकता हूँ?", a: "परंपरा चुने दिन (1.5/3/5/7/9 या 11) पर विसर्जन माँगती है। स्थायी मूर्तियाँ (रजत, पीतल, संगमरमर) पूरे वर्ष रह सकती हैं।" },
         { q: "सर्वोत्तम मोदक क्या है?", a: "उकडीचे मोदक (महाराष्ट्र-शैली का भापित चावल-आटा, नारियल-गुड़ भरण) शास्त्रीय प्रिय। मीठे मोदक (किसी भी प्रकार) भी अर्पित। वेदिक तत्त्व स्थानीय मराठी कैटरर से उकडीचे मोदक का समन्वय कर सकता है।" },
       ],
-      primaryCta: { label: "गणेश पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "गणेश पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1693,7 +1693,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "4–5 hours (Trimbakeshwar) / Day-long (at-home premium)",
     schemaType: "Service",
     relatedSlugs: ["pitru-dosh-nivaran", "navagraha-shanti", "rudrabhishek"],
-    primaryCta: { label: "Book Kaal Sarp Puja", href: "/puja" },
+    primaryCta: { label: "Book Kaal Sarp Puja", href: "/online-puja-booking" },
     hi: {
       name: "काल सर्प दोष निवारण पूजा",
       eyebrow: "त्र्यंबकेश्वर विशेष · राहु-केतु के बीच सभी ग्रह",
@@ -1739,7 +1739,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मुझे पूर्व उपवास करना होगा?", a: "हाँ — 24 घंटे पूर्व सात्विक शाकाहारी आहार, प्याज/लहसुन वर्जित। पूजा के दिन पूजा पूर्ण होने तक उपवास (जल एवं फल मान्य)।" },
         { q: "कितनी बार करवाना चाहिए?", a: "शास्त्रीय रूप से एक बार पर्याप्त। तीव्र काल सर्प प्रकारों हेतु, कुंडली ज्योतिषी कभी-कभी प्रत्येक 3 वर्ष में दोहराने की अनुशंसा करते हैं।" },
       ],
-      primaryCta: { label: "काल सर्प पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "काल सर्प पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1794,7 +1794,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2–3 hours",
     schemaType: "Service",
     relatedSlugs: ["kaal-sarp-dosh-nivaran", "navagraha-shanti", "hanuman-chalisa-path"],
-    primaryCta: { label: "Book Mangal Dosh Puja", href: "/puja" },
+    primaryCta: { label: "Book Mangal Dosh Puja", href: "/online-puja-booking" },
     hi: {
       name: "मंगल दोष निवारण पूजा",
       eyebrow: "मांगलिक उपाय · विवाह-पूर्व · मंगल हवन",
@@ -1839,7 +1839,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मंगल पूजा होने पर कुंभ विवाह आवश्यक है?", a: "मंद/मध्यम मांगलिक दोष हेतु, अकेली मंगल दोष निवारण पूजा पर्याप्त। कुंभ विवाह तीव्र मामलों (मंगल 7वें में नीच, कोई निवारण नहीं, कोई शुभ दृष्टि नहीं) हेतु आरक्षित — हम केवल स्पष्ट कुंडली निर्णय के बाद अनुशंसा करते हैं।" },
         { q: "कहाँ सर्वोत्तम होती है?", a: "घर पर पूर्णतः मान्य। प्रीमियम विकल्प: मंगल-प्रमुख मंदिर (जैसे उज्जैन में मंगलनाथ, दक्षिण भारत के कार्तिकेय मंदिर, महाकालेश्वर)।" },
       ],
-      primaryCta: { label: "मंगल दोष पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "मंगल दोष पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1894,7 +1894,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "3–4 hours",
     schemaType: "Service",
     relatedSlugs: ["tarpan-shradh", "kaal-sarp-dosh-nivaran", "navagraha-shanti"],
-    primaryCta: { label: "Book Pitru Dosh Puja", href: "/puja" },
+    primaryCta: { label: "Book Pitru Dosh Puja", href: "/online-puja-booking" },
     hi: {
       name: "पितृ दोष निवारण पूजा",
       eyebrow: "पैतृक कर्म शुद्धि · पितृ पक्ष विशेष · गया तीर्थ",
@@ -1939,7 +1939,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "कब करवाएँ?", a: "पितृ पक्ष (भाद्रपद कृष्ण पक्ष के 16 दिन, सितंबर-अक्टूबर) अनेक गुना अधिक प्रबल। अन्यथा किसी भी माह की कृष्ण पक्ष अमावस्या, अथवा माता-पिता की पुण्यतिथि।" },
         { q: "कितनी बार?", a: "माता-पिता की तिथि पर वार्षिक श्राद्ध आवश्यक। संपूर्ण पितृ दोष निवारण प्रायः जीवन में एक बार, केवल तब दोहराया जाता है जब कुंडली ज्योतिषी अनसुलझे अवशिष्ट दोष का संकेत दें।" },
       ],
-      primaryCta: { label: "पितृ दोष पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "पितृ दोष पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -1993,7 +1993,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1.5 hours (evening)",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "lakshmi-puja", "rudrabhishek"],
-    primaryCta: { label: "Book Karwa Chauth Puja", href: "/puja" },
+    primaryCta: { label: "Book Karwa Chauth Puja", href: "/online-puja-booking" },
     hi: {
       name: "करवा चौथ पूजा",
       eyebrow: "विवाहित महिलाओं का व्रत · पति की दीर्घायु · कार्तिक कृष्ण 4",
@@ -2037,7 +2037,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "सरगी क्या है?", a: "सास द्वारा वधू को दिया गया उषाकाल पूर्व भोजन। प्रायः मठरी, फल, सूखे मेवे, मिठाई एवं एक गिलास दूध सम्मिलित। सूर्योदय से पूर्व खाया; उपवास तुरंत बाद आरंभ।" },
         { q: "क्या व्रत अनिवार्य निर्जला है?", a: "पारंपरिक रूप से हाँ (निर्जला), परंतु गर्भवती महिलाएँ, वृद्ध एवं स्वास्थ्य चिंता वाले जल एवं फल ले सकते हैं। आशय कठोर रूप से अधिक महत्वपूर्ण।" },
       ],
-      primaryCta: { label: "करवा चौथ पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "करवा चौथ पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2091,7 +2091,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "3–4 hours",
     schemaType: "Service",
     relatedSlugs: ["mundan-sanskar", "naamkaran", "satyanarayan-katha"],
-    primaryCta: { label: "Book Janeu Sanskar", href: "/puja" },
+    primaryCta: { label: "Book Janeu Sanskar", href: "/online-puja-booking" },
     hi: {
       name: "जनेऊ संस्कार (उपनयन)",
       eyebrow: "पवित्र धागा संस्कार · बालक 7–11 · वैदिक दीक्षा",
@@ -2135,7 +2135,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मंदिर में हो सकता है?", a: "हाँ — अनेक परिवार विष्णु या देवी मंदिर पसंद करते हैं। वेदिक तत्त्व वाराणसी, कांचीपुरम, तिरुपति के प्रमुख मंदिरों में समन्वय कर सकता है।" },
         { q: "क्या विवाह हेतु आवश्यक है?", a: "पारंपरिक रूप से हाँ — विवाह संस्कार करने के वर के अधिकार के लिए उपनयन पूर्वापेक्षा है। बचपन में न हुआ हो तो विवाह से दिनों पूर्व कभी-कभी 'शीघ्र-उपनयन' (शीघ्र दीक्षा) किया जाता है।" },
       ],
-      primaryCta: { label: "जनेऊ संस्कार बुक करें", href: "/puja" },
+      primaryCta: { label: "जनेऊ संस्कार बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2189,7 +2189,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["naamkaran", "annaprashan", "janeu-upanayan"],
-    primaryCta: { label: "Book Mundan Sanskar", href: "/puja" },
+    primaryCta: { label: "Book Mundan Sanskar", href: "/online-puja-booking" },
     hi: {
       name: "मुंडन संस्कार",
       eyebrow: "प्रथम केश-कर्तन · चूड़ाकरण · तिरुपति / स्थानीय",
@@ -2233,7 +2233,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मुंडन केवल बालकों हेतु है?", a: "बालकों एवं बालिकाओं दोनों का चूड़ाकरण होता है। बालिकाओं के लिए केवल प्रतीकात्मक छोटा अंश (3-5 लट) निकाला जाता है; पूर्ण सिर-मुंडन बालकों हेतु आरक्षित (और बालकों हेतु भी वैकल्पिक)।" },
         { q: "केशों का क्या किया जाता है?", a: "केश केले के पत्ते पर एकत्र किए जाते हैं एवं या तो बहते जल (नदी, सागर, पवित्र कुंड) में विसर्जित होते हैं या मंदिर ले जाए जाते हैं (तिरुपति सर्वाधिक लोकप्रिय)। लापरवाही से न फेंकें।" },
       ],
-      primaryCta: { label: "मुंडन संस्कार बुक करें", href: "/puja" },
+      primaryCta: { label: "मुंडन संस्कार बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2287,7 +2287,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["naamkaran", "mundan-sanskar", "janeu-upanayan"],
-    primaryCta: { label: "Book Annaprashan", href: "/puja" },
+    primaryCta: { label: "Book Annaprashan", href: "/online-puja-booking" },
     hi: {
       name: "अन्नप्राशन संस्कार",
       eyebrow: "बच्चे का प्रथम ठोस भोजन · 6 मास · मीठी खीर",
@@ -2331,7 +2331,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "यदि बच्चा खाने से मना करे?", a: "सामान्य — एवं अनुष्ठानिक रूप से इससे फर्क नहीं पड़ता। मंत्र जप होते हैं एवं चम्मच बच्चे के होंठों को छूता है; निगलना प्रतीकात्मक है। संस्कार पूर्ण।" },
         { q: "वस्तु-चयन (करियर शकुन) ट्रे क्या है?", a: "बच्चे के सामने 5-वस्तु ट्रे (पुस्तक, कलम, स्वर्ण, मिट्टी, तलवार) रखी जाती है; पहली छुई गई वस्तु बच्चे की जीवन-दिशा का कर्मिक संकेतक मानी जाती है। परिवार के वरिष्ठ बड़ी उत्सुकता से प्रतीक्षा करते हैं। गंभीर शकुन एवं मनोरंजक क्षण दोनों।" },
       ],
-      primaryCta: { label: "अन्नप्राशन बुक करें", href: "/puja" },
+      primaryCta: { label: "अन्नप्राशन बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2384,7 +2384,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["annaprashan", "mundan-sanskar", "janeu-upanayan"],
-    primaryCta: { label: "Book Naamkaran", href: "/puja" },
+    primaryCta: { label: "Book Naamkaran", href: "/online-puja-booking" },
     hi: {
       name: "नामकरण संस्कार",
       eyebrow: "बच्चे का नामकरण समारोह · 11वाँ या 12वाँ दिन · नक्षत्र-आधारित नाम",
@@ -2427,7 +2427,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "यदि हमारा चुना नाम नक्षत्र से मेल नहीं खाता?", a: "दो विकल्प: (1) अपना चुना नाम सार्वजनिक नाम रखें एवं अनुष्ठान उपयोग हेतु अलग नक्षत्र-संरेखित नाम जोड़ें; (2) नाम की वर्तनी या उच्चारण बदलें ताकि नक्षत्र अक्षर से शुरू हो। हमारे ज्योतिषी दोनों में सहायता करते हैं।" },
         { q: "क्या 11वाँ/12वाँ दिन अनिवार्य है?", a: "पारंपरिक रूप से हाँ — परंतु चिकित्सा या अन्य कारणों से अनेक परिवार 21वें, 100वें दिन या पहले जन्मदिन पर करते हैं। पहले प्राथमिकता।" },
       ],
-      primaryCta: { label: "नामकरण बुक करें", href: "/puja" },
+      primaryCta: { label: "नामकरण बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2482,7 +2482,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "24 hours",
     schemaType: "Service",
     relatedSlugs: ["sundarkand-path", "bhagwat-katha", "vishnu-sahasranama"],
-    primaryCta: { label: "Book Akhand Ramayan", href: "/puja" },
+    primaryCta: { label: "Book Akhand Ramayan", href: "/online-puja-booking" },
     hi: {
       name: "अखंड रामायण पाठ",
       eyebrow: "निरंतर 24-घंटे रामायण पाठ · पारिवारिक संकल्प",
@@ -2527,7 +2527,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या परिवार सम्पूर्ण 24 घंटे उपस्थित रह सकता है?", a: "मेज़बान परिवार प्रायः मुख्य कांड (बाल उद्घाटन, सुंदर कांड अपराह्न, उत्तर कांड प्रातः) में उपस्थित रहता है एवं बीच में विश्राम। निरंतर पारिवारिक उपस्थिति अपेक्षित या आवश्यक नहीं।" },
         { q: "कहाँ आयोजित हो सकता है?", a: "घर पर (बड़ा बैठक कक्ष या छत तंबू), सामुदायिक हॉल, मंदिर प्रांगण। आवश्यकता हो तो वेदिक तत्त्व स्थल व्यवस्था का समन्वय कर सकता है।" },
       ],
-      primaryCta: { label: "अखंड रामायण बुक करें", href: "/puja" },
+      primaryCta: { label: "अखंड रामायण बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2581,7 +2581,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["griha-pravesh", "vastu-shanti", "navagraha-shanti"],
-    primaryCta: { label: "Book Bhumi Pujan", href: "/puja" },
+    primaryCta: { label: "Book Bhumi Pujan", href: "/online-puja-booking" },
     hi: {
       name: "भूमि पूजन",
       eyebrow: "भूमि उपासना · निर्माण से पूर्व · वास्तु आधार",
@@ -2625,7 +2625,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या भूमि पूजन एवं वास्तु शांति एक हैं?", a: "नहीं — भूमि पूजन निर्माण से पहले होता है, वास्तु शांति निर्माण पूर्ण होने के बाद (एवं प्रायः गृह प्रवेश से पहले)। पूर्ण-शास्त्रीय निर्माण हेतु दोनों आवश्यक।" },
         { q: "क्या निर्माण आरंभ हो चुका हो तो हो सकता है?", a: "आदर्शतः नहीं — परंतु ऐसे मामलों में 'पूर्वव्यापी भूमि पूजन' क्षति-नियंत्रण के रूप में किया जाता है। पूर्ण लाभ कम होता है परंतु वास्तु पुरुष फिर भी शांत होते हैं।" },
       ],
-      primaryCta: { label: "भूमि पूजन बुक करें", href: "/puja" },
+      primaryCta: { label: "भूमि पूजन बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2679,7 +2679,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "On call (13-day procedure)",
     schemaType: "Service",
     relatedSlugs: ["tarpan-shradh", "pitru-dosh-nivaran", "satyanarayan-katha"],
-    primaryCta: { label: "Call Antim Sanskar 24/7", href: "/puja" },
+    primaryCta: { label: "Call Antim Sanskar 24/7", href: "/online-puja-booking" },
     hi: {
       name: "अंतिम संस्कार",
       eyebrow: "अंत्येष्टि एवं अंतिम संस्कार · 13-दिवसीय विधि · 24/7 पंडित",
@@ -2723,7 +2723,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या हरिद्वार में अस्थि-विसर्जन अनिवार्य है?", a: "शास्त्रोक्त रूप से गंगा सर्वाधिक शक्तिशाली, हरिद्वार (ब्रह्म कुंड), वाराणसी (मणिकर्णिका घाट), एवं प्रयागराज (त्रिवेणी संगम) सर्वोच्च स्थल। तथापि कोई भी बहती नदी मान्य — अनेक दक्षिण भारतीय परिवार कावेरी या गोदावरी में विसर्जित करते हैं।" },
         { q: "परिवार में कौन अनुष्ठान करता है?", a: "पारंपरिक रूप से ज्येष्ठ पुत्र। अनुपलब्ध हो तो अगला पुत्र, फिर कोई भी पुत्र, फिर ज्येष्ठ पौत्र, फिर ज्येष्ठ भ्राता, फिर निकटतम पुरुष परिजन। केवल पुत्रियाँ हों तो आधुनिक प्रथा पुत्री या जामाता को अधिकारी होने देती है।" },
       ],
-      primaryCta: { label: "अंतिम संस्कार 24/7 कॉल", href: "/puja" },
+      primaryCta: { label: "अंतिम संस्कार 24/7 कॉल", href: "/online-puja-booking" },
     },
   },
   {
@@ -2777,7 +2777,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "2 hours",
     schemaType: "Service",
     relatedSlugs: ["pitru-dosh-nivaran", "antim-sanskar", "satyanarayan-katha"],
-    primaryCta: { label: "Book Tarpan / Shradh", href: "/puja" },
+    primaryCta: { label: "Book Tarpan / Shradh", href: "/online-puja-booking" },
     hi: {
       name: "तर्पण / वार्षिक श्राद्ध",
       eyebrow: "वार्षिक पैतृक अर्पण · पितृ पक्ष · मृत्यु-तिथि",
@@ -2821,7 +2821,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या ऑनलाइन हो सकता है?", a: "तर्पण एवं पिंड-दान आपके नाम-गोत्र से गया/हरिद्वार/वाराणसी पर पंडित द्वारा HD रिकॉर्डिंग सहित दूरस्थ संपन्न हो सकते हैं। ब्राह्मण-भोजन प्रत्यक्ष श्रेष्ठ परंतु दूरस्थ भी समन्वित (हम आपकी ओर से पवित्र स्थल पर ब्राह्मणों को भोजन कराते हैं)।" },
         { q: "श्राद्ध करने का अधिकारी कौन?", a: "ज्येष्ठ पुत्र प्रथम वरीयता, फिर कोई पुत्र, फिर ज्येष्ठ पौत्र, फिर ज्येष्ठ भ्राता, फिर निकट पुरुष परिजन। केवल पुत्रियाँ हों तो आधुनिक प्रथा पुत्रियों एवं जामाताओं को अनुमति देती है।" },
       ],
-      primaryCta: { label: "तर्पण / श्राद्ध बुक करें", href: "/puja" },
+      primaryCta: { label: "तर्पण / श्राद्ध बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2875,7 +2875,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1.5 hours",
     schemaType: "Service",
     relatedSlugs: ["satyanarayan-katha", "vishnu-sahasranama", "sankashti-chaturthi"],
-    primaryCta: { label: "Book Ekadashi Puja", href: "/puja" },
+    primaryCta: { label: "Book Ekadashi Puja", href: "/online-puja-booking" },
     hi: {
       name: "एकादशी व्रत पूजा",
       eyebrow: "विष्णु व्रत · 11वाँ चंद्र दिन · मास में दो बार",
@@ -2919,7 +2919,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "एकादशी पर चावल क्यों नहीं?", a: "शास्त्रोक्त धारणा: एकादशी पर चावल व्रत के कर्म पर ले लेता है। श्रद्धालु ठीक कर्म चुकाने के लिए उपवास करते हैं; चावल खाना उसे विफल करेगा। गेहूँ, जई, दालें भी बचें। साबूदाना, कुट्टू एवं सिंघाड़ा अनुमत विकल्प।" },
         { q: "कौन सी एकादशी सर्वाधिक शक्तिशाली?", a: "वैकुंठ एकादशी (मार्गशीर्ष शुक्ल, दिसंबर-जनवरी) सर्वोच्च — वैकुंठ के द्वार खुलने माने जाते हैं। निर्जला एकादशी (ज्येष्ठ शुक्ल, मई-जून) सर्वाधिक तपस्वी। देवशयनी एवं देवउठनी एकादशियाँ (आषाढ़ एवं कार्तिक शुक्ल) ब्रह्मांडीय विष्णु चक्र को चिह्नित करती हैं।" },
       ],
-      primaryCta: { label: "एकादशी पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "एकादशी पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -2973,7 +2973,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "1.5 hours (evening)",
     schemaType: "Service",
     relatedSlugs: ["ganesh-puja", "ekadashi-vrat", "satyanarayan-katha"],
-    primaryCta: { label: "Book Sankashti Puja", href: "/puja" },
+    primaryCta: { label: "Book Sankashti Puja", href: "/online-puja-booking" },
     hi: {
       name: "संकष्टी चतुर्थी पूजा",
       eyebrow: "गणेश व्रत · पूर्णिमा के बाद 4थे चंद्र दिन · मासिक",
@@ -3017,7 +3017,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "बादलमय हो एवं चंद्रमा न दिखे तो?", a: "चंद्रोदय का मुहूर्त बीत गया हो (पंडित-जी आपके शहर का समय पुष्ट करते हैं), तो व्रत पूर्ण माना जाता है। चंद्रमा को मानसिक दर्शन अर्पित करें एवं व्रत तोड़ें।" },
         { q: "कौन सी मासिक संकष्टी सर्वाधिक शक्तिशाली?", a: "माघ (जनवरी-फरवरी) की तिलकुंद संकष्टी सर्वोच्च। भाद्रपद (गणेश चतुर्थी से ठीक पूर्व) की भालचंद्र संकष्टी अत्यधिक शक्तिशाली। सभी 12 का वार्षिक पालन सम्पूर्ण भक्त का मार्ग।" },
       ],
-      primaryCta: { label: "संकष्टी पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "संकष्टी पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
   {
@@ -3072,7 +3072,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
     duration: "8–10 hours (full night)",
     schemaType: "Service",
     relatedSlugs: ["rudrabhishek", "mahamrityunjaya-jaap", "navagraha-shanti"],
-    primaryCta: { label: "Book Maha Shivratri Puja", href: "/puja" },
+    primaryCta: { label: "Book Maha Shivratri Puja", href: "/online-puja-booking" },
     hi: {
       name: "महा शिवरात्रि पूजा",
       eyebrow: "रात-भर शिव उपासना · 4 प्रहर अभिषेक · फाल्गुन कृष्ण 13",
@@ -3117,7 +3117,7 @@ export const PUJA_LANDINGS: ServiceLandingEntry[] = [
         { q: "क्या मैं बिना पंडित के कर सकता हूँ?", a: "हाँ — गृहस्थ सरलीकृत संस्करण कर सकते हैं। पंडित-नेतृत्व संस्करण हर प्रहर में संपूर्ण रुद्री पाठ, सही द्रव्य क्रम एवं अनुष्ठानिक पूर्णता सुनिश्चित करता है। पहली बार करने वालों एवं बड़े संकल्पों हेतु अनुशंसित।" },
         { q: "बेल पत्र (बिल्व पत्र) क्या है?", a: "बिल्व पत्र (3-पत्ती बेल) शिव का सर्वाधिक प्रिय अर्पण। हर पत्ती शिव के तीन नेत्रों, तीन शक्तियों (इच्छा-ज्ञान-क्रिया), या त्रिमूर्ति की प्रतीक। भक्ति से अर्पित एक बेल पत्र सौ सामान्य पुष्पों से अधिक पुण्य देता है। हम पूरी रात्रि के लिए ताज़े बेल पत्र की व्यवस्था करते हैं।" },
       ],
-      primaryCta: { label: "महा शिवरात्रि पूजा बुक करें", href: "/puja" },
+      primaryCta: { label: "महा शिवरात्रि पूजा बुक करें", href: "/online-puja-booking" },
     },
   },
 ];

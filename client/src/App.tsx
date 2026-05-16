@@ -272,7 +272,7 @@ function InteractionTracker() {
   useEffect(() => {
     import("@/lib/spiritual-tracker").then(({ trackPageVisit }) => {
       const pageCategories: Record<string, string> = {
-        "/shop": "shopping", "/puja": "puja", "/pandits": "pandit",
+        "/shop": "shopping", "/online-puja-booking": "puja", "/pandits": "pandit",
         "/astrology": "astrology", "/ai-kundli": "astrology", "/premium-kundli-pdf": "astrology",
         "/ai-baby-names": "astrology", "/ai-palm-reading": "astrology",
         "/vastu-compass": "vastu", "/panchang-calendar": "panchang",
@@ -400,8 +400,8 @@ function MobileBottomNav() {
           flameColor="#E07A2B"
         />
       )) as any,
-      label: "Puja", path: "/puja",
-      match: (l: string) => l === "/puja" || l === "/virtual-puja",
+      label: "Puja", path: "/online-puja-booking",
+      match: (l: string) => l === "/online-puja-booking" || l === "/online-puja-booking" || l === "/virtual-puja",
       color: "#E07A2B", tint: "rgba(224,122,43,0.14)",
     },
     {
@@ -702,7 +702,10 @@ function Router() {
           <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
           <Route path="/pandits/:citySlug" component={PanditCityLanding} />
           <Route path="/online-pandit-booking" component={PanditDirectory} />
-          <Route path="/puja" component={PujaBooking} />
+          {/* Canonical puja-booking URL is /online-puja-booking. Any
+              client-side nav to legacy /puja is redirected; hard nav is
+              caught by the server 301 in SEO_ALIAS_REDIRECTS. */}
+          <Route path="/puja">{() => { window.location.replace("/online-puja-booking"); return null; }}</Route>
           <Route path="/online-puja-booking" component={PujaBooking} />
           <Route path="/puja/:type/:city" component={PujaCity} />
           <Route path="/puja/:slug">{() => <ServiceLanding vertical="puja" pattern="/puja/:slug" />}</Route>

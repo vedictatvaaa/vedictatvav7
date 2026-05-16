@@ -134,13 +134,13 @@ export default function PujaBooking() {
         schemas={[
           breadcrumbListSchema([
             { name: "Home", url: abs("/") },
-            { name: "Book a Puja", url: abs("/puja") },
+            { name: "Book a Puja", url: abs("/online-puja-booking") },
           ]),
           faqPageSchema(PUJA_FAQS.map(f => ({ question: f.q, answer: f.a })), "puja-faq"),
           serviceSchema({
             name: "Online Pandit Booking for Puja at Home",
             description: "Book a verified Vedic pandit online for Griha Pravesh, Satyanarayan Katha, Lakshmi Puja, Ganesh Sthapana, Rudra Abhishek, Navagraha Shanti and 50+ ceremonies. All samagri included, transparent pricing, shubh muhurat suggestions.",
-            url: abs("/puja"),
+            url: abs("/online-puja-booking"),
             providerName: "Vedic Tatva",
             areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
           }),
@@ -354,7 +354,7 @@ export default function PujaBooking() {
 
         <DedicatedPujaPagesGrid />
 
-        <RelatedServicesSection context="puja-booking" currentPath="/puja" />
+        <RelatedServicesSection context="puja-booking" currentPath="/online-puja-booking" />
       </div>
     </div>
   );

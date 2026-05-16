@@ -92,7 +92,7 @@ export const VERTICAL_LABELS: Record<ServiceVertical, string> = {
 export const VERTICAL_BASE_PATHS: Record<ServiceVertical, string> = {
   rudraksha: "/shop/rudraksha",
   gemstones: "/shop/gemstones",
-  puja: "/puja",
+  puja: "/online-puja-booking",
   astrology: "/astrology/services",
   "pind-daan": "/pind-daan/services",
 };

@@ -15,7 +15,7 @@ const suggestLimiter = rateLimit({
 
 const STATIC_SUGGESTIONS: { label: string; url: string; type: string }[] = [
   { label: "Book a Pandit", url: "/pandits", type: "service" },
-  { label: "Online Puja", url: "/puja", type: "service" },
+  { label: "Online Puja", url: "/online-puja-booking", type: "service" },
   { label: "Pind Daan in Gaya", url: "/pind-daan", type: "service" },
   { label: "AI Kundli", url: "/ai-kundli", type: "service" },
   { label: "Astrology Consultation", url: "/astrology", type: "service" },

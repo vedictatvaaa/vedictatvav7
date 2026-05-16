@@ -108,7 +108,7 @@ export default function PujaCityPage() {
 
   const breadcrumbs = breadcrumbList([
     { name: "Home", url: abs("/") },
-    { name: "Puja", url: abs("/puja") },
+    { name: "Puja", url: abs("/online-puja-booking") },
     { name: puja.name, url: abs(`/puja/${puja.slug}`) },
     { name: city.name, url: abs(path) },
   ]);
@@ -178,7 +178,7 @@ export default function PujaCityPage() {
       >
         <Link href="/" className="hover:text-[#6D2B35]" data-testid="breadcrumb-home">{copy.breadcrumbHome}</Link>
         <ChevronRight className="w-3.5 h-3.5 opacity-50" />
-        <Link href="/puja" className="hover:text-[#6D2B35]" data-testid="breadcrumb-puja">{copy.breadcrumbPuja}</Link>
+        <Link href="/online-puja-booking" className="hover:text-[#6D2B35]" data-testid="breadcrumb-puja">{copy.breadcrumbPuja}</Link>
         <ChevronRight className="w-3.5 h-3.5 opacity-50" />
         {puja.landingSlug ? (
           <Link href={`/puja/${puja.landingSlug}`} className="hover:text-[#6D2B35]" data-testid="breadcrumb-puja-type">{copy.pujaName}</Link>
@@ -229,7 +229,7 @@ export default function PujaCityPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/puja">
+            <Link href="/online-puja-booking">
               <Button size="lg" data-testid="button-book-puja">{copy.bookCta}</Button>
             </Link>
             <Link href="/puja-call">

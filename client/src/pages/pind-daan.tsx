@@ -2491,7 +2491,7 @@ const RECOMMENDED_RITUALS: { title: string; tagline: string; href: string; icon:
   { title: "Tripindi Shradh", tagline: "For ancestors departed unnaturally or whose tithi is unknown.", href: recommendWa("Tripindi Shradh"), icon: ScrollText, tag: "Pitru Dosh", external: true },
   { title: "Narayan Bali Puja", tagline: "Liberation rite for souls who left through accident or untimely death.", href: recommendWa("Narayan Bali Puja"), icon: Sparkles, tag: "Moksha Vidhi", external: true },
   { title: "Pitru Dosh Nivaran", tagline: "Remedial puja for ancestral curses affecting career, marriage & progeny.", href: recommendWa("Pitru Dosh Nivaran Puja"), icon: ShieldCheck, tag: "Dosh Remedy", external: true },
-  { title: "Rudrabhishek for Ancestors", tagline: "Lord Shiva worship dedicated to grant gati to departed souls.", href: "/puja", icon: Flame, tag: "Shaivite Rite" },
+  { title: "Rudrabhishek for Ancestors", tagline: "Lord Shiva worship dedicated to grant gati to departed souls.", href: "/online-puja-booking", icon: Flame, tag: "Shaivite Rite" },
   { title: "Kala Sarp Dosh Puja", tagline: "Trimbakeshwar rite to dissolve serpent-curse passed through lineage.", href: recommendWa("Kala Sarp Dosh Puja"), icon: Wind, tag: "Graha Dosh", external: true },
   { title: "Tirth Yatra Packages", tagline: "Visit Gaya, Kashi & Haridwar in person with our pandit-led yatras.", href: "/tirth-yatra", icon: Mountain, tag: "Pilgrimage" },
 ];

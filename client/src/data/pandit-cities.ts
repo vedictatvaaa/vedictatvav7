@@ -38,7 +38,7 @@ export type PanditCityConfig = {
 };
 
 const CROSS_PROMO_BASE: CrossPromo[] = [
-  { title: "Online Puja with Live Pandits", href: "/puja", description: "Join the ritual over video — same priest, same shastra, no travel." },
+  { title: "Online Puja with Live Pandits", href: "/online-puja-booking", description: "Join the ritual over video — same priest, same shastra, no travel." },
   { title: "Authentic Puja Samagri", href: "/spiritual-essentials", description: "The exact items the pandit will ask for, delivered in one kit." },
   { title: "Talk to a Vedic Astrologer", href: "/astrology", description: "Get a kundli reading or muhurat consultation before booking." },
   { title: "Today's Panchang & Muhurat", href: "/panchang", description: "Pick the most auspicious tithi for your ceremony." },

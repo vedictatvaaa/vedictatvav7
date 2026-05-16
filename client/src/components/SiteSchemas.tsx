@@ -12,7 +12,7 @@ const PRIMARY_NAV: Array<{ name: string; url: string }> = [
   { name: "Shop", url: "/shop" },
   { name: "Puja Essentials", url: "/spiritual-essentials" },
   { name: "Book a Pandit", url: "/pandits" },
-  { name: "Book a Puja", url: "/puja" },
+  { name: "Book a Puja", url: "/online-puja-booking" },
   { name: "Pind Daan", url: "/pind-daan" },
   { name: "Astrology", url: "/astrology" },
   { name: "AI Kundli", url: "/ai-kundli" },

@@ -34,7 +34,7 @@ const PAGE_HINTS: Record<string, { topic: string; intent: string; primaryKw: str
     intent: "Service booking",
     primaryKw: ["book pandit online", "verified pandit", "puja pandit near me"],
   },
-  "/puja": {
+  "/online-puja-booking": {
     topic: "Online and at-home puja booking",
     intent: "Service booking",
     primaryKw: ["online puja booking", "book puja at home", "vedic puja"],

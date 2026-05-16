@@ -22,7 +22,7 @@ const ONLINE_PUJA_BOOKING: SeoLandingPageProps = {
   subtitle:
     "Book any puja online — Sankalp on video, full vidhi by verified pandits, photo-video proof and prasad couriered home. Same-day slots, all samagri included.",
   heroCTAs: [
-    { label: "Book a Puja", href: "/puja", variant: "primary" },
+    { label: "Book a Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "View All Pandits", href: "/pandits", variant: "outline" },
   ],
   trustChips: ["100% Verified Pandits", "Live Sankalp", "Prasad Couriered Home"],
@@ -98,7 +98,7 @@ const ONLINE_PUJA_BOOKING: SeoLandingPageProps = {
   finalCtaTitle: "Book an Online Puja Today",
   finalCtaSubtitle: "Same-day slots available. All samagri included. Prasad couriered worldwide.",
   finalCtaButtons: [
-    { label: "Browse Pujas", href: "/puja", variant: "primary" },
+    { label: "Browse Pujas", href: "/online-puja-booking", variant: "primary" },
     { label: "Talk to Us", href: "/contact", variant: "outline" },
   ],
   relatedLinks: [
@@ -124,7 +124,7 @@ const SATYANARAYAN_PUJA: SeoLandingPageProps = {
   canonical: "/satyanarayan-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Satyanarayan Puja", url: "/satyanarayan-puja" },
   ],
   eyebrow: "Satyanarayan Puja",
@@ -132,7 +132,7 @@ const SATYANARAYAN_PUJA: SeoLandingPageProps = {
   subtitle:
     "Book a verified pandit for Satyanarayan Vrat at home or online. Full katha, all samagri arranged, prasad and aarti included.",
   heroCTAs: [
-    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Book This Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Find a Pandit", href: "/pandits", variant: "outline" },
   ],
   trustChips: ["Verified Pandit", "All Samagri Included", "Same-Day Booking"],
@@ -207,7 +207,7 @@ const SATYANARAYAN_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Book Satyanarayan Puja Today",
   finalCtaSubtitle: "Verified pandit, full samagri, katha booklet — at your home or online.",
   finalCtaButtons: [
-    { label: "Book Now", href: "/puja", variant: "primary" },
+    { label: "Book Now", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   relatedLinks: [
@@ -229,7 +229,7 @@ const RUDRABHISHEK_PUJA: SeoLandingPageProps = {
   canonical: "/rudrabhishek-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Rudrabhishek Puja", url: "/rudrabhishek-puja" },
   ],
   eyebrow: "Rudrabhishek",
@@ -237,7 +237,7 @@ const RUDRABHISHEK_PUJA: SeoLandingPageProps = {
   subtitle:
     "Full Rudri Paath, abhishek with panchamrit, ganga jal and bilva-patra. Performed at a Shiva temple or live online — dakshina from ₹2,100 with all samagri.",
   heroCTAs: [
-    { label: "Book Rudrabhishek", href: "/puja", variant: "primary" },
+    { label: "Book Rudrabhishek", href: "/online-puja-booking", variant: "primary" },
     { label: "Talk to a Pandit", href: "/contact", variant: "outline" },
   ],
   trustChips: ["Veda-Pathi Pandit", "Live at Shiva Temple", "Bilva-Patra Included"],
@@ -312,7 +312,7 @@ const RUDRABHISHEK_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Book a Rudrabhishek Today",
   finalCtaSubtitle: "Veda-pathi pandit, full samagri, abhishek at temple or online.",
   finalCtaButtons: [
-    { label: "Book Now", href: "/puja", variant: "primary" },
+    { label: "Book Now", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   relatedLinks: [
@@ -333,7 +333,7 @@ const NAVRATRI_PUJA: SeoLandingPageProps = {
   canonical: "/navratri-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Navratri Puja", url: "/navratri-puja" },
   ],
   eyebrow: "Navratri",
@@ -341,7 +341,7 @@ const NAVRATRI_PUJA: SeoLandingPageProps = {
   subtitle:
     "Book a verified pandit for the full nine-day Navratri vidhi — daily Durga pujan, Akhand Jyot, Saptashati Paath, Kanya Pujan and Havan on Navami.",
   heroCTAs: [
-    { label: "Book Navratri Puja", href: "/puja", variant: "primary" },
+    { label: "Book Navratri Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   trustChips: ["All 9 Days Covered", "Akhand Jyot Setup", "Saptashati Paath"],
@@ -419,7 +419,7 @@ const NAVRATRI_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Book Navratri Puja with a Verified Pandit",
   finalCtaSubtitle: "All nine days, full samagri, Akhand Jyot, Kanya Pujan and Havan.",
   finalCtaButtons: [
-    { label: "Book Now", href: "/puja", variant: "primary" },
+    { label: "Book Now", href: "/online-puja-booking", variant: "primary" },
     { label: "Read Vidhi Guide", href: "/navratri-puja-vidhi", variant: "outline" },
   ],
   relatedLinks: [
@@ -461,7 +461,7 @@ function buildCityPage(args: {
     subtitle: `Identity-verified, scripture-trained Brahmin pandits across ${city}. Transparent dakshina, all samagri included.`,
     heroCTAs: [
       { label: `View ${city} Pandits`, href: `/pandits?city=${citySlug}`, variant: "primary" },
-      { label: "Book a Puja", href: "/puja", variant: "outline" },
+      { label: "Book a Puja", href: "/online-puja-booking", variant: "outline" },
     ],
     trustChips: ["Identity Verified", "Same-Day Booking", "Transparent Dakshina"],
     intro,
@@ -525,7 +525,7 @@ function buildCityPage(args: {
     finalCtaSubtitle: `Same-day slots available. All samagri included. Transparent dakshina.`,
     finalCtaButtons: [
       { label: `View ${city} Pandits`, href: `/pandits?city=${citySlug}`, variant: "primary" },
-      { label: "Book a Puja", href: "/puja", variant: "outline" },
+      { label: "Book a Puja", href: "/online-puja-booking", variant: "outline" },
     ],
     relatedLinks: [
       { label: "Online Puja Booking", href: "/online-puja-booking" },
@@ -834,7 +834,7 @@ const LAKSHMI_PUJA_BENEFITS: SeoLandingPageProps = {
   finalCtaTitle: "Book a Lakshmi Puja with a Verified Pandit",
   finalCtaSubtitle: "Diwali, Friday, Sharad Purnima or Varamahalakshmi — full vidhi at home or online.",
   finalCtaButtons: [
-    { label: "Book Lakshmi Puja", href: "/puja", variant: "primary" },
+    { label: "Book Lakshmi Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   relatedLinks: [
@@ -960,7 +960,7 @@ const GRIHA_PRAVESH_MUHURAT: SeoLandingPageProps = {
   finalCtaTitle: "Get Your Griha Pravesh Muhurat & Pandit",
   finalCtaSubtitle: "Personalised muhurat for your gotra + verified pandit for the full Vastu-Shanti vidhi.",
   finalCtaButtons: [
-    { label: "Book Griha Pravesh", href: "/puja", variant: "primary" },
+    { label: "Book Griha Pravesh", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   relatedLinks: [
@@ -985,7 +985,7 @@ const GRIHA_PRAVESH_PUJA: SeoLandingPageProps = {
   canonical: "/griha-pravesh-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Griha Pravesh Puja", url: "/griha-pravesh-puja" },
   ],
   eyebrow: "Griha Pravesh Puja",
@@ -993,7 +993,7 @@ const GRIHA_PRAVESH_PUJA: SeoLandingPageProps = {
   subtitle:
     "Begin life in your new home with a complete Vedic housewarming — Vastu Shanti, Navagraha invocation, kalash sthapana and havan, performed by a verified pandit.",
   heroCTAs: [
-    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Book This Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Find a Muhurat", href: "/griha-pravesh-muhurat", variant: "outline" },
   ],
   trustChips: ["Verified Pandit", "Vastu Shanti Included", "Personalised Muhurat"],
@@ -1042,7 +1042,7 @@ const GRIHA_PRAVESH_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Bless Your New Home With a Verified Pandit",
   finalCtaSubtitle: "Personalised muhurat, full Vastu Shanti vidhi, all samagri included.",
   finalCtaButtons: [
-    { label: "Book Griha Pravesh", href: "/puja", variant: "primary" },
+    { label: "Book Griha Pravesh", href: "/online-puja-booking", variant: "primary" },
     { label: "Get Muhurat", href: "/griha-pravesh-muhurat", variant: "outline" },
   ],
   relatedLinks: [
@@ -1064,7 +1064,7 @@ const LAKSHMI_PUJA: SeoLandingPageProps = {
   canonical: "/lakshmi-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Lakshmi Puja", url: "/lakshmi-puja" },
   ],
   eyebrow: "Lakshmi Puja",
@@ -1072,7 +1072,7 @@ const LAKSHMI_PUJA: SeoLandingPageProps = {
   subtitle:
     "Invoke Goddess Lakshmi for wealth, abundance and prosperity. Book a verified pandit for Diwali, Friday vrat or any auspicious occasion — at home or live online.",
   heroCTAs: [
-    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Book This Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Find a Pandit", href: "/pandits", variant: "outline" },
   ],
   trustChips: ["Verified Pandit", "Sri Sukta Paath", "Same-Day Booking"],
@@ -1124,7 +1124,7 @@ const LAKSHMI_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Invite Lakshmi Into Your Home",
   finalCtaSubtitle: "Verified pandit, Sri Sukta paath, full samagri — at home or live online.",
   finalCtaButtons: [
-    { label: "Book Lakshmi Puja", href: "/puja", variant: "primary" },
+    { label: "Book Lakshmi Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Read Lakshmi Benefits", href: "/lakshmi-puja-benefits", variant: "outline" },
   ],
   relatedLinks: [
@@ -1146,7 +1146,7 @@ const NAVGRAHA_PUJA: SeoLandingPageProps = {
   canonical: "/navgraha-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Navgraha Puja", url: "/navgraha-puja" },
   ],
   eyebrow: "Navgraha Puja",
@@ -1154,7 +1154,7 @@ const NAVGRAHA_PUJA: SeoLandingPageProps = {
   subtitle:
     "A complete Vedic remedy for malefic planetary periods. Verified pandit performs navgraha homa, mantra jaap and ratna-arpan to balance all nine planets in your kundli.",
   heroCTAs: [
-    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Book This Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Get a Kundli Reading", href: "/astrology", variant: "outline" },
   ],
   trustChips: ["Veda-Pathi Pandit", "Custom to Your Kundli", "Mantra Jaap Included"],
@@ -1206,7 +1206,7 @@ const NAVGRAHA_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Pacify Your Grahas With an Authentic Vedic Remedy",
   finalCtaSubtitle: "Verified Veda-pathi pandit, custom to your kundli, full samagri included.",
   finalCtaButtons: [
-    { label: "Book Navgraha Puja", href: "/puja", variant: "primary" },
+    { label: "Book Navgraha Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Get Kundli Reading", href: "/astrology", variant: "outline" },
   ],
   relatedLinks: [
@@ -1228,7 +1228,7 @@ const MARRIAGE_PUJA: SeoLandingPageProps = {
   canonical: "/marriage-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Marriage Puja", url: "/marriage-puja" },
   ],
   eyebrow: "Marriage Puja",
@@ -1236,7 +1236,7 @@ const MARRIAGE_PUJA: SeoLandingPageProps = {
   subtitle:
     "Book a Veda-pathi pandit for the most important sanskar of life. North Indian, South Indian, Maharashtrian, Bengali, Gujarati and Punjabi styles supported.",
   heroCTAs: [
-    { label: "Book a Wedding Pandit", href: "/puja", variant: "primary" },
+    { label: "Book a Wedding Pandit", href: "/online-puja-booking", variant: "primary" },
     { label: "Marriage Muhurat", href: "/astrology", variant: "outline" },
   ],
   trustChips: ["Multi-Language Pandit", "Sastra-Compliant Vidhi", "Personalised Muhurat"],
@@ -1291,7 +1291,7 @@ const MARRIAGE_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Begin Your Married Life With an Authentic Vedic Ceremony",
   finalCtaSubtitle: "Veda-pathi pandit matched to your tradition, full samagri, personalised muhurat.",
   finalCtaButtons: [
-    { label: "Book Marriage Pandit", href: "/puja", variant: "primary" },
+    { label: "Book Marriage Pandit", href: "/online-puja-booking", variant: "primary" },
     { label: "View Pandits", href: "/pandits", variant: "outline" },
   ],
   relatedLinks: [
@@ -1313,7 +1313,7 @@ const PITRA_DOSH_PUJA: SeoLandingPageProps = {
   canonical: "/pitra-dosh-puja",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Pitra Dosh Puja", url: "/pitra-dosh-puja" },
   ],
   eyebrow: "Pitra Dosh Puja",
@@ -1321,7 +1321,7 @@ const PITRA_DOSH_PUJA: SeoLandingPageProps = {
   subtitle:
     "Pacify ancestral karmic debts with the most powerful Vedic remedies — Tripindi Shradh, Narayan-Nag Bali and Pind Daan at the sacred Pitru Tirthas.",
   heroCTAs: [
-    { label: "Book This Puja", href: "/puja", variant: "primary" },
+    { label: "Book This Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Pind Daan Locations", href: "/pind-daan", variant: "outline" },
   ],
   trustChips: ["At Gaya / Kashi / Haridwar", "Verified Pandit", "Full Tripindi Vidhi"],
@@ -1371,7 +1371,7 @@ const PITRA_DOSH_PUJA: SeoLandingPageProps = {
   finalCtaTitle: "Settle Ancestral Karmic Debts With a Sastra-Compliant Vedic Remedy",
   finalCtaSubtitle: "Verified pandit at Gaya / Kashi / Haridwar / Trimbakeshwar. Full vidhi for vansh-vriddhi.",
   finalCtaButtons: [
-    { label: "Book Pitra Dosh Puja", href: "/puja", variant: "primary" },
+    { label: "Book Pitra Dosh Puja", href: "/online-puja-booking", variant: "primary" },
     { label: "Pind Daan in Gaya", href: "/pind-daan-gaya", variant: "outline" },
   ],
   relatedLinks: [
@@ -1393,7 +1393,7 @@ const MAHA_MRITYUNJAYA_JAAP: SeoLandingPageProps = {
   canonical: "/maha-mrityunjaya-jaap",
   breadcrumbs: [
     { name: "Home", url: "/" },
-    { name: "Pujas", url: "/puja" },
+    { name: "Pujas", url: "/online-puja-booking" },
     { name: "Maha Mrityunjaya Jaap", url: "/maha-mrityunjaya-jaap" },
   ],
   eyebrow: "Maha Mrityunjaya Jaap",
@@ -1401,7 +1401,7 @@ const MAHA_MRITYUNJAYA_JAAP: SeoLandingPageProps = {
   subtitle:
     "The supreme Vedic mantra for health, longevity and protection from Akal Mrityu. Veda-pathi pandits perform the full jaap with Rudri Paath and Mahamrityunjaya Homa.",
   heroCTAs: [
-    { label: "Book This Jaap", href: "/puja", variant: "primary" },
+    { label: "Book This Jaap", href: "/online-puja-booking", variant: "primary" },
     { label: "Talk to a Jyotishi", href: "/astrology", variant: "outline" },
   ],
   trustChips: ["Veda-Pathi Pandits", "Rudri Paath Included", "Live Sankalp"],
@@ -1450,7 +1450,7 @@ const MAHA_MRITYUNJAYA_JAAP: SeoLandingPageProps = {
   finalCtaTitle: "Invoke the Supreme Vedic Mantra for Health & Longevity",
   finalCtaSubtitle: "Veda-pathi pandits, Sava Lakh / Maha / Koti formats, performed at Jyotirlingas.",
   finalCtaButtons: [
-    { label: "Book Mahamrityunjaya Jaap", href: "/puja", variant: "primary" },
+    { label: "Book Mahamrityunjaya Jaap", href: "/online-puja-booking", variant: "primary" },
     { label: "Get a Kundli Reading", href: "/astrology", variant: "outline" },
   ],
   relatedLinks: [
@@ -2601,7 +2601,7 @@ const HAVAN_CUPS: SeoLandingPageProps = {
   finalCtaSubtitle: "Pre-filled, smokeless, apartment-safe — pure cow ghee and 16-herb samagri inside.",
   finalCtaButtons: [
     { label: "Shop Havan Cups", href: "/spiritual-essentials", variant: "primary" },
-    { label: "Book Online Havan with Pandit", href: "/puja", variant: "outline" },
+    { label: "Book Online Havan with Pandit", href: "/online-puja-booking", variant: "outline" },
   ],
   relatedLinks: [
     { label: "Sambrani Cups", href: "/sambrani-cups" },
@@ -2844,7 +2844,7 @@ const PUJA_KITS: SeoLandingPageProps = {
   finalCtaSubtitle: "Every samagri, pre-measured, with a printed vidhi guide. Ready to perform.",
   finalCtaButtons: [
     { label: "Shop Puja Kits", href: "/spiritual-essentials", variant: "primary" },
-    { label: "Book Pandit for Live Guidance", href: "/puja", variant: "outline" },
+    { label: "Book Pandit for Live Guidance", href: "/online-puja-booking", variant: "outline" },
   ],
   relatedLinks: [
     { label: "Festival Collections", href: "/festival-collections" },

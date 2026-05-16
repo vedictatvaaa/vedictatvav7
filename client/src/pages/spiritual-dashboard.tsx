@@ -927,7 +927,7 @@ export default function SpiritualDashboard() {
               <h3 className="font-serif font-bold text-sm text-[#6D2B35]">Astrology Services</h3>
               <p className="text-[11px] text-[#5a4a3a]/60 mt-1">AI Kundli, baby names &amp; palm reading</p>
             </Link>
-            <Link href="/puja" className="group bg-white rounded-xl p-4 border border-[#6D2B35]/8 shadow-sm hover-elevate" data-testid="link-puja">
+            <Link href="/online-puja-booking" className="group bg-white rounded-xl p-4 border border-[#6D2B35]/8 shadow-sm hover-elevate" data-testid="link-puja">
               <Flame className="h-5 w-5 text-orange-500 mb-2" />
               <h3 className="font-serif font-bold text-sm text-[#6D2B35]">Book a Puja</h3>
               <p className="text-[11px] text-[#5a4a3a]/60 mt-1">Sacred ceremonies with verified pandits</p>
@@ -1098,7 +1098,7 @@ function SavedAncestorsDashboardSection() {
                 <Link href={a.recommendedHref || "/pind-daan"} className="inline-flex items-center gap-1.5 bg-[#6D2B35] hover:bg-[#5a232b] text-white text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-pind-daan-${a.id}`}>
                   Book Pind Daan <ChevronRight className="w-3 h-3" />
                 </Link>
-                <Link href="/puja" className="inline-flex items-center gap-1.5 bg-white text-[#6D2B35] border border-[#6D2B35]/20 hover-elevate text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-tarpan-${a.id}`}>
+                <Link href="/online-puja-booking" className="inline-flex items-center gap-1.5 bg-white text-[#6D2B35] border border-[#6D2B35]/20 hover-elevate text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-tarpan-${a.id}`}>
                   Book Tarpan Puja
                 </Link>
                 <span className="ml-auto text-[10px] text-[#5a4a3a]/60 self-center">

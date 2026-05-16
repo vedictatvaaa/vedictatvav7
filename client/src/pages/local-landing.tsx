@@ -130,7 +130,7 @@ export default function LocalLandingPage() {
                 <Sparkles className="h-10 w-10 text-[#D4AF37] mx-auto mb-3" />
                 <h2 className="font-serif text-2xl font-bold text-[#4a1a22] mb-2">Book {categoryLabel} in {city}</h2>
                 <p className="text-[#5a4a3a] max-w-xl mx-auto mb-5">Live HD video call with a verified pandit. Full ritual, recorded for your records, in your preferred language.</p>
-                <Link href="/puja"><Button className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-semibold" data-testid="button-book-service">Book Now <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                <Link href="/online-puja-booking"><Button className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-semibold" data-testid="button-book-service">Book Now <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
               </CardContent>
             </Card>
           </div>

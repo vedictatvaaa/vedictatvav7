@@ -996,7 +996,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }
                     {isFetching ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
                     Try again
                   </Button>
-                  <Link href="/puja">
+                  <Link href="/online-puja-booking">
                     <Button variant="outline" data-testid="button-fallback-online-puja">Book online puja instead</Button>
                   </Link>
                 </div>
@@ -1018,7 +1018,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }
                 </p>
                 <div className="flex gap-2 justify-center mt-4 flex-wrap">
                   {(pandits || []).length === 0 ? (
-                    <Link href="/puja">
+                    <Link href="/online-puja-booking">
                       <Button data-testid="button-empty-online-puja">Book online puja</Button>
                     </Link>
                   ) : (

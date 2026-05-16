@@ -236,7 +236,7 @@ function OverviewTab({ unread, setTab }: { unread: number; setTab: (t: TabId) =>
         <CardContent className="p-5">
           <h3 className="font-serif font-bold text-[#4a1a22] mb-3">Quick actions</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <QA href="/puja" icon={MapPin} label="Book a Puja" />
+            <QA href="/online-puja-booking" icon={MapPin} label="Book a Puja" />
             <QA href="/pandits" icon={Sparkles} label="Find a Pandit" />
             <QA href="/shop" icon={IndianRupee} label="Shop Samagri" />
             <QA href="/order-history" icon={Receipt} label="Order History" />

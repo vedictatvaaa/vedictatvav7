@@ -110,10 +110,10 @@ const SEED: InsertSeoPage[] = [
     changeFreq: "weekly",
   },
   {
-    pagePath: "/puja",
+    pagePath: "/online-puja-booking",
     metaTitle: "Online Puja Booking — Verified Pandits, Live Sankalp | Vedic Tatva",
     metaDescription: "Book authentic online puja with verified pandits. Live video sankalp, prasad delivery and full ritual proof. Choose from popular pujas pan-India.",
-    canonicalUrl: "/puja",
+    canonicalUrl: "/online-puja-booking",
     priority: 0.9,
     changeFreq: "weekly",
   },

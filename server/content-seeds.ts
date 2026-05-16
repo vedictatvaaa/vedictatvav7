@@ -64,7 +64,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Satyanarayan Puja — Vidhi, Story, Muhurat 2026 | Vedic Tatva",
     metaDescription: "Complete Satyanarayan Puja vidhi at home, full katha summary, samagri checklist and 2026 auspicious dates. Book a verified pandit on Vedic Tatva.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book a Pandit for Satyanarayan Puja",
   },
   {
@@ -103,7 +103,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Rudrabhishek Puja — Benefits, Vidhi, Muhurat 2026 | Vedic Tatva",
     metaDescription: "Why Rudrabhishek puja removes doshas, full vidhi, samagri list and 2026 auspicious dates including Mondays and Pradosh Vrat. Book a verified pandit.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Rudrabhishek Pandit",
   },
   {
@@ -179,7 +179,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Lakshmi Puja — Diwali Vidhi, Muhurat 2026 | Vedic Tatva",
     metaDescription: "Complete Lakshmi Puja vidhi for Diwali at home, samagri checklist, muhurat timings and 2026 auspicious dates including Dhanteras and Fridays.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Lakshmi Puja Pandit",
   },
   {
@@ -217,7 +217,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Navagraha Shanti Puja — Planetary Remedies, Muhurat 2026",
     metaDescription: "Targeted Navagraha Shanti Puja for kundli doshas including Sade Sati, Mangal Dosh, Kaal Sarp Dosh. Vidhi, mantras, donations and 2026 muhurat.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Navagraha Pandit",
   },
   {
@@ -255,7 +255,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Griha Pravesh Puja — Vidhi, Best Muhurat 2026 | Vedic Tatva",
     metaDescription: "Step-by-step Griha Pravesh vidhi, best muhurat dates for 2026, samagri checklist, and the must-avoid days. Book a verified pandit.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Griha Pravesh Pandit",
   },
   {
@@ -292,7 +292,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Kaal Sarp Dosh Puja — Trimbakeshwar Vidhi, Muhurat 2026",
     metaDescription: "Authentic Kaal Sarp Dosh Puja vidhi, what the dosh actually means, and 2026 muhurat dates. Verify your kundli before booking.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Kaal Sarp Pandit",
   },
   {
@@ -329,7 +329,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Navratri Puja — Vidhi, Mantras, Dates 2026 | Vedic Tatva",
     metaDescription: "Complete Navratri puja vidhi at home, daily mantras for the nine forms of Durga, kanya pujan guide and Sharad Navratri dates 2026.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Navratri Pandit",
   },
   {
@@ -476,7 +476,7 @@ const PUJA_SEEDS: PujaSeed[] = [
     ],
     metaTitle: "Maha Mrityunjaya Jaap — Healing Puja, Vidhi, Muhurat 2026",
     metaDescription: "Sacred Maha Mrityunjaya Jaap for healing, the mantra and its meaning, full vidhi with 1.25 lakh count, and 2026 muhurat dates.",
-    bookingShopUrl: "/puja",
+    bookingShopUrl: "/online-puja-booking",
     bookingShopLabel: "Book Maha Mrityunjaya Jaap Pandit",
   },
 ];

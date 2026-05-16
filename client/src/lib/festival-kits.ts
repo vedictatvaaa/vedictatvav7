@@ -27,7 +27,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
     services: [
       { label: "Book a Pandit for Lakshmi Puja", href: "/pandits", description: "Verified Karmkandi pandit at your doorstep on Diwali night." },
       { label: "Diwali Muhurat", href: "/muhurat-finder", description: "Choose the most auspicious time for Lakshmi pujan." },
-      { label: "Online Lakshmi Puja", href: "/puja", description: "Sankalp puja livestreamed from a sacred temple." },
+      { label: "Online Lakshmi Puja", href: "/online-puja-booking", description: "Sankalp puja livestreamed from a sacred temple." },
     ],
   },
   navratri: {
@@ -45,7 +45,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
     ],
     services: [
       { label: "Book a Durga Saptashati Pandit", href: "/pandits", description: "Recitation of all 13 chapters across nine nights." },
-      { label: "Navratri Online Puja", href: "/puja", description: "Daily aarti livestreamed from Vaishno Devi & Kamakhya." },
+      { label: "Navratri Online Puja", href: "/online-puja-booking", description: "Daily aarti livestreamed from Vaishno Devi & Kamakhya." },
     ],
   },
   "ganesh-chaturthi": {
@@ -61,7 +61,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
     ],
     services: [
       { label: "Book Ganpati Sthapana Pandit", href: "/pandits", description: "Pranapratishtha and daily aarti for the full 10 days." },
-      { label: "Online Ganesh Puja", href: "/puja", description: "Sankalp puja from Siddhivinayak with prasad delivered." },
+      { label: "Online Ganesh Puja", href: "/online-puja-booking", description: "Sankalp puja from Siddhivinayak with prasad delivered." },
     ],
   },
   janmashtami: {
@@ -77,7 +77,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
     ],
     services: [
       { label: "Book a Janmashtami Pandit", href: "/pandits", description: "Midnight abhishek of Laddu Gopal at your home." },
-      { label: "Online Krishna Puja", href: "/puja", description: "Live darshan from Vrindavan & Mathura." },
+      { label: "Online Krishna Puja", href: "/online-puja-booking", description: "Live darshan from Vrindavan & Mathura." },
     ],
   },
   mahashivratri: {
@@ -94,7 +94,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
     ],
     services: [
       { label: "Book a Rudrabhishek Pandit", href: "/pandits", description: "Full Rudri paath through all four prahar of the night." },
-      { label: "Online Mahamrityunjaya Jaap", href: "/puja", description: "1.25 lakh jaap performed for your sankalp." },
+      { label: "Online Mahamrityunjaya Jaap", href: "/online-puja-booking", description: "1.25 lakh jaap performed for your sankalp." },
     ],
   },
   holi: {
