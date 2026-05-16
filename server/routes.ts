@@ -7754,6 +7754,63 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
   });
 
+  // ---- AI Puja Recommender (used by pandit directory) ----
+  // Given a free-text "situation", returns the most fitting puja and the
+  // specialization keyword to filter pandits by. Cost-bounded, JSON mode.
+  // Rate limit guards against cost abuse — 12 calls / IP / 5 min is plenty
+  // for legitimate "ask AI" use, way below sustained scraping cost.
+  const pujaRecommendLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 12,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+    message: { error: "Too many requests. Please try again in a few minutes." },
+  });
+  app.post("/api/ai/puja-recommend", pujaRecommendLimiter, async (req, res) => {
+    try {
+      const { situation } = req.body as { situation?: string };
+      if (!situation || situation.trim().length < 5) {
+        return res.status(400).json({ error: "Tell us a bit more about your situation." });
+      }
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ error: "AI is currently unavailable." });
+      }
+      const ai = new OpenAI();
+      const r = await ai.chat.completions.create({
+        model: "gpt-4o-mini",
+        response_format: { type: "json_object" },
+        temperature: 0.5,
+        max_tokens: 350,
+        messages: [{
+          role: "user",
+          content: `You are a senior Vedic pandit advising on which puja a devotee should perform.
+
+User's situation: """${situation.trim().slice(0, 600)}"""
+
+Respond as strict JSON with these exact keys:
+- "pujaName": string (the canonical Sanskrit/Hindi puja name, e.g. "Satyanarayan Puja", "Rudrabhishek")
+- "specialization": one of [Satyanarayan, Griha Pravesh, Vivah, Mundan, Namkaran, Rudrabhishek, Navagraha, Shradh, Vastu, Ganesh, Lakshmi, Saraswati, Kaal Sarp, Mahamrityunjaya, General]
+- "reasoning": 2-3 sentences in warm, plain English explaining why this puja fits.
+- "preparation": 1 sentence on what the devotee should arrange.
+
+Be specific and authoritative. No emoji.`
+        }],
+      });
+      const raw = r.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(raw);
+      res.json({
+        pujaName: String(parsed.pujaName || "").slice(0, 100),
+        specialization: String(parsed.specialization || "General").slice(0, 50),
+        reasoning: String(parsed.reasoning || "").slice(0, 600),
+        preparation: String(parsed.preparation || "").slice(0, 300),
+      });
+    } catch (e: any) {
+      console.error("[ai/puja-recommend]", e?.message);
+      res.status(503).json({ error: "Could not get a recommendation right now." });
+    }
+  });
+
   // ---- AI Personalized Predictions ----
 
   app.post("/api/ai/predictions", async (req, res) => {
