@@ -281,3 +281,54 @@ export async function runFestivalReminderSweep(): Promise<{ sent: number; skippe
   }
   return { sent, skipped };
 }
+
+// =====================================================================
+// One-shot seed — populates `festivals` from the canonical list mirrored
+// from client/src/lib/festivals.ts so admin DB and homepage decor share
+// the same calendar. Runs once at boot if the table is empty; admins can
+// add/edit/delete freely after that — we never overwrite.
+// =====================================================================
+const FESTIVAL_SEED: Array<{ slug: string; name: string; date: string; description: string; preparationNotes: string }> = [
+  { slug: "makar-sankranti",  name: "Makar Sankranti",        date: "2026-01-14", description: "Sun enters Capricorn — harvest & til-gud.", preparationNotes: "Til-gud, kite flying, Surya namaskar, dakshina to pandit." },
+  { slug: "vasant-panchami",  name: "Vasant Panchami",        date: "2026-01-23", description: "Saraswati Puja — knowledge & arts.", preparationNotes: "Yellow flowers, books on mandir, kheer prasad." },
+  { slug: "mahashivratri",    name: "Maha Shivratri",         date: "2026-02-15", description: "Great night of Shiva — fasting & jagran.", preparationNotes: "Bilva leaves, milk, gangajal for Rudrabhishek." },
+  { slug: "holi",             name: "Holi",                   date: "2026-03-04", description: "Festival of colours — burn ego with Holika.", preparationNotes: "Organic gulal, gujiya, Holika Dahan samagri." },
+  { slug: "ram-navami",       name: "Ram Navami",             date: "2026-04-05", description: "Birth of Lord Rama — Ramayana paath.", preparationNotes: "Tulsi, kheer, Ramayana recital, charanamrit." },
+  { slug: "akshaya-tritiya",  name: "Akshaya Tritiya",        date: "2026-04-20", description: "Day of eternal prosperity — gold & gifting.", preparationNotes: "Gold/silver, donations, Lakshmi-Narayan puja." },
+  { slug: "ganga-dussehra",   name: "Ganga Dussehra",         date: "2026-05-26", description: "Descent of Ma Ganga — purifying ablution.", preparationNotes: "Gangajal, white flowers, lamps for visarjan." },
+  { slug: "rath-yatra",       name: "Jagannath Rath Yatra",   date: "2026-06-27", description: "Jagannath rides through Puri.", preparationNotes: "Khichdi prasad, peda, jagannath katha." },
+  { slug: "guru-purnima",     name: "Guru Purnima",           date: "2026-07-10", description: "Honour your guru — sacred lineage.", preparationNotes: "Guru dakshina, paduka puja, white sweets." },
+  { slug: "raksha-bandhan",   name: "Raksha Bandhan",         date: "2026-08-28", description: "Sacred thread of protection.", preparationNotes: "Rakhi thread, roli-akshat, sweets." },
+  { slug: "janmashtami",      name: "Krishna Janmashtami",    date: "2026-09-04", description: "Birth of Lord Krishna — midnight abhishek.", preparationNotes: "Makhan-mishri, panjiri, jhula decoration." },
+  { slug: "ganesh-chaturthi", name: "Ganesh Chaturthi",       date: "2026-09-14", description: "Ganesha utsav — modak & sthapana.", preparationNotes: "Modak, durva grass, eco Ganesha murti." },
+  { slug: "navratri",         name: "Sharadiya Navratri",     date: "2026-09-22", description: "Nine nights of Devi worship.", preparationNotes: "Akhand jyot, kalash sthapana, vrat samagri." },
+  { slug: "dussehra",         name: "Vijayadashami",          date: "2026-10-02", description: "Victory of Rama over Ravana.", preparationNotes: "Shami leaves, weapon puja, Ravana-dahan." },
+  { slug: "karva-chauth",     name: "Karva Chauth",           date: "2026-10-09", description: "Sacred fast for spousal longevity.", preparationNotes: "Karva, sieve, mehendi, sargi thali." },
+  { slug: "diwali",           name: "Diwali (Lakshmi Puja)",  date: "2026-11-08", description: "Festival of lights — Lakshmi-Ganesh puja.", preparationNotes: "Diyas, rangoli, Lakshmi-Ganesh murti, kuber yantra." },
+  { slug: "chhath",           name: "Chhath Puja",            date: "2026-11-14", description: "Surya & Chhathi Maiya — purest fast.", preparationNotes: "Sup, daura, thekua, sugarcane, ghat preparation." },
+  { slug: "tulsi-vivah",      name: "Tulsi Vivah",            date: "2026-11-23", description: "Sacred marriage of Tulsi & Shaligram.", preparationNotes: "Tulsi plant, mandap, shaligram, wedding samagri." },
+  { slug: "geeta-jayanti",    name: "Geeta Jayanti",          date: "2026-12-01", description: "Birth of the Bhagavad Gita.", preparationNotes: "Gita paath, yellow flowers, Krishna bhog." },
+];
+
+export async function seedFestivalsIfEmpty(): Promise<number> {
+  try {
+    const existing = await db.select({ id: festivals.id }).from(festivals).limit(1);
+    if (existing.length) return 0;
+    let inserted = 0;
+    for (const f of FESTIVAL_SEED) {
+      try {
+        await db.insert(festivals).values({
+          slug: f.slug, name: f.name, date: f.date,
+          description: f.description, preparationNotes: f.preparationNotes,
+          notifyUsers: true, notifyPandits: true, isActive: true,
+        }).onConflictDoNothing();
+        inserted++;
+      } catch (e) { /* slug collision — fine */ }
+    }
+    console.log(`[festivals] seeded ${inserted} festivals from canonical list`);
+    return inserted;
+  } catch (e) {
+    console.error("[festivals] seed failed:", e);
+    return 0;
+  }
+}

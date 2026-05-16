@@ -307,7 +307,10 @@ app.use((req, res, next) => {
   // Festival reminder sweep — runs hourly, scans for festivals exactly
   // 7 days out, emails users + pandits once each (idempotent via the
   // festival_reminder_log unique index).
-  const { runFestivalReminderSweep } = await import("./spiritual-tracker");
+  const { runFestivalReminderSweep, seedFestivalsIfEmpty } = await import("./spiritual-tracker");
+  // One-shot festival seed at boot — populates festivals DB from the
+  // canonical list so admin & homepage decor share one calendar.
+  seedFestivalsIfEmpty().catch((e) => console.error("[festivals] seed err:", e));
   const runFestivalReminders = async () => {
     try {
       const r = await runFestivalReminderSweep();

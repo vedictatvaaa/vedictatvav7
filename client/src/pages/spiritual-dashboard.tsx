@@ -464,11 +464,51 @@ export default function SpiritualDashboard() {
   const [serverSynced, setServerSynced] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
-  const todayLog = data.logs.find(l => l.date === today);
-  const [logForm, setLogForm] = useState<DailyLog>(todayLog || {
-    date: today, mantras: 0, meditationMins: 0,
-    templeVisit: false, reading: false, charity: false, puja: false, notes: ""
-  });
+  // Legacy daily-log form state retired — superseded by KarmaTracker (CLUSTER 0).
+  // Logs are now POSTed to /api/spiritual/log; the migration above lifts old localStorage rows.
+
+  // One-shot migration: lift legacy localStorage daily-logs into the new
+  // server-backed Karma & Dharma tracker. Runs once per user (flagged in
+  // localStorage). Silent — failures are non-fatal, retried next visit.
+  useEffect(() => {
+    if (!user) return;
+    const email = (user as any).email as string;
+    if (!email) return;
+    const flagKey = `vt_karma_migrated_${user.id}`;
+    if (localStorage.getItem(flagKey) === "1") return;
+    const localData = loadData();
+    const logs: DailyLog[] = localData.logs || [];
+    if (!logs.length) { localStorage.setItem(flagKey, "1"); return; }
+    (async () => {
+      const headers = { "Content-Type": "application/json", "x-user-id": String(user.id), "x-user-email": email };
+      // Server contract: { activityType, value, performedAt? }. Returns 200 on success.
+      const post = async (body: any): Promise<boolean> => {
+        try {
+          const r = await fetch("/api/spiritual/log", { method: "POST", headers, body: JSON.stringify(body) });
+          return r.ok;
+        } catch { return false; }
+      };
+      let attempted = 0; let succeeded = 0;
+      for (const l of logs) {
+        if (!l?.date) continue;
+        const performedAt = new Date(`${l.date}T08:00:00Z`).toISOString();
+        const calls: Array<Promise<boolean>> = [];
+        if (l.mantras && l.mantras > 0) calls.push(post({ activityType: "japa",    value: l.mantras, performedAt, notes: l.notes || undefined }));
+        if (l.charity)                  calls.push(post({ activityType: "charity", value: 100,        performedAt, notes: "Migrated from daily log" }));
+        if (l.templeVisit)              calls.push(post({ activityType: "temple",  value: 1,          performedAt, notes: "Migrated from daily log" }));
+        if (l.puja)                     calls.push(post({ activityType: "temple",  value: 1,          performedAt, notes: "Puja (migrated)" }));
+        const results = await Promise.all(calls);
+        attempted += results.length;
+        succeeded += results.filter(Boolean).length;
+      }
+      // Only mark migrated when every intended row landed. Partial failures
+      // retry next visit (idempotency on the server side is acceptable here
+      // since worst case is double-credit on one retry — rare and bounded).
+      if (attempted === 0 || succeeded === attempted) {
+        localStorage.setItem(flagKey, "1");
+      }
+    })();
+  }, [user]);
 
   // On mount (or when user logs in), fetch server data and merge with local.
   // Server data wins if it has more logs; local is pushed to server if server is empty.
@@ -597,38 +637,7 @@ export default function SpiritualDashboard() {
     toast({ title: "Namaste, " + setupName.trim() + "!", description: "Your spiritual journey begins today." });
   };
 
-  const handleLogSave = () => {
-    const existing = data.logs.findIndex(l => l.date === logForm.date);
-    const updatedLogs = [...data.logs];
-    if (existing >= 0) {
-      updatedLogs[existing] = logForm;
-    } else {
-      updatedLogs.push(logForm);
-    }
-    setData(prev => ({ ...prev, logs: updatedLogs }));
-    toast({ title: "Activity Logged!", description: `Your spiritual activities for ${logForm.date} have been saved.` });
-  };
-
   const daysOnJourney = data.profile ? Math.max(1, Math.ceil((Date.now() - new Date(data.profile.startDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-
-  const last7Days = useMemo(() => {
-    const days = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const log = data.logs.find(l => l.date === dateStr);
-      days.push({
-        date: dateStr,
-        label: d.toLocaleDateString("en-IN", { weekday: "short" }),
-        day: d.getDate(),
-        hasLog: !!log,
-        mantras: log?.mantras || 0,
-        meditation: log?.meditationMins || 0,
-      });
-    }
-    return days;
-  }, [data.logs]);
 
   if (showSetup) {
     return (
@@ -811,184 +820,6 @@ export default function SpiritualDashboard() {
           </div>
         </section>
 
-        {/* CLUSTER 2: Today — log activities + weekly chart + goals */}
-        <section className="mb-8" data-testid="section-today">
-          <div className="flex items-baseline justify-between mb-3 px-1">
-            <h2 className="font-serif text-xl font-bold text-[#6D2B35]">Today</h2>
-            <p className="text-xs text-[#5a4a3a]/50">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p>
-          </div>
-          <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl p-5 sm:p-6 border border-[#6D2B35]/8 shadow-sm">
-            <h2 className="font-serif text-lg font-bold text-[#6D2B35] mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#D4AF37]" /> Log Today's Activities
-            </h2>
-
-            <div className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3a] mb-1.5 block">Mantras Chanted</label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setLogForm(p => ({ ...p, mantras: Math.max(0, p.mantras - 1) }))}
-                      className="w-9 h-9 rounded-lg bg-[#F5F0E6] flex items-center justify-center hover:bg-[#6D2B35]/10 transition-colors"
-                      data-testid="btn-mantras-minus"
-                    >
-                      <Minus className="h-4 w-4 text-[#6D2B35]" />
-                    </button>
-                    <input
-                      type="number"
-                      min={0}
-                      value={logForm.mantras}
-                      onChange={e => setLogForm(p => ({ ...p, mantras: Math.max(0, parseInt(e.target.value) || 0) }))}
-                      className="w-20 text-center py-2 rounded-lg border border-[#6D2B35]/15 text-[#5a4a3a] font-semibold focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30"
-                      data-testid="input-mantras"
-                    />
-                    <button
-                      onClick={() => setLogForm(p => ({ ...p, mantras: p.mantras + 1 }))}
-                      className="w-9 h-9 rounded-lg bg-[#F5F0E6] flex items-center justify-center hover:bg-[#6D2B35]/10 transition-colors"
-                      data-testid="btn-mantras-plus"
-                    >
-                      <Plus className="h-4 w-4 text-[#6D2B35]" />
-                    </button>
-                    <button
-                      onClick={() => setLogForm(p => ({ ...p, mantras: p.mantras + 108 }))}
-                      className="px-2.5 py-1.5 text-xs font-medium bg-[#6D2B35]/10 text-[#6D2B35] rounded-lg hover:bg-[#6D2B35]/20 transition-colors"
-                      data-testid="btn-mantras-108"
-                    >
-                      +108
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3a] mb-1.5 block">Meditation (minutes)</label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setLogForm(p => ({ ...p, meditationMins: Math.max(0, p.meditationMins - 5) }))}
-                      className="w-9 h-9 rounded-lg bg-[#F5F0E6] flex items-center justify-center hover:bg-[#6D2B35]/10 transition-colors"
-                      data-testid="btn-meditation-minus"
-                    >
-                      <Minus className="h-4 w-4 text-[#6D2B35]" />
-                    </button>
-                    <input
-                      type="number"
-                      min={0}
-                      value={logForm.meditationMins}
-                      onChange={e => setLogForm(p => ({ ...p, meditationMins: Math.max(0, parseInt(e.target.value) || 0) }))}
-                      className="w-20 text-center py-2 rounded-lg border border-[#6D2B35]/15 text-[#5a4a3a] font-semibold focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30"
-                      data-testid="input-meditation"
-                    />
-                    <button
-                      onClick={() => setLogForm(p => ({ ...p, meditationMins: p.meditationMins + 5 }))}
-                      className="w-9 h-9 rounded-lg bg-[#F5F0E6] flex items-center justify-center hover:bg-[#6D2B35]/10 transition-colors"
-                      data-testid="btn-meditation-plus"
-                    >
-                      <Plus className="h-4 w-4 text-[#6D2B35]" />
-                    </button>
-                    {[15, 30, 60].map(m => (
-                      <button
-                        key={m}
-                        onClick={() => setLogForm(p => ({ ...p, meditationMins: m }))}
-                        className="px-2 py-1.5 text-xs font-medium bg-[#6D2B35]/10 text-[#6D2B35] rounded-lg hover:bg-[#6D2B35]/20 transition-colors"
-                        data-testid={`btn-meditation-${m}`}
-                      >
-                        {m}m
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { key: "templeVisit" as const, label: "Temple Visit", icon: Sun },
-                  { key: "reading" as const, label: "Scripture Reading", icon: BookOpen },
-                  { key: "charity" as const, label: "Charity / Seva", icon: HandHeart },
-                  { key: "puja" as const, label: "Puja Performed", icon: Flame },
-                ].map(item => (
-                  <button
-                    key={item.key}
-                    onClick={() => setLogForm(p => ({ ...p, [item.key]: !p[item.key] }))}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
-                      logForm[item.key]
-                        ? "border-[#6D2B35] bg-[#6D2B35]/5 text-[#6D2B35]"
-                        : "border-[#6D2B35]/10 text-[#5a4a3a]/50 hover:border-[#6D2B35]/30"
-                    }`}
-                    data-testid={`toggle-${item.key}`}
-                  >
-                    <item.icon className={`h-5 w-5 ${logForm[item.key] ? "text-[#D4AF37]" : ""}`} />
-                    <span className="text-xs font-medium text-center leading-tight">{item.label}</span>
-                    {logForm[item.key] && <Check className="h-3.5 w-3.5 text-green-600" />}
-                  </button>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-[#5a4a3a] mb-1.5 block">Notes (optional)</label>
-                <textarea
-                  value={logForm.notes}
-                  onChange={e => setLogForm(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="Any reflections, gratitude, or insights..."
-                  className="w-full px-4 py-2.5 rounded-lg border border-[#6D2B35]/15 bg-[#F5F0E6]/30 text-[#5a4a3a] text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 resize-none h-20"
-                  data-testid="input-notes"
-                />
-              </div>
-
-              <button
-                onClick={handleLogSave}
-                className="w-full py-3 bg-gradient-to-r from-[#6D2B35] to-[#8B3A47] text-white font-semibold rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                data-testid="btn-save-log"
-              >
-                <Check className="h-4 w-4" />
-                {todayLog ? "Update Today's Log" : "Save Today's Activities"}
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-5 border border-[#6D2B35]/8 shadow-sm">
-              <h3 className="font-serif text-lg font-bold text-[#6D2B35] mb-3 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-[#D4AF37]" /> Weekly Overview
-              </h3>
-              <div className="flex items-end gap-1.5 justify-between">
-                {last7Days.map(d => (
-                  <div key={d.date} className="flex flex-col items-center gap-1 flex-1">
-                    <div className="relative w-full">
-                      <div className="bg-[#F5F0E6] rounded-t-lg w-full" style={{ height: "60px" }}>
-                        <div
-                          className={`absolute bottom-0 left-0 right-0 rounded-t-lg transition-all ${d.hasLog ? "bg-gradient-to-t from-[#6D2B35] to-[#D4AF37]" : "bg-[#F5F0E6]"}`}
-                          style={{ height: d.hasLog ? `${Math.min(100, Math.max(20, (d.mantras + d.meditation) / 2))}%` : "4px" }}
-                        />
-                      </div>
-                    </div>
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      d.date === today ? "bg-[#6D2B35] text-white" : d.hasLog ? "bg-[#D4AF37]/20 text-[#6D2B35]" : "bg-[#F5F0E6] text-[#5a4a3a]/40"
-                    }`}>
-                      {d.day}
-                    </div>
-                    <span className="text-[10px] text-[#5a4a3a]/50">{d.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {data.profile?.goals && data.profile.goals.length > 0 && (
-              <div className="bg-white rounded-2xl p-5 border border-[#6D2B35]/8 shadow-sm">
-                <h3 className="font-serif text-lg font-bold text-[#6D2B35] mb-3 flex items-center gap-2">
-                  <Target className="h-5 w-5 text-[#D4AF37]" /> My Goals
-                </h3>
-                <div className="space-y-2">
-                  {data.profile.goals.map(goal => (
-                    <div key={goal} className="flex items-center gap-2 text-sm text-[#5a4a3a]">
-                      <Leaf className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                      {goal}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          </div>
-        </section>
 
         {/* CLUSTER 3: Progress — Achievements + Activity (tabbed; both retrospective) */}
         <section className="mb-8" data-testid="section-progress">
