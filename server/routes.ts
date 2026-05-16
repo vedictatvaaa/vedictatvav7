@@ -26,6 +26,7 @@ import { registerBacklinkRoutes } from "./seo-backlinks";
 import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords";
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
 import { registerPanditPortalRoutes } from "./pandit-portal";
+import { registerAstroRealtimeRoutes } from "./astro-realtime";
 import { registerAiCoderRoutes } from "./ai-coder";
 import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
@@ -717,6 +718,7 @@ export async function registerRoutes(
   registerPromoteProductRoutes(app);
   registerYatraPilgrimageRoutes(app);
   registerPanditPortalRoutes(app);
+  registerAstroRealtimeRoutes(app);
   registerAiCoderRoutes(app, adminAuthMiddleware);
   registerDashboardRoutes(app);
   const { registerPanditStorefrontRoutes } = await import("./pandit-storefront");
@@ -7580,11 +7582,17 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   });
 
   // ---- Astrologers CRUD ----
+  // Strip password hash + portal-internal fields from any public astrologer payload.
+  const sanitizeAstrologer = (a: any) => {
+    if (!a) return a;
+    const { password, ...rest } = a;
+    return rest;
+  };
   app.get("/api/astrologers", async (req, res) => {
     try {
       const all = await storage.getAstrologers();
       const showAll = req.query.all === "true";
-      res.json(showAll ? all : all.filter(a => a.verified));
+      res.json((showAll ? all : all.filter(a => a.verified)).map(sanitizeAstrologer));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch astrologers" });
     }
@@ -7594,23 +7602,26 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     try {
       const astrologer = await storage.getAstrologer(parseInt(req.params.id));
       if (!astrologer) return res.status(404).json({ message: "Astrologer not found" });
-      res.json(astrologer);
+      res.json(sanitizeAstrologer(astrologer));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch astrologer" });
     }
   });
 
-  app.patch("/api/astrologers/:id", async (req, res) => {
+  app.patch("/api/astrologers/:id", adminAuthMiddleware, async (req, res) => {
     try {
-      const updated = await storage.updateAstrologer(parseInt(req.params.id), req.body);
+      // Never accept caller-supplied password through this admin write — set-password
+      // is its own dedicated endpoint with bcrypt hashing.
+      const { password, ...safeBody } = (req.body || {}) as Record<string, any>;
+      const updated = await storage.updateAstrologer(parseInt(req.params.id), safeBody as any);
       if (!updated) return res.status(404).json({ message: "Astrologer not found" });
-      res.json(updated);
+      res.json(sanitizeAstrologer(updated));
     } catch (error) {
       res.status(500).json({ message: "Failed to update astrologer" });
     }
   });
 
-  app.delete("/api/astrologers/:id", async (req, res) => {
+  app.delete("/api/astrologers/:id", adminAuthMiddleware, async (req, res) => {
     try {
       const deleted = await storage.deleteAstrologer(parseInt(req.params.id));
       res.json({ success: deleted });

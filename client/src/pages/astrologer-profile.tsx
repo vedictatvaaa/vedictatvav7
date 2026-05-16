@@ -1,22 +1,50 @@
 import { useState } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import PageSeo from "@/components/PageSeo";
 import { person as personSchema } from "@/lib/seo-schemas";
 import {
   ArrowLeft, MapPin, Phone, Mail, Star, Clock, Globe, BookOpen,
-  Shield, Award, Share2, Calendar, ChevronRight, Copy, Check
+  Shield, Award, Share2, Calendar, ChevronRight, Copy, Check,
+  MessageCircle, Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Astrologer } from "@shared/schema";
+import { getIdentity, identityFetch } from "@/lib/userIdentity";
 
 export default function AstrologerProfile() {
   const [, params] = useRoute("/astrologer/:id");
+  const [, setLocation] = useLocation();
   const astrologerId = params?.id ? parseInt(params.id) : 0;
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [startingChat, setStartingChat] = useState(false);
+
+  async function startChat() {
+    if (!getIdentity()) {
+      toast({ title: "Please sign in to start a chat", variant: "destructive" });
+      setLocation("/login");
+      return;
+    }
+    setStartingChat(true);
+    try {
+      const r = await identityFetch<any>("/api/astrology-sessions", {
+        method: "POST",
+        body: JSON.stringify({ astrologerId, mode: "chat" }),
+      });
+      setLocation(`/astrology-session/${r.session.id}`);
+    } catch (e: any) {
+      if (String(e.message).toLowerCase().includes("recharge")) {
+        toast({ title: "Wallet recharge needed", description: "Add funds to start the consultation.", variant: "destructive" });
+        setLocation("/wallet");
+      } else {
+        toast({ title: "Could not start chat", description: e.message, variant: "destructive" });
+      }
+    } finally { setStartingChat(false); }
+  }
 
   const { data: astrologer, isLoading } = useQuery<Astrologer>({
     queryKey: [`/api/astrologers/${astrologerId}`],
@@ -207,9 +235,46 @@ export default function AstrologerProfile() {
                   ) : null}
                 </div>
 
+                {/* Live consultation block */}
+                <div className="mb-3 p-3 rounded-md bg-[#FBF7EE] border border-[#D4AF37]/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[#6D2B35]">Live consultation</div>
+                    {(astrologer as any).online ? (
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] h-5 gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Online
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] h-5 text-[#5a4a3a]">Offline</Badge>
+                    )}
+                  </div>
+                  <Button
+                    onClick={startChat}
+                    disabled={startingChat || !(astrologer as any).online || !(astrologer as any).acceptingChat}
+                    className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md h-10 text-[13px] font-semibold gap-1.5"
+                    data-testid="btn-start-chat"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    {startingChat ? "Connecting..." : `Start Chat · ₹${(((astrologer as any).chatRatePaisePerMin ?? 1500) / 100).toFixed(0)}/min`}
+                  </Button>
+                  <Button
+                    disabled
+                    variant="outline"
+                    className="w-full mt-2 rounded-md h-9 text-[12px] gap-1.5"
+                    data-testid="btn-call-coming"
+                  >
+                    <Phone className="w-3.5 h-3.5" /> Voice call · launching soon
+                  </Button>
+                  <Link href="/wallet">
+                    <button className="w-full mt-2 flex items-center justify-center gap-1 text-[11px] text-[#6D2B35] hover:underline" data-testid="link-wallet">
+                      <Wallet className="w-3 h-3" /> Top up wallet
+                    </button>
+                  </Link>
+                  <div className="text-[10px] text-[#5a4a3a] mt-2 text-center">First 5 minutes FREE for new users</div>
+                </div>
+
                 <Link href={`/astrology?astrologer=${astrologer.id}`}>
-                  <Button className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md h-10 text-[13px] font-semibold gap-1.5" data-testid="btn-book-astrologer">
-                    <Calendar className="w-3.5 h-3.5" /> Book consultation
+                  <Button variant="outline" className="w-full rounded-md h-9 text-[12px] font-semibold gap-1.5" data-testid="btn-book-astrologer">
+                    <Calendar className="w-3.5 h-3.5" /> Or book scheduled session
                     <ChevronRight className="w-3.5 h-3.5" />
                   </Button>
                 </Link>

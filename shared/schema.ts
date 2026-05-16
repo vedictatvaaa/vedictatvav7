@@ -368,8 +368,132 @@ export const astrologers = pgTable("astrologers", {
   boostStartDate: timestamp("boost_start_date"),
   boostEndDate: timestamp("boost_end_date"),
   boostActive: boolean("boost_active").notNull().default(false),
+  // AstroTalk-style real-time consultation fields
+  password: text("password"),                         // bcrypt; nullable for legacy/admin-created rows
+  chatRatePaisePerMin: integer("chat_rate_paise_per_min").notNull().default(1500), // ₹15/min default
+  callRatePaisePerMin: integer("call_rate_paise_per_min").notNull().default(2500), // ₹25/min default
+  online: boolean("online").notNull().default(false),
+  acceptingChat: boolean("accepting_chat").notNull().default(true),
+  acceptingCall: boolean("accepting_call").notNull().default(true),
+  lastSeenAt: timestamp("last_seen_at"),
+  totalEarningsPaise: integer("total_earnings_paise").notNull().default(0),
+  totalSessions: integer("total_sessions").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Astrologer portal sessions (auth tokens)
+export const astrologerPortalSessions = pgTable("astrologer_portal_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  astrologerId: integer("astrologer_id").notNull(),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  tokenIdx: index("astrologer_portal_sessions_token_idx").on(t.token),
+}));
+
+// User wallet (one row per user; balance in paise to avoid float math)
+export const userWallets = pgTable("user_wallets", {
+  userId: integer("user_id").primaryKey(),
+  balancePaise: integer("balance_paise").notNull().default(0),
+  totalRechargedPaise: integer("total_recharged_paise").notNull().default(0),
+  totalSpentPaise: integer("total_spent_paise").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Wallet ledger
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  kind: text("kind").notNull(),                       // recharge | bonus | session_debit | refund | adjustment
+  amountPaise: integer("amount_paise").notNull(),     // positive = credit, negative = debit
+  balanceAfterPaise: integer("balance_after_paise").notNull(),
+  refType: text("ref_type"),                          // razorpay | session | admin | promo
+  refId: text("ref_id"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("wallet_txn_user_id_idx").on(t.userId),
+  kindIdx: index("wallet_txn_kind_idx").on(t.kind),
+}));
+
+// Per-minute consultation sessions (chat now, call later)
+export const astrologerSessions = pgTable("astrologer_sessions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  astrologerId: integer("astrologer_id").notNull(),
+  mode: text("mode").notNull(),                       // chat | call
+  status: text("status").notNull().default("waiting"), // waiting | active | ended | cancelled | timeout
+  ratePaisePerMin: integer("rate_paise_per_min").notNull(),
+  freeMinutesGranted: integer("free_minutes_granted").notNull().default(0),
+  freeMinutesUsed: integer("free_minutes_used").notNull().default(0),
+  startedAt: timestamp("started_at"),
+  acceptedAt: timestamp("accepted_at"),
+  endedAt: timestamp("ended_at"),
+  endedBy: text("ended_by"),                          // user | astrologer | system_zero_balance | system_timeout
+  durationSec: integer("duration_sec").notNull().default(0),
+  paidMinutes: integer("paid_minutes").notNull().default(0),
+  amountChargedPaise: integer("amount_charged_paise").notNull().default(0),
+  astrologerEarningsPaise: integer("astrologer_earnings_paise").notNull().default(0),
+  lastTickAt: timestamp("last_tick_at"),
+  ratingId: integer("rating_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("astro_sessions_user_idx").on(t.userId),
+  astrologerIdIdx: index("astro_sessions_astrologer_idx").on(t.astrologerId),
+  statusIdx: index("astro_sessions_status_idx").on(t.status),
+}));
+
+export const sessionMessages = pgTable("session_messages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sessionId: integer("session_id").notNull(),
+  senderType: text("sender_type").notNull(),          // user | astrologer | system
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  sessionIdIdx: index("session_messages_session_idx").on(t.sessionId),
+}));
+
+export const sessionRatings = pgTable("session_ratings", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sessionId: integer("session_id").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  astrologerId: integer("astrologer_id").notNull(),
+  rating: integer("rating").notNull(),                // 1..5
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Free-chat grants (e.g. first 5 minutes free for new user)
+export const freeChatGrants = pgTable("free_chat_grants", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  astrologerId: integer("astrologer_id"),             // null = any astrologer
+  minutesGranted: integer("minutes_granted").notNull().default(5),
+  minutesUsed: integer("minutes_used").notNull().default(0),
+  reason: text("reason").notNull().default("first_chat"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("free_chat_grants_user_idx").on(t.userId),
+}));
+
+export const insertUserWalletSchema = createInsertSchema(userWallets);
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ id: true, createdAt: true });
+export const insertAstrologerSessionSchema = createInsertSchema(astrologerSessions).omit({ id: true, createdAt: true });
+export const insertSessionMessageSchema = createInsertSchema(sessionMessages).omit({ id: true, createdAt: true });
+export const insertSessionRatingSchema = createInsertSchema(sessionRatings).omit({ id: true, createdAt: true });
+export const insertFreeChatGrantSchema = createInsertSchema(freeChatGrants).omit({ id: true, createdAt: true });
+export type UserWallet = typeof userWallets.$inferSelect;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type AstrologerSession = typeof astrologerSessions.$inferSelect;
+export type InsertAstrologerSession = z.infer<typeof insertAstrologerSessionSchema>;
+export type SessionMessage = typeof sessionMessages.$inferSelect;
+export type InsertSessionMessage = z.infer<typeof insertSessionMessageSchema>;
+export type SessionRating = typeof sessionRatings.$inferSelect;
+export type FreeChatGrant = typeof freeChatGrants.$inferSelect;
+export type AstrologerPortalSession = typeof astrologerPortalSessions.$inferSelect;
 
 export const pujaBookings = pgTable("puja_bookings", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

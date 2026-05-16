@@ -135,6 +135,9 @@ const ReturnTicket = lazy(() => import("@/pages/return-ticket"));
 const TrackOrder = lazy(() => import("@/pages/track-order"));
 const Wishlist = lazy(() => import("@/pages/wishlist"));
 const Subscriptions = lazy(() => import("@/pages/subscriptions"));
+const WalletPage = lazy(() => import("@/pages/wallet"));
+const AstrologySession = lazy(() => import("@/pages/astrology-session"));
+const AstrologerPortal = lazy(() => import("@/pages/astrologer-portal"));
 const Donations = lazy(() => import("@/pages/donations"));
 const Membership = lazy(() => import("@/pages/membership"));
 const AIKundli = lazy(() => import("@/pages/ai-kundli"));
@@ -735,6 +738,9 @@ function Router() {
           <Route path="/track-order" component={TrackOrder} />
           <Route path="/wishlist" component={Wishlist} />
           <Route path="/subscriptions" component={Subscriptions} />
+          <Route path="/wallet" component={WalletPage} />
+          <Route path="/astrology-session/:id" component={AstrologySession} />
+          <Route path="/astrologer-portal" component={AstrologerPortal} />
           <Route path="/donations" component={Donations} />
           <Route path="/membership" component={Membership} />
           <Route path="/refund-policy" component={RefundPolicy} />
