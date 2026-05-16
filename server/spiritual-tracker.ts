@@ -21,6 +21,7 @@ import {
 } from "@shared/schema";
 import { sendEmailAsync } from "./email";
 import { adminAuthMiddleware } from "./admin-auth";
+import { enrichFestivalContent, generatePersonalizedFestivalEmail } from "./festival-ai";
 
 // --- Karma / Dharma weights ---------------------------------------------
 // Tuned so every action moves the needle but heavy spiritual acts dominate.
@@ -214,6 +215,30 @@ export function registerSpiritualTrackerRoutes(app: Express) {
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
+
+  // --- AI: enrich a festival's description + preparation notes -------
+  // Admin clicks "Generate with AI" → we ask GPT for warm, authoritative
+  // copy and PATCH the row. Returns the updated festival.
+  app.post("/api/admin/festivals/:id/generate-content", adminGate, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const [f] = await db.select().from(festivals).where(eq(festivals.id, id)).limit(1);
+      if (!f) return res.status(404).json({ error: "Not found" });
+      let enriched: { description: string; preparationNotes: string } | null = null;
+      try { enriched = await enrichFestivalContent(f); }
+      catch (err) { console.error("[festival-ai] enrich threw:", err); enriched = null; }
+      // Any AI failure (no key, parse error, runtime exception) → 503,
+      // DB untouched. Never leak raw internal error text to the client.
+      if (!enriched) return res.status(503).json({ error: "AI unavailable. Check OPENAI_API_KEY and try again." });
+      const [row] = await db.update(festivals)
+        .set({ description: enriched.description, preparationNotes: enriched.preparationNotes })
+        .where(eq(festivals.id, id)).returning();
+      res.json(row);
+    } catch (e: any) {
+      console.error("[festival-ai] endpoint err:", e);
+      res.status(500).json({ error: "Internal error" });
+    }
+  });
 }
 
 // =====================================================================
@@ -250,28 +275,30 @@ export async function runFestivalReminderSweep(): Promise<{ sent: number; skippe
           festivalId: f.id, recipientType: r.type, recipientId: r.id,
         }).onConflictDoNothing().returning();
         if (!ins.length) { skipped++; continue; }
-        const subject = `${f.name} is in 7 days — prepare your sadhana`;
-        const html = `
-          <div style="font-family:Inter,system-ui,sans-serif;max-width:560px;margin:auto">
-            <h2 style="color:#7a1d1d;font-family:'Playfair Display',serif">${f.name}</h2>
-            <p>Namaste ${r.name || ""},</p>
-            <p><strong>${f.name}</strong> falls on <strong>${f.date}</strong> — exactly one week away.</p>
-            ${f.description ? `<p>${f.description}</p>` : ""}
-            ${f.preparationNotes ? `<div style="background:#fdf6e9;border:1px solid #e6d3a3;border-radius:8px;padding:12px 16px;margin:16px 0">
-              <strong style="color:#7a1d1d">Preparation</strong><br/>${f.preparationNotes}
-            </div>` : ""}
-            <p style="font-size:13px;color:#666;margin-top:20px">
-              ${r.type === "pandit"
-                ? "Block your calendar early — bookings spike before festivals."
-                : 'Plan your puja, samagri & pandit booking now at <a href="https://vedictatva.com">vedictatva.com</a>.'}
-            </p>
-          </div>`;
-        sendEmailAsync({
-          to: r.email,
-          subject,
-          text: `${f.name} is in 7 days (${f.date}). ${f.preparationNotes || ""}`,
-          html,
-        }, "festival-reminder", { kind: "customer" });
+
+        // Pull a small karma snapshot for users so the AI can personalise.
+        // Pandits get a different prompt that doesn't need karma context.
+        let karmaCtx = null;
+        if (r.type === "user") {
+          try {
+            const acts = await db.select().from(spiritualActivities)
+              .where(eq(spiritualActivities.userId, r.id));
+            const karma = acts.reduce((s, a) => s + a.karmaPoints, 0);
+            const dharma = acts.reduce((s, a) => s + a.dharmaPoints, 0);
+            const fastingDates = acts.filter((a) => a.activityType === "fasting").map((a) => new Date(a.performedAt));
+            karmaCtx = {
+              karma, dharma,
+              level: Math.min(50, Math.floor(karma / 500) + 1),
+              fastingStreak: computeStreak(fastingDates),
+            };
+          } catch { /* karma lookup is best-effort */ }
+        }
+
+        const { subject, html, text } = await generatePersonalizedFestivalEmail(
+          f, { type: r.type, name: r.name, email: r.email }, karmaCtx,
+        );
+        sendEmailAsync({ to: r.email, subject, text, html },
+          "festival-reminder", { kind: "customer" });
         sent++;
       } catch (err) {
         console.error("[festival-reminder] failed for", r.email, err);

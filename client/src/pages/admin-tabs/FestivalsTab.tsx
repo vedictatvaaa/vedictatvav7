@@ -92,6 +92,18 @@ function FestivalsTab() {
     },
   });
 
+  const generateAi = useMutation({
+    mutationFn: (id: number) =>
+      adminFetch(`/api/admin/festivals/${id}/generate-content`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/festivals"] });
+      toast({ title: "AI content generated", description: "Description and prep notes refreshed." });
+    },
+    onError: (e: any) => {
+      toast({ title: "AI failed", description: e?.message || "Try again", variant: "destructive" });
+    },
+  });
+
   const seedAll = async () => {
     for (const f of SEED) {
       try { await create.mutateAsync(f); } catch {/* skip dupes */}
@@ -206,6 +218,14 @@ function FestivalsTab() {
                       <Switch checked={f.isActive}
                         onCheckedChange={(v) => update.mutate({ id: f.id, body: { isActive: v } })} />
                     </div>
+                    <Button size="sm" variant="outline"
+                      data-testid={`button-ai-festival-${f.id}`}
+                      disabled={generateAi.isPending && generateAi.variables === f.id}
+                      onClick={() => generateAi.mutate(f.id)}
+                      title="Rewrite description + prep notes with AI">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      {generateAi.isPending && generateAi.variables === f.id ? "Writing..." : "AI"}
+                    </Button>
                     <Button size="icon" variant="ghost" data-testid={`button-delete-festival-${f.id}`}
                       onClick={() => { if (confirm(`Delete ${f.name}?`)) remove.mutate(f.id); }}>
                       <Trash2 className="h-4 w-4" />
