@@ -307,7 +307,6 @@ export default function PanditCityLanding() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BecomePanditStrip />
       <PageSeo
         title={city.metaTitle}
         description={city.metaDescription}

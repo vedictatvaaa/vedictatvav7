@@ -100,7 +100,6 @@ export default function PanditCityPujaLanding() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BecomePanditStrip />
       <PageSeo
         title={metaTitle}
         description={metaDescription}
