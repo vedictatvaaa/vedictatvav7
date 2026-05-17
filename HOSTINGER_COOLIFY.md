@@ -1,185 +1,149 @@
-# Vedic Tatva — Hostinger VPS + Coolify Deployment Guide
+# Vedic Tatva — Deploy to Existing Coolify on Hostinger VPS
 
-Complete step-by-step guide to deploy Vedic Tatva on a Hostinger VPS using
-Coolify. Once set up, every `git push` to `main` automatically deploys.
-
----
-
-## Prerequisites
-
-| What                  | Minimum spec                                   |
-|-----------------------|------------------------------------------------|
-| Hostinger VPS plan    | KVM 2 (2 vCPU, 8 GB RAM) or higher            |
-| OS                    | Ubuntu 22.04 LTS (select in Hostinger panel)   |
-| Domain                | `vedictatva.com` pointing to VPS IP (DNS A record) |
-| GitHub repo           | This repo pushed to your GitHub account        |
+Coolify is already installed. Follow these steps to deploy Vedic Tatva.
+Every `git push` to `main` will auto-deploy after setup.
 
 ---
 
-## Step 1 — Point your domain to the VPS
+## Before you start — checklist
 
-In Hostinger's hPanel → **DNS / Nameservers**:
-
-| Type | Name | Value        | TTL  |
-|------|------|--------------|------|
-| A    | @    | `<VPS IP>`   | 300  |
-| A    | www  | `<VPS IP>`   | 300  |
-
-Wait ~5 minutes for propagation before proceeding.
+- [ ] This repo is pushed to your GitHub account
+- [ ] Your domain (`vedictatva.com`) has an A record pointing to the VPS IP
+- [ ] You can open the Coolify UI in your browser
 
 ---
 
-## Step 2 — SSH into your VPS
+## Step 1 — Connect GitHub to Coolify
 
-```bash
-ssh root@<VPS_IP>
-```
+1. Open Coolify UI → **Settings → Source → GitHub App → Add GitHub App**
+2. Follow the GitHub OAuth flow to authorize Coolify
+3. Select which repos Coolify can access (at minimum this repo)
 
-> Hostinger provides the root password in hPanel → VPS → Manage.
-> Change it on first login: `passwd`
-
----
-
-## Step 3 — Run the one-click installer
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/<YOUR_GITHUB_USER>/vedictatva/main/scripts/hostinger-one-click.sh | bash
-```
-
-This installs **Docker** and **Coolify** automatically, then shows the Coolify
-UI URL.
-
-**Or** if you already cloned the repo:
-
-```bash
-git clone https://github.com/<YOUR_GITHUB_USER>/vedictatva.git /opt/vedictatva
-bash /opt/vedictatva/scripts/hostinger-one-click.sh
-```
+> Skip this step if GitHub is already connected.
 
 ---
 
-## Step 4 — Set up Coolify
+## Step 2 — Create the PostgreSQL database
 
-1. Open **http://\<VPS\_IP\>:8000** in your browser.
-2. Create your Coolify admin account (first-run wizard).
-3. Go to **Settings → Source (Git) → Add GitHub App** — connect your GitHub
-   account so Coolify can read private repos.
+1. Coolify → **Resources → New → Database → PostgreSQL 16**
+2. Name it `vedictatva-db`, leave other defaults
+3. Click **Deploy** and wait for it to turn green
+4. Click the database resource → copy the **Internal Connection URL**
 
----
-
-## Step 5 — Create the PostgreSQL database in Coolify
-
-1. **Resources → New → Database → PostgreSQL 16**
-2. Name: `vedictatva-db`
-3. Click **Deploy** — Coolify starts a managed Postgres container.
-4. Once green, click the DB resource → copy the **Internal Connection URL**:
+   It looks like:
    ```
-   postgres://postgres:XXXX@vedictatva-db:5432/postgres
+   postgres://postgres:XXXXXXXXXXXX@vedictatva-db:5432/postgres
    ```
-   Save this — you'll paste it as `PG_DATABASE_URL` in Step 7.
+   **Save this URL** — you'll paste it in Step 4.
 
 ---
 
-## Step 6 — Create the app in Coolify
+## Step 3 — Create the application
 
-1. **Resources → New → Application → Private Repository (GitHub App)**
-2. Select your repo and branch **`main`**.
-3. Coolify auto-detects the `Dockerfile` — confirm **Build Pack: Dockerfile**.
+1. Coolify → **Resources → New → Application → Private Repository (GitHub App)**
+2. Select your repo + branch **`main`**
+3. Coolify will auto-detect the `Dockerfile` — confirm **Build Pack: Dockerfile**
 4. Set **Port: `5000`**
 5. Set **Health Check Path: `/api/health`**
-6. Click **Save** (don't deploy yet).
+6. Click **Save** (don't deploy yet)
 
 ---
 
-## Step 7 — Paste environment variables
+## Step 4 — Add environment variables
 
-In the application → **Environment Variables** tab, add **all** of these:
+In the application → **Environment Variables** tab, add all of the following.
+Replace every value that says `CHANGE_ME`.
 
 ```env
-# Database — paste the Internal URL from Step 5
+# ── Database ─────────────────────────────────────────────────────
+# Paste the Internal URL from Step 2
 PG_DATABASE_URL=postgres://postgres:XXXX@vedictatva-db:5432/postgres
 DATABASE_URL=postgres://postgres:XXXX@vedictatva-db:5432/postgres
 
-# Secrets — generate each with: openssl rand -hex 32
-SESSION_SECRET=<generated>
-UNSUBSCRIBE_SECRET=<generated>
-ORDER_LOOKUP_SECRET=<generated>
+# ── Secrets (generate each with: openssl rand -hex 32) ───────────
+SESSION_SECRET=CHANGE_ME
+UNSUBSCRIBE_SECRET=CHANGE_ME
+ORDER_LOOKUP_SECRET=CHANGE_ME
 
-# Razorpay — from https://dashboard.razorpay.com → Settings → API Keys
+# ── Razorpay — dashboard.razorpay.com → Settings → API Keys ──────
 RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 
-# OpenAI — from https://platform.openai.com/api-keys
+# ── OpenAI — platform.openai.com/api-keys ────────────────────────
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxx
 
-# Shiprocket webhook token — any random string
-SHIPROCKET_WEBHOOK_TOKEN=<openssl rand -hex 24>
+# ── Shiprocket webhook (any random string) ────────────────────────
+SHIPROCKET_WEBHOOK_TOKEN=CHANGE_ME
 
-# Optional (but recommended)
+# ── Optional but recommended ──────────────────────────────────────
 SENDGRID_API_KEY=SG.xxxxxxxxxxxx
 PUBLIC_SITE_URL=https://vedictatva.com
 BACKUP_DIR=/app/backups
 BACKUP_RETENTION_DAYS=7
+
+# ── Enable the Deploy button in the admin panel ───────────────────
 DEPLOY_FROM_BROWSER=1
 ```
 
-> Generate secrets on your local machine:
+> **Generate secrets fast** (run on your local machine or VPS):
 > ```bash
-> openssl rand -hex 32   # SESSION_SECRET
-> openssl rand -hex 32   # UNSUBSCRIBE_SECRET
-> openssl rand -hex 32   # ORDER_LOOKUP_SECRET
-> openssl rand -hex 24   # SHIPROCKET_WEBHOOK_TOKEN
+> openssl rand -hex 32   # paste as SESSION_SECRET
+> openssl rand -hex 32   # paste as UNSUBSCRIBE_SECRET
+> openssl rand -hex 32   # paste as ORDER_LOOKUP_SECRET
+> openssl rand -hex 24   # paste as SHIPROCKET_WEBHOOK_TOKEN
 > ```
 
 ---
 
-## Step 8 — Add persistent storage volumes
+## Step 5 — Add persistent storage
 
-In the application → **Storages** tab → **Add Storage**:
+Application → **Storages** tab → **Add Storage** (do this twice):
 
-| Name                   | Container Path |
-|------------------------|----------------|
-| `vedictatva-uploads`   | `/app/uploads` |
-| `vedictatva-backups`   | `/app/backups` |
+| Volume name              | Container path   |
+|--------------------------|------------------|
+| `vedictatva-uploads`     | `/app/uploads`   |
+| `vedictatva-backups`     | `/app/backups`   |
 
 ---
 
-## Step 9 — Configure domain + TLS
+## Step 6 — Add your domain + TLS
 
-In the application → **Domains** tab:
+Application → **Domains** tab:
 
 1. Add `https://vedictatva.com`
 2. Add `https://www.vedictatva.com`
-3. Coolify automatically provisions **Let's Encrypt** certificates via its
-   built-in Traefik/Caddy proxy.
+
+Coolify provisions a **Let's Encrypt certificate automatically** via its
+built-in Traefik proxy — nothing else needed.
 
 ---
 
-## Step 10 — Deploy!
+## Step 7 — Deploy
 
-Click **Deploy** in Coolify.
+Click the **Deploy** button.
 
 Coolify will:
-1. Clone your repo from GitHub
-2. Build the Docker image (~3 min first time, ~30 s with cache)
-3. Run `docker-entrypoint.sh` → waits for Postgres → runs `drizzle-kit push`
-4. Start the app on port 5000
-5. Run the health check on `/api/health`
-6. Activate your domain with TLS once the health check passes
+1. Pull the repo from GitHub
+2. Build the Docker image (~3 min first time, ~30 s with layer cache)
+3. Wait for Postgres to be ready
+4. Run `drizzle-kit push` to create all database tables
+5. Start the app on port 5000
+6. Health-check `/api/health` every 30 s
+7. Activate your domain + TLS once the health check is green
 
-Check **Deployments → View Logs** to watch progress.
+Watch **Deployments → View Logs** for real-time build output.
 
 ---
 
-## Step 11 — Create the first admin user
+## Step 8 — Create the first admin user
 
-After the first successful deploy:
+After a successful deploy, open a terminal on your VPS:
 
 ```bash
-# SSH into VPS
-ssh root@<VPS_IP>
+# Find the database container name
+docker ps --format '{{.Names}}' | grep postgres
 
-# Open a Postgres shell inside the DB container
+# Open a Postgres shell (replace container name if different)
 docker exec -it vedictatva-db psql -U postgres -d postgres
 ```
 
@@ -194,60 +158,43 @@ VALUES (
 \q
 ```
 
-> The hash above is for `ChangeMe123!` — change it immediately after first
-> login via the Admin → Security tab!
+> The hash above is for the password `ChangeMe123!`.
+> **Change it immediately** after first login in Admin → Security.
 >
-> Generate your own hash:
+> Generate your own hash on the VPS:
 > ```bash
-> docker exec vedictatva-app-1 node -e \
+> docker exec <app-container-name> node -e \
 >   "require('bcryptjs').hash('YourSecurePassword',10).then(console.log)"
 > ```
 
-Then log in at `https://vedictatva.com/admin/login`.
+Log in at `https://vedictatva.com/admin/login`.
 
 ---
 
-## Auto-deploy on every git push
+## Step 9 — Enable auto-deploy on every git push
 
-In Coolify → Application → **Source** tab:
+Application → **Source** tab:
 
-- Enable **"Auto Deploy on push to `main`"**
-- Copy the **Webhook URL** Coolify shows
-- Add it in GitHub → repo → Settings → Webhooks → Add webhook
+1. Toggle **Auto Deploy on push to `main`** — ON
+2. Copy the **Webhook URL** Coolify shows
+3. GitHub → your repo → Settings → Webhooks → Add webhook → paste that URL
 
-From this point on:
+From now on:
 ```bash
-git push origin main
-# → Coolify auto-builds and deploys within ~2 minutes
-```
-
----
-
-## Updating the app
-
-```bash
-# From your local machine
 git add .
-git commit -m "feat: your change"
+git commit -m "your change"
 git push origin main
-# Coolify picks it up automatically
+# Coolify builds and deploys automatically within ~2 minutes
 ```
 
 ---
 
-## Alternative: docker-compose (without Coolify)
+## Configuring webhooks in external services
 
-If you prefer to skip Coolify and run directly with Docker Compose:
-
-```bash
-ssh root@<VPS_IP>
-git clone https://github.com/<YOU>/vedictatva.git /opt/vedictatva
-cd /opt/vedictatva
-cp .env.example .env
-nano .env          # fill ALL CHANGE_ME values
-docker compose up -d --build
-curl http://localhost:5000/api/health
-```
+| Service     | URL to set                                             |
+|-------------|--------------------------------------------------------|
+| Razorpay    | `https://vedictatva.com/api/razorpay/webhook`          |
+| Shiprocket  | `https://vedictatva.com/api/shiprocket/webhook`        |
 
 ---
 
@@ -255,47 +202,43 @@ curl http://localhost:5000/api/health
 
 | Symptom | Fix |
 |---------|-----|
-| Build fails with `npm ci` error | Check GitHub token / repo access in Coolify settings |
-| `PG_DATABASE_URL` not set error | Paste the full postgres URL from Step 5 |
-| Health check timeout on first deploy | Extend start_period — DB schema push can take 60 s |
-| `column does not exist` after redeploy | SSH + run `docker exec <app> npx drizzle-kit push --force` |
-| Coolify UI unreachable | Check port 8000 is open: `ufw status` |
-| SSL cert not issued | Ensure DNS A records point to VPS IP; Coolify needs port 80 open |
-| Admin login page blank | Check `/api/health` returns 200; check app logs in Coolify |
-
----
-
-## Security checklist
-
-- [ ] All `CHANGE_ME` values replaced with strong random secrets
-- [ ] `POSTGRES_PASSWORD` is 24+ characters
-- [ ] Port `5432` is NOT exposed publicly (Coolify keeps it internal)
-- [ ] TLS active (`https://vedictatva.com` loads with valid cert)
-- [ ] Admin password changed from default after first login
-- [ ] 2FA enabled in Admin → Security
-- [ ] Razorpay webhook URL: `https://vedictatva.com/api/razorpay/webhook`
-- [ ] Shiprocket webhook URL + token configured
-- [ ] `DEPLOY_FROM_BROWSER=1` set (enables deploy button in admin panel)
+| Build fails — `npm ci` error | Check GitHub App connection in Coolify Settings |
+| `PG_DATABASE_URL not set` | Make sure you saved env vars before deploying |
+| Health check times out | DB schema push can take up to 60 s; wait and retry |
+| `column does not exist` after redeploy | SSH in: `docker exec <app> npx drizzle-kit push --force` |
+| SSL cert not issued | Ensure DNS A records are live; port 80 must be open |
+| Admin panel shows blank | Check `/api/health` returns `{"status":"ok"}`; check Coolify logs |
 
 ---
 
 ## Daily backups
 
-The app runs `pg_dump | gzip` automatically every 24 hours.
-Backups live in the `vedictatva-backups` volume.
+The app automatically runs `pg_dump | gzip` every 24 h.
+Files land in the `vedictatva-backups` volume.
 
 ```bash
 # List backups
-docker exec vedictatva-app-1 ls -lh /app/backups
+docker exec <app-container> ls -lh /app/backups
 
-# Download to your machine
+# Download to local machine
 scp root@<VPS_IP>:/var/lib/docker/volumes/vedictatva-backups/_data/*.sql.gz ./
 
 # Restore
 gunzip -c vedictatva-<ts>.sql.gz | \
-  docker exec -i vedictatva-db psql -U postgres -d postgres
+  docker exec -i <db-container> psql -U postgres -d postgres
 ```
 
 ---
 
-*Last updated: May 2026 | Vedic Tatva v1*
+## Security checklist before going live
+
+- [ ] All `CHANGE_ME` secrets replaced with `openssl rand -hex 32` values
+- [ ] Admin default password changed after first login
+- [ ] 2FA enabled in Admin → Security + recovery codes downloaded
+- [ ] Razorpay + Shiprocket webhook URLs configured
+- [ ] Port 5432 is NOT exposed publicly (Coolify keeps it internal by default)
+- [ ] `https://vedictatva.com` loads with a valid TLS certificate
+
+---
+
+*Vedic Tatva — May 2026*
