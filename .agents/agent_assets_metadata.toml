@@ -1440,6 +1440,36 @@ uri = "file://attached_assets/generated_images/bhandara_seva_banner.png"
 type = "image"
 title = "bhandara seva banner"
 
+[[generated]]
+id = "Pi7E1PcPT505ReFADqD19"
+uri = "file://attached_assets/heroes/hero-scene-essentials.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "a5jiRDhPo6t-1SqX6tlgD"
+uri = "file://attached_assets/heroes/hero-scene-brand.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "FJbz8KTsutU4P17i2eBXD"
+uri = "file://attached_assets/heroes/hero-scene-pind-daan.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "BNQH0L4xVaX-6p1u5rsrL"
+uri = "file://attached_assets/heroes/hero-scene-astrology.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VB6bQV9Wu4SmDB0spNgw9"
+uri = "file://attached_assets/heroes/hero-scene-tirth-yatra.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
