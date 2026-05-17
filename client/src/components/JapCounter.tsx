@@ -1181,7 +1181,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         const nextCount = persistRef.current.count + 1;
         const completedMala = nextCount >= target;
         const malaNumberAtTap = persistRef.current.malas + 1;
-        vibrate(35, vibrationOn);
+        vibrate([60, 30, 90], vibrationOn);
         commitTick();
         setAudioLocked(true);
         await mantraAudio.play(mantra.id);
@@ -1300,7 +1300,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       } else if (lifetimeNext > 0 && lifetimeNext % 108 === 0) {
         vibrate([100, 50, 100], vibrationOn);
       } else {
-        vibrate(35, vibrationOn);
+        // Forceful per-bead haptic — double-pulse felt clearly on every count.
+        // 35ms single pulse was being silently dropped by most Android devices
+        // (the motor can't spin up that fast). 60+30+90ms pattern always lands.
+        vibrate([60, 30, 90], vibrationOn);
       }
     }
 
