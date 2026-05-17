@@ -550,10 +550,12 @@ export default function OrderHistory() {
                               data-testid={`button-download-invoice-${order.id}`}
                               onClick={async () => {
                                 try {
-                                  let res = await fetch(`/api/invoices/order/${order.id}/download`);
+                                  if (!token) return;
+                                  const ownerHeaders = { Authorization: `Bearer ${token}` };
+                                  let res = await fetch(`/api/invoices/order/${order.id}/download`, { headers: ownerHeaders });
                                   if (res.status === 404) {
-                                    await fetch(`/api/invoices/generate/${order.id}`, { method: "POST" });
-                                    res = await fetch(`/api/invoices/order/${order.id}/download`);
+                                    await fetch(`/api/invoices/generate/${order.id}`, { method: "POST", headers: ownerHeaders });
+                                    res = await fetch(`/api/invoices/order/${order.id}/download`, { headers: ownerHeaders });
                                   }
                                   if (res.ok) {
                                     const blob = await res.blob();

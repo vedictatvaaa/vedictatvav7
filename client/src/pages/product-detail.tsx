@@ -28,6 +28,7 @@ import { ProductRelatedServices } from "@/components/RelatedServices";
 import RelatedBlogPosts from "@/components/RelatedBlogPosts";
 import PincodeChecker from "@/components/PincodeChecker";
 import DeliveryEtaInline from "@/components/DeliveryEtaInline";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import PageSeo from "@/components/PageSeo";
 import { product as productSchemaBuilder, breadcrumbList, faqPage, abs } from "@/lib/seo-schemas";
 
@@ -1001,7 +1002,7 @@ export default function ProductDetail() {
                   <div className="rounded-md border border-[#D4AF37]/20 bg-white p-4" data-testid="text-product-description">
                     {product.description.includes("<") ? (
                       <div className="text-sm text-[#3a2a1a] leading-relaxed prose prose-sm max-w-none [&_b]:text-[#6D2B35] [&_strong]:text-[#6D2B35]"
-                        dangerouslySetInnerHTML={{ __html: product.description }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }}
                       />
                     ) : (
                       <p className="text-sm text-[#3a2a1a] leading-relaxed">{product.description}</p>
@@ -1089,7 +1090,7 @@ export default function ProductDetail() {
                             <h3 className="text-xl font-serif text-[#6D2B35]">About this product</h3>
                           </div>
                           {product.description.includes("<") ? (
-                            <div className="text-sm text-[#3a2a1a] leading-relaxed prose prose-sm max-w-none [&_b]:text-[#6D2B35] [&_strong]:text-[#6D2B35]" dangerouslySetInnerHTML={{ __html: product.description }} />
+                            <div className="text-sm text-[#3a2a1a] leading-relaxed prose prose-sm max-w-none [&_b]:text-[#6D2B35] [&_strong]:text-[#6D2B35]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.description) }} />
                           ) : (
                             <p className="text-[#3a2a1a] leading-relaxed whitespace-pre-line">{product.description}</p>
                           )}
@@ -1266,7 +1267,7 @@ export default function ProductDetail() {
                                 return product.richDescription.includes("<") ? (
                                   <div
                                     className="text-[#3a2a1a] leading-relaxed prose prose-base max-w-none [&_b]:text-[#6D2B35] [&_strong]:text-[#6D2B35] [&_i]:text-[#5a4a3a] [&_ul]:mt-3 [&_ul]:space-y-1.5 [&_li]:text-[#3a2a1a] [&_br]:mb-2"
-                                    dangerouslySetInnerHTML={{ __html: product.richDescription }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.richDescription) }}
                                     data-testid="rich-description-html"
                                   />
                                 ) : (

@@ -15,6 +15,7 @@ import { getProductUrl } from "@/lib/utils";
 import { optImg } from "@/lib/optImg";
 import PageSeo from "@/components/PageSeo";
 import { blogPosting, abs } from "@/lib/seo-schemas";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 export default function BlogPostPage() {
   const params = useParams<{ slug: string }>();
@@ -185,7 +186,7 @@ export default function BlogPostPage() {
         <div className="lg:grid lg:grid-cols-[1fr_220px] lg:gap-10">
           <div
             className="prose prose-stone max-w-none text-[#3d3328] leading-relaxed [&_h2]:font-serif [&_h2]:text-[#6D2B35] [&_h2]:text-2xl [&_h2]:mt-10 [&_h2]:mb-3 [&_h2]:scroll-mt-24 [&_h3]:font-serif [&_h3]:text-[#6D2B35] [&_h3]:text-xl [&_h3]:mt-6 [&_h3]:mb-2 [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1.5 [&_strong]:text-[#6D2B35] [&_a]:text-[#6D2B35] [&_a]:underline"
-            dangerouslySetInnerHTML={{ __html: bodyWithIds }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(bodyWithIds) }}
             data-testid="content-blog-body"
           />
           {tocItems.length >= 2 && (

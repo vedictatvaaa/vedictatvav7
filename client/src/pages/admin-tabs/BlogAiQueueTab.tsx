@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, CheckCircle2, XCircle, Clock, Eye, EyeOff } from "lucide-react";
@@ -187,7 +188,7 @@ export default function BlogAiQueueTab({ adminToken }: { adminToken?: string }) 
                 <div
                   className="border-t border-[#E8DCC4] pt-3 max-h-[420px] overflow-y-auto prose prose-sm max-w-none text-foreground prose-headings:text-[#6D2B35] prose-p:leading-relaxed"
                   data-testid={`preview-body-${p.id}`}
-                  dangerouslySetInnerHTML={{ __html: p.body || "<p><em>No body content.</em></p>" }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(p.body || "<p><em>No body content.</em></p>") }}
                 />
               )}
               {reasonFor === p.id && (

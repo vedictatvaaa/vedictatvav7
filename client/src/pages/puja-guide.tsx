@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, IndianRupee, Calendar, ShoppingBag, ChevronRight } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 interface PujaListItem {
   id: number;
@@ -273,7 +274,7 @@ function Section({ title, html }: { title: string; html: string }) {
   return (
     <div className="mb-8">
       <h2 className="text-xl font-serif font-bold text-[#6D2B35] mb-3">{title}</h2>
-      <div className="prose prose-base max-w-none text-foreground prose-p:leading-relaxed prose-strong:text-[#6D2B35]" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="prose prose-base max-w-none text-foreground prose-p:leading-relaxed prose-strong:text-[#6D2B35]" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, CheckCircle, Type, RefreshCw, Sparkles } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 import { Input } from "@/components/ui/input";
 
@@ -252,7 +253,7 @@ function AplusListingsTab({ adminToken }: { adminToken?: string }) {
                     {previewMode ? (
                       <div
                         className="border border-primary/10 rounded-lg overflow-hidden"
-                        dangerouslySetInnerHTML={{ __html: generatedHtml }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(generatedHtml) }}
                         data-testid="aplus-preview"
                       />
                     ) : (

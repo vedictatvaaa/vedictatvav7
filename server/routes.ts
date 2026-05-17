@@ -102,7 +102,7 @@ const uploadStorage = multer.diskStorage({
 });
 const upload = multer({
   storage: uploadStorage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp/;
     if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype.split("/")[1])) {
@@ -3600,7 +3600,18 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .update(body)
         .digest("hex");
 
-      if (expectedSignature !== razorpay_signature) {
+      // Constant-time comparison to defeat timing side-channels on the HMAC
+      // check. We also strictly validate the hex shape first because
+      // Buffer.from("xyz", "hex") silently truncates partial input rather
+      // than throwing — which would yield a same-length buffer that could
+      // theoretically pass the length guard.
+      const sigStr = String(razorpay_signature || "");
+      if (!/^[a-f0-9]{64}$/i.test(sigStr)) {
+        return res.status(400).json({ success: false, message: "Payment verification failed" });
+      }
+      const expectedBuf = Buffer.from(expectedSignature, "hex");
+      const receivedBuf = Buffer.from(sigStr, "hex");
+      if (receivedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
         return res.status(400).json({ success: false, message: "Payment verification failed" });
       }
 
@@ -10499,7 +10510,46 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   });
 
   // ---- Invoice Routes ----
-  app.get("/api/invoices", async (_req, res) => {
+  // Invoices contain PII (full name, address, phone, GSTIN, amounts). Access is
+  // gated to either (a) an authenticated admin or (b) the order's owner, who
+  // must prove identity by supplying the email recorded on the order via the
+  // x-user-email header (mirrors /api/my-bookings/:userId pattern). Path
+  // traversal is also defended: pdfUrl must live under /uploads/invoices/.
+  async function isAdminRequest(req: any): Promise<boolean> {
+    const token = (req.headers["x-admin-token"] as string) || "";
+    if (!token) return false;
+    try { return !!(await validateAdminSession(token)); } catch { return false; }
+  }
+  function assertSafeInvoicePath(pdfUrl: string): string | null {
+    if (typeof pdfUrl !== "string" || !pdfUrl.startsWith("/uploads/invoices/")) return null;
+    const safeName = path.basename(pdfUrl);
+    if (!/^[A-Za-z0-9._-]+\.pdf$/i.test(safeName)) return null;
+    const invDir = path.join(process.cwd(), "uploads", "invoices");
+    const resolved = path.resolve(invDir, safeName);
+    if (!resolved.startsWith(invDir + path.sep) && resolved !== invDir) return null;
+    return resolved;
+  }
+  // Ownership is proven by EITHER an admin session OR the OTP-derived Bearer
+  // token issued by /api/orders/verify-otp. The token is HMAC-signed and
+  // email-bound, so unlike a raw header it cannot be forged by knowing the
+  // {orderId, email} pair. The verified token email must equal the order's
+  // customerEmail (case/whitespace normalized).
+  async function callerOwnsOrder(req: any, order: any): Promise<boolean> {
+    if (!order) return false;
+    if (await isAdminRequest(req)) return true;
+    const auth = String(req.headers.authorization || "");
+    const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!bearer) return false;
+    const verified = verifyLookupToken(bearer);
+    if (!verified) return false;
+    const tokenEmail = normalizeEmail(verified.email);
+    const orderEmail = normalizeEmail(order.customerEmail || "");
+    return !!tokenEmail && tokenEmail === orderEmail;
+  }
+
+  // Admin-only: full list of invoices.
+  app.get("/api/invoices", async (req, res) => {
+    if (!(await isAdminRequest(req))) return res.status(401).json({ message: "Unauthorized" });
     const inv = await storage.getInvoices();
     res.json(inv);
   });
@@ -10507,10 +10557,15 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   app.get("/api/invoices/:id", async (req, res) => {
     const inv = await storage.getInvoice(Number(req.params.id));
     if (!inv) return res.status(404).json({ message: "Invoice not found" });
+    const order = await storage.getOrder(inv.orderId);
+    if (!(await callerOwnsOrder(req, order))) return res.status(403).json({ message: "Forbidden" });
     res.json(inv);
   });
 
   app.get("/api/invoices/order/:orderId", async (req, res) => {
+    const order = await storage.getOrder(Number(req.params.orderId));
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!(await callerOwnsOrder(req, order))) return res.status(403).json({ message: "Forbidden" });
     const inv = await storage.getInvoiceByOrderId(Number(req.params.orderId));
     if (!inv) return res.status(404).json({ message: "Invoice not found for this order" });
     res.json(inv);
@@ -10519,16 +10574,21 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   app.get("/api/invoices/:id/download", async (req, res) => {
     const inv = await storage.getInvoice(Number(req.params.id));
     if (!inv || !inv.pdfUrl) return res.status(404).json({ message: "Invoice PDF not found" });
-    const filePath = path.join(process.cwd(), inv.pdfUrl);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "PDF file missing" });
+    const order = await storage.getOrder(inv.orderId);
+    if (!(await callerOwnsOrder(req, order))) return res.status(403).json({ message: "Forbidden" });
+    const filePath = assertSafeInvoicePath(inv.pdfUrl);
+    if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ message: "PDF file missing" });
     res.download(filePath, `Invoice-${inv.invoiceNumber.replace(/\//g, "-")}.pdf`);
   });
 
   app.get("/api/invoices/order/:orderId/download", async (req, res) => {
+    const order = await storage.getOrder(Number(req.params.orderId));
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!(await callerOwnsOrder(req, order))) return res.status(403).json({ message: "Forbidden" });
     const inv = await storage.getInvoiceByOrderId(Number(req.params.orderId));
     if (!inv || !inv.pdfUrl) return res.status(404).json({ message: "Invoice not found" });
-    const filePath = path.join(process.cwd(), inv.pdfUrl);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: "PDF file missing" });
+    const filePath = assertSafeInvoicePath(inv.pdfUrl);
+    if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ message: "PDF file missing" });
     res.download(filePath, `Invoice-${inv.invoiceNumber.replace(/\//g, "-")}.pdf`);
   });
 
@@ -10536,6 +10596,7 @@ Please create an optimized route that minimizes backtracking and maximizes the s
     try {
       const order = await storage.getOrder(Number(req.params.orderId));
       if (!order) return res.status(404).json({ message: "Order not found" });
+      if (!(await callerOwnsOrder(req, order))) return res.status(403).json({ message: "Forbidden" });
       const existing = await storage.getInvoiceByOrderId(order.id);
       if (existing) return res.json(existing);
       const { getFinancialYear, generateInvoiceNumber, calculateGST, generateInvoicePDF } = await import("./invoice");
