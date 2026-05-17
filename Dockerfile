@@ -6,9 +6,9 @@ WORKDIR /app
 # Build deps for native modules (bcrypt, sharp, pg-native if used)
 RUN apk add --no-cache python3 make g++ libc6-compat
 
-# Install ALL deps (we need devDeps for the build + drizzle-kit at runtime for db:push)
+# Install ALL deps (force development so devDeps are included even if NODE_ENV=production is injected by CI)
 COPY package.json package-lock.json* ./
-RUN npm ci --no-audit --no-fund
+RUN NODE_ENV=development npm ci --no-audit --no-fund
 
 # Copy source and build
 COPY . .
