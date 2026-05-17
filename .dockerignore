@@ -9,7 +9,6 @@ dist
 logs
 backups
 uploads
-attached_assets
 .local
 .agents
 .replit
