@@ -129,7 +129,22 @@ app.use("/uploads", express.static("uploads", {
 
 app.use("/attached_assets", express.static("attached_assets", {
   maxAge: "30d",
+  // Don't fall through to the SPA catch-all on missing files. Otherwise
+  // a missing image URL gets HTML (index.html) and the browser renders
+  // a broken-image icon — which is exactly the "?" symptom users saw
+  // before the .gitignore fix that brought the asset folders into git.
+  fallthrough: false,
 }));
+
+// Convert any error from the static handler above (mainly ENOENT 404s)
+// into a clean JSON 404 so the SPA catch-all can't accidentally serve
+// HTML for a missing /attached_assets/* path.
+app.use("/attached_assets", (err: any, _req: any, res: any, next: any) => {
+  if (err && (err.statusCode === 404 || err.code === "ENOENT")) {
+    return res.status(404).json({ message: "Asset not found" });
+  }
+  return next(err);
+});
 
 declare module "http" {
   interface IncomingMessage {

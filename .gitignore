@@ -20,13 +20,33 @@ vite.config.ts.*
 backups/
 # Local-only directories (not in git, sync'd separately)
 downloads/
-attached_assets/
 artifacts/
 
-# Local-only directories (kept on VPS, not in git)
-downloads/
-attached_assets/
-artifacts/
+# attached_assets: ignored by default (ad-hoc uploads, screenshots),
+# but specific subdirs that hold product/UI imagery MUST be tracked so
+# they make it into the Docker build context → VPS. Without these
+# un-ignores, the production server falls through to the SPA index.html
+# for /attached_assets/<missing>.png and the browser shows a "?" instead
+# of the product image.
+attached_assets/*
+!attached_assets/brass_copperware/
+!attached_assets/category_cards/
+!attached_assets/dhoti_kurta/
+!attached_assets/generated_images/
+!attached_assets/havan_samagri/
+!attached_assets/heroes/
+!attached_assets/mala_catalogue/
+!attached_assets/mala_images/
+!attached_assets/pandits/
+!attached_assets/product_images/
+!attached_assets/rudraksha/
+!attached_assets/service_icons/
+# Loose product-image files referenced directly from the products table.
+!attached_assets/IMG_1811.JPG_1776544579053.jpeg
+!attached_assets/IMG_2060.JPG_1776544579057.jpeg
+!attached_assets/IMG_2401_1776544579060.PNG
+!attached_assets/IMG_2626.JPG_1776544579061.jpeg
+!attached_assets/IMG_3509.JPG_1776544579062.jpeg
 # Runtime upload subdirs — only seed files we explicitly add live in uploads/
 uploads/invoices/
 uploads/kundli-pdfs/
