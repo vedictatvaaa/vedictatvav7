@@ -22,10 +22,14 @@ backups/
 downloads/
 attached_assets/
 artifacts/
-uploads/
 
 # Local-only directories (kept on VPS, not in git)
 downloads/
 attached_assets/
 artifacts/
-uploads/
+# Runtime upload subdirs — only seed files we explicitly add live in uploads/
+uploads/invoices/
+uploads/kundli-pdfs/
+uploads/labels/
+uploads/mantra-audio/
+uploads/sacred-audio/
