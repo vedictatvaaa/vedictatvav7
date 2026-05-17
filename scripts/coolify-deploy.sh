@@ -268,7 +268,6 @@ if [[ -n "$GH_APP_UUID" ]]; then
     --arg gh "$GH_APP_UUID" \
     --arg repo "$GITHUB_REPO" \
     --arg branch "$GITHUB_BRANCH" \
-    --arg domain "https://${DOMAIN}" \
     '{
       server_uuid: $sv,
       project_uuid: $pj,
@@ -286,8 +285,7 @@ if [[ -n "$GH_APP_UUID" ]]; then
       health_check_interval: 30,
       health_check_timeout: 5,
       health_check_retries: 3,
-      health_check_start_period: 45,
-      fqdn: $domain
+      health_check_start_period: 45
     }')
   app_resp=$(api POST /api/v1/applications/private-github-app "$app_body")
 else
@@ -299,7 +297,6 @@ else
     --arg env "$ENVIRONMENT_NAME" \
     --arg repo "https://github.com/${GITHUB_REPO}" \
     --arg branch "$GITHUB_BRANCH" \
-    --arg domain "https://${DOMAIN}" \
     '{
       server_uuid: $sv,
       project_uuid: $pj,
@@ -316,8 +313,7 @@ else
       health_check_interval: 30,
       health_check_timeout: 5,
       health_check_retries: 3,
-      health_check_start_period: 45,
-      fqdn: $domain
+      health_check_start_period: 45
     }')
   app_resp=$(api POST /api/v1/applications/public "$app_body")
 fi
@@ -325,6 +321,13 @@ fi
 APP_UUID=$(echo "$app_resp" | jq -r '.uuid // empty')
 [[ -z "$APP_UUID" ]] && die "Failed to create application. Response: $app_resp"
 ok "Application created: ${APP_UUID}"
+
+# Set domain via PATCH after creation
+if [[ -n "$DOMAIN" ]]; then
+  info "Setting domain https://${DOMAIN}…"
+  api PATCH "/api/v1/applications/${APP_UUID}" \
+    "{\"fqdn\":\"https://${DOMAIN}\"}" >/dev/null 2>&1 && ok "Domain set." || warn "Domain set failed — add it manually in Coolify UI."
+fi
 
 # =============================================================================
 # SECTION 8 — Environment variables
