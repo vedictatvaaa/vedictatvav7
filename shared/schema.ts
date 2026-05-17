@@ -2172,3 +2172,33 @@ export const insertHeroSlideSchema = createInsertSchema(heroSlides, {
 
 export type HeroSlide = typeof heroSlides.$inferSelect;
 export type InsertHeroSlide = z.infer<typeof insertHeroSlideSchema>;
+
+// ============================================================================
+// Homepage Sections — admin-managed order + visibility of the movable blocks
+// on the homepage (Spiritual Snapshot, Book a Pandit, Tabbed Shop, Bhandara
+// Seva, Testimonials, Vedic Astrology). Hero, conversion tagline and the
+// SEO content block remain structural and are NOT in this table.
+// `key` is a stable string the frontend maps to a section component.
+// Public GET /api/homepage-sections returns ordered rows; admin PATCH/reorder
+// gated by adminAuthMiddleware.
+// ============================================================================
+export const homepageSections = pgTable("homepage_sections", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  key: text("key").notNull().unique(),
+  label: text("label").notNull(),
+  position: integer("position").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  positionIdx: index("homepage_sections_position_idx").on(t.position),
+}));
+
+export const insertHomepageSectionSchema = createInsertSchema(homepageSections, {
+  key: z.string().min(1).max(64),
+  label: z.string().min(1).max(120),
+  position: z.number().int().min(0).max(999).optional(),
+  enabled: z.boolean().optional(),
+}).omit({ id: true, updatedAt: true });
+
+export type HomepageSection = typeof homepageSections.$inferSelect;
+export type InsertHomepageSection = z.infer<typeof insertHomepageSectionSchema>;

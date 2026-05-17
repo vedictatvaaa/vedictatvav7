@@ -47,6 +47,7 @@ import {
   insertProductSchema, insertPanditSchema, insertOrderSchema,
   insertPujaBookingSchema, insertAstrologyBookingSchema,
   insertSocialProofSettingsSchema, insertBoostEventSchema, insertSalesPopupSchema, insertHeroSlideSchema,
+  insertHomepageSectionSchema,
   insertSiteSettingsSchema, insertProductReviewSchema, insertProductQuestionSchema,
   insertReturnTicketSchema, insertCouponSchema, insertSubscriptionSchema,
   insertDonationSchema, insertDonationOrderSchema, insertPanditReviewSchema,
@@ -3210,6 +3211,70 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!parsed.success) return res.status(400).json({ message: "Invalid ids array" });
     const rows = await storage.reorderHeroSlides(parsed.data.ids);
     await auditAdmin(req, "hero-slide.reorder", "heroSlide", { count: parsed.data.ids.length });
+    res.json(rows);
+  });
+
+  // ============================================================
+  // Homepage Sections — admin-managed order + visibility of the
+  // movable blocks on /. Keys MUST stay in lock-step with the
+  // sectionMap in client/src/pages/home.tsx. Adding a new section?
+  // Append to HOMEPAGE_SECTION_DEFAULTS below AND wire it in home.tsx.
+  // ============================================================
+  const HOMEPAGE_SECTION_DEFAULTS = [
+    { key: "snapshot",      label: "Today's Spiritual Snapshot" },
+    { key: "book-pandit",   label: "Book a Pandit (city search)" },
+    { key: "tabbed-shop",   label: "Handpicked / Popular / Trending (Tabbed Shop)" },
+    { key: "bhandara",      label: "Bhandara Seva (donation)" },
+    { key: "testimonials",  label: "Testimonials / Community Stories" },
+    { key: "astrology",     label: "Vedic Astrology (hero banner)" },
+  ];
+
+  let homepageSectionsSeeded = false;
+  async function ensureHomepageSectionsSeeded() {
+    if (homepageSectionsSeeded) return;
+    try {
+      await storage.seedHomepageSections(HOMEPAGE_SECTION_DEFAULTS as any);
+      homepageSectionsSeeded = true;
+    } catch (e: any) {
+      // Don't crash the request loop if the table doesn't exist yet
+      // (db:push hasn't run). Just keep retrying on the next call.
+      console.error("[homepage-sections seed]", e?.message || e);
+    }
+  }
+
+  // Public — ordered list of enabled sections (5 min CDN-friendly cache).
+  app.get("/api/homepage-sections", async (_req, res) => {
+    try {
+      await ensureHomepageSectionsSeeded();
+      const rows = await storage.listHomepageSections({ enabledOnly: true });
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.json(rows);
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to load homepage sections" });
+    }
+  });
+
+  // Admin — full list (including disabled).
+  app.get("/api/admin/homepage-sections", adminAuthMiddleware, async (_req, res) => {
+    await ensureHomepageSectionsSeeded();
+    const rows = await storage.listHomepageSections();
+    res.json(rows);
+  });
+
+  app.patch("/api/admin/homepage-sections/:id", adminAuthMiddleware, async (req, res) => {
+    const partial = insertHomepageSectionSchema.partial().safeParse(req.body);
+    if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
+    const row = await storage.updateHomepageSection(Number(req.params.id), partial.data);
+    if (!row) return res.status(404).json({ message: "Section not found" });
+    await auditAdmin(req, "homepage-section.update", "homepageSection", { id: row.id, ...partial.data });
+    res.json(row);
+  });
+
+  app.post("/api/admin/homepage-sections/reorder", adminAuthMiddleware, async (req, res) => {
+    const parsed = z.object({ ids: z.array(z.number().int().positive()).max(50) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid ids array" });
+    const rows = await storage.reorderHomepageSections(parsed.data.ids);
+    await auditAdmin(req, "homepage-section.reorder", "homepageSection", { count: parsed.data.ids.length });
     res.json(rows);
   });
 

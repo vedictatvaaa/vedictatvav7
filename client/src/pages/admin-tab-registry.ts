@@ -36,6 +36,7 @@ export const TABS: TabDef[] = [
   { id: "social-proof",    label: "Social Proof",     icon: Eye,           section: "Marketing" },
   { id: "sales-popups",    label: "Sales Popups",     icon: Megaphone,     section: "Marketing" },
   { id: "hero-slider",     label: "Hero Slider",      icon: ImageIcon,     section: "Marketing" },
+  { id: "homepage-sections", label: "Homepage Sections", icon: GitCommit,   section: "Marketing" },
   { id: "blog",            label: "Blog",             icon: FileText,      section: "Marketing" },
   { id: "blog-ai",         label: "AI Blog Queue",    icon: Sparkles,      section: "Marketing" },
   { id: "puja-library",    label: "Puja Library",     icon: FileText,      section: "Marketing" },

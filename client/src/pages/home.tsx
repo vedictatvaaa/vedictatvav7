@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, Fragment, type ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Star, Calendar, ShoppingBag, Sparkles, UserCheck, Heart, ScrollText, MapPin, HandHeart, Flame, CheckCircle, Shield, Globe, IndianRupee, Search, BookOpen, Video, TrendingUp, MapPinned, Brain, Hand, Baby, CalendarDays, Trophy, MessageCircle, Gamepad2, Scale, Leaf, RotateCcw, Compass, HeartHandshake, Gem, Sun, Moon, Droplets, ChevronDown, ChevronUp, Palette, Hash, Navigation, Lightbulb, CircleDot, ThumbsUp, ThumbsDown, Clock, X, Shirt, Map, Calculator, Music2 } from "lucide-react";
@@ -543,6 +543,45 @@ export default function Home() {
   const Cta1Icon = scene.cta1.icon;
   const Cta2Icon = scene.cta2.icon;
 
+  // ── Movable homepage sections (admin-managed order + visibility) ──
+  // Admin → Homepage Sections tab persists rows in `homepage_sections`.
+  // Public GET /api/homepage-sections returns enabled rows in `position`
+  // order. We map each key to its JSX node and render only the keys
+  // the API returned, in the order it returned them. Fallback below
+  // ensures the page never blanks if the API is slow/empty.
+  const { data: serverSections } = useQuery<{ key: string; position: number; enabled: boolean }[]>({
+    queryKey: ["/api/homepage-sections"],
+  });
+  const orderedSectionKeys = useMemo(() => {
+    if (serverSections && serverSections.length > 0) {
+      return serverSections
+        .filter((s) => s.enabled !== false)
+        .map((s) => s.key)
+        .filter((k) => k in (sectionMapKeysProbe as Record<string, true>));
+    }
+    return DEFAULT_HOMEPAGE_ORDER;
+  }, [serverSections]);
+  const sectionMap: Record<string, ReactNode> = {
+    "snapshot":     <SpiritualSnapshot />,
+    "book-pandit":  <BookPanditSection />,
+    "tabbed-shop": (
+      <TabbedShop
+        featuredProducts={featuredProducts}
+        allProducts={products}
+        isLoading={isLoading}
+        ratingsAgg={ratingsAgg}
+        addToCart={addToCart}
+        toast={toast}
+        viewAllLabel={t.products.viewAll}
+        addToCartLabel={t.products.addToCart}
+        sectionTag={t.products.sectionTag}
+      />
+    ),
+    "bhandara":     <BhandaraSection />,
+    "testimonials": <TestimonialsCarousel />,
+    "astrology":    <AstrologySection />,
+  };
+
   return (
     <div className="w-full">
       <PageSeo
@@ -689,17 +728,19 @@ export default function Home() {
           SpiritualSnapshot follow directly under the hero, cutting
           ~110 px of redundant scrolling and one cognitive layer. */}
 
-      {/* Today's Spiritual Snapshot — slim daily strip, sits directly
-          under the hero now that the redundant Four Pillars block is
-          gone. Bridges hero → tabbed shop with daily panchang utility. */}
-      <SpiritualSnapshot />
+      {/* ════════════ Movable homepage sections ════════════
+          Order + visibility controlled by admin via
+          /api/homepage-sections (Admin → Homepage Sections tab).
+          Default order matches the keys below. If the API hasn't
+          loaded yet OR the table is empty, we fall back to the
+          DEFAULT_HOMEPAGE_ORDER constant so the page never blanks. */}
+      {orderedSectionKeys.map((k) => (
+        <Fragment key={k}>{sectionMap[k]}</Fragment>
+      ))}
 
-      {/* Tabbed Shop — Popular + Trending Near You + New Arrivals (Handpicked) */}
-      {/* Book a Pandit — moved here from below the trust block in this
-          audit pass. Highest-margin booking surface, sits right under
-          Spiritual Snapshot so the city-search converter is the first
-          revenue block users see after the four pillars. */}
-      <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
+      {/* ── Parked: book-pandit body lives in <BookPanditSection /> (movable) */}
+      {false && (
+      <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit-parked">
         <div className="container mx-auto px-4">
           {/* Image column removed (per user request — homepage clutter
               pass). Layout collapsed to a single centered column. The
@@ -786,31 +827,33 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+      )}
 
-      <TabbedShop
-        featuredProducts={featuredProducts}
-        allProducts={products}
-        isLoading={isLoading}
-        ratingsAgg={ratingsAgg}
-        addToCart={addToCart}
-        toast={toast}
-        viewAllLabel={t.products.viewAll}
-        addToCartLabel={t.products.addToCart}
-        sectionTag={t.products.sectionTag}
-      />
+      {/* ── Bhandara JSX moved into the sectionMap above (movable).
+            The next chunk is the legacy disabled blocks (false &&). ── */}
 
-      {/* Bhandara Seva — true hero banner with bespoke image + single CTA.
-          Mirrors the new astrology hero pattern: 16:9 cinematic
-          backdrop (temple bhandara feast), dark wash on the LEFT for
-          legibility, content left-aligned, single focal CTA →
-          /donations. Live meals counter retained as a slim chip above
-          the headline so the social-impact metric still reads. All
-          testids preserved (section-bhandara-seva, text-bhandara-heading,
-          text-bhandara-body, text-bhandara-tagline, text-meals-count,
-          chip-bhandara-impact, img-bhandara-seva). */}
+      {false && (
       <section
         className="relative overflow-hidden border-y border-[#D4AF37]/30"
-        data-testid="section-bhandara-seva"
+        data-testid="section-bhandara-seva-parked"
+      >
+        {/* Backdrop image — 16:9 hero illustration */}
+        <img
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          src=""
+        />
+      </section>
+      )}
+
+      {/* (Parked-bhandara stub above is a no-op; real bhandara JSX lives
+          inline in BhandaraSection() — see end of file.) */}
+
+      {false && (
+      <section
+        className="relative overflow-hidden border-y border-[#D4AF37]/30"
+        data-testid="section-bhandara-seva-legacy"
       >
         {/* Backdrop image — 16:9 hero illustration */}
         <img
@@ -892,6 +935,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* AI-Personalized Recommendations (DISABLED — keeps homepage to 7 lean sections) */}
       {false && <RecommendedForYou limit={8} />}
@@ -1188,21 +1232,12 @@ export default function Home() {
           is qualified. Keep the import path live in case product
           decides to A/B-test it back in. */}
 
-      {/* Testimonials / Community Stories */}
-      <TestimonialsCarousel />
-
-      {/* Vedic Astrology — true hero banner with bespoke image.
-          16:9 cinematic backdrop (zodiac chakra + golden constellations
-          on midnight maroon), dark wash on the LEFT side keeps text
-          legible, gold rule top + bottom. Single focal CTA lives where
-          the eye naturally lands after reading the headline. All
-          testids preserved (section-astrology, text-astrology-heading,
-          btn-generate-kundli). */}
+      {/* Testimonials + Astrology now rendered in movable sectionMap above. */}
+      {false && (
       <section
-        id="vedic-astrology"
-        aria-labelledby="astrology-heading"
+        id="vedic-astrology-parked"
         className="relative text-white scroll-mt-24 border-y border-[#D4AF37]/30 overflow-hidden"
-        data-testid="section-astrology"
+        data-testid="section-astrology-parked"
       >
         {/* Backdrop image — 16:9 hero illustration */}
         <img
@@ -1257,6 +1292,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {false && (<>
       {/* Stats Bar (REMOVED — moved to /about full + footer micro-strip) */}
@@ -2163,6 +2199,252 @@ function TabbedShop({
               {viewAllLabel} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
           </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Movable homepage sections — order/visibility controlled by admin via
+// /api/homepage-sections. Keep this DEFAULT_HOMEPAGE_ORDER in lock-step
+// with HOMEPAGE_SECTION_DEFAULTS in server/routes.ts. The keys are also
+// the source of truth for which keys the API is allowed to return.
+// ════════════════════════════════════════════════════════════════════
+const DEFAULT_HOMEPAGE_ORDER = [
+  "snapshot",
+  "book-pandit",
+  "tabbed-shop",
+  "bhandara",
+  "testimonials",
+  "astrology",
+];
+
+// Whitelist used by the order-resolver to ignore unknown keys returned
+// by a stale API (e.g. admin added a row before the frontend ships a
+// matching component).
+const sectionMapKeysProbe: Record<string, true> = {
+  "snapshot":     true,
+  "book-pandit":  true,
+  "tabbed-shop":  true,
+  "bhandara":     true,
+  "testimonials": true,
+  "astrology":    true,
+};
+
+function BookPanditSection() {
+  return (
+    <section className="py-10 md:py-14 bg-[#FBF7EE]" data-testid="section-book-pandit">
+      <div className="container mx-auto px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="space-y-5 max-w-2xl mx-auto"
+        >
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+              <span className="text-[#6D2B35] text-[10px] md:text-xs uppercase tracking-[0.32em] font-semibold">Pandit Booking</span>
+              <span className="h-px w-10 md:w-14 bg-[#D4AF37]" />
+            </div>
+            <h2 className="font-serif text-xl md:text-3xl lg:text-4xl text-[#6D2B35] leading-[1.1] tracking-tight mb-3" data-testid="text-pandit-heading">
+              Find trusted pandits <span className="italic font-semibold saffron-shimmer">in your city</span>
+            </h2>
+            <p className="text-[13px] md:text-sm text-[#5a4a3a]/70 leading-relaxed max-w-2xl mx-auto">
+              Connect with verified, experienced pandits for every sacred ceremony — Griha Pravesh, Satyanarayan Katha and more. Background-checked and rated by real families.
+            </p>
+            <div className="flex items-center justify-center gap-2 flex-wrap mt-4">
+              <div className="bg-white rounded-md px-2.5 py-1 inline-flex items-center gap-1.5 border border-[#D4AF37]/25">
+                <Star className="h-3 w-3 text-[#D4AF37] fill-[#D4AF37]" />
+                <span className="text-[11px] font-semibold text-[#5a4a3a]">4.9</span>
+                <span className="text-[10px] text-[#5a4a3a]/60">· 12K reviews</span>
+              </div>
+              <div className="bg-white rounded-md px-2.5 py-1 border border-[#D4AF37]/25">
+                <span className="text-[11px] font-semibold text-[#5a4a3a]">500+ Pandits</span>
+              </div>
+              <div className="bg-white rounded-md px-2.5 py-1 inline-flex items-center gap-1.5 border border-[#D4AF37]/25">
+                <Shield className="h-3 w-3 text-emerald-600" />
+                <span className="text-[11px] font-semibold text-[#5a4a3a]">Verified</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 max-w-md mx-auto bg-white rounded-md border border-[#D4AF37]/25 focus-within:border-[#D4AF37]/60 transition-colors p-1 pl-3">
+            <Search className="h-4 w-4 text-[#5a4a3a]/45 shrink-0" />
+            <input
+              type="text"
+              placeholder="Enter your city…"
+              className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
+              data-testid="input-pandit-city"
+            />
+            <Link href="/pandits">
+              <Button
+                size="sm"
+                className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
+                data-testid="btn-search-pandit"
+              >
+                Search
+              </Button>
+            </Link>
+          </div>
+          <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
+            <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
+            {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
+              <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+                <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
+                  {c}
+                </span>
+              </Link>
+            ))}
+          </div>
+          <div className="text-center">
+            <Link href="/pandits">
+              <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
+                Browse all pandits <ArrowRight className="h-3 w-3" />
+              </span>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function BhandaraSection() {
+  return (
+    <section
+      className="relative overflow-hidden border-y border-[#D4AF37]/30"
+      data-testid="section-bhandara-seva"
+    >
+      <img
+        src={optImg(bhandaraBannerImg, 1440)}
+        srcSet={optImgSrcSet(bhandaraBannerImg, [480, 768, 1080, 1440, 1920])}
+        sizes="100vw"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="lazy"
+        decoding="async"
+        data-testid="img-bhandara-seva"
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(20,11,16,0.75) 0%, rgba(20,11,16,0.7) 50%, rgba(20,11,16,0.75) 100%)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14 text-white">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-3 flex-wrap mb-3">
+            <span
+              className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold"
+              data-testid="text-bhandara-eyebrow"
+            >
+              Seva
+            </span>
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#D4AF37]/40 bg-white/5 backdrop-blur-sm"
+              data-testid="chip-bhandara-impact"
+            >
+              <Flame className="w-3 h-3 text-[#D4AF37]" />
+              <span className="text-[11px] font-medium tracking-wide whitespace-nowrap">
+                <span className="font-semibold text-[#D4AF37]" data-testid="text-meals-count">3,809</span>
+                {" "}meals served this year
+              </span>
+            </span>
+          </div>
+          <h2
+            className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold leading-[1.15] tracking-tight"
+            data-testid="text-bhandara-heading"
+          >
+            Devotion that goes <span className="text-[#D4AF37]">beyond your home</span>
+          </h2>
+          <p
+            className="text-[13.5px] md:text-[14.5px] text-white/80 mt-3 leading-relaxed max-w-xl mx-auto"
+            data-testid="text-bhandara-body"
+          >
+            Every order helps us serve bhandara &mdash; sharing food, care and
+            blessings with families in need across India.
+          </p>
+          <p
+            className="font-serif italic text-[13px] md:text-sm text-[#D4AF37] mt-2"
+            data-testid="text-bhandara-tagline"
+          >
+            Pure essentials. Greater purpose.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <Link href="/donations">
+              <Button
+                className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
+                data-testid="btn-sponsor-meal"
+                aria-label="Sponsor a meal — contribute to bhandara seva"
+              >
+                <HandHeart className="h-4 w-4" />
+                Sponsor a Meal
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AstrologySection() {
+  return (
+    <section
+      id="vedic-astrology"
+      aria-labelledby="astrology-heading"
+      className="relative text-white scroll-mt-24 border-y border-[#D4AF37]/30 overflow-hidden"
+      data-testid="section-astrology"
+    >
+      <img
+        src={optImg(astrologyBannerImg, 1440)}
+        srcSet={optImgSrcSet(astrologyBannerImg, [480, 768, 1080, 1440, 1920])}
+        sizes="100vw"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        loading="lazy"
+        decoding="async"
+        data-testid="img-astrology-banner"
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, rgba(20,11,16,0.85) 0%, rgba(20,11,16,0.7) 45%, rgba(20,11,16,0.4) 100%)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative container mx-auto px-4 sm:px-6 py-10 md:py-14">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="text-[#D4AF37] text-[10px] uppercase tracking-[0.32em] font-semibold mb-3">
+            Vedic Astrology · Jyotish
+          </div>
+          <h2
+            id="astrology-heading"
+            className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold leading-[1.15] tracking-tight"
+            data-testid="text-astrology-heading"
+          >
+            Free Kundli &amp; live consultations with{" "}
+            <span className="text-[#D4AF37]">certified Vedic astrologers</span>
+          </h2>
+          <div className="mt-6 flex justify-center">
+            <Link href="/astrology">
+              <Button
+                className="bg-[#D4AF37] text-[#1a1118] font-semibold gap-2 hover:bg-[#D4AF37] shadow-[0_0_30px_-8px_rgba(212,175,55,0.6)]"
+                data-testid="btn-generate-kundli"
+                aria-label="Get your free Vedic Kundli and consult an astrologer"
+              >
+                <BookOpen className="h-4 w-4" />
+                Get My Free Kundli
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </section>

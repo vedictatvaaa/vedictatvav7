@@ -2,7 +2,7 @@ import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gt, gte, lte, lt, coun
 import { db } from "./db";
 import {
   users, products, orders, pandits, panditReviews, panditApplications, franchiseApplications, pujaBookings, astrologyBookings,
-  socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs, heroSlides,
+  socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs, heroSlides, homepageSections,
   coupons, subscriptions, donations, donationOrders, astrologers, seoPages, matrimonyProfiles,
   invoices, dispatches, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
   emailSends, newsletterCampaigns, emailUnsubscribes,
@@ -30,6 +30,7 @@ import {
   type BoostEvent, type InsertBoostEvent,
   type SalesPopup, type InsertSalesPopup,
   type HeroSlide, type InsertHeroSlide,
+  type HomepageSection, type InsertHomepageSection,
   type SiteSettings, type InsertSiteSettings,
   type ProductReview, type InsertProductReview,
   type ProductQuestion, type InsertProductQuestion,
@@ -144,6 +145,12 @@ export interface IStorage {
   updateHeroSlide(id: number, data: Partial<InsertHeroSlide>): Promise<HeroSlide | undefined>;
   deleteHeroSlide(id: number): Promise<boolean>;
   reorderHeroSlides(orderedIds: number[]): Promise<HeroSlide[]>;
+
+  // Homepage sections (movable blocks on /)
+  listHomepageSections(opts?: { enabledOnly?: boolean }): Promise<HomepageSection[]>;
+  updateHomepageSection(id: number, data: Partial<InsertHomepageSection>): Promise<HomepageSection | undefined>;
+  reorderHomepageSections(orderedIds: number[]): Promise<HomepageSection[]>;
+  seedHomepageSections(defaults: InsertHomepageSection[]): Promise<HomepageSection[]>;
 
   getSiteSettings(): Promise<SiteSettings | undefined>;
   upsertSiteSettings(settings: InsertSiteSettings): Promise<SiteSettings>;
@@ -1929,6 +1936,46 @@ export class DatabaseStorage implements IStorage {
       }
     });
     return this.listHeroSlides();
+  }
+
+  // ===== Homepage sections (movable blocks on /) =====
+  async listHomepageSections(opts?: { enabledOnly?: boolean }): Promise<HomepageSection[]> {
+    const q = db.select().from(homepageSections);
+    return opts?.enabledOnly
+      ? await q.where(eq(homepageSections.enabled, true)).orderBy(asc(homepageSections.position), asc(homepageSections.id))
+      : await q.orderBy(asc(homepageSections.position), asc(homepageSections.id));
+  }
+  async updateHomepageSection(id: number, data: Partial<InsertHomepageSection>): Promise<HomepageSection | undefined> {
+    const [row] = await db.update(homepageSections)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(homepageSections.id, id))
+      .returning();
+    return row;
+  }
+  async reorderHomepageSections(orderedIds: number[]): Promise<HomepageSection[]> {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx.update(homepageSections)
+          .set({ position: i, updatedAt: new Date() })
+          .where(eq(homepageSections.id, orderedIds[i]));
+      }
+    });
+    return this.listHomepageSections();
+  }
+  // Idempotently inserts defaults the first time, then keeps `label` fresh
+  // on subsequent boots without touching `position` or `enabled` (so admin
+  // ordering survives across deploys).
+  async seedHomepageSections(defaults: InsertHomepageSection[]): Promise<HomepageSection[]> {
+    for (let i = 0; i < defaults.length; i++) {
+      const d = defaults[i];
+      await db.insert(homepageSections)
+        .values({ key: d.key, label: d.label, position: d.position ?? i, enabled: d.enabled ?? true })
+        .onConflictDoUpdate({
+          target: homepageSections.key,
+          set: { label: d.label, updatedAt: new Date() },
+        });
+    }
+    return this.listHomepageSections();
   }
 
   async upsertSpiritualJourney(userId: number, data: any): Promise<void> {
