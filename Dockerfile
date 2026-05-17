@@ -16,6 +16,7 @@ COPY server ./server
 COPY shared ./shared
 COPY script ./script
 COPY attached_assets ./attached_assets
+COPY uploads ./uploads
 COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN npm run build
@@ -37,6 +38,9 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/client/public ./client/public
+
+# Seed files copied into image, used by entrypoint to populate empty volumes
+COPY uploads ./uploads-seed
 
 # Persistent dirs (mount volumes here in production)
 RUN mkdir -p /app/uploads /app/backups /app/logs/deploys && \
