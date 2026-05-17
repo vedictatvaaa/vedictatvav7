@@ -15,6 +15,7 @@ COPY client ./client
 COPY server ./server
 COPY shared ./shared
 COPY script ./script
+COPY attached_assets ./attached_assets
 COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN npm run build
