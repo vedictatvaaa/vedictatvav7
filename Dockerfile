@@ -24,8 +24,8 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
-# Runtime tools: postgresql-client for pg_dump backups, curl for healthcheck, bash for entrypoint
-RUN apk add --no-cache postgresql16-client curl bash tini
+# Runtime tools: postgresql-client for pg_dump backups, curl for healthcheck, bash for entrypoint, su-exec to drop privileges after fixing volume perms
+RUN apk add --no-cache postgresql16-client curl bash tini su-exec
 
 ENV NODE_ENV=production
 ENV PORT=5000
@@ -45,7 +45,6 @@ RUN mkdir -p /app/uploads /app/backups /app/logs/deploys && \
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-USER node
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

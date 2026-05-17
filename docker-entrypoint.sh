@@ -3,6 +3,15 @@ set -e
 
 echo "[entrypoint] Vedic Tatva starting up…"
 
+# If running as root (typical when Coolify mounts volumes), fix volume ownership
+# then drop to the unprivileged 'node' user via su-exec for the actual app run.
+if [ "$(id -u)" = "0" ]; then
+  echo "[entrypoint] Running as root — fixing volume permissions and dropping to 'node'."
+  mkdir -p /app/uploads /app/backups /app/logs/deploys
+  chown -R node:node /app/uploads /app/backups /app/logs 2>/dev/null || true
+  exec su-exec node:node "$0" "$@"
+fi
+
 # Map common Coolify / generic var names to the names this app expects.
 if [ -z "${PG_DATABASE_URL:-}" ] && [ -n "${DATABASE_URL:-}" ]; then
   export PG_DATABASE_URL="$DATABASE_URL"
