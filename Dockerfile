@@ -38,6 +38,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/client/public ./client/public
+COPY --from=builder /app/attached_assets ./attached_assets
 
 # Seed files copied into image, used by entrypoint to populate empty volumes
 COPY uploads ./uploads-seed
