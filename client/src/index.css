@@ -521,7 +521,9 @@
   background: linear-gradient(270deg, #4a1219 0%, transparent 100%);
 }
 .vt-led-track {
-  display: inline-block;
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
   white-space: nowrap;
   height: 44px;
   line-height: 44px;
@@ -536,6 +538,7 @@
   animation: vt-led-scroll 26s linear infinite;
   will-change: transform;
 }
+.vt-led-track > span { flex-shrink: 0; }
 .vt-led-strip:hover .vt-led-track {
   animation-play-state: paused;
 }
