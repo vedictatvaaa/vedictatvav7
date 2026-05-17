@@ -43,6 +43,16 @@ type HeroSlide = {
   cta2: HeroCta;
 };
 
+// Icon-name → component map for slides served from the admin DB. Keys must
+// match the ICON_OPTIONS list in the admin HeroSliderTab. Unknown names
+// fall back to ShoppingBag so a stale icon never crashes the homepage.
+const HERO_ICONS: Record<string, any> = {
+  ShoppingBag, Sparkles, UserCheck, HandHeart, Star,
+  Map, MapPinned, Gem, Calendar, Heart,
+};
+const heroIconByName = (name?: string | null): any =>
+  (name && HERO_ICONS[name]) || ShoppingBag;
+
 // 5 hero sliders — one per business vertical, ordered Samagri-first per the
 // SEO commercial-intent priority (puja samagri → puja booking → pandit →
 // astrology → festivals/yatra). Slide 1 is the LCP image (eager+high
@@ -122,16 +132,18 @@ function HeroBackground({
   setCurrent,
   isPaused,
   onTogglePause,
+  slides,
 }: {
   current: number;
   setCurrent: (i: number) => void;
   isPaused: boolean;
   onTogglePause: () => void;
+  slides: HeroSlide[];
 }) {
   return (
     <>
       <div className="absolute inset-0" style={{ aspectRatio: "16 / 9" }}>
-        {heroSlides.map((slide, i) => (
+        {slides.map((slide, i) => (
           <img
             key={slide.alt}
             src={optImg(slide.src, 1080)}
@@ -155,7 +167,7 @@ function HeroBackground({
           mobile fingers can hit them. The visible dot stays small for
           aesthetic; the hit area is generous and invisible. */}
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5">
-        {heroSlides.map((_, i) => (
+        {slides.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrent(i)}
@@ -462,14 +474,72 @@ export default function Home() {
     && window.matchMedia
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const [heroPaused, setHeroPaused] = useState(prefersReducedMotion);
+
+  // Admin-managed hero slides. If the API returns any rows we use those;
+  // otherwise we fall back to the bundled `heroSlides` so the homepage hero
+  // is never empty (covers fresh installs, API errors, slow networks).
+  // 5-min cache matches the server-side Cache-Control header.
+  type AdminHeroSlideRow = {
+    id: number;
+    imageUrl: string;
+    imageAlt: string | null;
+    mobilePosition: string | null;
+    tagline: string | null;
+    title1: string | null;
+    title2: string | null;
+    title2Highlight: string | null;
+    subtitle: string | null;
+    cta1Label: string | null;
+    cta1Href: string | null;
+    cta1Icon: string | null;
+    cta2Label: string | null;
+    cta2Href: string | null;
+    cta2Icon: string | null;
+  };
+  const { data: adminHeroSlides } = useQuery<AdminHeroSlideRow[]>({
+    queryKey: ["/api/hero-slides"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const effectiveSlides: HeroSlide[] = useMemo(() => {
+    if (Array.isArray(adminHeroSlides) && adminHeroSlides.length > 0) {
+      return adminHeroSlides.map((r) => ({
+        src: r.imageUrl,
+        alt: r.imageAlt || "",
+        mobilePosition: r.mobilePosition || "center center",
+        tagline: r.tagline || "",
+        title1: r.title1 || "",
+        title2: r.title2 || "",
+        title2Highlight: r.title2Highlight || "",
+        subtitle: r.subtitle || "",
+        cta1: {
+          label: r.cta1Label || "Learn More",
+          href: r.cta1Href || "/",
+          icon: heroIconByName(r.cta1Icon),
+        },
+        cta2: {
+          label: r.cta2Label || "Browse",
+          href: r.cta2Href || "/",
+          icon: heroIconByName(r.cta2Icon),
+        },
+      }));
+    }
+    return heroSlides;
+  }, [adminHeroSlides]);
+
+  // Clamp heroIdx if the slide count changes (e.g. admin deletes a slide
+  // while the user is on the page).
+  useEffect(() => {
+    if (heroIdx >= effectiveSlides.length) setHeroIdx(0);
+  }, [effectiveSlides.length, heroIdx]);
+
   useEffect(() => {
     if (heroPaused) return;
     const timer = setInterval(() => {
-      setHeroIdx((prev) => (prev + 1) % heroSlides.length);
+      setHeroIdx((prev) => (prev + 1) % effectiveSlides.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, [heroPaused]);
-  const scene = heroSlides[heroIdx];
+  }, [heroPaused, effectiveSlides.length]);
+  const scene = effectiveSlides[heroIdx] ?? effectiveSlides[0];
   const Cta1Icon = scene.cta1.icon;
   const Cta2Icon = scene.cta2.icon;
 
@@ -494,6 +564,7 @@ export default function Home() {
           setCurrent={setHeroIdx}
           isPaused={heroPaused}
           onTogglePause={() => setHeroPaused((p) => !p)}
+          slides={effectiveSlides}
         />
 
         {/* Dark wash for legibility (matches Heros guideline regardless of theme) */}

@@ -81,6 +81,7 @@ const ProvidersTab          = safeLazy(() => import("./admin-tabs/ProvidersTab")
 const AuditLogTab           = safeLazy(() => import("./admin-tabs/AuditLogTab"));
 const SocialProofTab        = safeLazy(() => import("./admin-tabs/SocialProofTab"));
 const SalesPopupsTab        = safeLazy(() => import("./admin-tabs/SalesPopupsTab"));
+const HeroSliderTab         = safeLazy(() => import("./admin-tabs/HeroSliderTab"));
 const AnalyticsTab          = safeLazy(() => import("./admin-tabs/AnalyticsTab"));
 const AplusListingsTab      = safeLazy(() => import("./admin-tabs/AplusListingsTab"));
 const SecurityTab           = safeLazy(() => import("./admin-tabs/SecurityTab"));
@@ -543,6 +544,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "audit-log" && <AuditLogTab adminToken={adminToken} />}
               {activeTab === "social-proof" && <SocialProofTab />}
               {activeTab === "sales-popups" && <SalesPopupsTab />}
+              {activeTab === "hero-slider" && <HeroSliderTab />}
               {activeTab === "analytics" && <AnalyticsTab />}
               {activeTab === "aplus" && <AplusListingsTab adminToken={adminToken} />}
               {activeTab === "security" && <SecurityTab adminToken={adminToken} />}

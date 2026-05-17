@@ -46,7 +46,7 @@ import * as jyotish from "./jyotish";
 import {
   insertProductSchema, insertPanditSchema, insertOrderSchema,
   insertPujaBookingSchema, insertAstrologyBookingSchema,
-  insertSocialProofSettingsSchema, insertBoostEventSchema, insertSalesPopupSchema,
+  insertSocialProofSettingsSchema, insertBoostEventSchema, insertSalesPopupSchema, insertHeroSlideSchema,
   insertSiteSettingsSchema, insertProductReviewSchema, insertProductQuestionSchema,
   insertReturnTicketSchema, insertCouponSchema, insertSubscriptionSchema,
   insertDonationSchema, insertDonationOrderSchema, insertPanditReviewSchema,
@@ -3158,6 +3158,141 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!ok) return res.status(404).json({ message: "Popup not found" });
     await auditAdmin(req, "sales-popup.delete", "salesPopup", { id: req.params.id });
     res.json({ message: "Popup deleted" });
+  });
+
+  // ============================================================
+  // Hero Slider — admin-managed homepage hero carousel.
+  // ============================================================
+  // Public: ordered list of enabled slides. 5 min cache so the homepage LCP
+  // isn't gated on a DB roundtrip but admin edits still propagate quickly.
+  app.get("/api/hero-slides", async (_req, res) => {
+    try {
+      const rows = await storage.listHeroSlides({ enabledOnly: true });
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.json(rows);
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to load hero slides" });
+    }
+  });
+
+  // Admin: full list (including disabled).
+  app.get("/api/admin/hero-slides", adminAuthMiddleware, async (_req, res) => {
+    const rows = await storage.listHeroSlides();
+    res.json(rows);
+  });
+
+  app.post("/api/admin/hero-slides", adminAuthMiddleware, async (req, res) => {
+    const parsed = validate(insertHeroSlideSchema, req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error });
+    const slide = await storage.createHeroSlide(parsed.data);
+    await auditAdmin(req, "hero-slide.create", "heroSlide", { id: slide.id });
+    res.status(201).json(slide);
+  });
+
+  app.patch("/api/admin/hero-slides/:id", adminAuthMiddleware, async (req, res) => {
+    const partial = insertHeroSlideSchema.partial().safeParse(req.body);
+    if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
+    const slide = await storage.updateHeroSlide(Number(req.params.id), partial.data);
+    if (!slide) return res.status(404).json({ message: "Slide not found" });
+    await auditAdmin(req, "hero-slide.update", "heroSlide", { id: slide.id });
+    res.json(slide);
+  });
+
+  app.delete("/api/admin/hero-slides/:id", adminAuthMiddleware, async (req, res) => {
+    const ok = await storage.deleteHeroSlide(Number(req.params.id));
+    if (!ok) return res.status(404).json({ message: "Slide not found" });
+    await auditAdmin(req, "hero-slide.delete", "heroSlide", { id: req.params.id });
+    res.json({ message: "Slide deleted" });
+  });
+
+  app.post("/api/admin/hero-slides/reorder", adminAuthMiddleware, async (req, res) => {
+    const parsed = z.object({ ids: z.array(z.number().int().positive()).max(50) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid ids array" });
+    const rows = await storage.reorderHeroSlides(parsed.data.ids);
+    await auditAdmin(req, "hero-slide.reorder", "heroSlide", { count: parsed.data.ids.length });
+    res.json(rows);
+  });
+
+  // Image upload for hero slides — saves to /uploads/hero/<random>.<ext>
+  // Reuses the existing `upload` multer (50 MB, image-only, no SVG).
+  app.post(
+    "/api/admin/hero-slides/upload-image",
+    adminAuthMiddleware,
+    upload.single("image"),
+    async (req, res) => {
+      try {
+        if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+        // Move into uploads/hero/ for tidiness.
+        const heroDir = path.join(uploadsDir, "hero");
+        if (!fs.existsSync(heroDir)) fs.mkdirSync(heroDir, { recursive: true });
+        const finalName = path.basename(req.file.filename);
+        const finalPath = path.join(heroDir, finalName);
+        // Copy + unlink instead of rename — fs.renameSync fails with
+        // EXDEV when the multer temp dir and the hero dir sit on different
+        // mount points (the Coolify VPS deploys uploads as a bind volume).
+        try {
+          fs.renameSync(req.file.path, finalPath);
+        } catch (err: any) {
+          if (err?.code === "EXDEV") {
+            fs.copyFileSync(req.file.path, finalPath);
+            try { fs.unlinkSync(req.file.path); } catch { /* best-effort */ }
+          } else {
+            throw err;
+          }
+        }
+        const url = `/uploads/hero/${finalName}`;
+        await auditAdmin(req, "hero-slide.upload", "heroSlide", { url });
+        res.json({ url });
+      } catch (e: any) {
+        res.status(500).json({ message: e?.message || "Upload failed" });
+      }
+    }
+  );
+
+  // AI image generation — { prompt, provider: 'openai'|'gemini', size }
+  // Persists the result to /uploads/hero/ and returns the public URL so the
+  // admin UI can drop it straight into the slide form.
+  app.post("/api/admin/hero-slides/generate-image", adminAuthMiddleware, async (req, res) => {
+    try {
+      const body = z.object({
+        prompt: z.string().min(4).max(2000),
+        provider: z.enum(["openai", "gemini"]).default("openai"),
+        size: z.string().max(20).default("1792x1024"),
+      }).safeParse(req.body);
+      if (!body.success) return res.status(400).json({ message: body.error.issues.map(i => i.message).join(", ") });
+
+      const { prompt, provider, size } = body.data;
+      let buf: Buffer;
+      if (provider === "gemini") {
+        const { generateGeminiImageBuffer } = await import("./replit_integrations/image/gemini");
+        buf = await generateGeminiImageBuffer(prompt, size);
+      } else {
+        const { generateImageBuffer } = await import("./replit_integrations/image/client");
+        // gpt-image-1 only accepts 1024x1024, 1024x1536, 1536x1024. The admin
+        // UI also offers 1792x1024 (which is a DALL-E-3 size) — map it down
+        // to the nearest supported landscape size so the request doesn't
+        // 400 out of OpenAI.
+        const SIZE_MAP: Record<string, string> = {
+          "1792x1024": "1536x1024",
+          "1024x1792": "1024x1536",
+        };
+        const ALLOWED = new Set(["1024x1024", "1024x1536", "1536x1024"]);
+        const openaiSize = (SIZE_MAP[size] || (ALLOWED.has(size) ? size : "1024x1024")) as any;
+        buf = await generateImageBuffer(prompt, openaiSize);
+      }
+
+      const heroDir = path.join(uploadsDir, "hero");
+      if (!fs.existsSync(heroDir)) fs.mkdirSync(heroDir, { recursive: true });
+      const filename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}-${provider}.png`;
+      fs.writeFileSync(path.join(heroDir, filename), buf);
+      const url = `/uploads/hero/${filename}`;
+      await auditAdmin(req, "hero-slide.generate", "heroSlide", { provider, prompt: prompt.slice(0, 80) });
+      res.json({ url, provider });
+    } catch (e: any) {
+      const msg = e?.message || "Image generation failed";
+      console.error("[hero-slides/generate-image]", msg);
+      res.status(500).json({ message: msg });
+    }
   });
 
   // ---- Social Proof Settings ----

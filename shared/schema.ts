@@ -2119,3 +2119,56 @@ export const festivalReminderLog = pgTable("festival_reminder_log", {
   // Idempotency: each (festival, recipient) pair gets exactly one reminder.
   unq: uniqueIndex("festival_reminder_unq").on(t.festivalId, t.recipientType, t.recipientId),
 }));
+
+// ============================================================================
+// Hero Slider — admin-managed homepage hero carousel.
+// Each row = one slide. CRUD via /api/admin/hero-slides. Public read at
+// /api/hero-slides returns only enabled rows ordered by `position`.
+// imageUrl can be an absolute URL, a /uploads/... path (admin upload), or
+// a /attached_assets/... path (legacy bundled hero scenes).
+// ============================================================================
+export const heroSlides = pgTable("hero_slides", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  position: integer("position").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+  imageUrl: text("image_url").notNull(),
+  imageAlt: text("image_alt").notNull().default(""),
+  mobilePosition: text("mobile_position").notNull().default("center center"),
+  tagline: text("tagline").notNull().default(""),
+  title1: text("title1").notNull().default(""),
+  title2: text("title2").notNull().default(""),
+  title2Highlight: text("title2_highlight").notNull().default(""),
+  subtitle: text("subtitle").notNull().default(""),
+  cta1Label: text("cta1_label").notNull().default(""),
+  cta1Href: text("cta1_href").notNull().default(""),
+  cta1Icon: text("cta1_icon").notNull().default("ShoppingBag"),
+  cta2Label: text("cta2_label").notNull().default(""),
+  cta2Href: text("cta2_href").notNull().default(""),
+  cta2Icon: text("cta2_icon").notNull().default("Sparkles"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  positionIdx: index("hero_slides_position_idx").on(t.position),
+}));
+
+export const insertHeroSlideSchema = createInsertSchema(heroSlides, {
+  imageUrl: z.string().min(1, "imageUrl is required").max(2048),
+  imageAlt: z.string().max(500).optional(),
+  mobilePosition: z.string().max(50).optional(),
+  tagline: z.string().max(200).optional(),
+  title1: z.string().max(200).optional(),
+  title2: z.string().max(200).optional(),
+  title2Highlight: z.string().max(200).optional(),
+  subtitle: z.string().max(600).optional(),
+  cta1Label: z.string().max(120).optional(),
+  cta1Href: z.string().max(1024).optional(),
+  cta1Icon: z.string().max(60).optional(),
+  cta2Label: z.string().max(120).optional(),
+  cta2Href: z.string().max(1024).optional(),
+  cta2Icon: z.string().max(60).optional(),
+  position: z.number().int().min(0).max(999).optional(),
+  enabled: z.boolean().optional(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type HeroSlide = typeof heroSlides.$inferSelect;
+export type InsertHeroSlide = z.infer<typeof insertHeroSlideSchema>;

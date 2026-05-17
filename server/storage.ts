@@ -2,7 +2,7 @@ import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gt, gte, lte, lt, coun
 import { db } from "./db";
 import {
   users, products, orders, pandits, panditReviews, panditApplications, franchiseApplications, pujaBookings, astrologyBookings,
-  socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs,
+  socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs, heroSlides,
   coupons, subscriptions, donations, donationOrders, astrologers, seoPages, matrimonyProfiles,
   invoices, dispatches, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
   emailSends, newsletterCampaigns, emailUnsubscribes,
@@ -29,6 +29,7 @@ import {
   type SocialProofSettings, type InsertSocialProofSettings,
   type BoostEvent, type InsertBoostEvent,
   type SalesPopup, type InsertSalesPopup,
+  type HeroSlide, type InsertHeroSlide,
   type SiteSettings, type InsertSiteSettings,
   type ProductReview, type InsertProductReview,
   type ProductQuestion, type InsertProductQuestion,
@@ -135,6 +136,14 @@ export interface IStorage {
   createSalesPopup(popup: InsertSalesPopup): Promise<SalesPopup>;
   updateSalesPopup(id: number, data: Partial<InsertSalesPopup>): Promise<SalesPopup | undefined>;
   deleteSalesPopup(id: number): Promise<boolean>;
+
+  // Hero slider
+  listHeroSlides(opts?: { enabledOnly?: boolean }): Promise<HeroSlide[]>;
+  getHeroSlide(id: number): Promise<HeroSlide | undefined>;
+  createHeroSlide(data: InsertHeroSlide): Promise<HeroSlide>;
+  updateHeroSlide(id: number, data: Partial<InsertHeroSlide>): Promise<HeroSlide | undefined>;
+  deleteHeroSlide(id: number): Promise<boolean>;
+  reorderHeroSlides(orderedIds: number[]): Promise<HeroSlide[]>;
 
   getSiteSettings(): Promise<SiteSettings | undefined>;
   upsertSiteSettings(settings: InsertSiteSettings): Promise<SiteSettings>;
@@ -1871,6 +1880,55 @@ export class DatabaseStorage implements IStorage {
   async getSpiritualJourney(userId: number): Promise<any | null> {
     const [row] = await db.select().from(spiritualJourney).where(eq(spiritualJourney.userId, userId));
     return row ? row.data : null;
+  }
+
+  // ===== Hero slider =====
+  async listHeroSlides(opts?: { enabledOnly?: boolean }): Promise<HeroSlide[]> {
+    const q = db.select().from(heroSlides);
+    const rows = opts?.enabledOnly
+      ? await q.where(eq(heroSlides.enabled, true)).orderBy(asc(heroSlides.position), asc(heroSlides.id))
+      : await q.orderBy(asc(heroSlides.position), asc(heroSlides.id));
+    return rows;
+  }
+  async getHeroSlide(id: number): Promise<HeroSlide | undefined> {
+    const [row] = await db.select().from(heroSlides).where(eq(heroSlides.id, id));
+    return row;
+  }
+  async createHeroSlide(data: InsertHeroSlide): Promise<HeroSlide> {
+    // Auto-place new slides at the end so the admin sees them at the bottom
+    // instead of overlapping an existing position.
+    let position = data.position;
+    if (position === undefined || position === null) {
+      const [{ maxPos }] = await db
+        .select({ maxPos: dsql<number>`coalesce(max(${heroSlides.position}), -1)` })
+        .from(heroSlides);
+      position = (Number(maxPos) || -1) + 1;
+    }
+    const [row] = await db.insert(heroSlides).values({ ...data, position }).returning();
+    return row;
+  }
+  async updateHeroSlide(id: number, data: Partial<InsertHeroSlide>): Promise<HeroSlide | undefined> {
+    const [row] = await db.update(heroSlides)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(heroSlides.id, id))
+      .returning();
+    return row;
+  }
+  async deleteHeroSlide(id: number): Promise<boolean> {
+    const out = await db.delete(heroSlides).where(eq(heroSlides.id, id)).returning({ id: heroSlides.id });
+    return out.length > 0;
+  }
+  async reorderHeroSlides(orderedIds: number[]): Promise<HeroSlide[]> {
+    // Re-stamp position sequentially. Run as a single transaction so the
+    // public /api/hero-slides query never observes a half-applied order.
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx.update(heroSlides)
+          .set({ position: i, updatedAt: new Date() })
+          .where(eq(heroSlides.id, orderedIds[i]));
+      }
+    });
+    return this.listHeroSlides();
   }
 
   async upsertSpiritualJourney(userId: number, data: any): Promise<void> {

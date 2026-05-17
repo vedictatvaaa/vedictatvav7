@@ -2,7 +2,7 @@ export type TabId =
   | "dashboard" | "products" | "orders" | "pandits" | "pandit-apps" | "astrologers"
   | "bookings" | "reviews" | "returns" | "coupons" | "subscriptions" | "donations"
   | "matrimony" | "seo" | "merchant" | "site-settings" | "integrations" | "audit-log"
-  | "social-proof" | "sales-popups" | "security" | "analytics" | "aplus"
+  | "social-proof" | "sales-popups" | "hero-slider" | "security" | "analytics" | "aplus"
   | "notifications" | "bestsellers" | "abandoned-carts" | "inventory" | "customers"
   | "blog" | "email-marketing" | "deploy" | "ai-assistant" | "ai-coder" | "backups"
   | "pandit-payouts" | "pandit-affiliate" | "pandit-memberships"
