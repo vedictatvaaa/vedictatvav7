@@ -847,10 +847,11 @@ function TithiToolRibbon() {
     || location === "/checkout"
     || location.startsWith("/cart");
 
-  // Admin toggle — defaults to ON only on the very first paint (before
-  // settings have loaded) so the bar does not flash hidden->visible. Once
-  // settings have loaded, respect whatever the admin saved.
-  const adminEnabled = settings ? Boolean((settings as any).ribbonEnabled ?? true) : true;
+  // Admin toggle — defaults to OFF. The promo bar must stay hidden until
+  // the admin explicitly enables it from the admin panel. No fallback to
+  // "on" on first paint, no fallback to default items when items array
+  // is empty/missing.
+  const adminEnabled = Boolean((settings as any)?.ribbonEnabled);
   const rawItems = (settings as any)?.ribbonItems;
   // Coerce every field to a string and only accept hrefs that are relative
   // paths or http(s) URLs. Anything else (javascript:, data:, vbscript:, an
@@ -870,13 +871,10 @@ function TithiToolRibbon() {
         }) : null)
         .filter((r): r is RibbonItem => !!r && !!r.title && isSafeHref(r.href))
     : [];
-  // Only fall back to DEFAULT_RIBBON_ITEMS when the admin has NEVER configured
-  // the field (rawItems is undefined/null). If the admin explicitly saved an
-  // empty array, treat that as an intentional "hide the bar" and do not
-  // resurrect the defaults — otherwise clearing slides in the admin panel
-  // appears to do nothing.
-  const adminConfigured = Array.isArray(rawItems);
-  const adminItems: RibbonItem[] = adminConfigured ? sanitized : DEFAULT_RIBBON_ITEMS;
+  // No fallback to defaults — if the admin hasn't configured items, the bar
+  // stays hidden. The DEFAULT_RIBBON_ITEMS export is preserved as a seed
+  // catalog the admin panel can paste in, not an automatic fallback.
+  const adminItems: RibbonItem[] = sanitized;
 
   const hidden = routeHidden || !adminEnabled || adminItems.length === 0;
 
@@ -918,7 +916,15 @@ function TithiToolRibbon() {
       data-testid="ribbon-promo"
     >
       <div className="py-2 text-[12px] sm:text-[13px] overflow-hidden">
-        <div className="flex w-max animate-marquee motion-reduce:animate-none">
+        <div
+          className="flex"
+          style={{
+            width: "max-content",
+            animation: "marquee 35s linear infinite",
+            willChange: "transform",
+          }}
+          data-testid="ribbon-marquee-track"
+        >
           <div className="flex items-center">
             {adminItems.map((r) => renderItem(r, 0))}
           </div>
