@@ -1601,3 +1601,9 @@ id = "SWPsHJZl1mRXQPAT5XWOw"
 uri = "file://attached_assets/generated_images/shiva-blessing-hand.png"
 type = "image"
 title = "Shiva's blessing hand — abhaya mudra"
+
+[[outputs]]
+id = "cED3nW1uwJsIIlMoxdU9j"
+uri = "file://vedictatva-deploy-20260517-1830.zip"
+type = "unspecified"
+title = "Vedic Tatva — Deploy-Ready Package"

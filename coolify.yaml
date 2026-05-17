@@ -1,0 +1,51 @@
+# =============================================================================
+# Vedic Tatva — Coolify Application Configuration
+# =============================================================================
+# This file is read by Coolify v4 when you import this repository.
+# It pre-fills port, health-check, and persistent storage settings.
+#
+# Reference: https://coolify.io/docs/knowledge-base/coolify-yml
+# =============================================================================
+
+version: "1"
+
+applications:
+  - name: vedictatva
+    build:
+      type: dockerfile
+      dockerfile: Dockerfile
+    runtime:
+      port: 5000
+      health_check:
+        path: /api/health
+        interval: 30
+        timeout: 5
+        retries: 3
+        start_period: 45
+    storage:
+      - source: vedictatva-uploads
+        destination: /app/uploads
+      - source: vedictatva-backups
+        destination: /app/backups
+    environment:
+      # Required — fill in Coolify → Environment Variables
+      - PG_DATABASE_URL          # postgres connection string from Coolify DB
+      - DATABASE_URL             # same as above (alias)
+      - SESSION_SECRET           # openssl rand -hex 32
+      - UNSUBSCRIBE_SECRET       # openssl rand -hex 32
+      - ORDER_LOOKUP_SECRET      # openssl rand -hex 32
+      - RAZORPAY_KEY_ID
+      - RAZORPAY_KEY_SECRET
+      - OPENAI_API_KEY
+      - SHIPROCKET_WEBHOOK_TOKEN
+      # Optional
+      - SENDGRID_API_KEY
+      - MSG91_AUTH_KEY
+      - GOOGLE_CLIENT_ID
+      - PUBLIC_SITE_URL
+      - GSC_SITE_URL
+      - GOOGLE_SERVICE_ACCOUNT_JSON
+      - BACKUP_DIR=/app/backups
+      - BACKUP_RETENTION_DAYS=7
+      - DEPLOY_FROM_BROWSER=0
+      - SKIP_DB_PUSH=0

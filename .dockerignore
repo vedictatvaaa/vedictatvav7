@@ -25,6 +25,7 @@ coverage
 *.md
 !README.md
 !DEPLOY.md
+!HOSTINGER_COOLIFY.md
 !replit.md
 threat_model.md
 screenshots
