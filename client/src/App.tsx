@@ -9,7 +9,7 @@ import { WishlistProvider } from "@/lib/wishlist";
 import AmbientBackdrop from "@/components/AmbientBackdrop";
 import { useSiteSettings } from "@/lib/site-settings";
 import { useFestivalTheme } from "@/components/festival/FestivalDecor";
-import { CalendarDays, UserRound, Store, Flame, Phone, Sparkles, Gift, ChevronLeft, ChevronRight, Music2 } from "lucide-react";
+import { CalendarDays, UserRound, Store, Flame, Phone, Sparkles, Gift, Music2 } from "lucide-react";
 import HawanKundIcon from "@/components/icons/HawanKundIcon";
 import PanditNavIcon from "@/components/icons/PanditIcon";
 import TempleIcon from "@/components/icons/TempleIcon";
@@ -837,8 +837,6 @@ export const DEFAULT_RIBBON_ITEMS: RibbonItem[] = [
 function TithiToolRibbon() {
   const [location] = useLocation();
   const settings = useSiteSettings();
-  const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
 
   // Hide on the calculator itself, admin, pandit-portal and checkout flows
   // where a top promo strip would be a distraction.
@@ -879,93 +877,54 @@ function TithiToolRibbon() {
   // appears to do nothing.
   const adminConfigured = Array.isArray(rawItems);
   const adminItems: RibbonItem[] = adminConfigured ? sanitized : DEFAULT_RIBBON_ITEMS;
-  const rotationMs = Math.max(1500, Number((settings as any)?.ribbonRotationMs) || 5000);
 
   const hidden = routeHidden || !adminEnabled || adminItems.length === 0;
 
-  useEffect(() => {
-    if (hidden || paused || adminItems.length < 2) return;
-    const t = window.setInterval(() => {
-      setIdx((i) => (i + 1) % adminItems.length);
-    }, rotationMs);
-    return () => window.clearInterval(t);
-  }, [hidden, paused, adminItems.length, rotationMs]);
-
-  // Re-clamp index when the admin shrinks the list.
-  useEffect(() => {
-    if (idx >= adminItems.length) setIdx(0);
-  }, [adminItems.length, idx]);
-
   if (hidden) return null;
 
-  const item = adminItems[idx];
-  const Icon = RIBBON_ICON_MAP[item.iconName] || CalendarDays;
-  const go = (delta: number) => setIdx((i) => (i + delta + adminItems.length) % adminItems.length);
+  // Continuous marquee — render the item list twice in a row so when the
+  // first copy scrolls off-screen the second is already in position. The
+  // `marquee` keyframe in index.css translates from 0 to -50%, which is
+  // exactly the width of one full copy of the items. Pauses on hover.
+  const renderItem = (r: RibbonItem, copyIdx: number) => {
+    const Icon = RIBBON_ICON_MAP[r.iconName] || CalendarDays;
+    return (
+      <span
+        key={`${copyIdx}-${r.id}`}
+        className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-6 flex-shrink-0"
+        data-testid={copyIdx === 0 ? `ribbon-slide-${r.id}` : undefined}
+        aria-hidden={copyIdx === 1 ? true : undefined}
+      >
+        <Icon className="h-3.5 w-3.5 text-[#D4AF37] flex-shrink-0" />
+        {r.eyebrow && <span className="text-white/90 flex-shrink-0">{r.eyebrow}:</span>}
+        <span className="font-semibold text-white whitespace-nowrap">{r.title}</span>
+        {r.detail && <span className="text-white/60 whitespace-nowrap">&middot; {r.detail}</span>}
+        {r.cta && (
+          <Link
+            href={r.href}
+            className="inline-flex items-center gap-1 bg-[#D4AF37] hover:bg-[#c19f30] text-[#1a0a0e] rounded-md px-2.5 py-0.5 text-[11px] sm:text-[12px] font-bold tracking-wide flex-shrink-0"
+            data-testid={copyIdx === 0 ? `link-ribbon-${r.id}` : undefined}
+          >
+            {r.cta}
+          </Link>
+        )}
+      </span>
+    );
+  };
 
   return (
     <div
-      className="w-full bg-gradient-to-r from-[#6D2B35] via-[#5a232b] to-[#6D2B35] text-white border-b border-[#D4AF37]/30"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onTouchStart={() => setPaused(true)}
+      className="w-full bg-gradient-to-r from-[#6D2B35] via-[#5a232b] to-[#6D2B35] text-white border-b border-[#D4AF37]/30 overflow-hidden"
       data-testid="ribbon-promo"
     >
-      <div className="container mx-auto px-3 py-2 flex items-center gap-2 sm:gap-3 text-[12px] sm:text-[13px]">
-        {adminItems.length > 1 && (
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label="Previous announcement"
-            className="hidden sm:inline-flex items-center justify-center w-5 h-5 rounded-full text-white/70 hover:text-[#D4AF37] hover-elevate flex-shrink-0"
-            data-testid="button-ribbon-prev"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
-        )}
-
-        <div
-          key={item.id}
-          className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 justify-center animate-in fade-in slide-in-from-right-2 duration-500"
-          data-testid={`ribbon-slide-${item.id}`}
-        >
-          <Icon className="h-3.5 w-3.5 text-[#D4AF37] flex-shrink-0" />
-          {item.eyebrow && <span className="text-white/90 hidden sm:inline flex-shrink-0">{item.eyebrow}:</span>}
-          <span className="font-semibold text-white truncate">{item.title}</span>
-          {item.detail && <span className="hidden md:inline text-white/60 truncate">&middot; {item.detail}</span>}
-          {item.cta && (
-            <Link
-              href={item.href}
-              className="ml-1 sm:ml-2 inline-flex items-center gap-1 bg-[#D4AF37] hover:bg-[#c19f30] text-[#1a0a0e] rounded-md px-2.5 py-0.5 text-[11px] sm:text-[12px] font-bold tracking-wide flex-shrink-0"
-              data-testid={`link-ribbon-${item.id}`}
-            >
-              {item.cta}
-            </Link>
-          )}
-        </div>
-
-        {adminItems.length > 1 && (
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label="Next announcement"
-            className="hidden sm:inline-flex items-center justify-center w-5 h-5 rounded-full text-white/70 hover:text-[#D4AF37] hover-elevate flex-shrink-0"
-            data-testid="button-ribbon-next"
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        )}
-
-        <div className="hidden md:flex items-center gap-1 ml-1 flex-shrink-0">
-          {adminItems.length > 1 && adminItems.map((r, i) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setIdx(i)}
-              aria-label={`Go to announcement ${i + 1}`}
-              data-testid={`ribbon-dot-${i}`}
-              className={`h-1.5 rounded-full transition-all ${i === idx ? "w-4 bg-[#D4AF37]" : "w-1.5 bg-white/30 hover:bg-white/50"}`}
-            />
-          ))}
+      <div className="py-2 text-[12px] sm:text-[13px] overflow-hidden">
+        <div className="flex w-max animate-marquee motion-reduce:animate-none">
+          <div className="flex items-center">
+            {adminItems.map((r) => renderItem(r, 0))}
+          </div>
+          <div className="flex items-center" aria-hidden="true">
+            {adminItems.map((r) => renderItem(r, 1))}
+          </div>
         </div>
       </div>
     </div>
