@@ -906,22 +906,10 @@ export default function Navbar() {
                 style={{ background: "linear-gradient(135deg, #4a1a22 0%, #6D2B35 55%, #8B3A47 100%)" }}
               >
                 <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-70" aria-hidden="true" />
-                <div className="flex items-center gap-2.5">
-                  {settings?.logoUrl ? (
-                    <img src={settings.logoUrl} alt="" className="h-8 w-8 object-contain rounded-sm bg-white/10 p-1" />
-                  ) : (
-                    <div className="h-8 w-8 rounded-sm bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center">
-                      <Sparkles className="h-4 w-4 text-[#D4AF37]" strokeWidth={2} />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="font-serif text-[16px] font-bold leading-none tracking-tight text-white truncate" data-testid="text-mobile-brand">
-                      {settings?.siteName || "Vedic Tatva"}
-                    </p>
-                    <p className="mt-1 text-[9px] tracking-[0.22em] uppercase text-[#D4AF37]/95 leading-none font-semibold">
-                      Authentic · Vedic · Yours
-                    </p>
-                  </div>
+                <div className="flex items-center">
+                  <p className="font-serif text-[16px] font-bold leading-none tracking-tight text-white truncate" data-testid="text-mobile-brand">
+                    {settings?.siteName || "Vedic Tatva"}
+                  </p>
                 </div>
 
                 {/* Inline city switcher */}
