@@ -10,8 +10,13 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 COPY package.json package-lock.json* ./
 RUN NODE_ENV=development npm ci --no-audit --no-fund
 
-# Copy source and build
-COPY . .
+# Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
+COPY client ./client
+COPY server ./server
+COPY shared ./shared
+COPY script ./script
+COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN npm run build
 
 # ---------- Stage 2: runtime ----------
