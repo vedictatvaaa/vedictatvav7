@@ -1607,3 +1607,9 @@ id = "cED3nW1uwJsIIlMoxdU9j"
 uri = "file://vedictatva-deploy-20260517-1830.zip"
 type = "unspecified"
 title = "Vedic Tatva — Deploy-Ready Package"
+
+[[outputs]]
+id = "elpQRLGAwHykejTD3Layt"
+uri = "file://vedictatva-deploy-20260517-1838.zip"
+type = "unspecified"
+title = "Vedic Tatva — One-Click Coolify Deploy Package"

@@ -28,6 +28,7 @@ zip -r "${OUTFILE}" \
   DEPLOY.md \
   HOSTINGER_COOLIFY.md \
   scripts/hostinger-one-click.sh \
+  scripts/coolify-deploy.sh \
   scripts/make-deploy-package.sh \
   scripts/deploy.sh \
   shared/ \
