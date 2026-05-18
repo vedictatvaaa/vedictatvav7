@@ -636,8 +636,11 @@ function Router() {
         }>
         <Switch>
           <Route path="/" component={Home} />
-          {/* SEO keyword landing pages (top-level URLs for organic ranking) */}
-          <Route path="/online-puja-booking">{() => <SeoLanding slug="online-puja-booking" />}</Route>
+          {/* SEO keyword landing pages (top-level URLs for organic ranking).
+              NOTE: /online-puja-booking is intentionally NOT here — it's owned
+              by the real PujaBooking component below so users actually get the
+              booking form (Step 01/02 + Confirm). A duplicate SeoLanding entry
+              here would shadow it inside this Switch and silently break booking. */}
           <Route path="/satyanarayan-puja">{() => <SeoLanding slug="satyanarayan-puja" />}</Route>
           <Route path="/rudrabhishek-puja">{() => <SeoLanding slug="rudrabhishek-puja" />}</Route>
           <Route path="/navratri-puja">{() => <SeoLanding slug="navratri-puja" />}</Route>
