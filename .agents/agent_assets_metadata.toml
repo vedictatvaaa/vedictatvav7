@@ -1470,6 +1470,108 @@ uri = "file://attached_assets/heroes/hero-scene-tirth-yatra.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "HSu5JnKtx8-KlF4dkVFbp"
+uri = "file://attached_assets/heroes/gen/test-puja-thali.png"
+type = "image"
+title = "puja thali test"
+
+[[generated]]
+id = "0RT8gL0yzlw_L-ViRfjyJ"
+uri = "file://attached_assets/heroes/gen/hero-puja-booking.png"
+type = "image"
+title = "puja booking hero"
+
+[[generated]]
+id = "Ek1kYcueLVFbtaWzAOEqd"
+uri = "file://attached_assets/heroes/gen/hero-pandit-booking.png"
+type = "image"
+title = "pandit booking hero"
+
+[[generated]]
+id = "xNJK5KBSdHDiDH5TiJ4vG"
+uri = "file://attached_assets/heroes/gen/hero-astrology.png"
+type = "image"
+title = "astrology kundli hero"
+
+[[generated]]
+id = "AEK7PjELlhXzOji2jsqv6"
+uri = "file://attached_assets/heroes/gen/hero-tirth-yatra.png"
+type = "image"
+title = "tirth yatra hero"
+
+[[generated]]
+id = "xDTReO9myey5HQ_4zzO5Q"
+uri = "file://attached_assets/heroes/gen/hero-essentials-page.png"
+type = "image"
+title = "essentials page hero"
+
+[[generated]]
+id = "RXbw9erItO0RfZXhlQCt_"
+uri = "file://attached_assets/heroes/gen/hero-book-pandit.png"
+type = "image"
+title = "book pandit hero"
+
+[[generated]]
+id = "-Dz3s7NXzPGDopZlYojQr"
+uri = "file://attached_assets/heroes/gen/hero-online-puja.png"
+type = "image"
+title = "online puja hero"
+
+[[generated]]
+id = "QULwZc7QjXe0BYGajNDXN"
+uri = "file://attached_assets/heroes/gen/hero-pind-daan.png"
+type = "image"
+title = "pind daan hero"
+
+[[generated]]
+id = "nD14ux8RiTBbIpsjNCYSs"
+uri = "file://attached_assets/heroes/gen/hero-festivals.png"
+type = "image"
+title = "festivals hero"
+
+[[generated]]
+id = "YCDSEZ-hhTebgWJ51h81d"
+uri = "file://attached_assets/heroes/gen16x9/hero-essentials.png"
+type = "image"
+title = "essentials 16x9"
+
+[[generated]]
+id = "hL183Z_UJ2D4o2-OT2ezY"
+uri = "file://attached_assets/heroes/gen16x9/hero-brand.png"
+type = "image"
+title = "brand 16x9"
+
+[[generated]]
+id = "G0IY6COqb6rX9zL_fE057"
+uri = "file://attached_assets/heroes/gen16x9/hero-pandit.png"
+type = "image"
+title = "pandit 16x9"
+
+[[generated]]
+id = "FbOwc6Ov7vNcwdP5j-Wlo"
+uri = "file://attached_assets/heroes/gen16x9/hero-astrology.png"
+type = "image"
+title = "astrology 16x9"
+
+[[generated]]
+id = "koou13GAZRnxb5A6xoaKA"
+uri = "file://attached_assets/heroes/gen16x9/hero-tirth-yatra.png"
+type = "image"
+title = "tirth yatra 16x9"
+
+[[generated]]
+id = "hV5jgdR-amdHdvJNCDzbr"
+uri = "file://attached_assets/heroes/gen16x9/hero-pind-daan.png"
+type = "image"
+title = "pind daan 16x9"
+
+[[generated]]
+id = "NXrFczd6aV4DSXlHdD4D-"
+uri = "file://attached_assets/heroes/gen16x9/hero-essentials-page.png"
+type = "image"
+title = "essentials page 16x9"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"

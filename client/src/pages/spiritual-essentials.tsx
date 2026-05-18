@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { optImg, optImgSrcSet, SIZES } from "@/lib/optImg";
 import { ArrowRight, ChevronDown, ShieldCheck, Award, Truck, Heart, Sparkles, Flame, Leaf } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import PageAPlusContent from "@/components/PageAPlusContent";
@@ -133,49 +134,70 @@ export default function SpiritualEssentials() {
         twitterCard="summary_large_image"
       />
 
-      {/* Premium hero */}
-      <section className="relative overflow-hidden text-white"
-        style={{ background: `linear-gradient(135deg, ${MAROON} 0%, #3A0F12 50%, #1A0608 100%)` }}>
-        <div aria-hidden="true" className="absolute inset-0 opacity-[0.06] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 25% 30%, white 1px, transparent 1px), radial-gradient(circle at 75% 70%, white 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
-        <div aria-hidden="true" className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl opacity-20"
-          style={{ background: GOLD }} />
-        <div aria-hidden="true" className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl opacity-15"
-          style={{ background: GOLD }} />
+      {/* Premium hero — unified full-bleed image, dynamic viewport, no opaque block */}
+      <section
+        className="relative overflow-hidden text-white flex items-center min-h-[100svh] [@supports(height:100dvh)]:min-h-[100dvh] md:min-h-[600px] lg:min-h-[640px] bg-[#1a0a0e]"
+      >
+        {/* Full-bleed Gemini hero image — served via /api/img for responsive AVIF/WebP variants */}
+        <img
+          src={optImg("/attached_assets/heroes/hero-scene-essentials-page.png", 1080) || "/attached_assets/heroes/hero-scene-essentials-page.png"}
+          srcSet={optImgSrcSet("/attached_assets/heroes/hero-scene-essentials-page.png", [320, 480, 768, 1080, 1440])}
+          sizes={SIZES.hero}
+          alt="Sacred Hindu puja samagri spread — brass idol, rudraksha mala, kalash and diyas"
+          className="absolute inset-0 w-full h-full object-cover object-[center_30%]"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
+        {/* Lower-third warm wash — image already fades dark here, this just guarantees text contrast */}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#1a0a0e]/65 via-[#1a0a0e]/20 to-transparent pointer-events-none" />
+        {/* Subtle gold glow accent — desktop only */}
+        <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />
 
-        <div className="container mx-auto px-4 py-14 sm:py-20 lg:py-28 relative z-10 text-center">
+        <div className="container mx-auto px-4 pt-2 md:pt-6 pb-6 md:pb-16 relative z-10 text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs uppercase tracking-[0.22em] font-semibold mb-5 sm:mb-7"
-              style={{ background: `${GOLD}1F`, color: GOLD, border: `1px solid ${GOLD}55` }}>
+            <span
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs uppercase tracking-[0.22em] font-semibold mb-3 sm:mb-6"
+              style={{ background: `${GOLD}1F`, color: GOLD, border: `1px solid ${GOLD}55`, textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
+            >
               <Sparkles className="w-3.5 h-3.5" />
               The Sacred Marketplace
             </span>
 
-            <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05] mb-5 sm:mb-7 max-w-4xl mx-auto">
+            <h1
+              className="font-serif text-[clamp(2rem,8vw,2.75rem)] sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.05] mb-3 sm:mb-6 max-w-4xl mx-auto"
+              style={{ textShadow: "0 2px 18px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.55)" }}
+            >
               Puja Essentials
             </h1>
-            <p className="text-base sm:text-lg lg:text-xl text-white/85 max-w-2xl mx-auto leading-relaxed mb-8 sm:mb-10">
-              Eight sacred verticals. Each with its own AI advisor, shastra-aligned guidance, and a personality of its own.
-              Every Rudraksha X-ray verified. Every gemstone lab certified. Every idol shilpa-shastra correct.
+            <p
+              className="text-[clamp(13px,3.6vw,15px)] sm:text-lg lg:text-xl text-white/90 max-w-2xl mx-auto leading-snug sm:leading-relaxed mb-4 sm:mb-8 font-light"
+              style={{ textShadow: "0 1px 12px rgba(0,0,0,0.65)" }}
+            >
+              Eight sacred verticals. Each with its own AI advisor, shastra-aligned guidance,
+              and a personality of its own. Every Rudraksha X-ray verified. Every gemstone lab certified.
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-[11px] sm:text-xs text-white/70">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 text-[11px] sm:text-xs text-white/85">
               {[
                 { Icon: ShieldCheck, t: "Lab Certified" },
                 { Icon: Award, t: "Pandit Energised" },
                 { Icon: Truck, t: "Pan-India + NRI" },
                 { Icon: Heart, t: "7-Day Returns" },
               ].map(({ Icon, t }) => (
-                <span key={t} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full backdrop-blur-sm"
+                  style={{ background: "rgba(0,0,0,0.3)", border: "1px solid rgba(212,175,55,0.25)" }}
+                >
                   <Icon className="w-3.5 h-3.5" style={{ color: GOLD }} />
                   {t}
                 </span>
               ))}
             </div>
 
-            <div className="mt-8 sm:mt-10 flex justify-center animate-bounce">
-              <ChevronDown className="w-5 h-5 text-white/50" />
+            <div className="mt-5 sm:mt-10 flex justify-center animate-bounce">
+              <ChevronDown className="w-5 h-5 text-white/60" />
             </div>
           </motion.div>
         </div>

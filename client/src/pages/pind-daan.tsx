@@ -1,5 +1,6 @@
 import { Link, useRoute } from "wouter";
 import { useI18n } from "@/lib/i18n";
+import { optImg, optImgSrcSet, SIZES } from "@/lib/optImg";
 import PageSeo from "@/components/PageSeo";
 import QuickAnswer from "@/components/QuickAnswer";
 import { faqPage, breadcrumbList, abs } from "@/lib/seo-schemas";
@@ -424,20 +425,49 @@ function HeroSection({ eyebrow, title, titleHi, subtitle, ctaPujaType, icon: Ico
   const HeroIcon = Icon || Flame;
   const { t } = useT();
   return (
-    <div className="bg-[#6D2B35] text-white border-b border-[#D4AF37]/30">
-      <div className="container mx-auto px-4 py-10 sm:py-14 max-w-4xl">
+    <div className="relative overflow-hidden bg-[#1a0a0e] text-white border-b border-[#D4AF37]/30">
+      <img
+        src={optImg("/attached_assets/heroes/hero-scene-pind-daan.png", 1080) || "/attached_assets/heroes/hero-scene-pind-daan.png"}
+        srcSet={optImgSrcSet("/attached_assets/heroes/hero-scene-pind-daan.png", [320, 480, 768, 1080, 1440])}
+        sizes={SIZES.hero}
+        alt="Pind Daan ritual at a sacred ghat — priest offering pinda by the river at dawn"
+        className="absolute inset-0 w-full h-full object-cover object-[70%_center]"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/90 via-[#1a0a0e]/60 to-[#1a0a0e]/20" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#1a0a0e]/70 to-transparent" aria-hidden="true" />
+      <div className="relative container mx-auto px-4 py-10 sm:py-14 max-w-4xl">
         <div className="flex items-center gap-2 mb-3">
-          <div className="h-px w-8 bg-[#D4AF37]/60" />
+          <div className="h-px w-8 bg-[#D4AF37]/70" />
           <HeroIcon className="h-3.5 w-3.5 text-[#D4AF37]" />
-          <span className="text-[#D4AF37] text-[11px] uppercase tracking-[0.25em] font-medium">{eyebrow}</span>
+          <span
+            className="text-[#D4AF37] text-[11px] uppercase tracking-[0.25em] font-medium"
+            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
+          >
+            {eyebrow}
+          </span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-2" data-testid="text-pind-daan-title">
+        <h1
+          className="font-serif text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-2"
+          style={{ textShadow: "0 2px 18px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)" }}
+          data-testid="text-pind-daan-title"
+        >
           {title}
         </h1>
         {titleHi && (
-          <p className="font-serif text-lg sm:text-xl text-[#D4AF37]/90 mb-3">{titleHi}</p>
+          <p
+            className="font-serif text-lg sm:text-xl text-[#D4AF37]/95 mb-3"
+            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
+          >
+            {titleHi}
+          </p>
         )}
-        <p className="text-white/75 text-sm sm:text-base max-w-2xl leading-relaxed mb-6">
+        <p
+          className="text-white/90 text-sm sm:text-base max-w-2xl leading-relaxed mb-6"
+          style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
+        >
           {subtitle}
         </p>
         <div className="flex flex-wrap gap-3">

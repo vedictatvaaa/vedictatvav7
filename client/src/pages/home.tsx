@@ -23,6 +23,7 @@ const heroBrandImg = "/attached_assets/heroes/hero-scene-brand.png";
 const heroTirthYatraImg = "/attached_assets/heroes/hero-scene-tirth-yatra.png";
 const heroCharDhamImg = "/attached_assets/heroes/hero-scene-char-dham.png";
 const heroPindDaanImg = "/attached_assets/heroes/hero-scene-pind-daan.png";
+const heroPanditImg = "/attached_assets/heroes/hero-scene-pandit.png";
 const heroEssentialsImg = "/attached_assets/heroes/hero-scene-essentials.png";
 const heroAstrologyImg = "/attached_assets/heroes/hero-scene-astrology.png";
 import bhandaraSevaImg from "@assets/generated_images/bhandara_seva_hero.png";
@@ -84,7 +85,7 @@ const heroSlides: HeroSlide[] = [
     cta2: { label: "Explore Rituals", href: "/online-puja-booking", icon: Sparkles },
   },
   {
-    src: heroPindDaanImg,
+    src: heroPanditImg,
     alt: "Verified Acharya performing havan and Vedic ritual",
     mobilePosition: "center center",
     tagline: "BOOK PANDITJI ONLINE",
@@ -606,7 +607,7 @@ export default function Home() {
       {/* SEO H1 — keyword-loaded, screen-reader-only so hero brand visual stays clean */}
       <h1 className="sr-only">Puja Samagri, Online Puja Booking & Pandit Services</h1>
       {/* Hero Section */}
-      <section className="relative w-full min-h-[100svh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
+      <section className="relative w-full min-h-[100svh] [@supports(height:100dvh)]:min-h-[100dvh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
         <HeroBackground
           current={heroIdx}
@@ -624,7 +625,7 @@ export default function Home() {
         {/* Subtle gold glow accent — desktop only */}
         <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />
 
-        <div className="relative z-10 container mx-auto px-4 pt-4 md:pt-6 pb-10 md:pb-16">
+        <div className="relative z-10 container mx-auto px-4 pt-2 md:pt-6 pb-6 md:pb-16">
           <div className="max-w-2xl mx-auto text-center">
             <AnimatePresence mode="wait">
               <motion.div
@@ -635,7 +636,7 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
               >
                 {/* Eyebrow */}
-                <div className="flex items-center justify-center mb-2 md:mb-3">
+                <div className="flex items-center justify-center mb-1.5 md:mb-3">
                   <span
                     className="text-[#D4AF37] text-[11px] sm:text-xs uppercase tracking-[0.3em] font-semibold"
                     style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
@@ -647,7 +648,7 @@ export default function Home() {
 
                 {/* Hero brand headline — demoted to h2 so the keyword-loaded sr-only h1 owns SEO */}
                 <h2
-                  className="font-serif text-white text-[2rem] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
+                  className="font-serif text-white text-[clamp(1.7rem,6.5vw,2.25rem)] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
                   style={{ textShadow: "0 2px 18px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5)" }}
                   data-testid="text-hero-headline"
                 >
@@ -660,7 +661,7 @@ export default function Home() {
 
                 {/* Subtitle */}
                 <p
-                  className="mt-3 md:mt-5 text-[15px] sm:text-lg md:text-xl text-white/90 leading-relaxed max-w-xl mx-auto font-light"
+                  className="mt-2 md:mt-5 text-[clamp(13px,3.6vw,15px)] sm:text-lg md:text-xl text-white/90 leading-snug sm:leading-relaxed max-w-xl mx-auto font-light"
                   style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
                   data-testid="text-hero-subtext"
                 >
@@ -668,7 +669,7 @@ export default function Home() {
                 </p>
 
                 {/* CTAs */}
-                <div className="mt-4 md:mt-7 flex flex-row justify-center gap-2 sm:gap-3">
+                <div className="mt-3 md:mt-7 flex flex-row justify-center gap-2 sm:gap-3">
                   <Link href={scene.cta1.href} className="flex-1 sm:flex-none">
                     <Button
                       className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-4 sm:px-6 font-semibold"
@@ -697,7 +698,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="mt-5 md:mt-8 pt-3 md:pt-4 border-t border-white/15"
+              className="mt-4 md:mt-8 pt-2.5 md:pt-4 border-t border-white/15"
             >
               <div className="grid grid-cols-4 gap-x-2 md:gap-x-4 gap-y-2 max-w-2xl mx-auto justify-items-center">
                 <HeroStat icon={Star} value={t.hero.rating} label="Rated" />

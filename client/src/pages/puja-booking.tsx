@@ -158,6 +158,8 @@ export default function PujaBooking() {
         title={PUJA_PARENT_H1}
         subtitle="Schedule a home or online puja with verified pandits — authentic vidhi, all samagri included, transparent pricing."
         variant="maroon"
+        bgImage="/attached_assets/heroes/hero-scene-brand.png"
+        bgImageAlt="Lakshmi-Ganesha brass idols garlanded with marigolds and glowing brass oil lamps for a Hindu puja"
         testId="hero-puja-booking"
       >
         {selectedPandit && (

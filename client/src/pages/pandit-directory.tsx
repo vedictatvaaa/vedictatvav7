@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link, useLocation, useSearch } from "wouter";
+import { optImg, optImgSrcSet, SIZES } from "@/lib/optImg";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MapPin, Star, Languages, Award, Search, Crown, ChevronDown, ChevronRight, ArrowUpDown, MessageSquare, X, Loader2, Send, Clock, Sparkles, ExternalLink, Navigation, Filter, ShieldCheck, Heart as HeartIcon, Globe, Video, ArrowRight, Building2, Flame, BellRing, Check, IndianRupee, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -71,22 +72,48 @@ const CITY_TILES: Array<{ slug: string; name: string; tagline: string; defaultCi
   { slug: "lucknow", name: "Lucknow", tagline: "Coming Soon", defaultCity: "Lucknow", live: false },
 ];
 
-// Slim hero for both views — solid maroon, hairline gold accents (no gradients)
+// Unified cinematic hero — full-bleed image with dark warm wash for text contrast (no opaque block).
 function SlimHero({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle?: string; children?: React.ReactNode }) {
   return (
-    <div className="bg-[#6D2B35] border-b border-[#D4AF37]/30">
-      <div className="container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center max-w-3xl">
+    <div className="relative overflow-hidden bg-[#1a0a0e] border-b border-[#D4AF37]/30">
+      <img
+        src={optImg("/attached_assets/heroes/hero-scene-pandit.png", 1080) || "/attached_assets/heroes/hero-scene-pandit.png"}
+        srcSet={optImgSrcSet("/attached_assets/heroes/hero-scene-pandit.png", [320, 480, 768, 1080, 1440])}
+        sizes={SIZES.hero}
+        alt="Verified Vedic pandit performing havan with sacred fire and marigold petals"
+        className="absolute inset-0 w-full h-full object-cover object-[70%_center]"
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/15" aria-hidden="true" />
+      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#1a0a0e]/65 to-transparent" aria-hidden="true" />
+      <div className="relative container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center max-w-3xl">
         <div className="flex items-center justify-center gap-2 mb-2.5">
-          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
-          <span className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] font-semibold">
+          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/70" />
+          <span
+            className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] font-semibold"
+            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
+          >
             <Sparkles className="w-3 h-3" /> {eyebrow}
           </span>
-          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/60" />
+          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/70" />
         </div>
-        <h1 className="text-[19px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif text-white mb-2 sm:mb-3 font-semibold tracking-tight" data-testid="text-pandit-title">
+        <h1
+          className="text-[19px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif text-white mb-2 sm:mb-3 font-semibold tracking-tight"
+          style={{ textShadow: "0 2px 18px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)" }}
+          data-testid="text-pandit-title"
+        >
           {title}
         </h1>
-        {subtitle && <p className="text-white/70 text-[13px] sm:text-sm md:text-[15px] leading-snug sm:leading-relaxed max-w-xl mx-auto">{subtitle}</p>}
+        {subtitle && (
+          <p
+            className="text-white/90 text-[13px] sm:text-sm md:text-[15px] leading-snug sm:leading-relaxed max-w-xl mx-auto"
+            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
+          >
+            {subtitle}
+          </p>
+        )}
         {children}
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { optImg, optImgSrcSet, SIZES } from "@/lib/optImg";
 
 export const slimCard =
   "rounded-lg border border-[#D4AF37]/20 hover:border-[#D4AF37]/45 transition-colors bg-white";
@@ -98,20 +99,42 @@ interface PageHeroProps {
   variant?: "maroon" | "dark" | "cream";
   testId?: string;
   font?: "serif" | "sans";
+  /** When provided, hero becomes a unified full-bleed cinematic image with dark wash overlay. */
+  bgImage?: string;
+  bgImageAlt?: string;
 }
 
-export function PageHero({ eyebrow, title, subtitle, children, variant = "maroon", testId, font = "serif" }: PageHeroProps) {
+export function PageHero({ eyebrow, title, subtitle, children, variant = "maroon", testId, font = "serif", bgImage, bgImageAlt }: PageHeroProps) {
   const variants: Record<string, string> = {
     maroon: "bg-[#6D2B35] text-white",
     dark: "bg-[#1a1118] text-white",
     cream: "bg-[#FBF7EE] text-[#6D2B35]",
   };
-  const isLight = variant === "cream";
+  const isLight = !bgImage && variant === "cream";
+  const useImage = Boolean(bgImage);
   return (
     <section
-      className={`${variants[variant]} relative py-10 md:py-14 overflow-hidden`}
+      className={`${useImage ? "bg-[#1a0a0e] text-white" : variants[variant]} relative overflow-hidden ${useImage ? "py-14 md:py-20 lg:py-24" : "py-10 md:py-14"}`}
       data-testid={testId}
     >
+      {useImage && (
+        <>
+          <img
+            src={optImg(bgImage, 1080) || bgImage}
+            srcSet={optImgSrcSet(bgImage, [320, 480, 768, 1080, 1440])}
+            sizes={SIZES.hero}
+            alt={bgImageAlt || ""}
+            className="absolute inset-0 w-full h-full object-cover object-[70%_center]"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            aria-hidden={!bgImageAlt}
+          />
+          {/* Left-to-right dark wash anchors text on the dark bokeh side; bottom fade reinforces contrast. */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/15" aria-hidden="true" />
+          <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#1a0a0e]/65 to-transparent" aria-hidden="true" />
+        </>
+      )}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" aria-hidden="true" />
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" aria-hidden="true" />
       <div className="container mx-auto px-4 relative z-10">
@@ -119,15 +142,26 @@ export function PageHero({ eyebrow, title, subtitle, children, variant = "maroon
           {eyebrow && (
             <div className="flex items-center justify-center gap-2.5 mb-3">
               <span className="h-px w-6 bg-[#D4AF37]" />
-              <span className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold">{eyebrow}</span>
+              <span
+                className="text-[#D4AF37] text-[10px] uppercase tracking-[0.3em] font-semibold"
+                style={useImage ? { textShadow: "0 1px 8px rgba(0,0,0,0.55)" } : undefined}
+              >
+                {eyebrow}
+              </span>
               <span className="h-px w-6 bg-[#D4AF37]" />
             </div>
           )}
-          <h1 className={`${font === "serif" ? "font-serif text-3xl md:text-4xl lg:text-5xl" : "font-sans text-2xl md:text-3xl lg:text-4xl tracking-tight"} font-semibold mb-2 leading-tight ${isLight ? "text-[#6D2B35]" : "text-white"}`}>
+          <h1
+            className={`${font === "serif" ? "font-serif text-3xl md:text-4xl lg:text-5xl" : "font-sans text-2xl md:text-3xl lg:text-4xl tracking-tight"} font-semibold mb-2 leading-tight ${isLight ? "text-[#6D2B35]" : "text-white"}`}
+            style={useImage ? { textShadow: "0 2px 18px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)" } : undefined}
+          >
             {title}
           </h1>
           {subtitle && (
-            <p className={`text-[13px] md:text-sm leading-relaxed max-w-xl mx-auto ${isLight ? "text-[#5a4a3a]/65" : "text-white/65"}`}>
+            <p
+              className={`text-[13px] md:text-sm leading-relaxed max-w-xl mx-auto ${isLight ? "text-[#5a4a3a]/65" : useImage ? "text-white/90" : "text-white/65"}`}
+              style={useImage ? { textShadow: "0 1px 12px rgba(0,0,0,0.6)" } : undefined}
+            >
               {subtitle}
             </p>
           )}
