@@ -335,7 +335,7 @@ export default function Navbar() {
     {
       title: "Shop",
       items: [
-        { href: "/puja-samagri-online", label: "Spiritual Store", icon: ShoppingBag },
+        { href: "/puja-samagri-online", label: "Puja Essentials", icon: ShoppingBag },
         { href: "/category/home-essentials", label: "Home Essentials", icon: Package, comingSoon: true },
         { href: "/category/hair-skin-care", label: "Hair & Skin Care", icon: Sparkles, comingSoon: true },
         { href: "/category/grains-pulses", label: "Grains & Pulses", icon: Package, comingSoon: true },
@@ -510,10 +510,11 @@ export default function Navbar() {
 
           <div className="flex items-center gap-0.5">
             <button
-              onClick={() => { setSearchOpen(!searchOpen); setAccountOpen(false); }}
-              className="hidden md:flex w-9 h-9 items-center justify-center rounded-md text-[#5a4a3a]/70 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors"
+              onClick={() => { setSearchOpen(!searchOpen); setAccountOpen(false); setMobileOpen(false); }}
+              className="flex w-9 h-9 items-center justify-center rounded-md text-[#5a4a3a]/70 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors"
               data-testid="btn-search"
               title="Search"
+              aria-label="Search"
             >
               <Search className="h-[17px] w-[17px]" />
             </button>
