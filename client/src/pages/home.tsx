@@ -26,6 +26,12 @@ const heroPindDaanImg = "/attached_assets/heroes/hero-scene-pind-daan.png";
 const heroPanditImg = "/attached_assets/heroes/hero-scene-pandit.png";
 const heroEssentialsImg = "/attached_assets/heroes/hero-scene-essentials.png";
 const heroAstrologyImg = "/attached_assets/heroes/hero-scene-astrology.png";
+// Mobile 9:16 portrait variants — served via <picture media="(max-width:767px)">
+// so phones get a properly-composed tall image instead of a center-crop of the
+// landscape one. Tablets + desktop continue to use the 16:9 originals above.
+const heroBrandImgMobile = "/attached_assets/heroes/mobile/hero-scene-brand-mobile.png";
+const heroPanditImgMobile = "/attached_assets/heroes/mobile/hero-scene-pandit-mobile.png";
+const heroAstrologyImgMobile = "/attached_assets/heroes/mobile/hero-scene-astrology-mobile.png";
 import bhandaraSevaImg from "@assets/generated_images/bhandara_seva_hero.png";
 import astrologyBannerImg from "@assets/generated_images/astrology_hero_banner.png";
 import bhandaraBannerImg from "@assets/generated_images/bhandara_seva_banner.png";
@@ -33,6 +39,8 @@ import bhandaraBannerImg from "@assets/generated_images/bhandara_seva_banner.png
 type HeroCta = { label: string; href: string; icon: any };
 type HeroSlide = {
   src: string;
+  /** Optional 9:16 portrait variant used on phones via <picture media>. */
+  mobileSrc?: string;
   alt: string;
   mobilePosition: string;
   tagline: string;
@@ -74,8 +82,9 @@ const heroSlides: HeroSlide[] = [
   },
   {
     src: heroBrandImg,
+    mobileSrc: heroBrandImgMobile,
     alt: "Vedic Pandit performing online puja with samagri and diya",
-    mobilePosition: "75% center",
+    mobilePosition: "center top",
     tagline: "ONLINE PUJA BOOKING",
     title1: "Book Online Puja",
     title2: "Services Across ",
@@ -86,8 +95,9 @@ const heroSlides: HeroSlide[] = [
   },
   {
     src: heroPanditImg,
+    mobileSrc: heroPanditImgMobile,
     alt: "Verified Acharya performing havan and Vedic ritual",
-    mobilePosition: "center center",
+    mobilePosition: "center top",
     tagline: "BOOK PANDITJI ONLINE",
     title1: "Book Trusted Panditji",
     title2: "for Every ",
@@ -98,8 +108,9 @@ const heroSlides: HeroSlide[] = [
   },
   {
     src: heroAstrologyImg,
+    mobileSrc: heroAstrologyImgMobile,
     alt: "Vedic astrology rashi chakra and cosmic elements",
-    mobilePosition: "center center",
+    mobilePosition: "center top",
     tagline: "ASTROLOGY & KUNDLI",
     title1: "Online Astrology",
     title2: "Consultation & ",
@@ -143,24 +154,37 @@ function HeroBackground({
 }) {
   return (
     <>
-      <div className="absolute inset-0" style={{ aspectRatio: "16 / 9" }}>
+      <div className="absolute inset-0">
         {slides.map((slide, i) => (
-          <img
+          <picture
             key={slide.alt}
-            src={optImg(slide.src, 1080)}
-            srcSet={optImgSrcSet(slide.src, [320, 480, 768, 1080, 1440])}
-            sizes="100vw"
-            alt={slide.alt}
-            width={1440}
-            height={810}
-            loading={i === 0 ? "eager" : "lazy"}
-            decoding={i === 0 ? "sync" : "async"}
-            fetchPriority={i === 0 ? "high" : "low"}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
               i === current ? "opacity-100" : "opacity-0"
             }`}
-            style={{ objectPosition: slide.mobilePosition }}
-          />
+          >
+            {/* Mobile portrait variant (9:16) — phones only.
+                Falls back to the landscape <img> below when no mobileSrc. */}
+            {slide.mobileSrc && (
+              <source
+                media="(max-width: 767px)"
+                srcSet={optImgSrcSet(slide.mobileSrc, [360, 480, 640, 828])}
+                sizes="100vw"
+              />
+            )}
+            <img
+              src={optImg(slide.src, 1080)}
+              srcSet={optImgSrcSet(slide.src, [320, 480, 768, 1080, 1440])}
+              sizes="100vw"
+              alt={slide.alt}
+              width={1440}
+              height={810}
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding={i === 0 ? "sync" : "async"}
+              fetchPriority={i === 0 ? "high" : "low"}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: slide.mobilePosition }}
+            />
+          </picture>
         ))}
       </div>
 
@@ -511,12 +535,22 @@ export default function Home() {
     queryKey: ["/api/hero-slides"],
     staleTime: 5 * 60 * 1000,
   });
+  // Map of known landscape hero URLs → their 9:16 mobile portrait variant.
+  // Used to graft mobileSrc onto admin-managed slides that point at one of
+  // the bundled hero PNGs. Admin-uploaded URLs not in this map gracefully
+  // fall through to landscape on every viewport.
+  const MOBILE_HERO_BY_LANDSCAPE: Record<string, string> = {
+    [heroBrandImg]: heroBrandImgMobile,
+    [heroPanditImg]: heroPanditImgMobile,
+    [heroAstrologyImg]: heroAstrologyImgMobile,
+  };
   const effectiveSlides: HeroSlide[] = useMemo(() => {
     if (Array.isArray(adminHeroSlides) && adminHeroSlides.length > 0) {
       return adminHeroSlides.map((r) => ({
         src: r.imageUrl,
+        mobileSrc: MOBILE_HERO_BY_LANDSCAPE[r.imageUrl],
         alt: r.imageAlt || "",
-        mobilePosition: r.mobilePosition || "center center",
+        mobilePosition: r.mobilePosition || "center top",
         tagline: r.tagline || "",
         title1: r.title1 || "",
         title2: r.title2 || "",
@@ -607,7 +641,7 @@ export default function Home() {
       {/* SEO H1 — keyword-loaded, screen-reader-only so hero brand visual stays clean */}
       <h1 className="sr-only">Puja Samagri, Online Puja Booking & Pandit Services</h1>
       {/* Hero Section */}
-      <section className="relative w-full min-h-[100svh] [@supports(height:100dvh)]:min-h-[100dvh] md:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
+      <section className="relative w-full min-h-[560px] sm:min-h-[600px] lg:min-h-[640px] flex items-center overflow-hidden bg-[#1a0a0e]" data-testid="section-hero">
         {/* Full-bleed rotating background images */}
         <HeroBackground
           current={heroIdx}

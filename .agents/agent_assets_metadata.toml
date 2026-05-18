@@ -1572,6 +1572,24 @@ uri = "file://attached_assets/heroes/gen16x9/hero-essentials-page.png"
 type = "image"
 title = "essentials page 16x9"
 
+[[generated]]
+id = "EhSEG900qo9m_bFmBwZLk"
+uri = "file://attached_assets/heroes/mobile/hero-scene-brand-mobile.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5wHzVDJO5dWewaAfuo2xw"
+uri = "file://attached_assets/heroes/mobile/hero-scene-pandit-mobile.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "WmpkTYM21m4uSs6HeeYTP"
+uri = "file://attached_assets/heroes/mobile/hero-scene-astrology-mobile.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
