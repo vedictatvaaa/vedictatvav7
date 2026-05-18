@@ -2276,8 +2276,8 @@ function TabbedShop({
 // ════════════════════════════════════════════════════════════════════
 const DEFAULT_HOMEPAGE_ORDER = [
   "snapshot",
-  "book-pandit",
   "tabbed-shop",
+  "book-pandit",
   "bhandara",
   "testimonials",
   "astrology",

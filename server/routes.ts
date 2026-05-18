@@ -3159,8 +3159,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   // ============================================================
   const HOMEPAGE_SECTION_DEFAULTS = [
     { key: "snapshot",      label: "Today's Spiritual Snapshot" },
-    { key: "book-pandit",   label: "Book a Pandit (city search)" },
     { key: "tabbed-shop",   label: "Handpicked / Popular / Trending (Tabbed Shop)" },
+    { key: "book-pandit",   label: "Book a Pandit (city search)" },
     { key: "bhandara",      label: "Bhandara Seva (donation)" },
     { key: "testimonials",  label: "Testimonials / Community Stories" },
     { key: "astrology",     label: "Vedic Astrology (hero banner)" },
