@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { adminAuthMiddleware } from "./admin-auth";
 import { pingIndexNowAsync, pingSitemap } from "./indexnow";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
-import { runDailyBlogGeneration } from "./blog-ai";
+import { runDailyBlogGeneration, startSeedInBackground, seedRunStatus } from "./blog-ai";
 import { regenerateForCurrentAndNextYear } from "./muhurat-engine";
 
 // Builds the canonical list of high-priority URLs the search engines should
@@ -130,7 +130,7 @@ async function runBlogGenOnce() {
   blogGenStatus.lastRunAt = new Date().toISOString();
   blogGenStatus.totalRuns += 1;
   try {
-    const r = await runDailyBlogGeneration(3);
+    const r = await runDailyBlogGeneration(10);
     blogGenStatus.lastInserted = r.inserted;
     blogGenStatus.lastErrors = r.errors;
   } catch (e: any) {
@@ -193,6 +193,19 @@ export function registerSeoSchedulerRoutes(app: Express) {
   app.post("/api/admin/blog-gen/run-now", adminAuthMiddleware, async (_req: Request, res: Response) => {
     await runBlogGenOnce();
     res.json({ success: true, status: blogGenStatus });
+  });
+
+  // One-shot library seeder. Kicks off a background job that generates and
+  // publishes `target` posts (default 50) from the curated keyword pool.
+  // Idempotent: existing slugs are skipped.
+  app.post("/api/admin/blog-gen/seed-library", adminAuthMiddleware, async (req: Request, res: Response) => {
+    const target = Math.max(1, Math.min(100, parseInt(String(req.body?.target ?? 50)) || 50));
+    const r = await startSeedInBackground(target);
+    res.json({ success: r.accepted, reason: r.reason, status: seedRunStatus });
+  });
+
+  app.get("/api/admin/blog-gen/seed-status", adminAuthMiddleware, (_req: Request, res: Response) => {
+    res.json(seedRunStatus);
   });
 
   app.post("/api/admin/muhurat/run-now", adminAuthMiddleware, async (_req: Request, res: Response) => {
