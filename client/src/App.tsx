@@ -656,7 +656,9 @@ function Router() {
           <Route path="/marriage-puja">{() => <SeoLanding slug="marriage-puja" />}</Route>
           <Route path="/pitra-dosh-puja">{() => <SeoLanding slug="pitra-dosh-puja" />}</Route>
           <Route path="/maha-mrityunjaya-jaap">{() => <SeoLanding slug="maha-mrityunjaya-jaap" />}</Route>
-          <Route path="/daily-rashifal">{() => <SeoLanding slug="daily-rashifal" />}</Route>
+          {/* /daily-rashifal intentionally omitted — owned by ZodiacRashifal below.
+              See the /online-puja-booking note above for why duplicates here silently
+              break the real page inside this Switch. */}
           <Route path="/weekly-rashifal">{() => <SeoLanding slug="weekly-rashifal" />}</Route>
           <Route path="/monthly-horoscope">{() => <SeoLanding slug="monthly-horoscope" />}</Route>
           <Route path="/yearly-horoscope-2026">{() => <SeoLanding slug="yearly-horoscope-2026" />}</Route>
