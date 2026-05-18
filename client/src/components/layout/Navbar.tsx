@@ -509,15 +509,17 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={() => { setSearchOpen(!searchOpen); setAccountOpen(false); setMobileOpen(false); }}
-              className="flex w-9 h-9 items-center justify-center rounded-md text-[#5a4a3a]/70 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors"
-              data-testid="btn-search"
-              title="Search"
-              aria-label="Search"
-            >
-              <Search className="h-[17px] w-[17px]" />
-            </button>
+            {location !== "/" && (
+              <button
+                onClick={() => { setSearchOpen(!searchOpen); setAccountOpen(false); setMobileOpen(false); }}
+                className="flex w-9 h-9 items-center justify-center rounded-md text-[#5a4a3a]/70 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors"
+                data-testid="btn-search"
+                title="Search"
+                aria-label="Search"
+              >
+                <Search className="h-[17px] w-[17px]" />
+              </button>
+            )}
 
             <div className="relative hidden md:block">
               <button
