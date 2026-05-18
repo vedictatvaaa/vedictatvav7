@@ -76,7 +76,7 @@ function PromoBar() {
       <div className="absolute right-0 top-0 bottom-0 w-12 z-10" style={{ background: `linear-gradient(to left, ${edge}, transparent)` }} />
       <div className="relative flex items-center py-2">
         {/* Mobile: Tithi + Rahukal + promos only */}
-        <div className="flex sm:hidden w-max flex-shrink-0 motion-safe:animate-marquee motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:w-auto whitespace-nowrap motion-reduce:whitespace-normal">
+        <div className="flex sm:hidden w-max flex-shrink-0 animate-marquee whitespace-nowrap">
           {duplicatedMobile.map((msg, i) => {
             const Icon = msg.icon;
             return (
@@ -88,7 +88,7 @@ function PromoBar() {
           })}
         </div>
         {/* Desktop: full panchang strip */}
-        <div className="hidden sm:flex w-max flex-shrink-0 motion-safe:animate-marquee motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:w-auto whitespace-nowrap motion-reduce:whitespace-normal">
+        <div className="hidden sm:flex w-max flex-shrink-0 animate-marquee whitespace-nowrap">
           {duplicated.map((msg, i) => {
             const Icon = msg.icon;
             return (

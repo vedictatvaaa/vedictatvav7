@@ -508,7 +508,7 @@ export default function Home() {
   const prefersReducedMotion = typeof window !== "undefined"
     && window.matchMedia
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const [heroPaused, setHeroPaused] = useState(prefersReducedMotion);
+  const [heroPaused, setHeroPaused] = useState(false);
 
   // Admin-managed hero slides. If the API returns any rows we use those;
   // otherwise we fall back to the bundled `heroSlides` so the homepage hero
@@ -656,12 +656,13 @@ export default function Home() {
               1. Unified maroon tint across the whole image (warm, sacred)
               2. Radial vignette darkening the edges around the text block
               3. Soft gold "sanctum" beam from above (desktop accent) */}
-        <div className="absolute inset-0 bg-[#3A0F12]/40 pointer-events-none" />
+        {/* Soft radial vignette only — no full-image tint, so banners stay
+            vibrant. The scrim card below carries the text contrast. */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 70% 60% at 50% 55%, rgba(26,10,14,0) 0%, rgba(26,10,14,0.35) 55%, rgba(26,10,14,0.75) 100%)",
+              "radial-gradient(ellipse 80% 70% at 50% 55%, rgba(26,10,14,0) 0%, rgba(26,10,14,0.12) 65%, rgba(26,10,14,0.42) 100%)",
           }}
         />
         <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />

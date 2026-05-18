@@ -337,9 +337,7 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .animate-spin-slow { animation: none; }
-}
+/* Japa mala rotation kept under reduce-motion (subtle and informational) */
 
 /* Animated gold shimmer on the Four Pillars heading accent word */
 .pillars-shimmer {

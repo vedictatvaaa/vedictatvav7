@@ -123,11 +123,7 @@ export default function HawanKundIcon({
         .incense-ember {
           animation: incense-ember-glow 1.6s ease-in-out infinite;
         }
-        @media (prefers-reduced-motion: reduce) {
-          .incense-smoke, .incense-ember {
-            animation: none !important;
-          }
-        }
+        /* Smoke + ember kept under reduce-motion — subtle, ambient */
       `}</style>
     </span>
   );
