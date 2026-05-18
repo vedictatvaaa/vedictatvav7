@@ -93,7 +93,6 @@ const InventoryHealthTab    = safeLazy(() => import("@/components/admin/Inventor
 const CustomersTab          = safeLazy(() => import("@/components/admin/CustomersTab").then(m => ({ default: m.CustomersTab })));
 const BlogTab               = safeLazy(() => import("@/components/admin/BlogTab").then(m => ({ default: m.BlogTab })));
 const EmailMarketingTab     = safeLazy(() => import("@/components/admin/EmailMarketingTab").then(m => ({ default: m.EmailMarketingTab })));
-const DeployTab             = safeLazy(() => import("./admin-tabs/DeployTab"));
 const AiAssistantTab        = safeLazy(() => import("./admin-tabs/AiAssistantTab"));
 const AiCoderTab            = safeLazy(() => import("./admin-tabs/AiCoderTab"));
 const AdminBackupsTab       = safeLazy(() => import("./admin-tabs/AdminBackupsTab"));
@@ -557,7 +556,6 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "customers" && <CustomersTab />}
               {activeTab === "blog" && <BlogTab adminToken={adminToken} />}
               {activeTab === "email-marketing" && <EmailMarketingTab adminToken={adminToken} />}
-              {activeTab === "deploy" && <DeployTab />}
               {activeTab === "ai-assistant" && <AiAssistantTab adminToken={adminToken} />}
               {activeTab === "ai-coder" && <AiCoderTab adminToken={adminToken} />}
               {activeTab === "backups" && <AdminBackupsTab adminToken={adminToken} />}

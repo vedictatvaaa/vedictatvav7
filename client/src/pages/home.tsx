@@ -206,10 +206,20 @@ function HeroBackground({
 function HeroStat({ icon: Icon, value, label }: { icon: any; value: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5 md:gap-2 min-w-0" data-testid={`hero-stat-${label.toLowerCase()}`}>
-      <Icon className="h-3.5 w-3.5 md:h-4 md:w-4 text-[#D4AF37] flex-shrink-0" />
+      <Icon className="h-3.5 w-3.5 md:h-4 md:w-4 text-[#D4AF37] flex-shrink-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.6)]" />
       <div className="min-w-0">
-        <div className="text-xs md:text-sm font-bold text-white leading-tight truncate">{value}</div>
-        <div className="text-[10px] uppercase tracking-wider text-white/70 md:text-white/55 leading-tight truncate">{label}</div>
+        <div
+          className="text-xs md:text-sm font-bold text-white leading-tight truncate"
+          style={{ textShadow: "0 1px 6px rgba(0,0,0,0.7)" }}
+        >
+          {value}
+        </div>
+        <div
+          className="text-[10px] uppercase tracking-wider text-white/80 leading-tight truncate"
+          style={{ textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+        >
+          {label}
+        </div>
       </div>
     </div>
   );
@@ -606,17 +616,15 @@ export default function Home() {
           slides={effectiveSlides}
         />
 
-        {/* Dark wash for legibility (matches Heros guideline regardless of theme) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1a0a0e]/80 via-transparent to-transparent" />
+        {/* Single ultra-light bottom-up wash — keeps the hero image visible
+            while giving text just enough contrast. Text legibility is carried
+            primarily by `text-shadow` on the headline/subtitle below. */}
+        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#1a0a0e]/55 via-[#1a0a0e]/15 to-transparent pointer-events-none" />
 
-        {/* Single subtle gold glow accent (replaces 7 diyas, mandala ring & sanskrit overlay) */}
+        {/* Subtle gold glow accent — desktop only */}
         <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />
 
-        {/* Centered vignette so centered text reads well over any photo on every viewport */}
-        <div className="absolute inset-0 bg-[#1a0a0e]/45 md:bg-[#1a0a0e]/35 pointer-events-none" />
-
-        <div className="relative z-10 container mx-auto px-4 pt-6 md:pt-8 pb-20 md:pb-24">
+        <div className="relative z-10 container mx-auto px-4 pt-4 md:pt-6 pb-10 md:pb-16">
           <div className="max-w-2xl mx-auto text-center">
             <AnimatePresence mode="wait">
               <motion.div
@@ -627,15 +635,20 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
               >
                 {/* Eyebrow */}
-                <div className="flex items-center justify-center mb-3 md:mb-4">
-                  <span className="text-[#D4AF37] text-[11px] sm:text-xs uppercase tracking-[0.3em] font-semibold" data-testid="text-hero-tagline">
+                <div className="flex items-center justify-center mb-2 md:mb-3">
+                  <span
+                    className="text-[#D4AF37] text-[11px] sm:text-xs uppercase tracking-[0.3em] font-semibold"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
+                    data-testid="text-hero-tagline"
+                  >
                     {scene.tagline}
                   </span>
                 </div>
 
                 {/* Hero brand headline — demoted to h2 so the keyword-loaded sr-only h1 owns SEO */}
                 <h2
-                  className="font-serif text-white text-[2.35rem] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
+                  className="font-serif text-white text-[2rem] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
+                  style={{ textShadow: "0 2px 18px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5)" }}
                   data-testid="text-hero-headline"
                 >
                   <span className="block">{scene.title1}</span>
@@ -647,14 +660,15 @@ export default function Home() {
 
                 {/* Subtitle */}
                 <p
-                  className="mt-5 md:mt-6 text-[17px] sm:text-lg md:text-xl text-white/80 leading-relaxed max-w-xl mx-auto font-light"
+                  className="mt-3 md:mt-5 text-[15px] sm:text-lg md:text-xl text-white/90 leading-relaxed max-w-xl mx-auto font-light"
+                  style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
                   data-testid="text-hero-subtext"
                 >
                   {scene.subtitle}
                 </p>
 
                 {/* CTAs */}
-                <div className="mt-7 md:mt-9 flex flex-row justify-center gap-2 sm:gap-3">
+                <div className="mt-4 md:mt-7 flex flex-row justify-center gap-2 sm:gap-3">
                   <Link href={scene.cta1.href} className="flex-1 sm:flex-none">
                     <Button
                       className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-4 sm:px-6 font-semibold"
@@ -683,7 +697,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="mt-8 md:mt-10 pt-4 md:pt-5 border-t border-white/15"
+              className="mt-5 md:mt-8 pt-3 md:pt-4 border-t border-white/15"
             >
               <div className="grid grid-cols-4 gap-x-2 md:gap-x-4 gap-y-2 max-w-2xl mx-auto justify-items-center">
                 <HeroStat icon={Star} value={t.hero.rating} label="Rated" />

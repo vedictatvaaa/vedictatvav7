@@ -15,7 +15,6 @@ import { pingIndexNow, pingIndexNowAsync, pingSitemap, getIndexNowKey } from "./
 import { notifyPublish, notifyUnpublish, getGoogleQuotaState } from "./publish-notify";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
 import { adminAuthMiddleware as sharedAdminAuth, validateAdminSession as sharedValidateAdminSession } from "./admin-auth";
-import { startDeploy, startRollback, getDeployState, getDeployHistory, isDeployEnabled } from "./deploy-runner";
 import { redirectMiddleware, registerRedirectAdminRoutes } from "./seo-redirects";
 import { isFestivalWindow } from "./festival-windows";
 import { registerLlmsRoutes, buildLlmsTxt } from "./seo-llms";
@@ -565,68 +564,6 @@ export async function registerRoutes(
       latencyMs: Date.now() - started,
       checks,
     });
-  });
-
-  // ----------------------------------------------------------------
-  // One-click deploy — runs scripts/deploy.sh on the production server.
-  // Gated by adminAuthMiddleware AND DEPLOY_FROM_BROWSER=1 env var, so it
-  // is impossible to trigger by accident or in dev. Strict rate limiter:
-  // 5 attempts / hour / admin to keep an attacker who steals a session token
-  // from looping it.
-  // ----------------------------------------------------------------
-  const deployLimiter = rateLimit({
-    windowMs: 60 * 60_000,
-    max: 5,
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
-  app.get("/api/admin/deploy/status", adminAuthMiddleware, async (_req, res) => {
-    const state = getDeployState();
-    res.json({ ...state, enabled: isDeployEnabled() });
-  });
-
-  app.post("/api/admin/deploy", adminAuthMiddleware, deployLimiter, async (req: any, res) => {
-    if (!isDeployEnabled()) {
-      return res.status(403).json({
-        message: "Browser deploys are disabled on this server.",
-        hint: "Set DEPLOY_FROM_BROWSER=1 in the environment, then restart PM2.",
-      });
-    }
-    const skipGitPull = req.body?.skipGitPull === true || req.body?.skipGitPull === "1";
-    const result = startDeploy(req.adminUserId || 0, { skipGitPull });
-    if (!result.ok) {
-      return res.status(409).json({ message: result.error });
-    }
-    try {
-      await auditAdmin(req, "deploy.start", `run:${result.id}`, { id: result.id, skipGitPull });
-    } catch {}
-    res.status(202).json({ id: result.id, status: "running", skipGitPull });
-  });
-
-  app.get("/api/admin/deploy/history", adminAuthMiddleware, async (_req, res) => {
-    res.json({ entries: getDeployHistory(), enabled: isDeployEnabled() });
-  });
-
-  app.post("/api/admin/deploy/rollback", adminAuthMiddleware, deployLimiter, async (req: any, res) => {
-    if (!isDeployEnabled()) {
-      return res.status(403).json({
-        message: "Browser deploys are disabled on this server.",
-        hint: "Set DEPLOY_FROM_BROWSER=1 in the environment, then restart PM2.",
-      });
-    }
-    const targetSha = String(req.body?.targetSha || "").trim();
-    if (!targetSha) {
-      return res.status(400).json({ message: "targetSha is required." });
-    }
-    const result = startRollback(req.adminUserId || 0, targetSha);
-    if (!result.ok) {
-      return res.status(409).json({ message: result.error });
-    }
-    try {
-      await auditAdmin(req, "deploy.rollback", `run:${result.id}`, { id: result.id, targetSha });
-    } catch {}
-    res.status(202).json({ id: result.id, status: "running", targetSha });
   });
 
   // Expose Google client ID to frontend (public)
