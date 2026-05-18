@@ -42,12 +42,12 @@ export async function buildLlmsTxt(siteUrl: string): Promise<string> {
   lines.push("> Vedic Tatva is India's premium spiritual ecommerce platform offering authentic puja samagri, idols, gemstones, and verified pandit booking for online and at-home pujas, Pind Daan in Gaya/Kashi/Haridwar, and AI-powered Vedic astrology services.");
   lines.push("");
   lines.push("## Core Services");
-  lines.push(`- [Book a Pandit](${siteUrl}/pandits): Verified Vedic pandits for puja at home or online`);
+  lines.push(`- [Book a Pandit](${siteUrl}/book-pandit-online): Verified Vedic pandits for puja at home or online`);
   lines.push(`- [Book a Puja](${siteUrl}/puja): Online and at-home Vedic pujas`);
-  lines.push(`- [Pind Daan](${siteUrl}/pind-daan): Ancestral rituals in Gaya, Kashi, Haridwar`);
+  lines.push(`- [Pind Daan](${siteUrl}/pind-daan-booking): Ancestral rituals in Gaya, Kashi, Haridwar`);
   lines.push(`- [Astrology](${siteUrl}/astrology): Kundli, matchmaking, dosha analysis`);
   lines.push(`- [AI Kundli](${siteUrl}/ai-kundli): Free AI-powered Vedic birth chart analysis`);
-  lines.push(`- [Panchang](${siteUrl}/panchang): Daily Hindu calendar with tithi, nakshatra, muhurat`);
+  lines.push(`- [Panchang](${siteUrl}/today-panchang): Daily Hindu calendar with tithi, nakshatra, muhurat`);
   lines.push(`- [Matrimony](${siteUrl}/matrimony): Vedic-aligned matrimonial profiles`);
   lines.push("");
   lines.push("## Spiritual Shop");

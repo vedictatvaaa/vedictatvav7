@@ -1,4 +1,4 @@
-// Server-side festival window detection. Used by /api/pandits to give Gold
+// Server-side festival window detection. Used by /api/book-pandit-online to give Gold
 // pandits a temporary ranking bump during major Hindu festivals (when puja
 // demand spikes). Mirrors the festival mdRange list in
 // client/src/lib/festivals.ts but kept here so the server has zero client

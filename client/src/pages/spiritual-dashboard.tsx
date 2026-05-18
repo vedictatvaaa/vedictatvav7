@@ -367,7 +367,7 @@ function PersonalizedRecommendations({ journeyData }: { journeyData: JourneyData
                         {recs.productSuggestions.map((p: any, i: number) => (
                           <Link
                             key={i}
-                            href="/shop"
+                            href="/puja-samagri-online"
                             className="flex items-start gap-3 bg-white rounded-lg p-3 border border-[#6D2B35]/5 hover:border-[#D4AF37]/30 hover:shadow-sm transition-all group"
                           >
                             <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 group-hover:bg-[#D4AF37]/10 transition-colors">
@@ -1095,7 +1095,7 @@ function SavedAncestorsDashboardSection() {
                 <div className="mt-3 text-xs text-[#5a4a3a]/60">Computing next date…</div>
               )}
               <div className="mt-3 flex flex-wrap gap-2">
-                <Link href={a.recommendedHref || "/pind-daan"} className="inline-flex items-center gap-1.5 bg-[#6D2B35] hover:bg-[#5a232b] text-white text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-pind-daan-${a.id}`}>
+                <Link href={a.recommendedHref || "/pind-daan-booking"} className="inline-flex items-center gap-1.5 bg-[#6D2B35] hover:bg-[#5a232b] text-white text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-pind-daan-${a.id}`}>
                   Book Pind Daan <ChevronRight className="w-3 h-3" />
                 </Link>
                 <Link href="/online-puja-booking" className="inline-flex items-center gap-1.5 bg-white text-[#6D2B35] border border-[#6D2B35]/20 hover-elevate text-xs font-bold px-3 py-1.5 rounded-md" data-testid={`button-book-tarpan-${a.id}`}>

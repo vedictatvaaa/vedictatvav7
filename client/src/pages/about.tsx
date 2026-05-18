@@ -43,8 +43,8 @@ export default function About() {
   const outlineBtn = "inline-flex items-center justify-center gap-1.5 h-10 px-5 rounded-md text-[13px] font-semibold bg-white text-[#6D2B35] border border-[#D4AF37]/30 hover:bg-[#FBF7EE] transition-colors";
 
   const { data: pandits } = useQuery<PanditLite[]>({
-    queryKey: ["/api/pandits"],
-    queryFn: () => fetch("/api/pandits").then(r => r.ok ? r.json() : []),
+    queryKey: ["/api/book-pandit-online"],
+    queryFn: () => fetch("/api/book-pandit-online").then(r => r.ok ? r.json() : []),
     staleTime: 5 * 60 * 1000,
   });
 

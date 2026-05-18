@@ -738,7 +738,7 @@ export default function JapaPage() {
               </a>{" "}
               · Need a guided puja?{" "}
               <a
-                href="/pandits"
+                href="/book-pandit-online"
                 onClick={() => haptic(10)}
                 className="text-[#D4AF37]/85 hover:text-[#D4AF37] underline underline-offset-2 transition-colors"
                 data-testid="link-book-pandit"

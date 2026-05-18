@@ -126,8 +126,8 @@ function SeoManagerTab() {
           <CardContent className="space-y-4">
             <div>
               <Label>Page Path *</Label>
-              <Input value={form.pagePath} onChange={e => setForm(f => ({ ...f, pagePath: e.target.value }))} placeholder="/shop or /pandits" disabled={!!editing} data-testid="input-seo-page-path" />
-              <p className="text-xs text-muted-foreground mt-1">URL path like /shop, /astrology, /product/rudraksha-mala</p>
+              <Input value={form.pagePath} onChange={e => setForm(f => ({ ...f, pagePath: e.target.value }))} placeholder="/puja-samagri-online or /book-pandit-online" disabled={!!editing} data-testid="input-seo-page-path" />
+              <p className="text-xs text-muted-foreground mt-1">URL path like /puja-samagri-online, /astrology, /product/rudraksha-mala</p>
             </div>
             <div>
               <Label>Meta Title</Label>
@@ -145,7 +145,7 @@ function SeoManagerTab() {
             </div>
             <div>
               <Label>Canonical URL</Label>
-              <Input value={form.canonicalUrl} onChange={e => setForm(f => ({ ...f, canonicalUrl: e.target.value }))} placeholder="https://vedictatva.com/shop" data-testid="input-seo-canonical" />
+              <Input value={form.canonicalUrl} onChange={e => setForm(f => ({ ...f, canonicalUrl: e.target.value }))} placeholder="https://vedictatva.com/puja-samagri-online" data-testid="input-seo-canonical" />
             </div>
             <div>
               <Label>H1 Override</Label>

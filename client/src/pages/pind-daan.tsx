@@ -446,7 +446,7 @@ function HeroSection({ eyebrow, title, titleHi, subtitle, ctaPujaType, icon: Ico
               <Flame className="w-4 h-4" /> {t("Book This Seva", "यह सेवा बुक करें")}
             </button>
           </Link>
-          <Link href="/pind-daan">
+          <Link href="/pind-daan-booking">
             <button className="bg-transparent text-white border border-[#D4AF37]/40 hover:bg-white/10 rounded-md h-10 px-5 text-[13px] font-semibold transition-colors inline-flex items-center justify-center gap-2" data-testid="btn-explore-cluster">
               {t("All Pind Daan Services", "सभी पिंडदान सेवाएँ")} <ArrowRight className="w-4 h-4" />
             </button>
@@ -994,7 +994,7 @@ export function PindDaanDetail({ slugOverride }: { slugOverride?: string } = {})
       <div className="container mx-auto px-4 mt-5">
         <div className="max-w-5xl mx-auto flex items-center gap-2 overflow-x-auto pb-2">
           <Link
-            href="/pind-daan"
+            href="/pind-daan-booking"
             className="text-[11px] text-[#6D2B35] hover:text-[#5a1f29] whitespace-nowrap font-semibold uppercase tracking-[0.2em]"
             data-testid="link-pind-daan-hub"
           >
@@ -2400,7 +2400,7 @@ function CitySeo({ cfg }: { cfg: CityConfig }) {
         },
         breadcrumbList([
           { name: "Home", url: "/" },
-          { name: "Pind Daan", url: "/pind-daan" },
+          { name: "Pind Daan", url: "/pind-daan-booking" },
           { name: `Pind Daan in ${cityCap}`, url: path },
         ]),
         faqPage(cfg.faqs.map((f) => ({ question: f.q, answer: f.a }))),
@@ -2417,17 +2417,17 @@ const SISTER_TIRTHS: Record<CityConfig["slug"], { slug: string; name: string; ta
   gaya: [
     { slug: "kashi", name: "Pind Daan in Kashi", tagline: "Liberation at Manikarnika Ghat", href: "/pind-daan-kashi", icon: Flame },
     { slug: "haridwar", name: "Pind Daan in Haridwar", tagline: "Shradh at Har Ki Pauri & Narayani Shila", href: "/pind-daan-haridwar", icon: Mountain },
-    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan", icon: Compass },
+    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan-booking", icon: Compass },
   ],
   kashi: [
     { slug: "gaya", name: "Pind Daan in Gaya", tagline: "Moksha at Vishnupad & Phalgu", href: "/pind-daan-gaya", icon: Sparkles },
     { slug: "haridwar", name: "Pind Daan in Haridwar", tagline: "Shradh at Har Ki Pauri & Narayani Shila", href: "/pind-daan-haridwar", icon: Mountain },
-    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan", icon: Compass },
+    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan-booking", icon: Compass },
   ],
   haridwar: [
     { slug: "gaya", name: "Pind Daan in Gaya", tagline: "Moksha at Vishnupad & Phalgu", href: "/pind-daan-gaya", icon: Sparkles },
     { slug: "kashi", name: "Pind Daan in Kashi", tagline: "Liberation at Manikarnika Ghat", href: "/pind-daan-kashi", icon: Flame },
-    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan", icon: Compass },
+    { slug: "hub", name: "All Sacred Tirthas", tagline: "Compare every Pind Daan destination", href: "/pind-daan-booking", icon: Compass },
   ],
 };
 

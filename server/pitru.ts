@@ -301,7 +301,7 @@ function buildDoshAssessment(t: DepartureTithi): DoshAssessment {
 
   // Recommendations always include three pillars: tarpan, annual Pind Daan, Brahman bhojan.
   const recommendations = [
-    { title: "Annual Pind Daan during Pitru Paksha", body: "Perform Pind Daan with a karmakandi pandit on the death tithi during Pitru Paksha. We can do this remotely on your behalf at Gaya, Kashi or Haridwar.", href: "/pind-daan" },
+    { title: "Annual Pind Daan during Pitru Paksha", body: "Perform Pind Daan with a karmakandi pandit on the death tithi during Pitru Paksha. We can do this remotely on your behalf at Gaya, Kashi or Haridwar.", href: "/pind-daan-booking" },
     { title: "Monthly Amavasya Tarpan", body: "Offer water with black sesame, kusha grass and barley on every Amavasya facing south, taking the departed soul’s name and gotra.", href: "/panchang-calendar" },
     { title: "Tripindi Shradh at Pishachmochan", body: severity === "high"
       ? "Strongly indicated — the special Tripindi Shradh at Pishachmochan Kund in Kashi is prescribed for ancestors with unfinished karma."
@@ -339,7 +339,7 @@ function reminderSubject(a: PitruAncestor, offset: number): string {
   return `Shradh of ${a.name} in ${offset} days`;
 }
 
-function reminderText(a: PitruAncestor, offset: number, shradhDate: string, siteUrl: string, bookingPath: string = "/pind-daan"): string {
+function reminderText(a: PitruAncestor, offset: number, shradhDate: string, siteUrl: string, bookingPath: string = "/pind-daan-booking"): string {
   const when = new Date(shradhDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const heading = offset === 0
     ? `Today (${when}) is the annual Shradh tithi for your ${a.relation}, ${a.name}.`
@@ -363,7 +363,7 @@ function reminderText(a: PitruAncestor, offset: number, shradhDate: string, site
   ].join("\n");
 }
 
-function reminderHtml(a: PitruAncestor, offset: number, shradhDate: string, siteUrl: string, bookingPath: string = "/pind-daan"): string {
+function reminderHtml(a: PitruAncestor, offset: number, shradhDate: string, siteUrl: string, bookingPath: string = "/pind-daan-booking"): string {
   const when = new Date(shradhDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const heading = offset === 0
     ? `Today (<strong>${when}</strong>) is the annual Shradh tithi for your ${a.relation}, <strong>${a.name}</strong>.`
@@ -444,7 +444,7 @@ async function dispatchReminderTick() {
       // Derive per-ancestor recommended booking deep link from the dosh
       // assessment so reminders link to the right city/package
       // (Pishachmochan/Kashi for high severity, Gaya for Amavasya, etc).
-      let bookingPath = "/pind-daan";
+      let bookingPath = "/pind-daan-booking";
       try {
         const tithiSnap: DepartureTithi = {
           tithiNumber: a.tithiNumber,
@@ -642,7 +642,7 @@ export function registerPitruRoutes(app: Express) {
             } catch {}
           }
         }
-        let recommendedHref = "/pind-daan";
+        let recommendedHref = "/pind-daan-booking";
         try {
           if (a.tithiNumber) {
             recommendedHref = buildDoshAssessment({

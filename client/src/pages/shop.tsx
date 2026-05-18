@@ -26,8 +26,8 @@ import CategoryAPlusThemed from "@/components/CategoryAPlusThemed";
 import CategoryCrossSell from "@/components/CategoryCrossSell";
 import ShopByCategory from "@/components/ShopByCategory";
 
-/* ───────────────────────── Parent /shop SEO content ─────────────────────────
- * Single source of truth for the parent (un-filtered) /shop landing.
+/* ───────────────────────── Parent /puja-samagri-online SEO content ─────────────────────────
+ * Single source of truth for the parent (un-filtered) /puja-samagri-online landing.
  * - SHOP_PARENT_FAQS feeds BOTH the visible accordion in PageAPlusContent
  *   AND the FAQPage JSON-LD that ships in <head>.
  * - SHOP_CATEGORY_LINKS renders as crawlable <Link> cards so Googlebot
@@ -441,7 +441,7 @@ export default function Shop() {
     "loban-dhoop": { search: "loban" },
     "guggal-dhoop": { search: "guggal" },
   };
-  const slugMatch = location.match(/^\/shop\/([^/?#]+)$/);
+  const slugMatch = location.match(/^\/puja-samagri-online\/([^/?#]+)$/);
   const rawSlug = slugMatch?.[1];
   const resolvedSlug = rawSlug ? (CATEGORY_SLUG_ALIASES[rawSlug] || rawSlug) : undefined;
   const slugPreset = resolvedSlug ? SHOP_SLUG_PRESETS[resolvedSlug] : undefined;
@@ -463,7 +463,7 @@ export default function Shop() {
   useEffect(() => { setSelectedCategory(urlCategory); }, [urlCategory]);
   useEffect(() => { setSearchQuery(urlSearch); }, [urlSearch]);
 
-  try { sessionStorage.setItem("lastShopPage", "/shop"); } catch {}
+  try { sessionStorage.setItem("lastShopPage", "/puja-samagri-online"); } catch {}
 
   const seoTitle = categoryContent?.metaTitle
     || (selectedCategory
@@ -473,7 +473,7 @@ export default function Shop() {
     || (selectedCategory
       ? `Shop authentic ${selectedCategory} online. Lab-certified, energised, and blessed. Free delivery above ₹499. Cash on Delivery available across India.`
       : "Discover authentic Rudraksha, puja samagri, deity idols, havan ingredients & more. Lab-certified, free shipping ₹499+, COD available. Crafted for your spiritual journey.");
-  const seoCanonical = slugMatch ? `/shop/${slugMatch[1]}` : "/shop";
+  const seoCanonical = slugMatch ? `/shop/${slugMatch[1]}` : "/puja-samagri-online";
 
   const { data: allProducts, isLoading: allLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -583,21 +583,21 @@ export default function Shop() {
     () => categoryContent
       ? breadcrumbListSchema([
           { name: "Home", url: "/" },
-          { name: "Shop", url: "/shop" },
+          { name: "Shop", url: "/puja-samagri-online" },
           { name: categoryContent.category, url: `/shop/${categoryContent.slug}` },
         ])
       : null,
     [categoryContent]
   );
 
-  // ── Parent /shop schemas: shown only on the un-filtered landing ──
+  // ── Parent /puja-samagri-online schemas: shown only on the un-filtered landing ──
   const isShopParent = !slugMatch && !selectedCategory && !searchQuery;
 
   const parentBreadcrumbSchema = useMemo(
     () => isShopParent
       ? breadcrumbListSchema([
           { name: "Home", url: "/" },
-          { name: "Shop", url: "/shop" },
+          { name: "Shop", url: "/puja-samagri-online" },
         ])
       : null,
     [isShopParent]
@@ -618,7 +618,7 @@ export default function Shop() {
             "@context": "https://schema.org",
             "@type": "Store",
             name: "Vedic Tatva",
-            url: schemaAbs("/shop"),
+            url: schemaAbs("/puja-samagri-online"),
             description: "Premium spiritual e-commerce — authentic rudraksha, hand-crafted idols, pure puja samagri, havan kits and more, sourced directly from traditional artisans across Bharat.",
             image: schemaAbs("/og/og-puja-essentials.jpg"),
             currenciesAccepted: "INR",
@@ -701,14 +701,14 @@ export default function Shop() {
       />
 
       {/* ── All hero/banner surfaces removed per user request:
-          - Parent /shop editorial banner (gone)
+          - Parent /puja-samagri-online editorial banner (gone)
           - Themed CategoryHeroThemed for /shop/<slug> landings (gone)
           The visual <ShopByCategory> grid (with product photos) below
-          is now the only above-the-fold surface on /shop. The category
+          is now the only above-the-fold surface on /puja-samagri-online. The category
           H1 + intro copy still feeds the SSR <head> via PageSeo /
           allShopSchemas, so SEO isn't impacted. ── */}
 
-      {/* ── Shop by Category (parent /shop only, no active search) ── */}
+      {/* ── Shop by Category (parent /puja-samagri-online only, no active search) ── */}
       {!categoryTheme && !searchQuery && (
         <ShopByCategory products={allProducts} />
       )}
@@ -778,7 +778,7 @@ export default function Shop() {
                       ))}
                     </div>
                   )}
-                  {aiSuggestion?.redirect && aiSuggestion.redirect !== "/shop" && (
+                  {aiSuggestion?.redirect && aiSuggestion.redirect !== "/puja-samagri-online" && (
                     <Link
                       href={aiSuggestion.redirect}
                       className="inline-flex items-center gap-1 text-[11.5px] mt-2 underline-offset-2 hover:underline"
@@ -980,7 +980,7 @@ export default function Shop() {
             {categoryContent ? (
               <>
                 <li>
-                  <Link href="/shop" className="hover:underline" style={{ color: `${INK}88` }} data-testid="link-breadcrumb-shop">
+                  <Link href="/puja-samagri-online" className="hover:underline" style={{ color: `${INK}88` }} data-testid="link-breadcrumb-shop">
                     Shop
                   </Link>
                 </li>
@@ -1151,7 +1151,7 @@ export default function Shop() {
           <CategoryCrossSell currentSlug={categoryTheme.slug} />
         )}
 
-        {/* Generic category content (parent /shop or non-themed slugs only) */}
+        {/* Generic category content (parent /puja-samagri-online or non-themed slugs only) */}
         {!categoryTheme && categoryContent && (
           <section className="mt-14 max-w-4xl mx-auto" data-testid={`category-content-${categoryContent.slug}`}>
             <header className="text-center mb-8">
@@ -1217,7 +1217,7 @@ export default function Shop() {
         />
 
         <div className="mt-12">
-          <RelatedServicesSection context="shop" currentPath="/shop" />
+          <RelatedServicesSection context="shop" currentPath="/puja-samagri-online" />
         </div>
       </main>
     </div>

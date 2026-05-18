@@ -142,7 +142,7 @@ export default function FestivalLanding() {
                 <Button
                   variant="outline"
                   className="bg-white/10 backdrop-blur border-white/30 text-white hover:bg-white/20"
-                  onClick={() => setLocation("/pandits")}
+                  onClick={() => setLocation("/book-pandit-online")}
                   data-testid="btn-book-pandit"
                 >
                   {fcopy.bookPandit} <ArrowRight className="w-4 h-4" />
@@ -185,7 +185,7 @@ export default function FestivalLanding() {
           ) : kitProducts.length === 0 ? (
             <Card className="p-6 text-sm text-[#5a4a3a]/70" data-testid="text-kit-empty">
               {fcopy.kitEmpty}
-              <Link href="/shop" className="ml-2 text-[#6D2B35] font-bold underline">{fcopy.shopNow}</Link>
+              <Link href="/puja-samagri-online" className="ml-2 text-[#6D2B35] font-bold underline">{fcopy.shopNow}</Link>
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

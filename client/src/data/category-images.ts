@@ -1,4 +1,4 @@
-// Single source of truth for the per-category hero image (used on /shop's
+// Single source of truth for the per-category hero image (used on /puja-samagri-online's
 // "Shop by Category" grid AND /spiritual-essentials hub tiles).
 import rudrakshaImg from "@assets/generated_images/cat-rudraksha.png";
 import pujaSamagriImg from "@assets/generated_images/cat-puja-samagri.png";

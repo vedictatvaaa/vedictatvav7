@@ -14,7 +14,7 @@ import { regenerateForCurrentAndNextYear } from "./muhurat-engine";
 async function buildPriorityUrls(siteUrl: string): Promise<string[]> {
   const base = siteUrl.replace(/\/$/, "");
   const staticPaths = [
-    "/", "/shop", "/spiritual-essentials", "/pandits", "/online-puja-booking", "/pind-daan",
+    "/", "/puja-samagri-online", "/spiritual-essentials", "/book-pandit-online", "/online-puja-booking", "/pind-daan-booking",
     "/astrology", "/ai-kundli", "/ai-baby-names", "/ai-palm-reading",
     "/panchang-calendar", "/matrimony", "/become-pandit", "/become-astrologer",
     "/category/idols", "/category/puja-samagri", "/category/havan-samagri",

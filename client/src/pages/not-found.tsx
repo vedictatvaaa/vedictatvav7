@@ -6,8 +6,8 @@ import { useState } from "react";
 
 const popularPages = [
   { title: "Home", href: "/", icon: Home, desc: "Back to homepage" },
-  { title: "Shop", href: "/shop", icon: ShoppingBag, desc: "Browse spiritual products" },
-  { title: "Book Pandit", href: "/pandits", icon: UserCheck, desc: "Find verified pandits" },
+  { title: "Shop", href: "/puja-samagri-online", icon: ShoppingBag, desc: "Browse spiritual products" },
+  { title: "Book Pandit", href: "/book-pandit-online", icon: UserCheck, desc: "Find verified pandits" },
   { title: "Puja Services", href: "/online-puja-booking", icon: Calendar, desc: "Schedule a puja" },
   { title: "Astrology", href: "/astrology", icon: Sparkles, desc: "Kundli & consultations" },
   { title: "AI Kundli", href: "/ai-kundli", icon: Brain, desc: "Free AI kundli report" },
@@ -24,7 +24,7 @@ export default function NotFound() {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
+      window.location.href = `/puja-samagri-online?search=${encodeURIComponent(searchQuery.trim())}`;
     }
   };
 

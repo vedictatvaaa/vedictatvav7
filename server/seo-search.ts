@@ -14,12 +14,12 @@ const suggestLimiter = rateLimit({
 });
 
 const STATIC_SUGGESTIONS: { label: string; url: string; type: string }[] = [
-  { label: "Book a Pandit", url: "/pandits", type: "service" },
+  { label: "Book a Pandit", url: "/book-pandit-online", type: "service" },
   { label: "Online Puja", url: "/online-puja-booking", type: "service" },
-  { label: "Pind Daan in Gaya", url: "/pind-daan", type: "service" },
+  { label: "Pind Daan in Gaya", url: "/pind-daan-booking", type: "service" },
   { label: "AI Kundli", url: "/ai-kundli", type: "service" },
   { label: "Astrology Consultation", url: "/astrology", type: "service" },
-  { label: "Daily Panchang", url: "/panchang", type: "service" },
+  { label: "Daily Panchang", url: "/today-panchang", type: "service" },
   { label: "Matrimony", url: "/matrimony", type: "service" },
   { label: "Puja Essentials", url: "/spiritual-essentials", type: "category" },
   { label: "Idols & Murtis", url: "/category/idols", type: "category" },

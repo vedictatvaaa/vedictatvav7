@@ -32,7 +32,7 @@ const socials = [
 const shopCategories = [
   { href: "/spiritual-essentials?category=rudraksha", label: "Rudraksha Beads", testid: "footer-cat-rudraksha" },
   { href: "/spiritual-essentials?category=yantras", label: "Yantras", testid: "footer-cat-yantras" },
-  { href: "/shop?category=Idols", label: "Idols & Murtis", testid: "footer-cat-idols" },
+  { href: "/puja-samagri-online?category=Idols", label: "Idols & Murtis", testid: "footer-cat-idols" },
   { href: "/spiritual-essentials?category=puja-samagri", label: "Puja Samagri", testid: "footer-cat-puja-samagri" },
   { href: "/spiritual-essentials?category=havan-samagri", label: "Havan Samagri", testid: "footer-cat-havan" },
   { href: "/spiritual-essentials?category=dhoti-kurta", label: "Dhoti & Kurta", testid: "footer-cat-apparel" },
@@ -303,7 +303,7 @@ export default function Footer() {
               {popularCities.map((city, i) => (
                 <span key={city}>
                   <Link
-                    href={`/pandits?city=${encodeURIComponent(city)}`}
+                    href={`/book-pandit-online?city=${encodeURIComponent(city)}`}
                     className="hover:text-[#f5d76e] transition-colors"
                     data-testid={`city-${city.toLowerCase()}`}
                     title={`Book a Pandit in ${city}`}

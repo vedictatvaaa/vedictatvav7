@@ -170,7 +170,7 @@ export default function HubTopPicks() {
 
       <div className="text-center mt-10">
         <Link
-          href="/shop"
+          href="/puja-samagri-online"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md font-semibold text-sm hover-elevate active-elevate-2"
           style={{ background: MAROON, color: "white" }}
           data-testid="link-browse-all-shop"

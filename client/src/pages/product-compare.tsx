@@ -66,7 +66,7 @@ export default function ProductCompare() {
       {/* Slim hero — solid maroon */}
       <div className="bg-[#6D2B35] border-b border-[#D4AF37]/30 text-white py-10 sm:py-12">
         <div className="container mx-auto px-4">
-          <Link href="/shop" className="inline-flex items-center gap-1.5 text-[#D4AF37] hover:text-white text-[11px] uppercase tracking-[0.3em] font-semibold mb-3 transition-colors" data-testid="link-back-shop">
+          <Link href="/puja-samagri-online" className="inline-flex items-center gap-1.5 text-[#D4AF37] hover:text-white text-[11px] uppercase tracking-[0.3em] font-semibold mb-3 transition-colors" data-testid="link-back-shop">
             <ArrowLeft className="h-3 w-3" /> Back to Shop
           </Link>
           <div className="flex items-center gap-2.5 mb-2">

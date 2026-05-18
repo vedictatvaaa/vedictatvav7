@@ -370,7 +370,7 @@ export default function Membership() {
             Membership plans are being prepared — explore everything else in the meantime
           </p>
           <div className="flex flex-wrap gap-2.5 justify-center">
-            <Link href="/shop">
+            <Link href="/puja-samagri-online">
               <Button className="bg-[#D4AF37] hover:bg-[#c4a030] text-[#6D2B35] rounded-md h-10 px-5 text-[13px] font-semibold" data-testid="btn-browse-shop">
                 Shop Now <ArrowRight className="h-4 w-4 ml-1.5" />
               </Button>

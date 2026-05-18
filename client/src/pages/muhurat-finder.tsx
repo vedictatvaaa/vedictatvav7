@@ -312,7 +312,7 @@ export default function MuhuratFinder() {
               <button onClick={() => { setResult(null); setSelectedCeremony(null); }} className={OUTLINE_BTN} data-testid="btn-other-ceremony">
                 Other Ceremonies
               </button>
-              <Link href="/pandits">
+              <Link href="/book-pandit-online">
                 <button className={OUTLINE_BTN} data-testid="btn-book-pandit">
                   Book a Pandit
                 </button>

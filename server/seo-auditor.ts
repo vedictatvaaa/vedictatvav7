@@ -70,14 +70,14 @@ function check(
 function categorize(path: string): PageAuditResult["category"] {
   if (path === "/") return "home";
   if (path.startsWith("/product/")) return "product";
-  if (path.startsWith("/category/") || path === "/shop" || path === "/spiritual-essentials") return "category";
+  if (path.startsWith("/category/") || path === "/puja-samagri-online" || path === "/spiritual-essentials") return "category";
   if (
     path.startsWith("/pandit") ||
     path.startsWith("/astrologer") ||
     path.startsWith("/puja") ||
     path.startsWith("/astrology") ||
     path.startsWith("/ai-") ||
-    path.startsWith("/pind-daan") ||
+    path.startsWith("/pind-daan-booking") ||
     path.startsWith("/temple-tourism")
   )
     return "service";
@@ -224,11 +224,11 @@ export function auditPage(
 const STATIC_PATHS = [
   "/",
   "/spiritual-essentials",
-  "/shop",
-  "/pandits",
+  "/puja-samagri-online",
+  "/book-pandit-online",
   "/puja",
   "/astrology",
-  "/pind-daan",
+  "/pind-daan-booking",
   "/pind-daan/kashi",
   "/pind-daan/gaya",
   "/pind-daan/haridwar",

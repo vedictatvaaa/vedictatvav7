@@ -233,7 +233,7 @@ export default function AiCoderTab({ adminToken }: { adminToken?: string }) {
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder='e.g. "Add a Diwali 10% off banner to the homepage above the hero, link to /shop?coupon=DIWALI10"'
+              placeholder='e.g. "Add a Diwali 10% off banner to the homepage above the hero, link to /puja-samagri-online?coupon=DIWALI10"'
               className="mt-1 min-h-[100px]"
               maxLength={4000}
               data-testid="input-aic-prompt"

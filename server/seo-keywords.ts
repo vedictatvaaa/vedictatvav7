@@ -13,9 +13,9 @@ export interface CuratedKeyword {
 }
 
 export const PUJA_PRIORITY_KEYWORDS: CuratedKeyword[] = [
-  { keyword: "online pandit booking", targetPath: "/pandits", intent: "transactional", priority: 10, cluster: "puja" },
-  { keyword: "book pandit for puja", targetPath: "/pandits", intent: "transactional", priority: 10, cluster: "puja" },
-  { keyword: "verified pandit near me", targetPath: "/pandits", intent: "local", priority: 9, cluster: "puja" },
+  { keyword: "online pandit booking", targetPath: "/book-pandit-online", intent: "transactional", priority: 10, cluster: "puja" },
+  { keyword: "book pandit for puja", targetPath: "/book-pandit-online", intent: "transactional", priority: 10, cluster: "puja" },
+  { keyword: "verified pandit near me", targetPath: "/book-pandit-online", intent: "local", priority: 9, cluster: "puja" },
   { keyword: "online vedic puja", targetPath: "/online-puja-booking", intent: "transactional", priority: 10, cluster: "puja" },
   { keyword: "satyanarayan puja booking", targetPath: "/online-puja-booking", intent: "transactional", priority: 10, cluster: "puja" },
   { keyword: "griha pravesh puja booking", targetPath: "/online-puja-booking", intent: "transactional", priority: 10, cluster: "puja" },
@@ -27,13 +27,13 @@ export const PUJA_PRIORITY_KEYWORDS: CuratedKeyword[] = [
   { keyword: "annaprashan samskar puja", targetPath: "/online-puja-booking", intent: "transactional", priority: 8, cluster: "puja" },
   { keyword: "namkaran puja online", targetPath: "/online-puja-booking", intent: "transactional", priority: 8, cluster: "puja" },
   { keyword: "mundan ceremony pandit", targetPath: "/online-puja-booking", intent: "transactional", priority: 8, cluster: "puja" },
-  { keyword: "wedding pandit booking", targetPath: "/pandits", intent: "transactional", priority: 9, cluster: "puja" },
-  { keyword: "pind daan in gaya online", targetPath: "/pind-daan", intent: "transactional", priority: 10, cluster: "puja" },
-  { keyword: "kashi pind daan booking", targetPath: "/pind-daan", intent: "transactional", priority: 10, cluster: "puja" },
-  { keyword: "haridwar pind daan", targetPath: "/pind-daan", intent: "transactional", priority: 9, cluster: "puja" },
-  { keyword: "shradh puja booking", targetPath: "/pind-daan", intent: "transactional", priority: 9, cluster: "puja" },
-  { keyword: "tarpan online booking", targetPath: "/pind-daan", intent: "transactional", priority: 8, cluster: "puja" },
-  { keyword: "pitru paksha puja online", targetPath: "/pind-daan", intent: "transactional", priority: 9, cluster: "puja" },
+  { keyword: "wedding pandit booking", targetPath: "/book-pandit-online", intent: "transactional", priority: 9, cluster: "puja" },
+  { keyword: "pind daan in gaya online", targetPath: "/pind-daan-booking", intent: "transactional", priority: 10, cluster: "puja" },
+  { keyword: "kashi pind daan booking", targetPath: "/pind-daan-booking", intent: "transactional", priority: 10, cluster: "puja" },
+  { keyword: "haridwar pind daan", targetPath: "/pind-daan-booking", intent: "transactional", priority: 9, cluster: "puja" },
+  { keyword: "shradh puja booking", targetPath: "/pind-daan-booking", intent: "transactional", priority: 9, cluster: "puja" },
+  { keyword: "tarpan online booking", targetPath: "/pind-daan-booking", intent: "transactional", priority: 8, cluster: "puja" },
+  { keyword: "pitru paksha puja online", targetPath: "/pind-daan-booking", intent: "transactional", priority: 9, cluster: "puja" },
   { keyword: "diwali puja samagri kit", targetPath: "/category/puja-samagri", intent: "transactional", priority: 10, cluster: "samagri" },
   { keyword: "navratri puja samagri", targetPath: "/category/puja-samagri", intent: "transactional", priority: 9, cluster: "samagri" },
   { keyword: "ganesh chaturthi samagri", targetPath: "/category/puja-samagri", intent: "transactional", priority: 9, cluster: "samagri" },
@@ -63,7 +63,7 @@ export const PUJA_PRIORITY_KEYWORDS: CuratedKeyword[] = [
   { keyword: "shubh muhurat finder", targetPath: "/muhurat-finder", intent: "informational", priority: 8, cluster: "calendar" },
   { keyword: "spiritual ecommerce india", targetPath: "/", intent: "branded", priority: 9, cluster: "brand" },
   { keyword: "vedic tatva", targetPath: "/", intent: "branded", priority: 10, cluster: "brand" },
-  { keyword: "buy spiritual products online", targetPath: "/shop", intent: "transactional", priority: 9, cluster: "brand" },
+  { keyword: "buy spiritual products online", targetPath: "/puja-samagri-online", intent: "transactional", priority: 9, cluster: "brand" },
 ];
 
 export async function seedKeywordTargets(): Promise<{ inserted: number; total: number }> {

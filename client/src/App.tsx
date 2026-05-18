@@ -272,7 +272,7 @@ function InteractionTracker() {
   useEffect(() => {
     import("@/lib/spiritual-tracker").then(({ trackPageVisit }) => {
       const pageCategories: Record<string, string> = {
-        "/shop": "shopping", "/online-puja-booking": "puja", "/pandits": "pandit",
+        "/puja-samagri-online": "shopping", "/online-puja-booking": "puja", "/book-pandit-online": "pandit",
         "/astrology": "astrology", "/ai-kundli": "astrology", "/premium-kundli-pdf": "astrology",
         "/ai-baby-names": "astrology", "/ai-palm-reading": "astrology",
         "/vastu-compass": "vastu", "/panchang-calendar": "panchang",
@@ -411,13 +411,13 @@ function MobileBottomNav() {
           active={props["data-active"] === true}
         />
       )) as any,
-      label: "Pandit", path: "/pandits",
-      match: (l: string) => l === "/pandits" || l.startsWith("/pandit/"),
+      label: "Pandit", path: "/book-pandit-online",
+      match: (l: string) => l === "/book-pandit-online" || l.startsWith("/pandit/"),
       color: "#2E7D6B", tint: "rgba(46,125,107,0.12)",
     },
   ];
 
-  const shopActive = location === "/shop" || location.startsWith("/product/");
+  const shopActive = location === "/puja-samagri-online" || location.startsWith("/product/");
 
   const renderSideTab = (tab: typeof sideTabs[number]) => {
     const isActive = tab.match(location);
@@ -537,7 +537,7 @@ function MobileBottomNav() {
         {renderSideTab(sideTabs[1])}
 
         <div className="flex-1 flex flex-col items-center justify-end pb-1.5">
-          <Link href="/shop">
+          <Link href="/puja-samagri-online">
             <button
               className={`relative -mt-7 w-14 h-14 rounded-full flex items-center justify-center transition-colors border-[3px] border-white ${
                 shopActive ? "bg-[#5a1f29]" : "bg-[#6D2B35] hover:bg-[#5a1f29]"
@@ -687,7 +687,7 @@ function Router() {
           <Route path="/temple-decor">{() => <SeoLanding slug="temple-decor" />}</Route>
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
-          <Route path="/shop" component={Shop} />
+          <Route path="/puja-samagri-online" component={Shop} />
           <Route path="/shop/rudraksha/:slug">{() => <ServiceLanding vertical="rudraksha" pattern="/shop/rudraksha/:slug" />}</Route>
           <Route path="/shop/gemstones/:slug">{() => <ServiceLanding vertical="gemstones" pattern="/shop/gemstones/:slug" />}</Route>
           <Route path="/shop/:slug" component={Shop} />
@@ -703,7 +703,7 @@ function Router() {
           <Route path="/festival/:slug" component={FestivalLanding} />
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
-          <Route path="/pandits" component={PanditDirectory} />
+          <Route path="/book-pandit-online" component={PanditDirectory} />
           <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
           <Route path="/pandits/:citySlug" component={PanditCityLanding} />
           <Route path="/online-pandit-booking" component={PanditDirectory} />
@@ -715,7 +715,7 @@ function Router() {
           <Route path="/puja/:type/:city" component={PujaCity} />
           <Route path="/puja/:slug">{() => <ServiceLanding vertical="puja" pattern="/puja/:slug" />}</Route>
           <Route path="/tools/tithi-calculator" component={TithiCalculator} />
-          <Route path="/pind-daan" component={PindDaanHub} />
+          <Route path="/pind-daan-booking" component={PindDaanHub} />
           <Route path="/online-pind-daan" component={PindDaanHub} />
           <Route path="/pind-daan-gaya" component={PindDaanGayaLanding} />
           <Route path="/pind-daan-kashi" component={PindDaanKashiLanding} />

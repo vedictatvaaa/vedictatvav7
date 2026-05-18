@@ -148,7 +148,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-applications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: data.action === "approve" ? "Application Approved" : "Application Rejected",

@@ -285,7 +285,7 @@ export default function PujaKitPage() {
             {isHi
               ? "इस किट की वस्तुएँ शीघ्र ही उपलब्ध होंगी। तब तक, हमारी पूरी दुकान देखें।"
               : "This kit's items are coming soon. In the meantime, browse our full shop."}
-            <Link href="/shop" className="ml-2 text-[#6D2B35] font-bold underline">
+            <Link href="/puja-samagri-online" className="ml-2 text-[#6D2B35] font-bold underline">
               {isHi ? "दुकान खोलें" : "Open shop"}
             </Link>
           </Card>

@@ -115,7 +115,7 @@ export default function LocalLandingPage() {
               ))}
             </div>
             <div className="text-center mt-6">
-              <Link href="/shop"><Button variant="outline" data-testid="button-browse-all">Browse All {categoryLabel} <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+              <Link href="/puja-samagri-online"><Button variant="outline" data-testid="button-browse-all">Browse All {categoryLabel} <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
             </div>
           </div>
         </section>

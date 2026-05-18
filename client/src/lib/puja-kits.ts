@@ -42,7 +42,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-shrim-mahalakshmi",
     services: [
-      { label: "Book a Lakshmi Puja Pandit", href: "/pandits", description: "Verified pandit for Friday Lakshmi pujan at home." },
+      { label: "Book a Lakshmi Puja Pandit", href: "/book-pandit-online", description: "Verified pandit for Friday Lakshmi pujan at home." },
       { label: "Online Lakshmi Puja", href: "/online-puja-booking", description: "Sankalp puja livestreamed from a sacred temple." },
     ],
   },
@@ -62,7 +62,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-gam-ganapataye",
     services: [
-      { label: "Book a Ganpati Sthapana Pandit", href: "/pandits", description: "Pranapratishtha and daily aarti at your home." },
+      { label: "Book a Ganpati Sthapana Pandit", href: "/book-pandit-online", description: "Pranapratishtha and daily aarti at your home." },
       { label: "Online Ganesh Puja", href: "/online-puja-booking", description: "Sankalp puja from Siddhivinayak with prasad delivered." },
     ],
   },
@@ -83,7 +83,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-namah-shivaya",
     services: [
-      { label: "Book a Rudrabhishek Pandit", href: "/pandits", description: "Full Rudri paath at your home on Monday." },
+      { label: "Book a Rudrabhishek Pandit", href: "/book-pandit-online", description: "Full Rudri paath at your home on Monday." },
       { label: "Online Mahamrityunjaya Jaap", href: "/online-puja-booking", description: "1.25 lakh jaap performed for your sankalp." },
     ],
   },
@@ -102,7 +102,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "hanuman-mantra",
     services: [
-      { label: "Book a Sundarkand Pandit", href: "/pandits", description: "Sundarkand or 108-times Hanuman Chalisa paath at home." },
+      { label: "Book a Sundarkand Pandit", href: "/book-pandit-online", description: "Sundarkand or 108-times Hanuman Chalisa paath at home." },
     ],
   },
   vishnu: {
@@ -121,7 +121,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-namo-narayanaya",
     services: [
-      { label: "Book a Satyanarayan Katha Pandit", href: "/pandits", description: "Full Satyanarayan vrat katha at your home." },
+      { label: "Book a Satyanarayan Katha Pandit", href: "/book-pandit-online", description: "Full Satyanarayan vrat katha at your home." },
     ],
   },
   krishna: {
@@ -140,7 +140,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "hare-krishna",
     services: [
-      { label: "Book a Krishna Janmashtami Pandit", href: "/pandits", description: "Midnight abhishek of Laddu Gopal at your home." },
+      { label: "Book a Krishna Janmashtami Pandit", href: "/book-pandit-online", description: "Midnight abhishek of Laddu Gopal at your home." },
       { label: "Online Krishna Puja", href: "/online-puja-booking", description: "Live darshan from Vrindavan & Mathura." },
     ],
   },
@@ -161,7 +161,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-dum-durgayai",
     services: [
-      { label: "Book a Durga Saptashati Pandit", href: "/pandits", description: "Recitation of all 13 chapters across nine nights." },
+      { label: "Book a Durga Saptashati Pandit", href: "/book-pandit-online", description: "Recitation of all 13 chapters across nine nights." },
       { label: "Online Devi Puja", href: "/online-puja-booking", description: "Daily aarti livestreamed from Vaishno Devi & Kamakhya." },
     ],
   },
@@ -180,7 +180,7 @@ export const DEITY_KITS: Record<string, DeityKit> = {
     ],
     mantraId: "om-suryaya-namah",
     services: [
-      { label: "Book a Surya Pujan Pandit", href: "/pandits", description: "Sandhya vandan and arghya pujan at sunrise." },
+      { label: "Book a Surya Pujan Pandit", href: "/book-pandit-online", description: "Sandhya vandan and arghya pujan at sunrise." },
     ],
   },
 };

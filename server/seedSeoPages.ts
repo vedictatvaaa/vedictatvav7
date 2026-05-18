@@ -105,7 +105,7 @@ const ENTRIES: SeoEntry[] = [
           url: SITE,
           potentialAction: {
             "@type": "SearchAction",
-            target: `${SITE}/shop?q={search_term_string}`,
+            target: `${SITE}/puja-samagri-online?q={search_term_string}`,
             "query-input": "required name=search_term_string",
           },
         },
@@ -115,7 +115,7 @@ const ENTRIES: SeoEntry[] = [
 
   // ==================== SHOP ====================
   {
-    pagePath: "/shop",
+    pagePath: "/puja-samagri-online",
     metaTitle: "Buy Puja Samagri, Rudraksha & Spiritual Products Online | Vedic Tatva",
     metaDescription:
       "Shop authentic puja samagri, rudraksha mala, brass idols, gemstones, incense & havan kits online. Free shipping above ₹499. Lab-certified, temple-blessed products.",
@@ -129,17 +129,17 @@ const ENTRIES: SeoEntry[] = [
       "@context": "https://schema.org",
       "@type": "CollectionPage",
       name: "Spiritual Products Shop",
-      url: `${SITE}/shop`,
+      url: `${SITE}/puja-samagri-online`,
       breadcrumb: breadcrumb([
         { name: "Home", path: "/" },
-        { name: "Shop", path: "/shop" },
+        { name: "Shop", path: "/puja-samagri-online" },
       ]),
     },
   },
 
   // ==================== PUJA & RITUALS ====================
   {
-    pagePath: "/pandits",
+    pagePath: "/book-pandit-online",
     metaTitle: "Book Verified Pandit Online for Puja at Home | Same-Day | Vedic Tatva",
     metaDescription:
       "Book a verified, experienced pandit for Satyanarayan Puja, Griha Pravesh, Wedding, Mundan & all ceremonies. Same-day booking, transparent pricing, 4.8★ rated pandits.",
@@ -158,11 +158,11 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Online Pandit Booking",
           "Book verified, experienced Hindu pandits online for puja ceremonies at home across India.",
-          `${SITE}/pandits`
+          `${SITE}/book-pandit-online`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Book Pandit", path: "/pandits" },
+          { name: "Book Pandit", path: "/book-pandit-online" },
         ]),
         faqSchema([
           {
@@ -626,7 +626,7 @@ const ENTRIES: SeoEntry[] = [
 
   // ==================== PIND DAAN CLUSTER ====================
   {
-    pagePath: "/pind-daan",
+    pagePath: "/pind-daan-booking",
     metaTitle: "Pind Daan, Tarpan & Shradh Online — Kashi, Gaya, Haridwar | Vedic Tatva",
     metaDescription:
       "Book authentic Pind Daan, Tarpan and Shradh online at Kashi, Gaya and Haridwar. Verified Tirth Purohits, full shastric vidhi, live video Sankalp, photo-video proof and prasad couriered worldwide.",
@@ -645,11 +645,11 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Pind Daan, Tarpan & Shradh — Online Booking",
           "Authentic ancestral rites performed by verified Tirth Purohits at Kashi, Gaya and Haridwar with live video Sankalp, photo-video proof and prasad couriered worldwide.",
-          `${SITE}/pind-daan`
+          `${SITE}/pind-daan-booking`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
         ]),
       ],
     },
@@ -678,7 +678,7 @@ const ENTRIES: SeoEntry[] = [
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Kashi", path: "/pind-daan/kashi" },
         ]),
       ],
@@ -708,7 +708,7 @@ const ENTRIES: SeoEntry[] = [
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Gaya", path: "/pind-daan/gaya" },
         ]),
       ],
@@ -738,7 +738,7 @@ const ENTRIES: SeoEntry[] = [
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Haridwar", path: "/pind-daan/haridwar" },
         ]),
       ],
@@ -773,7 +773,7 @@ const ENTRIES: SeoEntry[] = [
         },
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Why Important", path: "/pind-daan/why-important" },
         ]),
       ],
@@ -808,7 +808,7 @@ const ENTRIES: SeoEntry[] = [
         },
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Sites in India", path: "/pind-daan/sites-in-india" },
         ]),
       ],
@@ -838,7 +838,7 @@ const ENTRIES: SeoEntry[] = [
         ),
         breadcrumb([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Yearly Remote", path: "/pind-daan/yearly-remote" },
         ]),
       ],

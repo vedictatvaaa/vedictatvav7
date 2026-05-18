@@ -324,16 +324,16 @@ async function seedSeoPages() {
         "name": "Vedic Tatva",
         "url": "https://vedictatva.com",
         "description": "Premium spiritual ecommerce and services platform",
-        "potentialAction": { "@type": "SearchAction", "target": "https://vedictatva.com/shop?q={search_term_string}", "query-input": "required name=search_term_string" }
+        "potentialAction": { "@type": "SearchAction", "target": "https://vedictatva.com/puja-samagri-online?q={search_term_string}", "query-input": "required name=search_term_string" }
       }),
       isActive: true,
     },
     {
-      pagePath: "/shop",
+      pagePath: "/puja-samagri-online",
       metaTitle: "Shop Spiritual Products Online - Rudraksha, Puja Items, Gemstones | Vedic Tatva",
       metaDescription: "Browse our curated collection of authentic spiritual products. Rudraksha malas, puja thalis, incense, gemstones, idols & more. Free shipping on orders above ₹999.",
       metaKeywords: "buy spiritual products online, rudraksha online, puja items, gemstones, incense sticks, brass idols, prayer beads, spiritual shop india",
-      canonicalUrl: "https://vedictatva.com/shop",
+      canonicalUrl: "https://vedictatva.com/puja-samagri-online",
       ogTitle: "Shop Spiritual Products - Vedic Tatva",
       ogDescription: "Authentic spiritual products with free shipping. Rudraksha, gemstones, puja items & more.",
       robotsIndex: true,
@@ -343,11 +343,11 @@ async function seedSeoPages() {
       isActive: true,
     },
     {
-      pagePath: "/pandits",
+      pagePath: "/book-pandit-online",
       metaTitle: "Book Verified Pandits for Puja Ceremonies - All Cities | Vedic Tatva",
       metaDescription: "Find and book verified, experienced pandits for all types of puja ceremonies across India. Satyanarayan Puja, Griha Pravesh, Wedding ceremonies & more.",
       metaKeywords: "book pandit online, pandit for puja, verified pandits, puja booking, griha pravesh pandit, satyanarayan puja, wedding pandit, pandit near me",
-      canonicalUrl: "https://vedictatva.com/pandits",
+      canonicalUrl: "https://vedictatva.com/book-pandit-online",
       ogTitle: "Book Verified Pandits - Vedic Tatva",
       ogDescription: "Experienced, verified pandits for all ceremonies. Book online with confidence.",
       robotsIndex: true,
@@ -478,7 +478,7 @@ async function ensurePindDaanSeoPages() {
     schemaMarkup: string;
   }> = [
     {
-      pagePath: "/pind-daan",
+      pagePath: "/pind-daan-booking",
       metaTitle: "Pind Daan, Tarpan & Shradh Online — Kashi, Gaya, Haridwar | Vedic Tatva",
       metaDescription:
         "Book authentic Pind Daan, Tarpan and Shradh online at Kashi, Gaya, Haridwar — performed by verified Tirth Purohits with live video Sankalp, photo proof and prasad couriered worldwide.",
@@ -495,7 +495,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
         ]),
       ),
     },
@@ -517,7 +517,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Kashi", path: "/pind-daan/kashi" },
         ]),
       ),
@@ -540,7 +540,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Gaya", path: "/pind-daan/gaya" },
         ]),
       ),
@@ -563,7 +563,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Haridwar", path: "/pind-daan/haridwar" },
         ]),
       ),
@@ -586,7 +586,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Why It's Important", path: "/pind-daan/why-important" },
         ]),
       ),
@@ -609,7 +609,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Sacred Sites", path: "/pind-daan/sites-in-india" },
         ]),
       ),
@@ -632,7 +632,7 @@ async function ensurePindDaanSeoPages() {
         ]),
         breadcrumbSchema([
           { name: "Home", path: "/" },
-          { name: "Pind Daan", path: "/pind-daan" },
+          { name: "Pind Daan", path: "/pind-daan-booking" },
           { name: "Yearly Remote", path: "/pind-daan/yearly-remote" },
         ]),
       ),
@@ -653,7 +653,7 @@ async function ensurePindDaanSeoPages() {
       twitterDescription: e.metaDescription,
       robotsIndex: true,
       robotsFollow: true,
-      priority: e.pagePath === "/pind-daan" ? 0.9 : 0.8,
+      priority: e.pagePath === "/pind-daan-booking" ? 0.9 : 0.8,
       changeFreq: "monthly",
       schemaMarkup: e.schemaMarkup,
       h1Override: e.h1Override,

@@ -33,20 +33,20 @@ export default function PanditPayoutsTab({ adminToken }: { adminToken?: string }
   const [createOpen, setCreateOpen] = useState(false);
 
   const { data: panditsData } = useQuery<{ pandits?: Pandit[] } | Pandit[]>({
-    queryKey: ["/api/pandits"],
+    queryKey: ["/api/book-pandit-online"],
   });
   const pandits: Pandit[] = useMemo(() => Array.isArray(panditsData) ? panditsData : (panditsData?.pandits || []), [panditsData]);
 
   useEffect(() => { if (!selectedId && pandits.length) setSelectedId(pandits[0].id); }, [pandits, selectedId]);
 
   const { data: earnings, isLoading: loadingEarnings } = useQuery<Earnings>({
-    queryKey: ["/api/admin/pandits", selectedId, "earnings"],
+    queryKey: ["/api/admin/book-pandit-online", selectedId, "earnings"],
     queryFn: () => fetcher(`/api/admin/pandits/${selectedId}/earnings`),
     enabled: !!selectedId,
   });
 
   const { data: payoutsResp, isLoading: loadingPayouts } = useQuery<{ payouts: Payout[] }>({
-    queryKey: ["/api/admin/pandits", selectedId, "payouts"],
+    queryKey: ["/api/admin/book-pandit-online", selectedId, "payouts"],
     queryFn: () => fetcher(`/api/admin/pandits/${selectedId}/payouts`),
     enabled: !!selectedId,
   });
@@ -56,8 +56,8 @@ export default function PanditPayoutsTab({ adminToken }: { adminToken?: string }
     mutationFn: async (id: number) => apiRequest("DELETE", `/api/admin/pandit-payouts/${id}`, undefined, { "x-admin-token": adminToken || "" }),
     onSuccess: () => {
       toast({ title: "Payout removed" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits", selectedId, "payouts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits", selectedId, "earnings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/book-pandit-online", selectedId, "payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/book-pandit-online", selectedId, "earnings"] });
     },
     onError: (e: any) => toast({ title: "Could not remove payout", description: e?.message, variant: "destructive" }),
   });
@@ -177,8 +177,8 @@ function CreatePayoutDialog({
     }, { "x-admin-token": adminToken || "" }),
     onSuccess: () => {
       toast({ title: "Payout recorded" });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits", panditId, "payouts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits", panditId, "earnings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/book-pandit-online", panditId, "payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/book-pandit-online", panditId, "earnings"] });
       onOpenChange(false);
     },
     onError: (e: any) => toast({ title: "Could not record payout", description: e?.message, variant: "destructive" }),

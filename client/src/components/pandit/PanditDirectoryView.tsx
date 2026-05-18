@@ -21,7 +21,7 @@
 //   9.  Distance-aware    — "near me" sort + km display when GPS allowed
 //   10. Price transparency — fees rendered with from-price + dakshina note
 //
-// Data shape: /api/pandits returns sanitized Pandit + { isOnline, distance }
+// Data shape: /api/book-pandit-online returns sanitized Pandit + { isOnline, distance }
 //
 // Embedded mode: when this component is rendered inside a city or city×puja
 // landing page, pass `embedded` to suppress the duplicate H1 + mini-hero
@@ -717,9 +717,9 @@ export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }
   }, [defaultCity, filters.tradition, userLocation]);
 
   const { data: pandits, isLoading, isError, refetch, isFetching } = useQuery<PanditWithMeta[]>({
-    queryKey: ["/api/pandits", queryParams],
+    queryKey: ["/api/book-pandit-online", queryParams],
     queryFn: async () => {
-      const r = await fetch(`/api/pandits?${queryParams}`);
+      const r = await fetch(`/api/book-pandit-online?${queryParams}`);
       if (!r.ok) throw new Error(`Failed to load pandits (${r.status})`);
       return r.json();
     },

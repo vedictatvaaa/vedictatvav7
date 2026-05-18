@@ -198,9 +198,9 @@ export default function ProductDetail() {
   const shopBackPath = (() => {
     try {
       const stored = sessionStorage.getItem("lastShopPage");
-      if (stored === "/spiritual-essentials" || stored === "/shop") return stored;
+      if (stored === "/spiritual-essentials" || stored === "/puja-samagri-online") return stored;
     } catch {}
-    return "/shop";
+    return "/puja-samagri-online";
   })();
   const shopBackLabel = shopBackPath === "/spiritual-essentials" ? "Puja Essentials" : "Shop";
 
@@ -409,8 +409,8 @@ export default function ProductDetail() {
       }),
       breadcrumbList([
         { name: "Home", url: "/" },
-        { name: "Shop", url: "/shop" },
-        { name: product.category, url: `/shop?category=${encodeURIComponent(product.category)}` },
+        { name: "Shop", url: "/puja-samagri-online" },
+        { name: product.category, url: `/puja-samagri-online?category=${encodeURIComponent(product.category)}` },
         { name: product.name, url: seoData.path },
       ]),
       faqPage(getCategoryFAQs(product).map(f => ({ question: f.q, answer: f.a }))),
@@ -1852,7 +1852,7 @@ export default function ProductDetail() {
           <section className="mt-14">
             <div className="flex items-end justify-between mb-5">
               <h2 className="text-xl sm:text-2xl font-serif text-[#6D2B35]" data-testid="text-related-products-heading">Devotees Also Bought</h2>
-              <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="text-xs sm:text-sm text-[#6D2B35] hover:underline font-semibold flex items-center gap-1">
+              <Link href={`/puja-samagri-online?category=${encodeURIComponent(product.category)}`} className="text-xs sm:text-sm text-[#6D2B35] hover:underline font-semibold flex items-center gap-1">
                 View all in {product.category} <ChevronRight className="h-3 w-3" />
               </Link>
             </div>

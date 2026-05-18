@@ -151,7 +151,7 @@ export default function ServiceLandingTemplate({ entry }: Props) {
           ? "/online-puja-booking"
           : entry.vertical === "astrology"
             ? "/astrology"
-            : "/shop",
+            : "/puja-samagri-online",
     };
 
   const hiDefaultCta = isHi

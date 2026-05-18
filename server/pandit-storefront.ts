@@ -85,7 +85,7 @@ const TIER_COMMISSION: Record<string, number> = {
 
 function commissionForPandit(p: { tier?: string | null; productCommissionPct?: number | null; tierExpiresAt?: Date | string | null }): number {
   // Tier expiry: an expired paid tier behaves as free for commission too,
-  // mirroring the reach-filter behavior in /api/pandits.
+  // mirroring the reach-filter behavior in /api/book-pandit-online.
   const expired = p.tierExpiresAt && new Date(p.tierExpiresAt as any) < new Date();
   const rawTier = (p.tier || "free").toLowerCase();
   const tier = expired ? "free" : rawTier;

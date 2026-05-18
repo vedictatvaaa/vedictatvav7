@@ -19,7 +19,7 @@ const PAGE_HINTS: Record<string, { topic: string; intent: string; primaryKw: str
     intent: "Brand discovery + transactional",
     primaryKw: ["spiritual products", "puja samagri online", "rudraksha", "online pandit booking"],
   },
-  "/shop": {
+  "/puja-samagri-online": {
     topic: "Full shop catalog of spiritual products",
     intent: "Transactional",
     primaryKw: ["buy spiritual products online", "puja samagri", "rudraksha", "idols brass", "yantra"],
@@ -29,7 +29,7 @@ const PAGE_HINTS: Record<string, { topic: string; intent: string; primaryKw: str
     intent: "Transactional",
     primaryKw: ["spiritual essentials", "puja kit online", "daily puja items"],
   },
-  "/pandits": {
+  "/book-pandit-online": {
     topic: "Verified pandit booking directory",
     intent: "Service booking",
     primaryKw: ["book pandit online", "verified pandit", "puja pandit near me"],
@@ -47,7 +47,7 @@ const PAGE_HINTS: Record<string, { topic: string; intent: string; primaryKw: str
   "/ai-kundli": { topic: "Free AI Kundli generator", intent: "Tool", primaryKw: ["free kundli online", "ai kundli", "janam kundli"] },
   "/ai-baby-names": { topic: "AI-powered baby name generator", intent: "Tool", primaryKw: ["baby name by date of birth", "rashi baby names"] },
   "/ai-palm-reading": { topic: "AI palm reading", intent: "Tool", primaryKw: ["ai palmistry", "palm reading online"] },
-  "/pind-daan": {
+  "/pind-daan-booking": {
     topic: "Pind Daan booking — Kashi, Gaya, Haridwar",
     intent: "Service booking",
     primaryKw: ["pind daan online", "gaya pind daan booking", "kashi pind daan"],

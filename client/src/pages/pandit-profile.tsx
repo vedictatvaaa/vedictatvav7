@@ -31,7 +31,7 @@ export default function PanditProfile() {
 
   // Resolve pandit either by slug (/p/:slug) or by id (/pandit/:id).
   const { data: pandit, isLoading } = useQuery<Pandit>({
-    queryKey: slug ? ["/api/pandits/public", slug] : ["/api/pandits", paramsId?.id],
+    queryKey: slug ? ["/api/pandits/public", slug] : ["/api/book-pandit-online", paramsId?.id],
     queryFn: async () => {
       const url = slug
         ? `/api/pandits/public/${encodeURIComponent(slug)}`
@@ -146,7 +146,7 @@ export default function PanditProfile() {
         <div className="text-center">
           <h1 className="font-serif text-2xl text-[#6D2B35] mb-2">Pandit Not Found</h1>
           <p className="text-[#5a4a3a]/50 mb-4">This profile may have been removed or is no longer available.</p>
-          <Link href="/pandits">
+          <Link href="/book-pandit-online">
             <Button className="bg-[#6D2B35] text-white">Browse Pandits</Button>
           </Link>
         </div>
@@ -191,7 +191,7 @@ export default function PanditProfile() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
         <div className="container mx-auto px-4">
-          <Link href="/pandits" className="inline-flex items-center gap-1.5 text-white/65 hover:text-white text-[12px] mb-5 transition-colors" data-testid="link-back-pandits">
+          <Link href="/book-pandit-online" className="inline-flex items-center gap-1.5 text-white/65 hover:text-white text-[12px] mb-5 transition-colors" data-testid="link-back-pandits">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to pandit directory
           </Link>
 

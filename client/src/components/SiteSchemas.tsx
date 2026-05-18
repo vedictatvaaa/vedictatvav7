@@ -9,11 +9,11 @@ import { useSiteSettings } from "@/lib/site-settings";
 
 const PRIMARY_NAV: Array<{ name: string; url: string }> = [
   { name: "Home", url: "/" },
-  { name: "Shop", url: "/shop" },
+  { name: "Shop", url: "/puja-samagri-online" },
   { name: "Puja Essentials", url: "/spiritual-essentials" },
-  { name: "Book a Pandit", url: "/pandits" },
+  { name: "Book a Pandit", url: "/book-pandit-online" },
   { name: "Book a Puja", url: "/online-puja-booking" },
-  { name: "Pind Daan", url: "/pind-daan" },
+  { name: "Pind Daan", url: "/pind-daan-booking" },
   { name: "Astrology", url: "/astrology" },
   { name: "AI Kundli", url: "/ai-kundli" },
   { name: "Panchang", url: "/panchang-calendar" },
@@ -61,7 +61,7 @@ export default function SiteSchemas() {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: `${origin}/shop?q={search_term_string}`,
+          urlTemplate: `${origin}/puja-samagri-online?q={search_term_string}`,
         },
         "query-input": "required name=search_term_string",
       },
@@ -80,7 +80,7 @@ export default function SiteSchemas() {
     });
 
     // CollectionPage hint on category landing pages helps sitelink selection
-    if (location.startsWith("/category/") || location === "/shop" || location === "/spiritual-essentials") {
+    if (location.startsWith("/category/") || location === "/puja-samagri-online" || location === "/spiritual-essentials") {
       setJsonLd("collection-page", {
         "@context": "https://schema.org",
         "@type": "CollectionPage",

@@ -152,13 +152,13 @@ function CityChooser() {
         schemas={[
           breadcrumbListSchema([
             { name: "Home", url: abs("/") },
-            { name: "Verified Pandits", url: abs("/pandits") },
+            { name: "Verified Pandits", url: abs("/book-pandit-online") },
           ]),
           faqPageSchema(PANDIT_FAQS.map(f => ({ question: f.q, answer: f.a })), "pandit-dir-faq"),
           serviceSchema({
             name: "Verified Vedic Pandit Booking",
             description: "Book identity-verified, scripture-trained Vedic pandits across 75+ Indian cities for Satyanarayan, Griha Pravesh, Wedding, Rudrabhishek and 50+ ceremonies. Same-day booking, transparent pricing, multi-language support.",
-            url: abs("/pandits"),
+            url: abs("/book-pandit-online"),
             providerName: "Vedic Tatva",
             areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
           }),
@@ -260,7 +260,7 @@ function CityChooser() {
 
         {/* Pind Daan CTA — slim maroon panel, no gradient */}
         <div className="max-w-5xl mx-auto mt-12">
-          <Link href="/pind-daan" className="block group" data-testid="link-pind-daan-cta">
+          <Link href="/pind-daan-booking" className="block group" data-testid="link-pind-daan-cta">
             <div className="rounded-md border border-[#D4AF37]/30 bg-[#6D2B35] p-6 sm:p-7 hover-elevate">
               <div className="flex flex-col md:flex-row md:items-center gap-5">
                 <div className="w-12 h-12 shrink-0 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center">

@@ -584,8 +584,8 @@ export function buildWelcomeEmail(params: {
 }): EmailMessage {
   const greeting = params.name ? `Namaste ${params.name} ji,` : "Namaste,";
   const dashboardUrl = `${siteUrl}/my-profile`;
-  const shopUrl = `${siteUrl}/shop`;
-  const panditsUrl = `${siteUrl}/pandits`;
+  const shopUrl = `${siteUrl}/puja-samagri-online`;
+  const panditsUrl = `${siteUrl}/book-pandit-online`;
   const text = `${greeting}
 
 Welcome to Vedic Tatva — India's home for authentic puja samagri, verified pandits, and Vedic astrology.

@@ -43,7 +43,7 @@ export default function BlogPostPage() {
   }, [post]);
 
   // Pull related products by category derived from the relatedShopUrl (e.g. /shop/sambrani-cups)
-  const shopCategory = post?.relatedShopUrl?.match(/\/shop\/([^/?#]+)/)?.[1];
+  const shopCategory = post?.relatedShopUrl?.match(/\/puja-samagri-online\/([^/?#]+)/)?.[1];
   const { data: shopProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
     queryFn: () => fetch("/api/products").then(r => r.json()),

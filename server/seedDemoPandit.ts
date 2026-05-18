@@ -34,7 +34,7 @@ export async function seedDemoPandit() {
       email: "demo@vedictatva.com",
       passwordHash,
       // tier=free + null lat/lng keeps this account out of every public
-      // /pandits search (the listing filter requires GPS proximity for
+      // /book-pandit-online search (the listing filter requires GPS proximity for
       // free pandits and rejects them when lat/lng are missing). The
       // account is still fully usable through the Pandit Portal login.
       tier: "free" as const,

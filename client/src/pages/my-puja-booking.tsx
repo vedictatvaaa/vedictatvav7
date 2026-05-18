@@ -212,7 +212,7 @@ export default function MyPujaBookingPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-[#5a4a3a]/65 mt-3">You can order missing items from <a href="/shop" className="text-[#6D2B35] underline">Vedic Tatva shop</a>.</p>
+              <p className="text-[11px] text-[#5a4a3a]/65 mt-3">You can order missing items from <a href="/puja-samagri-online" className="text-[#6D2B35] underline">Vedic Tatva shop</a>.</p>
             </CardContent>
           </Card>
         )}

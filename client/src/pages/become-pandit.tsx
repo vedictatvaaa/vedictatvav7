@@ -2351,7 +2351,7 @@ function PersonalisedStorefrontSection() {
               ))}
             </div>
             <div className="mt-6">
-              <Link href="/pandits">
+              <Link href="/book-pandit-online">
                 <Button variant="outline" className="rounded-full" style={{ borderColor: C.maroon, color: C.maroon }} data-testid="btn-view-storefront-examples">
                   <Store className="w-4 h-4 mr-2" />
                   See live pandit storefronts

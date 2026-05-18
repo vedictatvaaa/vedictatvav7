@@ -31,8 +31,8 @@ function PanditsTab() {
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
 
   const { data: pandits, isLoading } = useQuery<Pandit[]>({
-    queryKey: ["/api/pandits", "admin"],
-    queryFn: () => fetcher("/api/pandits?all=true"),
+    queryKey: ["/api/book-pandit-online", "admin"],
+    queryFn: () => fetcher("/api/book-pandit-online?all=true"),
   });
 
   const approveMutation = useMutation({
@@ -48,7 +48,7 @@ function PanditsTab() {
       return { ...await res.json(), newVerified };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: data.newVerified ? "Pandit Approved" : "Pandit Delisted", description: data.newVerified ? "Pandit is now live and visible." : "Pandit has been delisted from public view." });
     },
@@ -66,7 +66,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       toast({ title: "Fees Updated", description: "Pandit fees updated successfully." });
       setEditingFeesId(null);
     },
@@ -80,7 +80,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Pandit Removed", description: "Pandit has been removed." });
     },
@@ -94,7 +94,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       toast({ title: "Boost Activated", description: "Pandit profile is now boosted." });
     },
     onError: () => toast({ title: "Error", description: "Failed to activate boost.", variant: "destructive" }),
@@ -107,7 +107,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       toast({ title: "Boost Deactivated", description: "Pandit boost has been removed." });
     },
     onError: () => toast({ title: "Error", description: "Failed to deactivate boost.", variant: "destructive" }),
@@ -225,8 +225,8 @@ function PanditsTab() {
         pandit={editingPandit}
         onClose={() => setEditingPandit(null)}
         onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/pandits", "admin"] });
-          queryClient.invalidateQueries({ queryKey: ["/api/pandits"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online"] });
           setEditingPandit(null);
         }}
       />

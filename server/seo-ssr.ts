@@ -7,8 +7,8 @@
 // social-media unfurlers like Twitter, LinkedIn, WhatsApp, Slack).
 //
 // This middleware sits BETWEEN the API routes and the Vite/static catch-all.
-// For top SEO routes (/, /shop, /shop/:slug, /product/:slug, /pind-daan*,
-// /astrology, /pandits, /puja, /blog, /blog/:slug, etc.), it:
+// For top SEO routes (/, /puja-samagri-online, /shop/:slug, /product/:slug, /pind-daan-booking*,
+// /astrology, /book-pandit-online, /puja, /blog, /blog/:slug, etc.), it:
 //
 //   1. Looks up the SEO data ahead of time (seo_pages row / category content
 //      / product row).
@@ -145,14 +145,14 @@ function injectHead(html: string, headHtml: string): string {
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
   // 0) Bespoke WhatsApp/social share cards (server/og-meta.ts).
   // These are hand-curated for the highest-intent routes (homepage,
-  // /become-pandit, /shop, /spiritual-essentials, /pandits, /puja,
-  // /pind-daan*, /membership) with FOMO copy + Sanskrit mantra +
+  // /become-pandit, /puja-samagri-online, /spiritual-essentials, /book-pandit-online, /puja,
+  // /pind-daan-booking*, /membership) with FOMO copy + Sanskrit mantra +
   // dedicated 1200x630 imagery. They override seo_pages because the
   // share-preview is a marketing surface, not an SEO body-content surface.
   // /shop/:slug and /product/:slug still fall through to the richer
   // category/product blocks below for proper Schema.org JSON-LD.
   const isCategoryOrProduct =
-    /^\/shop\/[^/?#]+$/.test(reqPath) || /^\/product\/[^/?#]+$/.test(reqPath);
+    /^\/puja-samagri-online\/[^/?#]+$/.test(reqPath) || /^\/product\/[^/?#]+$/.test(reqPath);
 
   // Per-pandit dynamic OG card for /p/<slug> — overrides the static fallback
   // in og-meta.ts so each share preview shows the real pandit's name, city,
@@ -194,7 +194,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
 
   // 1) Curated category landings — /shop/:slug (alias-aware so /shop/malas
   // resolves to the wearables block, matching client behaviour).
-  const shopMatch = reqPath.match(/^\/shop\/([^/?#]+)$/);
+  const shopMatch = reqPath.match(/^\/puja-samagri-online\/([^/?#]+)$/);
   if (shopMatch) {
     const urlSlug = shopMatch[1];
     const canonicalKey = resolveCategorySlug(urlSlug);
@@ -248,7 +248,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${baseUrl}/` },
-          { "@type": "ListItem", position: 2, name: "Shop", item: `${baseUrl}/shop` },
+          { "@type": "ListItem", position: 2, name: "Shop", item: `${baseUrl}/puja-samagri-online` },
           { "@type": "ListItem", position: 3, name: c.category, item: `${baseUrl}${canonicalPath}` },
         ],
       };

@@ -189,7 +189,7 @@ export async function registerRoutes(
     "/puja-samagri": "/spiritual-essentials",
     "/puja-essentials": "/spiritual-essentials",
     "/puja-kits-collection": "/puja-kits",
-    "/book-panditji": "/pandits",
+    "/book-panditji": "/book-pandit-online",
     "/astrology-services": "/astrology",
     // Japa counter — consolidate ranking signal on /digital-japa-counter.
     "/jap": "/digital-japa-counter",
@@ -826,7 +826,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     const staticPages = [
       { loc: "/", priority: "1.0", changefreq: "daily" },
       { loc: "/spiritual-essentials", priority: "0.8", changefreq: "weekly" },
-      { loc: "/shop", priority: "0.8", changefreq: "weekly" },
+      { loc: "/puja-samagri-online", priority: "0.8", changefreq: "weekly" },
       { loc: "/online-pandit-booking", priority: "0.9", changefreq: "weekly" },
       // Per-city pandit landings + per-(city, puja) long-tail landings.
       // Generated from server/pandit-cities-map.ts so the sitemap stays
@@ -1161,7 +1161,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${seo.pagePath}`)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${seo.changeFreq ?? "weekly"}</changefreq>\n    <priority>${seo.priority?.toString() ?? "0.75"}</priority>\n  </url>\n`;
     }
 
-    // Service-landing entries (rudraksha + gemstones nested under /shop, puja, astrology)
+    // Service-landing entries (rudraksha + gemstones nested under /puja-samagri-online, puja, astrology)
     // Mirrors client/src/data/service-landings/*. When new entries are added, add slugs here too.
     const rudrakshaSlugs = ["mukhi-1", "mukhi-2", "mukhi-3", "mukhi-5", "mukhi-7"];
     const gemstoneSlugs = ["pukhraj", "neelam", "manik", "panna", "moonga"];
@@ -1376,12 +1376,12 @@ Sitemap: ${baseUrl}/sitemap.xml
       const products = await storage.getProducts();
       const staticUrls = [
         `${baseUrl}/`,
-        `${baseUrl}/shop`,
+        `${baseUrl}/puja-samagri-online`,
         `${baseUrl}/spiritual-essentials`,
-        `${baseUrl}/pandits`,
+        `${baseUrl}/book-pandit-online`,
         `${baseUrl}/puja`,
         `${baseUrl}/astrology`,
-        `${baseUrl}/pind-daan`,
+        `${baseUrl}/pind-daan-booking`,
         `${baseUrl}/donations`,
         `${baseUrl}/kathas`,
         `${baseUrl}/panchang-calendar`,
@@ -1797,7 +1797,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         { name: "Panchang Calendar", path: "/panchang-calendar", description: "Daily Hindu calendar with tithi, nakshatra, and muhurat", keywords: "panchang calendar tithi nakshatra muhurat hindu date festival vrat" },
         { name: "Muhurat Finder", path: "/muhurat-finder", description: "Find auspicious timings for weddings, griha pravesh, and more", keywords: "muhurat shubh timing wedding griha pravesh business opening auspicious" },
         { name: "Spiritual Kathas", path: "/kathas", description: "Read and listen to divine stories and scriptures", keywords: "katha story tale paath vrat katha satyanarayan hanuman chalisa bhagavad gita ramayan" },
-        { name: "Shop Spiritual Products", path: "/shop", description: "Premium spiritual and puja products", keywords: "shop buy products puja items rudraksha incense idols gemstones" },
+        { name: "Shop Spiritual Products", path: "/puja-samagri-online", description: "Premium spiritual and puja products", keywords: "shop buy products puja items rudraksha incense idols gemstones" },
         { name: "Donations", path: "/donations", description: "Make spiritual donations and seva", keywords: "donation daan charity seva offering temple cow gau raksha" },
         { name: "Hindu Matrimony", path: "/matrimony", description: "Find your perfect match with Vedic compatibility", keywords: "matrimony marriage vivah shaadi wedding rishta match compatibility" },
         { name: "Spiritual Dashboard", path: "/spiritual-dashboard", description: "Your personalized spiritual journey tracker", keywords: "dashboard spiritual journey progress rewards meditation karma" },
@@ -2273,7 +2273,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Pandits ----
-  app.get("/api/pandits", async (req, res) => {
+  app.get("/api/book-pandit-online", async (req, res) => {
     const city = req.query.city as string | undefined;
     const state = req.query.state as string | undefined;
     const region = req.query.region as string | undefined; // cultural region (regionalOrigin)
@@ -2411,11 +2411,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  app.post("/api/pandits", adminAuthMiddleware, async (req, res) => {
+  app.post("/api/book-pandit-online", adminAuthMiddleware, async (req, res) => {
     const parsed = validate(insertPanditSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
     const pandit = await storage.createPandit(parsed.data);
-    notifyPublish(req, [`/pandit/${pandit.id}`, `/pandits`], { pingSitemap: true });
+    notifyPublish(req, [`/pandit/${pandit.id}`, `/book-pandit-online`], { pingSitemap: true });
     res.status(201).json(pandit);
   });
 
@@ -8220,7 +8220,7 @@ Provide authentic Vastu Shastra based analysis. Be specific about which placemen
     } catch (e) { console.error("Cache cleanup error:", e); }
   }
 
-  app.get("/api/panchang", async (req, res) => {
+  app.get("/api/today-panchang", async (req, res) => {
     try {
       cleanupExpiredCache();
       const placeQ = (req.query.place as string | undefined) || "Delhi";
@@ -10035,7 +10035,7 @@ ${accumulatedWisdom}`
           serviceHints: [
             { title: "Personalized Vedic Predictions", description: "Discover your Moon sign, emotional patterns, and best remedies with AI-powered predictions.", link: "/my-profile", linkLabel: "Get My Predictions", icon: "sparkles" },
             { title: "Book Rudrabhishek Puja", description: "Rudrabhishek is the most powerful Shiva puja for removing obstacles, diseases, and negative energies.", link: "/online-puja-booking", linkLabel: "Book Rudrabhishek", icon: "flame" },
-            { title: "Find a Pandit Near You", description: "Need a pandit for Shiva puja at home? Book a verified pandit in your city within minutes.", link: "/pandits", linkLabel: "Find Pandit", icon: "user" },
+            { title: "Find a Pandit Near You", description: "Need a pandit for Shiva puja at home? Book a verified pandit in your city within minutes.", link: "/book-pandit-online", linkLabel: "Find Pandit", icon: "user" },
           ],
         },
         2: {

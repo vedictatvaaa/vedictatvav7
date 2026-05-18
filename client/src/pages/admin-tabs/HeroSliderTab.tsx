@@ -52,7 +52,7 @@ const blankForm = (): FormState => ({
   title2Highlight: "",
   subtitle: "",
   cta1Label: "Shop Now",
-  cta1Href: "/shop",
+  cta1Href: "/puja-samagri-online",
   cta1Icon: "ShoppingBag",
   cta2Label: "Learn More",
   cta2Href: "/about",
@@ -502,7 +502,7 @@ function HeroSliderTab() {
                       </div>
                       <div className="space-y-2">
                         <Label>Link</Label>
-                        <Input value={form[hrefKey] as string} onChange={(e) => setForm(f => ({ ...f, [hrefKey]: e.target.value }))} placeholder="/shop" data-testid={`input-hero-cta${n}-href`} />
+                        <Input value={form[hrefKey] as string} onChange={(e) => setForm(f => ({ ...f, [hrefKey]: e.target.value }))} placeholder="/puja-samagri-online" data-testid={`input-hero-cta${n}-href`} />
                       </div>
                       <div className="space-y-2">
                         <Label>Icon</Label>

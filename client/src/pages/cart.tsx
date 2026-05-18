@@ -98,7 +98,7 @@ export default function CartPage() {
                 Continue Shopping
               </Button>
             </Link>
-            <Link href="/shop?sort=bestsellers">
+            <Link href="/puja-samagri-online?sort=bestsellers">
               <Button variant="outline" className="rounded-md border-[#D4AF37]/40 text-[#6D2B35] hover:bg-[#FBF7EE] h-10 px-5 text-[13px] font-semibold" data-testid="btn-browse-bestsellers">
                 <Sparkles className="h-4 w-4 mr-2 text-[#D4AF37]" />
                 Browse Bestsellers

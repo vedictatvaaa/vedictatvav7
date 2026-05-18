@@ -11,9 +11,9 @@ type ServiceLink = {
 };
 
 const ALL_SERVICES: ServiceLink[] = [
-  { title: "Shop Products", description: "Browse authentic spiritual products", href: "/shop", icon: ShoppingBag, color: "bg-amber-50 text-amber-600" },
+  { title: "Shop Products", description: "Browse authentic spiritual products", href: "/puja-samagri-online", icon: ShoppingBag, color: "bg-amber-50 text-amber-600" },
   { title: "Puja Essentials", description: "Curated puja items & ritual needs", href: "/spiritual-essentials", icon: Leaf, color: "bg-lime-50 text-lime-600" },
-  { title: "Book a Pandit", description: "Verified pandits for all ceremonies", href: "/pandits", icon: UserCheck, color: "bg-orange-50 text-orange-600" },
+  { title: "Book a Pandit", description: "Verified pandits for all ceremonies", href: "/book-pandit-online", icon: UserCheck, color: "bg-orange-50 text-orange-600" },
   { title: "Book Puja", description: "Schedule sacred puja ceremonies", href: "/online-puja-booking", icon: Calendar, color: "bg-red-50 text-red-600" },
   { title: "Astrology", description: "Expert Vedic astrology consultations", href: "/astrology", icon: Sparkles, color: "bg-purple-50 text-purple-600" },
   { title: "AI Kundli", description: "Free AI-powered kundli analysis", href: "/ai-kundli", icon: Brain, color: "bg-indigo-50 text-indigo-600" },
@@ -31,26 +31,26 @@ const ALL_SERVICES: ServiceLink[] = [
 ];
 
 const RELATED_MAP: Record<string, string[]> = {
-  "rudraksha": ["/astrology", "/ai-kundli", "/online-puja-booking", "/pandits", "/spiritual-essentials"],
-  "incense": ["/online-puja-booking", "/pandits", "/virtual-puja", "/spiritual-essentials", "/vastu-compass"],
-  "puja": ["/pandits", "/online-puja-booking", "/virtual-puja", "/donations", "/panchang-calendar", "/shop"],
-  "idol": ["/online-puja-booking", "/vastu-compass", "/pandits", "/donations", "/shop"],
-  "wearable": ["/astrology", "/ai-kundli", "/ai-palm-reading", "/shop"],
-  "havan": ["/online-puja-booking", "/pandits", "/virtual-puja", "/shop", "/panchang-calendar"],
-  "astrology": ["/ai-kundli", "/ai-palm-reading", "/ai-baby-names", "/pandits", "/online-puja-booking", "/shop"],
-  "pandit": ["/online-puja-booking", "/virtual-puja", "/astrology", "/shop", "/donations", "/panchang-calendar"],
-  "puja-booking": ["/pandits", "/shop", "/virtual-puja", "/astrology", "/donations", "/muhurat-finder"],
-  "kundli": ["/astrology", "/ai-palm-reading", "/ai-baby-names", "/pandits", "/matrimony"],
-  "palm": ["/astrology", "/ai-kundli", "/ai-baby-names", "/pandits"],
-  "baby-names": ["/ai-kundli", "/astrology", "/ai-palm-reading", "/pandits"],
-  "donation": ["/online-puja-booking", "/pandits", "/virtual-puja", "/kathas", "/shop"],
-  "katha": ["/donations", "/online-puja-booking", "/pandits", "/panchang-calendar", "/shop"],
-  "vastu": ["/astrology", "/ai-kundli", "/pandits", "/online-puja-booking", "/shop"],
-  "matrimony": ["/astrology", "/ai-kundli", "/pandits", "/online-puja-booking"],
-  "virtual-puja": ["/online-puja-booking", "/pandits", "/donations", "/shop", "/panchang-calendar"],
-  "panchang": ["/astrology", "/online-puja-booking", "/pandits", "/ai-kundli", "/muhurat-finder"],
-  "dashboard": ["/astrology", "/ai-kundli", "/online-puja-booking", "/pandits", "/shop", "/kathas"],
-  "shop": ["/spiritual-essentials", "/online-puja-booking", "/pandits", "/astrology", "/compare"],
+  "rudraksha": ["/astrology", "/ai-kundli", "/online-puja-booking", "/book-pandit-online", "/spiritual-essentials"],
+  "incense": ["/online-puja-booking", "/book-pandit-online", "/virtual-puja", "/spiritual-essentials", "/vastu-compass"],
+  "puja": ["/book-pandit-online", "/online-puja-booking", "/virtual-puja", "/donations", "/panchang-calendar", "/puja-samagri-online"],
+  "idol": ["/online-puja-booking", "/vastu-compass", "/book-pandit-online", "/donations", "/puja-samagri-online"],
+  "wearable": ["/astrology", "/ai-kundli", "/ai-palm-reading", "/puja-samagri-online"],
+  "havan": ["/online-puja-booking", "/book-pandit-online", "/virtual-puja", "/puja-samagri-online", "/panchang-calendar"],
+  "astrology": ["/ai-kundli", "/ai-palm-reading", "/ai-baby-names", "/book-pandit-online", "/online-puja-booking", "/puja-samagri-online"],
+  "pandit": ["/online-puja-booking", "/virtual-puja", "/astrology", "/puja-samagri-online", "/donations", "/panchang-calendar"],
+  "puja-booking": ["/book-pandit-online", "/puja-samagri-online", "/virtual-puja", "/astrology", "/donations", "/muhurat-finder"],
+  "kundli": ["/astrology", "/ai-palm-reading", "/ai-baby-names", "/book-pandit-online", "/matrimony"],
+  "palm": ["/astrology", "/ai-kundli", "/ai-baby-names", "/book-pandit-online"],
+  "baby-names": ["/ai-kundli", "/astrology", "/ai-palm-reading", "/book-pandit-online"],
+  "donation": ["/online-puja-booking", "/book-pandit-online", "/virtual-puja", "/kathas", "/puja-samagri-online"],
+  "katha": ["/donations", "/online-puja-booking", "/book-pandit-online", "/panchang-calendar", "/puja-samagri-online"],
+  "vastu": ["/astrology", "/ai-kundli", "/book-pandit-online", "/online-puja-booking", "/puja-samagri-online"],
+  "matrimony": ["/astrology", "/ai-kundli", "/book-pandit-online", "/online-puja-booking"],
+  "virtual-puja": ["/online-puja-booking", "/book-pandit-online", "/donations", "/puja-samagri-online", "/panchang-calendar"],
+  "panchang": ["/astrology", "/online-puja-booking", "/book-pandit-online", "/ai-kundli", "/muhurat-finder"],
+  "dashboard": ["/astrology", "/ai-kundli", "/online-puja-booking", "/book-pandit-online", "/puja-samagri-online", "/kathas"],
+  "shop": ["/spiritual-essentials", "/online-puja-booking", "/book-pandit-online", "/astrology", "/compare"],
 };
 
 function getRelatedServices(context: string, currentPath: string, count: number = 4): ServiceLink[] {

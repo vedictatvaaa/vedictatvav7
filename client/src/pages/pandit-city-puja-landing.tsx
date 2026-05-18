@@ -55,7 +55,7 @@ export default function PanditCityPujaLanding() {
   const pujaSlug = params.pujaSlug || "";
 
   const city = PANDIT_CITIES_BY_SLUG[citySlug];
-  if (!city) return <Redirecting to="/pandits" />;
+  if (!city) return <Redirecting to="/book-pandit-online" />;
 
   const puja = city.popularPujas.find(
     (p) => slugifyPujaName(p.name) === pujaSlug,
@@ -88,7 +88,7 @@ export default function PanditCityPujaLanding() {
   });
   const breadcrumbJsonLd = breadcrumbListSchema([
     { name: "Home", url: abs("/") },
-    { name: "Pandits", url: abs("/pandits") },
+    { name: "Pandits", url: abs("/book-pandit-online") },
     { name: city.name, url: abs(`/pandits/${city.slug}`) },
     { name: puja.name, url: abs(`/pandits/${city.slug}/${pujaSlug}`) },
   ]);
@@ -115,7 +115,7 @@ export default function PanditCityPujaLanding() {
           <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-4 flex-wrap" aria-label="Breadcrumb">
             <Link href="/" className="hover:underline">Home</Link>
             <ChevronRight className="h-3 w-3" />
-            <Link href="/pandits" className="hover:underline">Pandits</Link>
+            <Link href="/book-pandit-online" className="hover:underline">Pandits</Link>
             <ChevronRight className="h-3 w-3" />
             <Link href={`/pandits/${city.slug}`} className="hover:underline">{city.name}</Link>
             <ChevronRight className="h-3 w-3" />

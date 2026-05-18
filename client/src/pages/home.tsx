@@ -69,7 +69,7 @@ const heroSlides: HeroSlide[] = [
     title2Highlight: "Online",
     subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense sticks, kalash, and temple essentials for every Hindu ritual.",
     cta1: { label: "Shop Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
-    cta2: { label: "Browse Categories", href: "/shop", icon: Gem },
+    cta2: { label: "Browse Categories", href: "/puja-samagri-online", icon: Gem },
   },
   {
     src: heroBrandImg,
@@ -92,8 +92,8 @@ const heroSlides: HeroSlide[] = [
     title2: "for Every ",
     title2Highlight: "Occasion",
     subtitle: "Hire experienced panditji for weddings, havan, vastu puja, griha pravesh, dosh nivaran, and temple rituals.",
-    cta1: { label: "Book a Pandit", href: "/pandits", icon: UserCheck },
-    cta2: { label: "Pind Daan", href: "/pind-daan", icon: HandHeart },
+    cta1: { label: "Book a Pandit", href: "/book-pandit-online", icon: UserCheck },
+    cta2: { label: "Pind Daan", href: "/pind-daan-booking", icon: HandHeart },
   },
   {
     src: heroAstrologyImg,
@@ -808,7 +808,7 @@ export default function Home() {
                 className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
                 data-testid="input-pandit-city"
               />
-              <Link href="/pandits">
+              <Link href="/book-pandit-online">
                 <Button
                   size="sm"
                   className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
@@ -823,7 +823,7 @@ export default function Home() {
             <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
               <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
               {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
-                <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+                <Link key={c} href={`/book-pandit-online?city=${encodeURIComponent(c)}`}>
                   <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
                     {c}
                   </span>
@@ -832,7 +832,7 @@ export default function Home() {
             </div>
 
             <div className="text-center">
-              <Link href="/pandits">
+              <Link href="/book-pandit-online">
                 <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
                   Browse all pandits <ArrowRight className="h-3 w-3" />
                 </span>
@@ -1354,7 +1354,7 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-2.5">
-              <Link href="/shop">
+              <Link href="/puja-samagri-online">
                 <Button
                   className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-5 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
                   data-testid="btn-final-shop"
@@ -1363,7 +1363,7 @@ export default function Home() {
                   Shop now
                 </Button>
               </Link>
-              <Link href="/pandits">
+              <Link href="/book-pandit-online">
                 <Button
                   variant="outline"
                   className="border-[#6D2B35]/25 bg-white text-[#6D2B35] hover:bg-[#FBF7EE] rounded-md px-5 h-10 text-[13px] font-semibold inline-flex items-center gap-2"
@@ -1505,7 +1505,7 @@ export default function Home() {
                 — Shukla Yajurveda, Iyer/Iyengar, Madhwa, Gujarati, Marathi, Konkani — with
                 transparent dakshina and same-day availability.
               </p>
-              <Link href="/pandits" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-pandits">
+              <Link href="/book-pandit-online" className="text-[#6D2B35] font-semibold text-[13px] inline-flex items-center gap-1 hover:underline" data-testid="link-seo-pandits">
                 Find a Verified Pandit <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </article>
@@ -1550,7 +1550,7 @@ export default function Home() {
                 <Link href="/navratri-puja" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-navratri">Navratri Puja</Link>
                 <Link href="/lakshmi-puja-benefits" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-lakshmi">Lakshmi Puja</Link>
                 <Link href="/griha-pravesh-muhurat" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-griha-pravesh">Griha Pravesh Muhurat</Link>
-                <Link href="/pind-daan" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-pind-daan">Pind Daan</Link>
+                <Link href="/pind-daan-booking" className="rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] px-3 py-1.5 text-[#6D2B35] font-semibold hover-elevate" data-testid="link-seo-festival-pind-daan">Pind Daan</Link>
               </div>
             </article>
             </div>
@@ -1929,8 +1929,8 @@ function SpiritualSnapshot() {
     staleTime: 1000 * 60 * 30,
   });
   const { data: panchang } = useQuery<PanchangSummary>({
-    queryKey: ["/api/panchang"],
-    queryFn: () => fetch("/api/panchang").then(r => r.json()),
+    queryKey: ["/api/today-panchang"],
+    queryFn: () => fetch("/api/today-panchang").then(r => r.json()),
     staleTime: 1000 * 60 * 30,
   });
 
@@ -2117,7 +2117,7 @@ function TabbedShop({
         {!isLoading && productsToShow.length === 0 && (
           <div className="text-center py-10" data-testid="text-tabbed-shop-empty">
             <p className="text-sm text-[#5a4a3a]/70">
-              No products to show right now. <Link href="/shop"><span className="text-[#6D2B35] font-semibold underline">Browse the full shop →</span></Link>
+              No products to show right now. <Link href="/puja-samagri-online"><span className="text-[#6D2B35] font-semibold underline">Browse the full shop →</span></Link>
             </p>
           </div>
         )}
@@ -2292,7 +2292,7 @@ function BookPanditSection() {
               className="flex-1 bg-transparent text-[13px] text-[#5a4a3a] placeholder:text-[#5a4a3a]/40 focus:outline-none py-1.5 min-w-0"
               data-testid="input-pandit-city"
             />
-            <Link href="/pandits">
+            <Link href="/book-pandit-online">
               <Button
                 size="sm"
                 className="bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md px-4 h-8 text-[12px] font-semibold"
@@ -2305,7 +2305,7 @@ function BookPanditSection() {
           <div className="flex items-center justify-center gap-2 flex-wrap max-w-md mx-auto">
             <span className="text-[11px] text-[#5a4a3a]/50 uppercase tracking-wider font-semibold">Popular:</span>
             {["Mumbai", "Delhi", "Bangalore", "Pune", "Kolkata"].map((c) => (
-              <Link key={c} href={`/pandits?city=${encodeURIComponent(c)}`}>
+              <Link key={c} href={`/book-pandit-online?city=${encodeURIComponent(c)}`}>
                 <span className="text-[11px] text-[#5a4a3a] bg-white border border-[#D4AF37]/15 hover:border-[#D4AF37]/45 hover:text-[#6D2B35] rounded-md px-2 py-0.5 transition-colors inline-block" data-testid={`chip-pandit-city-${c.toLowerCase()}`}>
                   {c}
                 </span>
@@ -2313,7 +2313,7 @@ function BookPanditSection() {
             ))}
           </div>
           <div className="text-center">
-            <Link href="/pandits">
+            <Link href="/book-pandit-online">
               <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#6D2B35] hover:text-[#D4AF37] transition-colors" data-testid="btn-find-pandit">
                 Browse all pandits <ArrowRight className="h-3 w-3" />
               </span>

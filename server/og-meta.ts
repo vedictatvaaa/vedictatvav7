@@ -26,7 +26,7 @@ export interface OgCard {
 
 const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
 
-/** Prefix marker — "prefix:/shop" matches /shop, /shop/abc, /shop/x/y, etc. */
+/** Prefix marker — "prefix:/puja-samagri-online" matches /puja-samagri-online, /shop/abc, /shop/x/y, etc. */
 const PREFIX = "prefix:";
 
 /**
@@ -64,7 +64,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
   {
-    match: `${PREFIX}/shop`,
+    match: `${PREFIX}/puja-samagri-online`,
     card: {
       title: "Sacred Puja Store · 4,000+ Authentic Items · Vedic Tatva",
       description:
@@ -76,7 +76,7 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
 
   // ── Pandit booking ─────────────────────────────────────────────────
   {
-    match: /^\/(online-pandit-booking|pandits)(\/|$|\?)/,
+    match: /^\/(online-pandit-booking|book-pandit-online|pandits)(\/|$|\?)/,
     card: {
       title: "Book a Verified Vedic Pandit Near You · Vedic Tatva",
       description:
@@ -97,10 +97,10 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
   },
 
   // ── Pind Daan (flagship sub-vertical, heavily promoted on the home page) ──
-  // Matches /pind-daan, /pind-daan/anything, AND the hyphenated city
+  // Matches /pind-daan-booking, /pind-daan/anything, AND the hyphenated city
   // landing routes /pind-daan-gaya|kashi|haridwar.
   {
-    match: /^\/(online-pind-daan|pind-daan(-(gaya|kashi|haridwar))?)(\/|$)/,
+    match: /^\/(online-pind-daan|pind-daan-booking|pind-daan(-(gaya|kashi|haridwar))?)(\/|$)/,
     card: {
       title: "Sacred Pind Daan in Gaya, Kashi & Haridwar · Vedic Tatva",
       description:
@@ -556,9 +556,9 @@ import { PANDIT_CITY_BY_SLUG, slugifyPuja } from "./pandit-cities-map";
 // ── Per-city + per-(city, puja) pandit share cards ────────────────
 // Returns a bespoke OG card for /pandits/:citySlug and
 // /pandits/:citySlug/:pujaSlug. Returns null otherwise so the
-// flagship pandit RegExp in ROUTE_CARDS still wins for /pandits.
+// flagship pandit RegExp in ROUTE_CARDS still wins for /book-pandit-online.
 export function buildPanditCityOgCard(pathname: string): OgCard | null {
-  const m = pathname.match(/^\/pandits\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
+  const m = pathname.match(/^\/book-pandit-online\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
   if (!m) return null;
   const city = PANDIT_CITY_BY_SLUG[m[1]];
   if (!city) return null;
@@ -645,7 +645,7 @@ export function resolveExplicitOgCard(pathname: string): OgCard | null {
     if (c) return c;
   }
   // Per-city pandit landings (and per-(city, puja) long-tail pages).
-  // Checked before the generic /pandits RegExp so each city/puja
+  // Checked before the generic /book-pandit-online RegExp so each city/puja
   // gets its own bespoke share preview.
   const cityCard = buildPanditCityOgCard(clean);
   if (cityCard) return cityCard;

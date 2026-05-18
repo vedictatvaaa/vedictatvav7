@@ -35,7 +35,7 @@ const abs = (p: string) => {
 function NotFound({ slug }: { slug: string }) {
   const [, navigate] = useLocation();
   useEffect(() => {
-    const t = setTimeout(() => navigate("/pandits"), 1500);
+    const t = setTimeout(() => navigate("/book-pandit-online"), 1500);
     return () => clearTimeout(t);
   }, [navigate]);
   return (
@@ -55,7 +55,7 @@ function CityHero({ city }: { city: PanditCityConfig }) {
         <nav className="flex items-center gap-1 text-xs text-muted-foreground mb-4" aria-label="Breadcrumb">
           <Link href="/" className="hover:underline">Home</Link>
           <ChevronRight className="h-3 w-3" />
-          <Link href="/pandits" className="hover:underline">Pandits</Link>
+          <Link href="/book-pandit-online" className="hover:underline">Pandits</Link>
           <ChevronRight className="h-3 w-3" />
           <span className="text-foreground">{city.name}</span>
         </nav>
@@ -301,7 +301,7 @@ export default function PanditCityLanding() {
   });
   const breadcrumbJsonLd = breadcrumbListSchema([
     { name: "Home", url: abs("/") },
-    { name: "Pandits", url: abs("/pandits") },
+    { name: "Pandits", url: abs("/book-pandit-online") },
     { name: city.name, url: abs(`/pandits/${city.slug}`) },
   ]);
 

@@ -238,7 +238,7 @@ interface WelcomeEmailParams {
 }
 
 export function buildWelcomeEmail1(p: WelcomeEmailParams): EmailMessage {
-  const shopUrl = `${SITE_URL}/shop?coupon=WELCOME10`;
+  const shopUrl = `${SITE_URL}/puja-samagri-online?coupon=WELCOME10`;
   const text = `Namaste,
 
 Welcome to Vedic Tatva — your home for authentic puja samagri, verified pandits, and Vedic astrology.
@@ -273,8 +273,8 @@ Unsubscribe: ${p.unsubscribeUrl}`;
 }
 
 export function buildWelcomeEmail2(p: WelcomeEmailParams): EmailMessage {
-  const shopUrl = `${SITE_URL}/shop`;
-  const panditsUrl = `${SITE_URL}/pandits`;
+  const shopUrl = `${SITE_URL}/puja-samagri-online`;
+  const panditsUrl = `${SITE_URL}/book-pandit-online`;
   const subject = "Bestsellers our community loves";
   const text = `Namaste,
 

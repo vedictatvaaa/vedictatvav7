@@ -21,7 +21,7 @@ export type TrustBadge = { label: string; value: string };
 export type PanditCityConfig = {
   slug: string;            // URL slug — kebab-case
   name: string;            // Display name (e.g. "Delhi NCR")
-  apiCity: string;         // City filter sent to /api/pandits
+  apiCity: string;         // City filter sent to /api/book-pandit-online
   state: string;
   live: boolean;           // true → directory inline; false → waitlist
   metaTitle: string;       // <title>
@@ -41,7 +41,7 @@ const CROSS_PROMO_BASE: CrossPromo[] = [
   { title: "Online Puja with Live Pandits", href: "/online-puja-booking", description: "Join the ritual over video — same priest, same shastra, no travel." },
   { title: "Authentic Puja Samagri", href: "/spiritual-essentials", description: "The exact items the pandit will ask for, delivered in one kit." },
   { title: "Talk to a Vedic Astrologer", href: "/astrology", description: "Get a kundli reading or muhurat consultation before booking." },
-  { title: "Today's Panchang & Muhurat", href: "/panchang", description: "Pick the most auspicious tithi for your ceremony." },
+  { title: "Today's Panchang & Muhurat", href: "/today-panchang", description: "Pick the most auspicious tithi for your ceremony." },
 ];
 
 const COMMON_FAQS: FaqItem[] = [

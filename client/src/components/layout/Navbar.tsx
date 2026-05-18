@@ -25,9 +25,9 @@ const promoMessages = [
 function PromoBar() {
   const festival = useFestivalTheme();
   const { data: panchang } = useQuery({
-    queryKey: ["/api/panchang"],
+    queryKey: ["/api/today-panchang"],
     queryFn: async () => {
-      const res = await fetch("/api/panchang");
+      const res = await fetch("/api/today-panchang");
       if (!res.ok) return null;
       return res.json();
     },
@@ -291,7 +291,7 @@ export default function Navbar() {
         setLocation(aiSuggestion.redirect);
       } else if (searchQuery.trim()) {
         setSearchOpen(false);
-        setLocation(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+        setLocation(`/puja-samagri-online?search=${encodeURIComponent(searchQuery.trim())}`);
       }
     } else if (e.key === "Escape") {
       setSearchOpen(false);
@@ -335,7 +335,7 @@ export default function Navbar() {
     {
       title: "Shop",
       items: [
-        { href: "/shop", label: "Spiritual Store", icon: ShoppingBag },
+        { href: "/puja-samagri-online", label: "Spiritual Store", icon: ShoppingBag },
         { href: "/category/home-essentials", label: "Home Essentials", icon: Package, comingSoon: true },
         { href: "/category/hair-skin-care", label: "Hair & Skin Care", icon: Sparkles, comingSoon: true },
         { href: "/category/grains-pulses", label: "Grains & Pulses", icon: Package, comingSoon: true },
@@ -820,7 +820,7 @@ export default function Navbar() {
                       <button
                         onClick={() => {
                           setSearchOpen(false);
-                          setLocation(`/shop?search=${encodeURIComponent(searchQuery)}`);
+                          setLocation(`/puja-samagri-online?search=${encodeURIComponent(searchQuery)}`);
                         }}
                         className="text-[10px] font-bold text-[#6D2B35] hover:text-[#D4AF37] transition-colors flex items-center gap-1"
                         data-testid="btn-view-all-results"

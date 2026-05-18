@@ -242,7 +242,7 @@ export default function CategoryComingSoon() {
                   Back to Home
                 </Button>
               </Link>
-              <Link href="/shop" className="flex-1">
+              <Link href="/puja-samagri-online" className="flex-1">
                 <Button
                   variant="outline"
                   className="w-full"

@@ -67,7 +67,7 @@ export default function PanditStorefrontPage() {
         <div>
           <h1 className="text-2xl font-bold text-[#4a1a22]">Storefront not found</h1>
           <p className="text-sm text-stone-600 mt-2">The pandit you are looking for is not available.</p>
-          <Link href="/pandits"><Button className="mt-4">Browse all pandits</Button></Link>
+          <Link href="/book-pandit-online"><Button className="mt-4">Browse all pandits</Button></Link>
         </div>
       </div>
     );
@@ -221,7 +221,7 @@ export default function PanditStorefrontPage() {
           <section data-testid="section-shop">
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <h2 className="text-xl font-bold inline-flex items-center gap-2"><ShoppingBag className="w-5 h-5" />Recommended Samagri</h2>
-              <Link href={`/shop${refQS}`}><Button variant="outline" size="sm">Shop all</Button></Link>
+              <Link href={`/puja-samagri-online${refQS}`}><Button variant="outline" size="sm">Shop all</Button></Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {products.map((p) => (

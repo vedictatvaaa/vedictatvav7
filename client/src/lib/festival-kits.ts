@@ -25,7 +25,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-hawan-samagri-32-herb-vedic-mix",
     ],
     services: [
-      { label: "Book a Pandit for Lakshmi Puja", href: "/pandits", description: "Verified Karmkandi pandit at your doorstep on Diwali night." },
+      { label: "Book a Pandit for Lakshmi Puja", href: "/book-pandit-online", description: "Verified Karmkandi pandit at your doorstep on Diwali night." },
       { label: "Diwali Muhurat", href: "/muhurat-finder", description: "Choose the most auspicious time for Lakshmi pujan." },
       { label: "Online Lakshmi Puja", href: "/online-puja-booking", description: "Sankalp puja livestreamed from a sacred temple." },
     ],
@@ -44,7 +44,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-havan-chammach-brass-sruva",
     ],
     services: [
-      { label: "Book a Durga Saptashati Pandit", href: "/pandits", description: "Recitation of all 13 chapters across nine nights." },
+      { label: "Book a Durga Saptashati Pandit", href: "/book-pandit-online", description: "Recitation of all 13 chapters across nine nights." },
       { label: "Navratri Online Puja", href: "/online-puja-booking", description: "Daily aarti livestreamed from Vaishno Devi & Kamakhya." },
     ],
   },
@@ -60,7 +60,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-panchgavya-cow-ghee-diya-battis-150",
     ],
     services: [
-      { label: "Book Ganpati Sthapana Pandit", href: "/pandits", description: "Pranapratishtha and daily aarti for the full 10 days." },
+      { label: "Book Ganpati Sthapana Pandit", href: "/book-pandit-online", description: "Pranapratishtha and daily aarti for the full 10 days." },
       { label: "Online Ganesh Puja", href: "/online-puja-booking", description: "Sankalp puja from Siddhivinayak with prasad delivered." },
     ],
   },
@@ -76,7 +76,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-hawan-samagri-32-herb-vedic-mix",
     ],
     services: [
-      { label: "Book a Janmashtami Pandit", href: "/pandits", description: "Midnight abhishek of Laddu Gopal at your home." },
+      { label: "Book a Janmashtami Pandit", href: "/book-pandit-online", description: "Midnight abhishek of Laddu Gopal at your home." },
       { label: "Online Krishna Puja", href: "/online-puja-booking", description: "Live darshan from Vrindavan & Mathura." },
     ],
   },
@@ -93,7 +93,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-havan-samagri-32-herb-vedic-mix",
     ],
     services: [
-      { label: "Book a Rudrabhishek Pandit", href: "/pandits", description: "Full Rudri paath through all four prahar of the night." },
+      { label: "Book a Rudrabhishek Pandit", href: "/book-pandit-online", description: "Full Rudri paath through all four prahar of the night." },
       { label: "Online Mahamrityunjaya Jaap", href: "/online-puja-booking", description: "1.25 lakh jaap performed for your sankalp." },
     ],
   },
@@ -109,7 +109,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-mango-wood-samidha-havan-sticks",
     ],
     services: [
-      { label: "Book a Holika Dahan Pandit", href: "/pandits", description: "Complete sankalp & ahuti during the muhurat." },
+      { label: "Book a Holika Dahan Pandit", href: "/book-pandit-online", description: "Complete sankalp & ahuti during the muhurat." },
     ],
   },
   "karva-chauth": {
@@ -149,7 +149,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-hawan-samagri-32-herb-vedic-mix",
     ],
     services: [
-      { label: "Book a Ramayan Path Pandit", href: "/pandits", description: "Akhand Ramayan or Sundarkand at your home." },
+      { label: "Book a Ramayan Path Pandit", href: "/book-pandit-online", description: "Akhand Ramayan or Sundarkand at your home." },
     ],
   },
   "hanuman-jayanti": {
@@ -163,7 +163,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-brass-trishul-shiva-trident",
     ],
     services: [
-      { label: "Book a Sundarkand Pandit", href: "/pandits", description: "108-times Hanuman Chalisa paath performed at your home." },
+      { label: "Book a Sundarkand Pandit", href: "/book-pandit-online", description: "108-times Hanuman Chalisa paath performed at your home." },
     ],
   },
   "vasant-panchami": {
@@ -175,7 +175,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-hawan-samagri-32-herb-vedic-mix",
     ],
     services: [
-      { label: "Book a Saraswati Pujan Pandit", href: "/pandits", description: "Vidya-arambh sanskar for children also available." },
+      { label: "Book a Saraswati Pujan Pandit", href: "/book-pandit-online", description: "Vidya-arambh sanskar for children also available." },
     ],
   },
   "akshaya-tritiya": {
@@ -190,7 +190,7 @@ export const FESTIVAL_KITS: Record<string, FestivalKit> = {
       "vedic-tatva-akhand-jot-brass-diya-glass-cover",
     ],
     services: [
-      { label: "Book a Lakshmi-Kuber Pandit", href: "/pandits", description: "Auspicious pujan during the unending muhurat." },
+      { label: "Book a Lakshmi-Kuber Pandit", href: "/book-pandit-online", description: "Auspicious pujan during the unending muhurat." },
       { label: "Akshaya Tritiya Muhurat", href: "/muhurat-finder", description: "Pick the precise window for new beginnings." },
     ],
   },

@@ -1,6 +1,6 @@
 // =====================================================================
 // CTA banner inviting Pandits to register on Vedic Tatva.
-// Used across /pandits, /pandits/:city, /pandits/:city/:puja so any
+// Used across /book-pandit-online, /pandits/:city, /pandits/:city/:puja so any
 // visiting Pandit (or someone who knows one) lands on /become-pandit.
 //
 // Two variants:
