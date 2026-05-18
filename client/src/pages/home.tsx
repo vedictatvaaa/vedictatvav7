@@ -651,16 +651,30 @@ export default function Home() {
           slides={effectiveSlides}
         />
 
-        {/* Single ultra-light bottom-up wash — keeps the hero image visible
-            while giving text just enough contrast. Text legibility is carried
-            primarily by `text-shadow` on the headline/subtitle below. */}
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#1a0a0e]/55 via-[#1a0a0e]/15 to-transparent pointer-events-none" />
-
-        {/* Subtle gold glow accent — desktop only */}
+        {/* Layered dharmic overlay — guarantees text/CTA contrast on every
+            slide and every viewport while keeping the on-brand maroon mood:
+              1. Unified maroon tint across the whole image (warm, sacred)
+              2. Radial vignette darkening the edges around the text block
+              3. Soft gold "sanctum" beam from above (desktop accent) */}
+        <div className="absolute inset-0 bg-[#3A0F12]/40 pointer-events-none" />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 60% at 50% 55%, rgba(26,10,14,0) 0%, rgba(26,10,14,0.35) 55%, rgba(26,10,14,0.75) 100%)",
+          }}
+        />
         <div className="absolute top-1/2 right-[-100px] -translate-y-1/2 w-[420px] h-[420px] rounded-full bg-[#D4AF37]/8 blur-3xl pointer-events-none hidden md:block" />
 
         <div className="relative z-10 container mx-auto px-4 pt-2 md:pt-6 pb-6 md:pb-16">
-          <div className="max-w-2xl mx-auto text-center">
+          {/* Editorial scrim card — a soft blurred maroon-dark surface that
+              guarantees text always sits on a high-contrast canvas, while the
+              surrounding image stays vibrant in the margins. Border + glow
+              keep it premium rather than heavy. */}
+          <div
+            className="max-w-2xl mx-auto text-center rounded-3xl px-5 py-7 md:px-10 md:py-10 bg-[#1a0a0e]/40 backdrop-blur-md border border-[#D4AF37]/15"
+            style={{ boxShadow: "0 20px 60px -20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)" }}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={heroIdx}
@@ -670,7 +684,7 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
               >
                 {/* Eyebrow */}
-                <div className="flex items-center justify-center mb-1.5 md:mb-3">
+                <div className="flex items-center justify-center mb-3 md:mb-4">
                   <span
                     className="text-[#D4AF37] text-[11px] sm:text-xs uppercase tracking-[0.3em] font-semibold"
                     style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
@@ -683,7 +697,7 @@ export default function Home() {
                 {/* Hero brand headline — demoted to h2 so the keyword-loaded sr-only h1 owns SEO */}
                 <h2
                   className="font-serif text-white text-[clamp(1.7rem,6.5vw,2.25rem)] sm:text-5xl md:text-[3.5rem] lg:text-[4.25rem] leading-[1.05] tracking-tight"
-                  style={{ textShadow: "0 2px 18px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5)" }}
+                  style={{ textShadow: "0 2px 22px rgba(0,0,0,0.85), 0 1px 3px rgba(0,0,0,0.7)" }}
                   data-testid="text-hero-headline"
                 >
                   <span className="block">{scene.title1}</span>
@@ -695,7 +709,7 @@ export default function Home() {
 
                 {/* Subtitle */}
                 <p
-                  className="mt-2 md:mt-5 text-[clamp(13px,3.6vw,15px)] sm:text-lg md:text-xl text-white/90 leading-snug sm:leading-relaxed max-w-xl mx-auto font-light"
+                  className="mt-4 md:mt-6 text-[clamp(13px,3.6vw,15px)] sm:text-lg md:text-xl text-white/90 leading-snug sm:leading-relaxed max-w-xl mx-auto font-light"
                   style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
                   data-testid="text-hero-subtext"
                 >
@@ -703,7 +717,7 @@ export default function Home() {
                 </p>
 
                 {/* CTAs */}
-                <div className="mt-3 md:mt-7 flex flex-row justify-center gap-2 sm:gap-3">
+                <div className="mt-6 md:mt-8 flex flex-row justify-center gap-2 sm:gap-3">
                   <Link href={scene.cta1.href} className="flex-1 sm:flex-none">
                     <Button
                       className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-4 sm:px-6 font-semibold"
@@ -716,7 +730,7 @@ export default function Home() {
                   <Link href={scene.cta2.href} className="flex-1 sm:flex-none">
                     <Button
                       variant="outline"
-                      className="w-full sm:w-auto bg-white/5 backdrop-blur-sm border-white/30 text-white hover:bg-white/10 rounded-md px-4 sm:px-6 font-semibold"
+                      className="w-full sm:w-auto bg-[#3A0F12]/70 backdrop-blur-md border-[#D4AF37]/45 text-white hover:bg-[#3A0F12]/85 hover:border-[#D4AF37]/70 rounded-md px-4 sm:px-6 font-semibold"
                       data-testid="btn-hero-cta2"
                     >
                       <Cta2Icon className="h-4 w-4 mr-2" />
@@ -732,7 +746,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="mt-4 md:mt-8 pt-2.5 md:pt-4 border-t border-white/15"
+              className="mt-7 md:mt-10 pt-4 md:pt-5 border-t border-white/15"
             >
               <div className="grid grid-cols-4 gap-x-2 md:gap-x-4 gap-y-2 max-w-2xl mx-auto justify-items-center">
                 <HeroStat icon={Star} value={t.hero.rating} label="Rated" />
