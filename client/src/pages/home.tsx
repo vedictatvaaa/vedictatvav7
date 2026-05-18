@@ -77,8 +77,8 @@ const heroSlides: HeroSlide[] = [
     title2: "& Puja Essentials ",
     title2Highlight: "Online",
     subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense sticks, kalash, and temple essentials for every Hindu ritual.",
-    cta1: { label: "Shop Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
-    cta2: { label: "Browse Categories", href: "/puja-samagri-online", icon: Gem },
+    cta1: { label: "Shop Now", href: "/spiritual-essentials", icon: ShoppingBag },
+    cta2: { label: "Categories", href: "/puja-samagri-online", icon: Gem },
   },
   {
     src: heroBrandImg,
@@ -718,24 +718,24 @@ export default function Home() {
                 </p>
 
                 {/* CTAs */}
-                <div className="mt-6 md:mt-8 flex flex-row justify-center gap-2 sm:gap-3">
-                  <Link href={scene.cta1.href} className="flex-1 sm:flex-none">
+                <div className="mt-6 md:mt-8 flex flex-row justify-center gap-2 sm:gap-3 min-w-0">
+                  <Link href={scene.cta1.href} className="flex-1 sm:flex-none min-w-0">
                     <Button
-                      className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-4 sm:px-6 font-semibold"
+                      className="w-full sm:w-auto bg-[#D4AF37] hover:bg-[#c5a030] text-[#1a0a0e] rounded-md px-3 sm:px-6 font-semibold min-w-0"
                       data-testid="btn-hero-cta1"
                     >
-                      <Cta1Icon className="h-4 w-4 mr-2" />
-                      {scene.cta1.label}
+                      <Cta1Icon className="h-4 w-4 mr-1.5 sm:mr-2 shrink-0" />
+                      <span className="truncate">{scene.cta1.label}</span>
                     </Button>
                   </Link>
-                  <Link href={scene.cta2.href} className="flex-1 sm:flex-none">
+                  <Link href={scene.cta2.href} className="flex-1 sm:flex-none min-w-0">
                     <Button
                       variant="outline"
-                      className="w-full sm:w-auto bg-[#3A0F12]/70 backdrop-blur-md border-[#D4AF37]/45 text-white hover:bg-[#3A0F12]/85 hover:border-[#D4AF37]/70 rounded-md px-4 sm:px-6 font-semibold"
+                      className="w-full sm:w-auto bg-[#3A0F12]/70 backdrop-blur-md border-[#D4AF37]/45 text-white hover:bg-[#3A0F12]/85 hover:border-[#D4AF37]/70 rounded-md px-3 sm:px-6 font-semibold min-w-0"
                       data-testid="btn-hero-cta2"
                     >
-                      <Cta2Icon className="h-4 w-4 mr-2" />
-                      {scene.cta2.label}
+                      <Cta2Icon className="h-4 w-4 mr-1.5 sm:mr-2 shrink-0" />
+                      <span className="truncate">{scene.cta2.label}</span>
                     </Button>
                   </Link>
                 </div>
