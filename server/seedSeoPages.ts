@@ -655,7 +655,7 @@ const ENTRIES: SeoEntry[] = [
     },
   },
   {
-    pagePath: "/pind-daan/kashi",
+    pagePath: "/pind-daan-kashi",
     metaTitle: "Pind Daan in Kashi (Varanasi) — Manikarnika & Pishachmochan | Vedic Tatva",
     metaDescription:
       "Book Pind Daan in Kashi at Manikarnika Ghat and Pishachmochan Kund. Tripindi Shradh, Tarpan and Brahman Bhojan by verified Kashi Tirth Purohits with live video Sankalp from anywhere in the world.",
@@ -674,18 +674,18 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Pind Daan in Kashi (Varanasi)",
           "Pind Daan, Tarpan and Tripindi Shradh at Manikarnika Ghat and Pishachmochan Kund in Kashi, performed by verified Tirth Purohits with live video Sankalp.",
-          `${SITE}/pind-daan/kashi`
+          `${SITE}/pind-daan-kashi`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Kashi", path: "/pind-daan/kashi" },
+          { name: "Kashi", path: "/pind-daan-kashi" },
         ]),
       ],
     },
   },
   {
-    pagePath: "/pind-daan/gaya",
+    pagePath: "/pind-daan-gaya",
     metaTitle: "Pind Daan in Gaya — Vishnupad, Phalgu & Akshayavat | Vedic Tatva",
     metaDescription:
       "Pind Daan in Gaya at Vishnupad Mandir, Phalgu River and Akshayavat by traditional Gayawal Tirth Purohits. 1-day or full 3-day shastric vidhi, live Sankalp via video call.",
@@ -704,18 +704,18 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Pind Daan in Gaya (Bihar)",
           "Pind Daan at Vishnupad Mandir, Phalgu River and Akshayavat performed by traditional Gayawal Tirth Purohits — 1-day Sankshipt or full 3-day shastric vidhi.",
-          `${SITE}/pind-daan/gaya`
+          `${SITE}/pind-daan-gaya`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Gaya", path: "/pind-daan/gaya" },
+          { name: "Gaya", path: "/pind-daan-gaya" },
         ]),
       ],
     },
   },
   {
-    pagePath: "/pind-daan/haridwar",
+    pagePath: "/pind-daan-haridwar",
     metaTitle: "Pind Daan in Haridwar — Narayani Shila & Har Ki Pauri | Pitru Dosh Nivaran",
     metaDescription:
       "Pind Daan and Tarpan in Haridwar at Narayani Shila Temple, Har Ki Pauri Brahmakund and Kankhal — the prime remedy for Pitru Dosh in Vedic astrology. Same-day Sankalp via video.",
@@ -734,18 +734,18 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Pind Daan in Haridwar",
           "Pind Daan, Tarpan and Pitru Dosh Nivaran puja at Narayani Shila, Har Ki Pauri Brahmakund and Kankhal — performed by registered Haridwar Tirth Purohits with live video Sankalp.",
-          `${SITE}/pind-daan/haridwar`
+          `${SITE}/pind-daan-haridwar`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Haridwar", path: "/pind-daan/haridwar" },
+          { name: "Haridwar", path: "/pind-daan-haridwar" },
         ]),
       ],
     },
   },
   {
-    pagePath: "/pind-daan/why-important",
+    pagePath: "/pind-daan-booking/why-important",
     metaTitle: "Why Pind Daan Is Important — Pitru Rina & Garuda Purana Significance | Vedic Tatva",
     metaDescription:
       "Understand the spiritual importance of Pind Daan in Sanatan Dharma — Pitru Rina, Garuda Purana teachings, Pitru Dosh, Pitru Paksha and the benefits of shradh for ancestors and descendants.",
@@ -769,18 +769,18 @@ const ENTRIES: SeoEntry[] = [
             "An explainer on Pitru Rina, Garuda Purana shastra, Pitru Dosh and the spiritual mechanics of Pind Daan and Tarpan.",
           author: { "@type": "Organization", name: BRAND, url: SITE },
           publisher: { "@type": "Organization", name: BRAND, url: SITE, logo: { "@type": "ImageObject", url: `${SITE}/logo.png` } },
-          mainEntityOfPage: `${SITE}/pind-daan/why-important`,
+          mainEntityOfPage: `${SITE}/pind-daan-booking/why-important`,
         },
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Why Important", path: "/pind-daan/why-important" },
+          { name: "Why Important", path: "/pind-daan-booking/why-important" },
         ]),
       ],
     },
   },
   {
-    pagePath: "/pind-daan/sites-in-india",
+    pagePath: "/pind-daan-booking/sites-in-india",
     metaTitle: "Pind Daan Sites in India — Gaya, Kashi, Haridwar, Trimbakeshwar & More | Vedic Tatva",
     metaDescription:
       "Sacred Pind Daan and Tarpan sites in India — Gaya, Kashi, Haridwar, Trimbakeshwar, Rameshwaram, Badrinath Brahma Kapal. Significance, ideal use case and how to book each.",
@@ -804,18 +804,18 @@ const ENTRIES: SeoEntry[] = [
             "A complete guide to the most sacred Pind Daan and Tarpan tirthas of India — Gaya, Kashi, Haridwar, Trimbakeshwar, Rameshwaram, Badrinath and more.",
           author: { "@type": "Organization", name: BRAND, url: SITE },
           publisher: { "@type": "Organization", name: BRAND, url: SITE, logo: { "@type": "ImageObject", url: `${SITE}/logo.png` } },
-          mainEntityOfPage: `${SITE}/pind-daan/sites-in-india`,
+          mainEntityOfPage: `${SITE}/pind-daan-booking/sites-in-india`,
         },
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Sites in India", path: "/pind-daan/sites-in-india" },
+          { name: "Sites in India", path: "/pind-daan-booking/sites-in-india" },
         ]),
       ],
     },
   },
   {
-    pagePath: "/pind-daan/yearly-remote",
+    pagePath: "/pind-daan-booking/yearly-remote",
     metaTitle: "Yearly Remote Tarpan & Pind Daan on Death Anniversary | NRI Pitru Seva",
     metaDescription:
       "Yearly remote shradh subscription for NRIs and devotees abroad — annual Pind Daan and Tarpan on death anniversary tithi at Kashi, Gaya or Haridwar with live video Sankalp and prasad couriered worldwide.",
@@ -834,12 +834,12 @@ const ENTRIES: SeoEntry[] = [
         serviceSchema(
           "Yearly Remote Tarpan & Pind Daan",
           "Annual subscription for remote Pind Daan and Tarpan on the death anniversary tithi at Kashi, Gaya or Haridwar — full shastric vidhi with live video Sankalp and prasad couriered worldwide.",
-          `${SITE}/pind-daan/yearly-remote`
+          `${SITE}/pind-daan-booking/yearly-remote`
         ),
         breadcrumb([
           { name: "Home", path: "/" },
           { name: "Pind Daan", path: "/pind-daan-booking" },
-          { name: "Yearly Remote", path: "/pind-daan/yearly-remote" },
+          { name: "Yearly Remote", path: "/pind-daan-booking/yearly-remote" },
         ]),
       ],
     },

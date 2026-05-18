@@ -102,7 +102,7 @@ export const RUDRAKSHA_LANDINGS: ServiceLandingEntry[] = [
     priceFrom: 2500,
     schemaType: "Product",
     relatedSlugs: ["mukhi-5", "mukhi-7", "ganesh-rudraksha", "gauri-shankar"],
-    primaryCta: { label: "Buy 1 Mukhi Rudraksha", href: "/shop/rudraksha" },
+    primaryCta: { label: "Buy 1 Mukhi Rudraksha", href: "/puja-samagri-online/rudraksha" },
   },
   {
     slug: "mukhi-2",
@@ -163,7 +163,7 @@ export const RUDRAKSHA_LANDINGS: ServiceLandingEntry[] = [
     priceFrom: 1500,
     schemaType: "Product",
     relatedSlugs: ["gauri-shankar", "mukhi-1", "mukhi-7"],
-    primaryCta: { label: "Buy 2 Mukhi Rudraksha", href: "/shop/rudraksha" },
+    primaryCta: { label: "Buy 2 Mukhi Rudraksha", href: "/puja-samagri-online/rudraksha" },
   },
   {
     slug: "mukhi-3",
@@ -223,7 +223,7 @@ export const RUDRAKSHA_LANDINGS: ServiceLandingEntry[] = [
     priceFrom: 800,
     schemaType: "Product",
     relatedSlugs: ["mukhi-1", "mukhi-7", "mukhi-11"],
-    primaryCta: { label: "Buy 3 Mukhi Rudraksha", href: "/shop/rudraksha" },
+    primaryCta: { label: "Buy 3 Mukhi Rudraksha", href: "/puja-samagri-online/rudraksha" },
   },
   {
     slug: "mukhi-5",
@@ -288,7 +288,7 @@ export const RUDRAKSHA_LANDINGS: ServiceLandingEntry[] = [
     priceFrom: 1100,
     schemaType: "Product",
     relatedSlugs: ["mukhi-1", "mukhi-7", "ganesh-rudraksha"],
-    primaryCta: { label: "Buy 5 Mukhi Mala", href: "/shop/rudraksha" },
+    primaryCta: { label: "Buy 5 Mukhi Mala", href: "/puja-samagri-online/rudraksha" },
   },
   {
     slug: "mukhi-7",
@@ -350,7 +350,7 @@ export const RUDRAKSHA_LANDINGS: ServiceLandingEntry[] = [
     priceFrom: 1300,
     schemaType: "Product",
     relatedSlugs: ["mukhi-5", "mukhi-11", "gauri-shankar"],
-    primaryCta: { label: "Buy 7 Mukhi Rudraksha", href: "/shop/rudraksha" },
+    primaryCta: { label: "Buy 7 Mukhi Rudraksha", href: "/puja-samagri-online/rudraksha" },
   },
   // ---- STUBS ----
   stub("mukhi-4", "4 Mukhi Rudraksha", "Mercury", "Sharp intellect, communication, learning"),

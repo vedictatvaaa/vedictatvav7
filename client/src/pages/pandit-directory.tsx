@@ -268,7 +268,7 @@ function CityChooser() {
             );
             if (tile.live) {
               return (
-                <Link key={tile.slug} href={`/pandits/${tile.slug}`} className="block h-full">
+                <Link key={tile.slug} href={`/book-pandit-online/${tile.slug}`} className="block h-full">
                   {Inner}
                 </Link>
               );
@@ -351,7 +351,7 @@ function CityChooser() {
             )}
           </div>
           <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
-            <Button variant="outline" onClick={() => { setComingSoonCity(null); navigate("/pandits/delhi-ncr"); }} className="rounded-md h-10 text-[13px]" data-testid="btn-try-delhi">
+            <Button variant="outline" onClick={() => { setComingSoonCity(null); navigate("/book-pandit-online/delhi-ncr"); }} className="rounded-md h-10 text-[13px]" data-testid="btn-try-delhi">
               Browse Delhi NCR Instead
             </Button>
             <Button onClick={() => { setComingSoonCity(null); navigate("/puja?mode=online"); }} className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] rounded-md h-10 text-[13px] font-semibold" data-testid="btn-book-online-from-city">
@@ -372,11 +372,11 @@ export default function PanditDirectory() {
   const cityParam = new URLSearchParams(searchString).get("city") || "";
   const knownTile = CITY_TILES.find(c => c.slug === cityParam);
 
-  // Legacy URL ?city=<slug> → canonical /pandits/<slug> (avoid duplicate
-  // content with the per-city landing pages). Replace in history so back
-  // button doesn't re-bounce.
+  // Legacy URL ?city=<slug> → canonical /book-pandit-online/<slug> (avoid
+  // duplicate content with the per-city landing pages). Replace in history
+  // so back button doesn't re-bounce.
   useEffect(() => {
-    if (knownTile) navigate(`/pandits/${knownTile.slug}`, { replace: true });
+    if (knownTile) navigate(`/book-pandit-online/${knownTile.slug}`, { replace: true });
   }, [knownTile, navigate]);
 
   if (knownTile) return null;

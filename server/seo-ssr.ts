@@ -202,7 +202,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
     if (c) {
       // Always canonicalise to the canonical-key URL so alias paths point
       // crawlers at the primary URL.
-      const canonicalPath = `/shop/${canonicalKey}`;
+      const canonicalPath = `/puja-samagri-online/${canonicalKey}`;
 
       // Pull up to 12 in-category products for the ItemList JSON-LD so
       // crawlers see a real category index even before React hydrates.

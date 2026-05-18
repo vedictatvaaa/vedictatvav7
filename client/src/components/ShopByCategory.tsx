@@ -68,7 +68,7 @@ export default function ShopByCategory({ products }: Props) {
               transition={{ duration: 0.4, delay: i * 0.04 }}
             >
               <Link
-                href={`/shop/${slug}`}
+                href={`/puja-samagri-online/${slug}`}
                 className="group relative block rounded-md overflow-hidden border-2 hover-elevate active-elevate-2 h-full"
                 style={{ borderColor: `${theme.palette.accent}33` }}
                 data-testid={`category-card-${slug}`}

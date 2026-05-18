@@ -441,7 +441,11 @@ export default function Shop() {
     "loban-dhoop": { search: "loban" },
     "guggal-dhoop": { search: "guggal" },
   };
-  const slugMatch = location.match(/^\/puja-samagri-online\/([^/?#]+)$/);
+  // Match both the canonical /puja-samagri-online/:slug and the legacy
+  // /shop/:slug (kept as inert SPA fallback — server 301s redirect hard
+  // nav). This ensures in-app navigation from any residual /shop/<cat>
+  // link still resolves the right category context + canonical.
+  const slugMatch = location.match(/^\/(?:puja-samagri-online|shop)\/([^/?#]+)$/);
   const rawSlug = slugMatch?.[1];
   const resolvedSlug = rawSlug ? (CATEGORY_SLUG_ALIASES[rawSlug] || rawSlug) : undefined;
   const slugPreset = resolvedSlug ? SHOP_SLUG_PRESETS[resolvedSlug] : undefined;
@@ -473,7 +477,7 @@ export default function Shop() {
     || (selectedCategory
       ? `Shop authentic ${selectedCategory} online. Lab-certified, energised, and blessed. Free delivery above ₹499. Cash on Delivery available across India.`
       : "Discover authentic Rudraksha, puja samagri, deity idols, havan ingredients & more. Lab-certified, free shipping ₹499+, COD available. Crafted for your spiritual journey.");
-  const seoCanonical = slugMatch ? `/shop/${slugMatch[1]}` : "/puja-samagri-online";
+  const seoCanonical = slugMatch ? `/puja-samagri-online/${slugMatch[1]}` : "/puja-samagri-online";
 
   const { data: allProducts, isLoading: allLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
@@ -584,7 +588,7 @@ export default function Shop() {
       ? breadcrumbListSchema([
           { name: "Home", url: "/" },
           { name: "Shop", url: "/puja-samagri-online" },
-          { name: categoryContent.category, url: `/shop/${categoryContent.slug}` },
+          { name: categoryContent.category, url: `/puja-samagri-online/${categoryContent.slug}` },
         ])
       : null,
     [categoryContent]

@@ -197,11 +197,52 @@ export async function registerRoutes(
     // Puja booking — canonical URL is /online-puja-booking. Old /puja
     // permalink consolidates here so we don't fragment ranking signal.
     "/puja": "/online-puja-booking",
+    // Old slugs → new canonical landings (top-level only; dynamic
+    // sub-paths handled by the regex redirects below).
+    "/shop": "/puja-samagri-online",
+    "/pandits": "/book-pandit-online",
+    "/pind-daan": "/pind-daan-booking",
   };
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
     if (!dest) return res.status(404).end();
     res.redirect(301, dest);
+  });
+
+  // Dynamic 301s for the renamed slug families. These mirror the
+  // canonical URL conventions used elsewhere:
+  //   /shop/rudraksha/:slug → /puja-samagri-online/rudraksha/:slug
+  //   /shop/gemstones/:slug → /puja-samagri-online/gemstones/:slug
+  //   /shop/:slug           → /puja-samagri-online/:slug
+  //   /pandits/:city[/:puja]→ /book-pandit-online/:city[/:puja]
+  //   /pind-daan/:slug      → /pind-daan-booking/:slug
+  // The dedicated `/pind-daan-{gaya,kashi,haridwar}` routes are NOT
+  // affected — they don't share the `/pind-daan/` prefix.
+  app.get(/^\/shop\/rudraksha\/([^/]+)$/, (req, res) => {
+    res.redirect(301, `/puja-samagri-online/rudraksha/${req.params[0]}`);
+  });
+  app.get(/^\/shop\/gemstones\/([^/]+)$/, (req, res) => {
+    res.redirect(301, `/puja-samagri-online/gemstones/${req.params[0]}`);
+  });
+  app.get(/^\/shop\/([^/]+)$/, (req, res) => {
+    res.redirect(301, `/puja-samagri-online/${req.params[0]}`);
+  });
+  app.get(/^\/pandits\/([^/]+)\/([^/]+)$/, (req, res) => {
+    res.redirect(301, `/book-pandit-online/${req.params[0]}/${req.params[1]}`);
+  });
+  app.get(/^\/pandits\/([^/]+)$/, (req, res) => {
+    res.redirect(301, `/book-pandit-online/${req.params[0]}`);
+  });
+  // Legacy /pind-daan/:slug. The 3 city slugs (kashi|gaya|haridwar) have
+  // dedicated hyphenated landing pages preserved by task scope, so they
+  // 301 to /pind-daan-{city} directly. All other slugs go to the new
+  // /pind-daan-booking/:slug canonical family.
+  app.get(/^\/pind-daan\/([^/]+)$/, (req, res) => {
+    const slug = req.params[0];
+    if (slug === "kashi" || slug === "gaya" || slug === "haridwar") {
+      return res.redirect(301, `/pind-daan-${slug}`);
+    }
+    res.redirect(301, `/pind-daan-booking/${slug}`);
   });
 
   // ---- Maintenance mode ----
@@ -835,13 +876,13 @@ Sitemap: ${baseUrl}/sitemap.xml
         const out: Array<{ loc: string; priority: string; changefreq: string }> = [];
         for (const c of PANDIT_CITY_SUMMARIES) {
           out.push({
-            loc: `/pandits/${c.slug}`,
+            loc: `/book-pandit-online/${c.slug}`,
             priority: c.live ? "0.9" : "0.7",
             changefreq: c.live ? "weekly" : "monthly",
           });
           for (const pn of c.popularPujaNames) {
             out.push({
-              loc: `/pandits/${c.slug}/${slugifyPuja(pn)}`,
+              loc: `/book-pandit-online/${c.slug}/${slugifyPuja(pn)}`,
               priority: c.live ? "0.75" : "0.55",
               changefreq: "monthly",
             });
@@ -985,6 +1026,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       if (
         path.startsWith("/product/") ||
         path.startsWith("/shop/") ||
+        path.startsWith("/puja-samagri-online/") ||
         path.startsWith("/category/") ||
         path.startsWith("/festival/") ||
         path.startsWith("/blog/") ||
@@ -1001,10 +1043,16 @@ Sitemap: ${baseUrl}/sitemap.xml
       // sitemap prevents Google from treating them as duplicate
       // competitors. The slash routes still resolve via PindDaanDetail
       // for any inbound links we don't control.
+      // Skip legacy slash-style city URLs from any stale DB rows — the
+      // canonical city pages are the dedicated /pind-daan-{city} landings
+      // (preserved by task scope) which are already in `staticPages`.
       if (
         path === "/pind-daan/kashi" ||
         path === "/pind-daan/gaya" ||
-        path === "/pind-daan/haridwar"
+        path === "/pind-daan/haridwar" ||
+        path === "/pind-daan-booking/kashi" ||
+        path === "/pind-daan-booking/gaya" ||
+        path === "/pind-daan-booking/haridwar"
       ) {
         continue;
       }
@@ -1143,7 +1191,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       "wearables", "dhoti-kurta", "brass-copperware", "gemstones",
     ];
     for (const slug of shopLandings) {
-      xml += `  <url>\n    <loc>${baseUrl}/shop/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>${baseUrl}/puja-samagri-online/${slug}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.85</priority>\n  </url>\n`;
     }
 
     // Derived /category/:slug pages from product categories
@@ -1157,7 +1205,11 @@ Sitemap: ${baseUrl}/sitemap.xml
     // Cluster shop landings backed by an active seo_pages record
     for (const seo of seoPagesList) {
       if (!seo.isActive || !seo.robotsIndex) continue;
-      if (!seo.pagePath.startsWith("/shop/")) continue;
+      // Only emit canonical shop family paths; legacy /shop/* rows (if any
+      // still exist in the DB) are dropped here so the sitemap never
+      // competes with the new /puja-samagri-online/* canonicals — server
+      // 301s handle the actual redirect for crawlers and humans.
+      if (!seo.pagePath.startsWith("/puja-samagri-online/")) continue;
       xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${seo.pagePath}`)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${seo.changeFreq ?? "weekly"}</changefreq>\n    <priority>${seo.priority?.toString() ?? "0.75"}</priority>\n  </url>\n`;
     }
 
@@ -1172,8 +1224,8 @@ Sitemap: ${baseUrl}/sitemap.xml
         xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${p}`)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${priority}</priority>\n  </url>\n`;
       }
     };
-    addLandingUrls(rudrakshaSlugs.map(s => `/shop/rudraksha/${s}`), "0.75");
-    addLandingUrls(gemstoneSlugs.map(s => `/shop/gemstones/${s}`), "0.75");
+    addLandingUrls(rudrakshaSlugs.map(s => `/puja-samagri-online/rudraksha/${s}`), "0.75");
+    addLandingUrls(gemstoneSlugs.map(s => `/puja-samagri-online/gemstones/${s}`), "0.75");
     addLandingUrls(pujaSlugs.map(s => `/puja/${s}`), "0.75");
     addLandingUrls(astrologySlugs.map(s => `/astrology/services/${s}`), "0.75");
 

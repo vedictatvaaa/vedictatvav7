@@ -60,7 +60,7 @@ export default function PanditCityPujaLanding() {
   const puja = city.popularPujas.find(
     (p) => slugifyPujaName(p.name) === pujaSlug,
   );
-  if (!puja) return <Redirecting to={`/pandits/${city.slug}`} />;
+  if (!puja) return <Redirecting to={`/book-pandit-online/${city.slug}`} />;
 
   const extras = getPujaExtras(pujaSlug);
 
@@ -84,13 +84,13 @@ export default function PanditCityPujaLanding() {
     areaServed: city.name,
     providerName: "Vedic Tatva",
     serviceType: puja.name,
-    url: `/pandits/${city.slug}/${pujaSlug}`,
+    url: `/book-pandit-online/${city.slug}/${pujaSlug}`,
   });
   const breadcrumbJsonLd = breadcrumbListSchema([
     { name: "Home", url: abs("/") },
     { name: "Pandits", url: abs("/book-pandit-online") },
-    { name: city.name, url: abs(`/pandits/${city.slug}`) },
-    { name: puja.name, url: abs(`/pandits/${city.slug}/${pujaSlug}`) },
+    { name: city.name, url: abs(`/book-pandit-online/${city.slug}`) },
+    { name: puja.name, url: abs(`/book-pandit-online/${city.slug}/${pujaSlug}`) },
   ]);
 
   // Related pujas in the same city — for internal linking
@@ -103,7 +103,7 @@ export default function PanditCityPujaLanding() {
       <PageSeo
         title={metaTitle}
         description={metaDescription}
-        canonical={`/pandits/${city.slug}/${pujaSlug}`}
+        canonical={`/book-pandit-online/${city.slug}/${pujaSlug}`}
         ogImage="/og/og-pandit-booking.jpg"
         ogType="website"
         schemas={[faqJsonLd, serviceJsonLd, breadcrumbJsonLd]}
@@ -117,7 +117,7 @@ export default function PanditCityPujaLanding() {
             <ChevronRight className="h-3 w-3" />
             <Link href="/book-pandit-online" className="hover:underline">Pandits</Link>
             <ChevronRight className="h-3 w-3" />
-            <Link href={`/pandits/${city.slug}`} className="hover:underline">{city.name}</Link>
+            <Link href={`/book-pandit-online/${city.slug}`} className="hover:underline">{city.name}</Link>
             <ChevronRight className="h-3 w-3" />
             <span className="text-foreground">{puja.name}</span>
           </nav>
@@ -194,7 +194,7 @@ export default function PanditCityPujaLanding() {
                     <Wand2 className="h-4 w-4 mr-2" /> Book a live online puja
                   </Button>
                 </Link>
-                <Link href={`/pandits/${PANDIT_CITIES.find((c) => c.live)?.slug ?? "delhi-ncr"}/${pujaSlug}`}>
+                <Link href={`/book-pandit-online/${PANDIT_CITIES.find((c) => c.live)?.slug ?? "delhi-ncr"}/${pujaSlug}`}>
                   <Button variant="outline" data-testid="button-try-live-city">
                     Try in {PANDIT_CITIES.find((c) => c.live)?.name ?? "Delhi NCR"} <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -245,7 +245,7 @@ export default function PanditCityPujaLanding() {
             {relatedPujas.map((p, i) => {
               const slug = slugifyPujaName(p.name);
               return (
-                <Link key={p.name} href={`/pandits/${city.slug}/${slug}`}>
+                <Link key={p.name} href={`/book-pandit-online/${city.slug}/${slug}`}>
                   <Card className="h-full hover-elevate cursor-pointer" data-testid={`card-related-puja-${i}`}>
                     <CardContent className="p-5">
                       <div className="flex items-start gap-3">

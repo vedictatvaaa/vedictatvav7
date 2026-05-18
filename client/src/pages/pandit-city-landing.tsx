@@ -123,7 +123,7 @@ function ComingSoonCallout({ city }: { city: PanditCityConfig }) {
             </Button>
           </Link>
           {liveCity && (
-            <Link href={`/pandits/${liveCity.slug}`}>
+            <Link href={`/book-pandit-online/${liveCity.slug}`}>
               <Button variant="outline" data-testid="button-try-live-city">
                 Browse pandits in {liveCity.name} <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -148,7 +148,7 @@ function PopularPujasGrid({ city }: { city: PanditCityConfig }) {
         {city.popularPujas.map((p, i) => {
           const slug = slugifyPujaName(p.name);
           return (
-            <Link key={p.name} href={`/pandits/${city.slug}/${slug}`}>
+            <Link key={p.name} href={`/book-pandit-online/${city.slug}/${slug}`}>
               <Card className="hover-elevate cursor-pointer h-full" data-testid={`card-popular-puja-${i}`}>
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3">
@@ -262,7 +262,7 @@ function OtherCitiesStrip({ currentSlug }: { currentSlug: string }) {
       <h2 className="text-lg font-serif font-semibold mb-3">Pandits in other cities</h2>
       <div className="flex flex-wrap gap-2">
         {others.map((c) => (
-          <Link key={c.slug} href={`/pandits/${c.slug}`}>
+          <Link key={c.slug} href={`/book-pandit-online/${c.slug}`}>
             <Badge
               variant="outline"
               className="px-3 py-1.5 text-sm cursor-pointer hover-elevate"
@@ -297,12 +297,12 @@ export default function PanditCityLanding() {
     areaServed: city.name,
     providerName: "Vedic Tatva",
     serviceType: "Hindu Priest Booking",
-    url: `/pandits/${city.slug}`,
+    url: `/book-pandit-online/${city.slug}`,
   });
   const breadcrumbJsonLd = breadcrumbListSchema([
     { name: "Home", url: abs("/") },
     { name: "Pandits", url: abs("/book-pandit-online") },
-    { name: city.name, url: abs(`/pandits/${city.slug}`) },
+    { name: city.name, url: abs(`/book-pandit-online/${city.slug}`) },
   ]);
 
   return (
@@ -310,7 +310,7 @@ export default function PanditCityLanding() {
       <PageSeo
         title={city.metaTitle}
         description={city.metaDescription}
-        canonical={`/pandits/${city.slug}`}
+        canonical={`/book-pandit-online/${city.slug}`}
         ogImage="/og/og-pandit-booking.jpg"
         ogType="website"
         schemas={[faqJsonLd, serviceJsonLd, breadcrumbJsonLd]}

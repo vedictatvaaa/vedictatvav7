@@ -90,11 +90,11 @@ export const VERTICAL_LABELS: Record<ServiceVertical, string> = {
 };
 
 export const VERTICAL_BASE_PATHS: Record<ServiceVertical, string> = {
-  rudraksha: "/shop/rudraksha",
-  gemstones: "/shop/gemstones",
+  rudraksha: "/puja-samagri-online/rudraksha",
+  gemstones: "/puja-samagri-online/gemstones",
   puja: "/online-puja-booking",
   astrology: "/astrology/services",
-  "pind-daan": "/pind-daan/services",
+  "pind-daan": "/pind-daan-booking/services",
 };
 
 export function entryPath(entry: { vertical: ServiceVertical; slug: string }) {

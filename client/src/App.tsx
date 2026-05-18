@@ -688,6 +688,13 @@ function Router() {
           <Route path="/buy/:slug" component={LocalLanding} />
           <Route path="/book/:slug" component={LocalLanding} />
           <Route path="/puja-samagri-online" component={Shop} />
+          <Route path="/puja-samagri-online/rudraksha/:slug">{() => <ServiceLanding vertical="rudraksha" pattern="/puja-samagri-online/rudraksha/:slug" />}</Route>
+          <Route path="/puja-samagri-online/gemstones/:slug">{() => <ServiceLanding vertical="gemstones" pattern="/puja-samagri-online/gemstones/:slug" />}</Route>
+          <Route path="/puja-samagri-online/:slug" component={Shop} />
+          {/* Legacy /shop/* routes kept as inert fallbacks; hard nav is
+              caught by the SEO_ALIAS_REDIRECTS 301s in server/routes.ts.
+              For client-side nav (no full reload), pass the matching legacy
+              pattern so ServiceLanding's useRoute can resolve the slug. */}
           <Route path="/shop/rudraksha/:slug">{() => <ServiceLanding vertical="rudraksha" pattern="/shop/rudraksha/:slug" />}</Route>
           <Route path="/shop/gemstones/:slug">{() => <ServiceLanding vertical="gemstones" pattern="/shop/gemstones/:slug" />}</Route>
           <Route path="/shop/:slug" component={Shop} />
@@ -704,6 +711,9 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/book-pandit-online" component={PanditDirectory} />
+          <Route path="/book-pandit-online/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
+          <Route path="/book-pandit-online/:citySlug" component={PanditCityLanding} />
+          {/* Legacy /pandits/* kept as inert fallbacks; server 301s redirect hard nav. */}
           <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
           <Route path="/pandits/:citySlug" component={PanditCityLanding} />
           <Route path="/online-pandit-booking" component={PanditDirectory} />
@@ -720,6 +730,8 @@ function Router() {
           <Route path="/pind-daan-gaya" component={PindDaanGayaLanding} />
           <Route path="/pind-daan-kashi" component={PindDaanKashiLanding} />
           <Route path="/pind-daan-haridwar" component={PindDaanHaridwarLanding} />
+          <Route path="/pind-daan-booking/:slug">{() => <PindDaanDetail />}</Route>
+          {/* Legacy /pind-daan/:slug kept as inert fallback; server 301 redirects hard nav. */}
           <Route path="/pind-daan/:slug">{() => <PindDaanDetail />}</Route>
           <Route path="/tirth-yatra/:slug" component={TirthYatraDetail} />
           <Route path="/tirth-yatra" component={TirthYatra} />

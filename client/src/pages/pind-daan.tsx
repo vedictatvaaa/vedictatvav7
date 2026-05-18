@@ -857,7 +857,7 @@ export function PindDaanHub() {
               kashi: "/pind-daan-kashi",
               haridwar: "/pind-daan-haridwar",
             };
-            const href = seoAlias[p.slug] || `/pind-daan/${p.slug}`;
+            const href = seoAlias[p.slug] || `/pind-daan-booking/${p.slug}`;
             return (
               <Link
                 key={p.slug}
@@ -988,7 +988,11 @@ export function PindDaanHub() {
 }
 
 export function PindDaanDetail({ slugOverride }: { slugOverride?: string } = {}) {
-  const [, params] = useRoute("/pind-daan/:slug");
+  // Matches both the new canonical /pind-daan-booking/:slug AND the
+  // legacy /pind-daan/:slug fallback (server 301 redirects hard nav).
+  const [matchedNew, paramsNew] = useRoute("/pind-daan-booking/:slug");
+  const [, paramsLegacy] = useRoute("/pind-daan/:slug");
+  const params = matchedNew ? paramsNew : paramsLegacy;
   const slug = slugOverride || params?.slug || "";
   const page = PAGES_BY_SLUG[slug];
 
@@ -999,7 +1003,7 @@ export function PindDaanDetail({ slugOverride }: { slugOverride?: string } = {})
       <PageSeo
         title={`${page.hero.title} | Vedic Tatva`}
         description={page.hero.subtitle}
-        canonical={`/pind-daan/${page.slug}`}
+        canonical={`/pind-daan-booking/${page.slug}`}
         twitterCard="summary_large_image"
         schemas={[faqPage(page.content.faqs.map((f) => ({ question: f.q, answer: f.a })))]}
       />
@@ -1034,7 +1038,7 @@ export function PindDaanDetail({ slugOverride }: { slugOverride?: string } = {})
           {PAGES.filter(p => p.slug !== slug).map((p) => (
             <Link
               key={p.slug}
-              href={`/pind-daan/${p.slug}`}
+              href={`/pind-daan-booking/${p.slug}`}
               className="text-[11px] text-[#5a4a3a] hover:text-[#6D2B35] whitespace-nowrap px-2.5 h-7 inline-flex items-center rounded-md bg-[#FBF7EE] border border-[#D4AF37]/25 hover-elevate"
               data-testid={`link-related-${p.slug}`}
             >

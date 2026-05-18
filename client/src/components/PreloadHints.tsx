@@ -23,8 +23,8 @@ const STATIC_TABLE: Record<string, PreloadEntry> = {
 };
 
 const PREFIX_TABLE: Array<{ prefix: string; entry: PreloadEntry }> = [
-  { prefix: "/shop/",        entry: { src: "/attached_assets/heroes/hero-scene-essentials.png", widths: [320, 480, 768, 1080, 1440] } },
-  { prefix: "/pind-daan/",   entry: { src: "/attached_assets/heroes/hero-scene-pind-daan.png",  widths: [320, 480, 768, 1080, 1440] } },
+  { prefix: "/puja-samagri-online/", entry: { src: "/attached_assets/heroes/hero-scene-essentials.png", widths: [320, 480, 768, 1080, 1440] } },
+  { prefix: "/pind-daan-booking/",   entry: { src: "/attached_assets/heroes/hero-scene-pind-daan.png",  widths: [320, 480, 768, 1080, 1440] } },
   { prefix: "/tirth-yatra/", entry: { src: "/attached_assets/heroes/hero-scene-tirth-yatra.png",widths: [320, 480, 768, 1080, 1440] } },
 ];
 

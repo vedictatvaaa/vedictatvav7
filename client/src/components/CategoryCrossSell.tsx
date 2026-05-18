@@ -40,7 +40,7 @@ export default function CategoryCrossSell({ currentSlug }: Props) {
           return (
             <Link
               key={t.slug}
-              href={`/shop/${t.slug}`}
+              href={`/puja-samagri-online/${t.slug}`}
               className="group flex flex-col items-center text-center rounded-md p-3 sm:p-4 border hover-elevate active-elevate-2"
               style={{ borderColor: `${t.palette.accent}40`, background: `${t.palette.bgFrom}05` }}
               data-testid={`cross-sell-${t.slug}`}

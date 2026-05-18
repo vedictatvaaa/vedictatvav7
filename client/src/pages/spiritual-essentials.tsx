@@ -38,7 +38,7 @@ function CategoryTile({ theme, position }: { theme: CategoryTheme; position: num
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.5, delay: position * 0.05 }}
     >
-      <Link href={`/shop/${theme.slug}`} data-testid={`tile-category-${theme.slug}`}>
+      <Link href={`/puja-samagri-online/${theme.slug}`} data-testid={`tile-category-${theme.slug}`}>
         <Card className="group relative overflow-hidden border-2 hover-elevate active-elevate-2 cursor-pointer h-full"
           style={{ borderColor: `${theme.palette.accent}33` }}>
           {/* Themed gradient background (kept as fallback / colour wash behind the image) */}
