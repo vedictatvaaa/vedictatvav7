@@ -26,7 +26,7 @@ Vedic Tatva is a premium spiritual e-commerce and service marketplace offering s
 *   `GOOGLE_SERVICE_ACCOUNT_JSON` (enables Google Indexing API)
 *   `GOOGLE_SITE_VERIFICATION_FILE` (for GSC HTML file verification)
 *   `BACKUP_DIR`, `BACKUP_RETENTION_DAYS`
-*   `DEPLOY_FROM_BROWSER` (set to `1` on the VPS to enable the admin "Deploy" tab; off everywhere else)
+*   `DEPLOY_FROM_BROWSER` (legacy — was for the now-decommissioned VPS deploy.sh flow; leave unset under Coolify)
 
 ## Stack
 
@@ -66,7 +66,7 @@ Vedic Tatva is a premium spiritual e-commerce and service marketplace offering s
 *   **Mobile-First Design:** Prioritizes responsiveness with specific mobile UI enhancements (e.g., sticky navigation, 2-column grids).
 *   **Decentralized SEO Management:** Admin panel allows per-page SEO overrides, while `PageSeo` component and `seo-seed.ts` provide robust defaults and fallback mechanisms.
 *   **Hybrid Notification System:** Order-journey notifications are WhatsApp-first with SMS fallback, ensured by database-level deduplication and channel preference.
-*   **Browser-triggered Deploys:** Admin → Deploy tab spawns `scripts/deploy.sh` server-side. Gated by `adminAuthMiddleware` + `DEPLOY_FROM_BROWSER=1`, rate-limited 5/hour, audited (`deploy.start`). Status + live log in `server/deploy-runner.ts`.
+*   **Browser-triggered Deploys (legacy):** Admin → Deploy tab spawns `scripts/deploy.sh` server-side. Gated by `adminAuthMiddleware` + `DEPLOY_FROM_BROWSER=1`, rate-limited 5/hour, audited (`deploy.start`). Status + live log in `server/deploy-runner.ts`. **No longer used** — production is on Coolify; this tab is dead code from the old VPS PM2 flow.
 *   **Performance budget:** LCP images ship explicit `width`/`height` (CLS guard), `optImgSrcSet` everywhere, `/api/img` negotiates AVIF→WebP→JPEG via `Accept` (`Vary: Accept`, 30-day immutable cache), `DeferredWidgets` mounts chat/FOMO/social-proof/install-banner only after first interaction or `requestIdleCallback` (4s safety), `PreloadHints` skips the LCP preload on Save-Data and 2g, and the ambient floral backdrop drops every second SVG node on `<= 640px`.
 *   **Per-route OG/WhatsApp share previews (no-JS crawlers):** `server/static.ts` intercepts every SPA-fallback HTML response and runs `injectOgMeta(html, path)` from `server/og-meta.ts`, swapping `<title>`, `og:*`, `twitter:*` and canonical based on a route → card map (exact, `prefix:/foo`, or RegExp). Bespoke 1200×630 JPEGs (<300 KB) live in `client/public/og/`. Production-only — dev still uses `vite.ts` (forbidden file) and crawlers don't hit dev anyway. `Cache-Control: max-age=300` keeps admin SEO edits fresh.
 
@@ -99,8 +99,8 @@ Vedic Tatva is a premium spiritual e-commerce and service marketplace offering s
 *   **Google Indexing API Quota:** Capped at 200 URLs/day; requires `GOOGLE_SERVICE_ACCOUNT_JSON` to be set.
 *   **AI Baby Name Generation:** Issues multiple parallel OpenAI calls; ensure `OPENAI_API_KEY` is valid and sufficient quota is available.
 *   **Razorpay Webhook Security:** Webhook signatures are HMAC-verified server-side; ensure `RAZORPAY_KEY_SECRET` is correctly configured.
-*   **Browser Deploy:** The "Deploy" admin tab requires `DEPLOY_FROM_BROWSER=1` in the production env. The runner uses `setsid` to detach the deploy script from this Node process, so a `pm2 restart` inside `deploy.sh` won't kill its own deploy. State and logs persist to `logs/deploys/` so the UI re-rehydrates after the restart.
-*   **Production schema drift:** `scripts/deploy.sh` runs `npm run db:push` between build and PM2 restart so additive schema changes (new columns / tables) reach prod automatically. It's stdin-closed and `timeout 60` capped so it can never hang the deploy; failures are logged and the deploy continues. For a destructive change (column drop or rename) drizzle-kit will refuse the silent push — SSH and run `npm run db:push` manually to confirm. Skip the auto-push with `SKIP_DB_PUSH=1`. Symptom of skipping this: API endpoints 500 with `column "..." does not exist` after deploy, and dependent SPA pages render blank.
+*   **Browser Deploy (decommissioned):** The "Deploy" admin tab was wired to the old VPS deploy.sh path. Coolify replaced this in May 2026; the tab and its `DEPLOY_FROM_BROWSER` env var are inert in production. Safe to delete in a future cleanup pass.
+*   **Production schema drift (under Coolify):** The old `deploy.sh` used to run `npm run db:push` between build and restart. Coolify does NOT do this automatically. After any schema change in `shared/schema.ts`, SSH into the Coolify-managed container (or run from any host with the prod `DATABASE_URL`) and run `npm run db:push` manually. Symptom of skipping this: API endpoints 500 with `column "..." does not exist` after deploy, and dependent SPA pages render blank. Drizzle-kit will refuse destructive changes (column drop / rename) without confirmation — handle those interactively, never auto.
 
 ## Agent Handoff Notes
 
@@ -169,34 +169,43 @@ them). Delete in next cleanup pass.
 | `/spiritual-essentials`    | Authentic Puja Samagri the Pandit Uses · Vedic Tatva        |
 | `/pind-daan-gaya`          | Sacred Pind Daan in Gaya, Kashi & Haridwar · Vedic Tatva    |
 
-### Deploy flow (Replit → GitHub → VPS)
+### Deploy flow (Replit → GitHub → Coolify)
 
-The VPS at `/var/www/vedicTattva-replit` runs PM2 process `vedictatva`
-serving on port 5000, fronted by nginx. `vedictatva.com` and
-`www.vedictatva.com` both proxy_pass to it (no CDN, no caching).
+Production is served by **Coolify** on the VPS. Coolify watches the
+`vedictatvav7` branch of GitHub repo
+`https://github.com/vedictatvaaa/vedictatvav7` and auto-deploys on
+every push. `vedictatva.com` and `www.vedictatva.com` are routed by
+Coolify (no CDN, no caching layer in front).
 
-Deploy from VPS shell:
+To ship a change end-to-end:
 
-```
-bash /var/www/vedicTattva-replit/scripts/deploy.sh
-```
-
-This does `git pull && npm ci && npm run build && pm2 reload vedictatva`.
+1. Make the edit in Replit (it auto-checkpoints to the local
+   `gitsafe-backup` remote).
+2. Open the **Version Control** panel in Replit's left sidebar (git
+   icon). Confirm you see "N commits ahead" of `origin/vedictatvav7`.
+   Click **Push** (NOT "Sync Changes" — Sync tries to pull first and
+   can stall on phantom conflicts).
+3. Coolify picks up the push automatically. Watch the deployment in
+   the Coolify dashboard.
+4. Verify with `curl -A "WhatsApp/2" -H "Accept: text/html"
+   "https://vedictatva.com/<path>?v=now"` and grep `og:title`, or a
+   simple `curl -s -o /dev/null -w "%{http_code}\n" https://vedictatva.com/`
+   for a 200.
 
 **Critical gotcha:** Replit's git layer auto-pushes only to a
-`gitsafe-backup` remote, NOT to GitHub `origin`. The VPS pulls from
-`origin`. To ship a change end-to-end:
+`gitsafe-backup` remote, NOT to GitHub `origin`. If you skip step 2,
+Coolify never sees your change and "why is the site still old?"
+becomes very confusing. This bit us multiple times — always confirm
+step 2 happened.
 
-1. Make the edit in Replit (it auto-checkpoints to gitsafe-backup).
-2. Open the **Version Control** panel in Replit's left sidebar (git
-   icon). Confirm you see "N commits ahead". Click **Push to GitHub**.
-3. SSH to VPS and run `bash /var/www/vedicTattva-replit/scripts/deploy.sh`.
-4. Verify with `curl -A "WhatsApp/2" -H "Accept: text/html"
-   "https://vedictatva.com/<path>?v=now"` and grep `og:title`.
-
-If you skip step 2, the VPS pulls nothing new and your change appears
-to vanish. This bit us multiple times this session — every confused
-"why is the homepage still old?" had this root cause.
+**Decommissioned old path (May 2026):** Before Coolify, the VPS had a
+manual flow at `/var/www/vedicTattva-replit` with a PM2 process
+`vedictatva` and a `scripts/deploy.sh` that pulled from a different
+GitHub repo (`suresh7724/vedicTattva-replit`, branch `main`). That
+process has been stopped and deleted from PM2, and the directory was
+renamed to `/var/www/vedicTattva-replit.OLD-do-not-use`. The Admin
+"Deploy" tab and the `DEPLOY_FROM_BROWSER` env var are leftovers from
+that flow and no longer relevant.
 
 ### WhatsApp / link unfurler cache busting
 
