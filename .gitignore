@@ -41,6 +41,10 @@ attached_assets/*
 !attached_assets/product_images/
 !attached_assets/rudraksha/
 !attached_assets/service_icons/
+# Mantra audio loops imported directly by client/src/components/JapCounter.tsx.
+# They sit at the root of attached_assets/ and must reach the Docker build
+# context or Vite fails with "Could not load <file>.mp3" during npm run build.
+!attached_assets/*.mp3
 # Loose product-image files referenced directly from the products table.
 !attached_assets/IMG_1811.JPG_1776544579053.jpeg
 !attached_assets/IMG_2060.JPG_1776544579057.jpeg
