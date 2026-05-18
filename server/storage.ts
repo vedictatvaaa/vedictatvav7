@@ -1962,9 +1962,11 @@ export class DatabaseStorage implements IStorage {
     });
     return this.listHomepageSections();
   }
-  // Idempotently inserts defaults the first time, then keeps `label` fresh
-  // on subsequent boots without touching `position` or `enabled` (so admin
-  // ordering survives across deploys).
+  // Idempotently inserts defaults the first time, then on subsequent boots
+  // syncs `label` AND `position` from code so the canonical order in
+  // HOMEPAGE_SECTION_DEFAULTS is the source of truth. Admin re-ordering via
+  // the panel will be reset on next deploy — intentional trade-off so default
+  // order changes actually propagate.
   async seedHomepageSections(defaults: InsertHomepageSection[]): Promise<HomepageSection[]> {
     for (let i = 0; i < defaults.length; i++) {
       const d = defaults[i];
@@ -1972,7 +1974,7 @@ export class DatabaseStorage implements IStorage {
         .values({ key: d.key, label: d.label, position: d.position ?? i, enabled: d.enabled ?? true })
         .onConflictDoUpdate({
           target: homepageSections.key,
-          set: { label: d.label, updatedAt: new Date() },
+          set: { label: d.label, position: d.position ?? i, updatedAt: new Date() },
         });
     }
     return this.listHomepageSections();
