@@ -77,7 +77,7 @@ const heroSlides: HeroSlide[] = [
     title2: "& Puja Essentials ",
     title2Highlight: "Online",
     subtitle: "Buy puja kits, havan samagri, diyas, brass idols, incense sticks, kalash, and temple essentials for every Hindu ritual.",
-    cta1: { label: "Shop Now", href: "/spiritual-essentials", icon: ShoppingBag },
+    cta1: { label: "Puja Samagri", href: "/spiritual-essentials", icon: ShoppingBag },
     cta2: { label: "Categories", href: "/puja-samagri-online", icon: Gem },
   },
   {
