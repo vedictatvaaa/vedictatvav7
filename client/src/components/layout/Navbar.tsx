@@ -720,10 +720,6 @@ export default function Navbar() {
               )}
             </div>
 
-            <div className="hidden md:block">
-              <CurrencySelector compact />
-            </div>
-
             <Link href="/cart">
               <button
                 className="w-9 h-9 flex items-center justify-center rounded-md text-[#5a4a3a]/70 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors relative"
