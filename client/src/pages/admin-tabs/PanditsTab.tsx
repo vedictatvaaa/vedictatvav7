@@ -46,6 +46,8 @@ function PanditsTab() {
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
+  const [bulkGeocoding, setBulkGeocoding] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
 
   const { data: pandits, isLoading } = useQuery<Pandit[]>({
     queryKey: ["/api/book-pandit-online", "admin"],
@@ -159,12 +161,89 @@ function PanditsTab() {
     },
   });
 
+  const handleBulkSetLocations = async () => {
+    const missing = (pandits || []).filter(p => p.latitude == null || p.longitude == null);
+    if (!missing.length) {
+      toast({ title: "All set!", description: "Every pandit already has GPS coordinates." });
+      return;
+    }
+    setBulkGeocoding(true);
+    setBulkProgress({ done: 0, total: missing.length, failed: 0 });
+    let done = 0;
+    let failed = 0;
+    for (const pandit of missing) {
+      const coords = await geocodeCity(pandit.city);
+      if (coords) {
+        try {
+          await fetch(`/api/pandits/${pandit.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+          });
+          done++;
+        } catch {
+          failed++;
+        }
+      } else {
+        failed++;
+      }
+      setBulkProgress({ done: done + failed, total: missing.length, failed });
+      // Nominatim rate limit: 1 req/sec
+      await new Promise(r => setTimeout(r, 1100));
+    }
+    await queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+    setBulkGeocoding(false);
+    setBulkProgress(null);
+    toast({
+      title: `Bulk Location Done`,
+      description: `${done} pandits located${failed ? `, ${failed} could not be found` : ""}.`,
+      variant: failed && !done ? "destructive" : "default",
+    });
+  };
+
+  const noGpsCount = (pandits || []).filter(p => p.latitude == null || p.longitude == null).length;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif text-primary" data-testid="page-title-pandits">Pandits</h1>
-        <p className="text-sm text-muted-foreground">Manage pandit registrations, approvals & boosts</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif text-primary" data-testid="page-title-pandits">Pandits</h1>
+          <p className="text-sm text-muted-foreground">Manage pandit registrations, approvals & boosts</p>
+        </div>
+        {noGpsCount > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={bulkGeocoding}
+            onClick={handleBulkSetLocations}
+            className="shrink-0 gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+            data-testid="btn-bulk-set-locations"
+          >
+            <LocateFixed className={`w-4 h-4 ${bulkGeocoding ? "animate-spin" : ""}`} />
+            {bulkGeocoding && bulkProgress
+              ? `Locating… ${bulkProgress.done}/${bulkProgress.total}`
+              : `Set All Locations (${noGpsCount} missing)`}
+          </Button>
+        )}
       </div>
+      {bulkGeocoding && bulkProgress && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3">
+          <LocateFixed className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-amber-800">
+              Geocoding pandits… {bulkProgress.done} of {bulkProgress.total} done
+              {bulkProgress.failed > 0 && <span className="text-red-600 ml-1">· {bulkProgress.failed} failed</span>}
+            </div>
+            <div className="mt-1.5 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+          <span className="text-xs text-amber-600 shrink-0">{Math.round((bulkProgress.done / bulkProgress.total) * 100)}%</span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
