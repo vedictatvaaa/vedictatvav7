@@ -1,1 +1,2 @@
 - [Dev route additions need restart](dev-route-restart.md) — new Express routes silently fall through to the SPA (200 HTML) until the workflow is restarted; tsx watch doesn't reliably hot-add them.
+- [Lenis scroll panes](lenis-scroll-panes.md) — global Lenis smooth-scroll eats wheel events; inner scroll containers need `data-lenis-prevent` (+ `min-h-0` for flex children) or they won't scroll.

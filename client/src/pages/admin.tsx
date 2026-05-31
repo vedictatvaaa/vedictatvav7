@@ -1,8 +1,11 @@
-import { useState, useEffect, lazy, Suspense, useMemo, useRef, type ComponentType } from "react";
+import {
+  useState, useEffect, lazy, Suspense, useMemo, useRef, Component,
+  type ComponentType, type LazyExoticComponent, type ReactNode, type ErrorInfo,
+} from "react";
 import { useQuery, useIsMutating } from "@tanstack/react-query";
 import {
   ShoppingCart, RotateCcw, CalendarClock, XCircle, Menu, Sparkles, Search,
-  HelpCircle, PanelLeftClose, PanelLeft,
+  HelpCircle, PanelLeftClose, PanelLeft, AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -30,9 +33,19 @@ import { AdminTodayStats } from "@/components/admin/AdminTodayStats";
 // chunk fails again on the reloaded page (real bug, not a stale-deploy
 // artifact). Uses sessionStorage to ensure we never reload-loop.
 const RELOAD_GUARD_KEY = "vt-admin-chunk-reload-guard";
-function safeLazy<T extends ComponentType<unknown>>(loader: () => Promise<{ default: T }>) {
-  return lazy(() =>
-    loader().then(
+type Preloadable<T extends ComponentType<any>> = LazyExoticComponent<T> & {
+  preload: () => Promise<{ default: T }>;
+};
+function safeLazy<T extends ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+): Preloadable<T> {
+  // Memoize the (guarded) import so React.lazy and an eager preload() share a
+  // single in-flight promise — hovering a sidebar tab warms the exact chunk
+  // React will later await, with no double fetch.
+  let cached: Promise<{ default: T }> | null = null;
+  const load = (): Promise<{ default: T }> => {
+    if (cached) return cached;
+    cached = loader().then(
       (mod) => {
         // Any successful chunk load on this page proves the deploy is
         // consistent. Clear the guard so a FUTURE stale-chunk error in the
@@ -53,10 +66,20 @@ function safeLazy<T extends ComponentType<unknown>>(loader: () => Promise<{ defa
           // Suspense fallback until the page actually reloads.
           return new Promise<{ default: T }>(() => {});
         }
+        // Drop the cache so a FUTURE preload() (e.g. a later hover) can re-run
+        // the import. Note: this does not revive an already-rejected
+        // React.lazy render — once a tab has rendered and its import failed,
+        // React keeps that lazy type rejected, so recovery there is via the
+        // chunk-reload guard above or the boundary's "Reload page" action.
+        cached = null;
         throw err;
-      }
-    )
-  );
+      },
+    );
+    return cached;
+  };
+  const Comp = lazy(load) as Preloadable<T>;
+  Comp.preload = load;
+  return Comp;
 }
 
 const DashboardTab          = safeLazy(() => import("./admin-tabs/DashboardTab"));
@@ -108,6 +131,129 @@ const BlogAiQueueTab        = safeLazy(() => import("./admin-tabs/BlogAiQueueTab
 const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab"));
 const CommunityTab          = safeLazy(() => import("./admin-tabs/CommunityTab"));
 const SacredLibraryTab      = safeLazy(() => import("./admin-tabs/SacredLibraryTab"));
+
+// id → lazy component, used to warm a tab's JS chunk on hover/focus so the
+// click feels instant. Partial because a few legacy TabIds (e.g. the
+// decommissioned "deploy" tab) have no rendered component; prefetchTab
+// no-ops for those via optional chaining.
+const TAB_COMPONENTS: Partial<Record<TabId, { preload: () => Promise<unknown> }>> = {
+  dashboard: DashboardTab,
+  products: ProductsTab,
+  orders: OrdersTab,
+  pandits: PanditsTab,
+  "pandit-apps": PanditApplicationsTab,
+  astrologers: AstrologersTab,
+  festivals: FestivalsTab,
+  bookings: BookingsTab,
+  reviews: ReviewsTabContent,
+  returns: ReturnTicketsTab,
+  coupons: CouponsTab,
+  subscriptions: SubscriptionsTab,
+  donations: DonationsTab,
+  matrimony: MatrimonyTab,
+  seo: SeoManagerTab,
+  distribution: DistributionTab,
+  merchant: MerchantCenterTab,
+  "site-settings": SiteSettingsTab,
+  integrations: IntegrationsTab,
+  "payment-gateways": ProvidersTab,
+  "ai-providers": ProvidersTab,
+  "audit-log": AuditLogTab,
+  "social-proof": SocialProofTab,
+  "sales-popups": SalesPopupsTab,
+  "hero-slider": HeroSliderTab,
+  "homepage-sections": HomepageSectionsTab,
+  analytics: AnalyticsTab,
+  visitors: VisitorsTab,
+  "api-setup": ApiSetupGuideTab,
+  aplus: AplusListingsTab,
+  security: SecurityTab,
+  notifications: NotificationsTab,
+  bestsellers: BestsellersTab,
+  "abandoned-carts": AbandonedCartsTab,
+  inventory: InventoryHealthTab,
+  customers: CustomersTab,
+  blog: BlogTab,
+  "email-marketing": EmailMarketingTab,
+  "ai-assistant": AiAssistantTab,
+  "ai-coder": AiCoderTab,
+  backups: AdminBackupsTab,
+  "schema-changelog": SchemaChangelogTab,
+  "pandit-payouts": PanditPayoutsTab,
+  "pandit-affiliate": PanditAffiliateTab,
+  "pandit-memberships": PanditMembershipsTab,
+  mantras: MantrasTab,
+  "blog-ai": BlogAiQueueTab,
+  "puja-library": PujaLibraryTab,
+  community: CommunityTab,
+  "sacred-library": SacredLibraryTab,
+};
+const prefetchedTabs = new Set<TabId>();
+function prefetchTab(id: TabId) {
+  if (prefetchedTabs.has(id)) return;
+  prefetchedTabs.add(id);
+  // Best-effort warm-up. On failure, forget it so a later hover/focus can
+  // retry instead of permanently skipping this tab's chunk.
+  TAB_COMPONENTS[id]?.preload?.().catch(() => { prefetchedTabs.delete(id); });
+}
+
+// Per-tab error boundary: if a single tab throws while rendering, show a
+// contained, recoverable card instead of blanking the whole admin panel
+// (the app-level AdminErrorBoundary still catches anything that escapes the
+// shell). Remounts — and so resets — when the keyed content wrapper swaps on
+// tab change, and offers an in-place retry that re-renders the same tab.
+class TabErrorBoundary extends Component<
+  { children: ReactNode; tabLabel?: string },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: ReactNode; tabLabel?: string }) {
+    super(props);
+    this.state = { hasError: false, message: "" };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || "Something went wrong rendering this section." };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Admin tab error:", error.message, error.stack);
+    fetch("/api/client-error", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: error.message, stack: error.stack, componentStack: info.componentStack }),
+    }).catch(() => {});
+  }
+  handleRetry = () => this.setState({ hasError: false, message: "" });
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-xl mx-auto mt-8" data-testid="admin-tab-error">
+          <div className="rounded-xl border border-border bg-card shadow-sm p-6 sm:p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-[hsl(var(--accent))] flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-[hsl(var(--primary))]" />
+            </div>
+            <h2 className="font-serif text-lg text-foreground mb-1.5">
+              {this.props.tabLabel ? `Couldn't load ${this.props.tabLabel}` : "Something went wrong"}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-3">
+              This section hit an error, but the rest of the admin panel is still working.
+            </p>
+            <p className="text-xs text-muted-foreground/80 break-words mb-5 font-mono bg-muted/50 rounded px-2 py-1 inline-block max-w-full">
+              {this.state.message}
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <Button size="sm" onClick={this.handleRetry} className="gap-2" data-testid="button-tab-retry">
+                <RotateCcw className="w-4 h-4" /> Try again
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => window.location.reload()} data-testid="button-tab-reload">
+                Reload page
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface AdminProps {
   adminToken?: string;
@@ -366,6 +512,8 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                       setActiveTab(item.id);
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
+                    onMouseEnter={() => prefetchTab(item.id)}
+                    onFocus={() => prefetchTab(item.id)}
                     title={!sidebarOpen ? `${item.label}${badge ? ` (${badge})` : ""}` : undefined}
                     aria-current={isActive ? "page" : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative hover-elevate ${
@@ -524,6 +672,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
         {/* Tab content */}
         <div ref={contentScrollRef} className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8" data-lenis-prevent>
           <div key={activeTab} className="max-w-6xl animate-in fade-in duration-200">
+            <TabErrorBoundary tabLabel={activeTabMeta?.label}>
             <Suspense fallback={fallback}>
               {activeTab === "dashboard" && <DashboardTab setActiveTab={setActiveTab} />}
               {activeTab === "products" && <ProductsTab />}
@@ -576,6 +725,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "community" && <CommunityTab adminToken={adminToken} />}
               {activeTab === "sacred-library" && <SacredLibraryTab adminToken={adminToken} />}
             </Suspense>
+            </TabErrorBoundary>
           </div>
         </div>
       </div>
