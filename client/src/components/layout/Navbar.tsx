@@ -208,6 +208,7 @@ export default function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
   const moreRef = useRef<HTMLDivElement>(null);
   const localeRef = useRef<HTMLDivElement>(null);
   const DELIVERY_CITIES = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Varanasi", "Gaya", "Haridwar", "Other"];
@@ -236,14 +237,12 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    if (!moreOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-        setMoreOpen(false);
-      }
+    if (!moreOpen) { setPaletteQuery(""); return; }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setMoreOpen(false); setPaletteQuery(""); }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
   }, [moreOpen]);
 
   const { data: searchData, isFetching: searchLoading } = useQuery<SearchResponse>({
@@ -495,97 +494,155 @@ export default function Navbar() {
             )}
           </Link>
 
+          {/* ── Desktop nav: 4 clean links + More ── */}
           <div className="hidden md:flex items-center justify-center flex-1 min-w-0">
-            <div className="flex items-center gap-0.5 lg:gap-1">
-              {links.map((link) => {
+            <div className="flex items-center gap-1">
+              {[
+                { href: "/online-pandit-booking", label: "Pandits" },
+                { href: "/puja-samagri-online", label: "Shop" },
+                { href: "/astrology", label: "Astrology" },
+                { href: "/today-panchang", label: "Panchang" },
+              ].map((link) => {
                 const isActive = location === link.href;
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`relative text-[11.5px] lg:text-[12px] font-medium tracking-wide transition-colors duration-200 px-2 lg:px-3 py-2 whitespace-nowrap ${
+                    className={`relative text-[13px] font-medium tracking-wide transition-colors duration-200 px-4 py-2 whitespace-nowrap rounded-full ${
                       isActive
                         ? "text-[#6D2B35]"
-                        : "text-[#5a4a3a]/70 hover:text-[#6D2B35]"
+                        : "text-[#5a4a3a]/65 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60"
                     }`}
-                    data-testid={`link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    data-testid={`link-${link.label.toLowerCase()}`}
                   >
                     {link.label}
                     {isActive && (
                       <span
-                        className="absolute left-2 right-2 lg:left-3 lg:right-3 -bottom-px h-[2px] rounded-full"
-                        style={{ background: "linear-gradient(90deg, #D4AF37, #6D2B35, #D4AF37)" }}
+                        className="absolute left-4 right-4 -bottom-px h-[2px] rounded-full"
+                        style={{ background: "linear-gradient(90deg, #D4AF37, #b8922e)" }}
                       />
                     )}
                   </Link>
                 );
               })}
 
-              {/* Desktop "More" mega-menu */}
+              {/* More → command-palette overlay */}
               <div className="relative" ref={moreRef}>
                 <button
                   type="button"
-                  onClick={() => { setMoreOpen(!moreOpen); setAccountOpen(false); setSearchOpen(false); }}
-                  className={`relative flex items-center gap-1 text-[11.5px] lg:text-[12px] font-medium tracking-wide transition-colors duration-200 px-2 lg:px-3 py-2 whitespace-nowrap ${
-                    moreOpen ? "text-[#6D2B35]" : "text-[#5a4a3a]/70 hover:text-[#6D2B35]"
+                  onClick={() => { setMoreOpen(!moreOpen); setSearchOpen(false); }}
+                  className={`relative flex items-center gap-1.5 text-[13px] font-medium tracking-wide transition-colors duration-200 px-4 py-2 rounded-full whitespace-nowrap ${
+                    moreOpen
+                      ? "text-[#6D2B35] bg-[#F5F0E6]/80"
+                      : "text-[#5a4a3a]/65 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60"
                   }`}
                   data-testid="btn-nav-more"
                   aria-expanded={moreOpen}
                 >
                   More
-                  <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${moreOpen ? "rotate-90" : "rotate-0"}`} strokeWidth={2.5} />
+                  <ChevronDown className={`h-3 w-3 opacity-60 transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
                 </button>
-
-                {moreOpen && (
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-[#D4AF37]/15 overflow-hidden"
-                    style={{ width: "min(680px, 90vw)" }}
-                    data-testid="nav-more-dropdown"
-                  >
-                    <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #D4AF37, #f5d76e, #D4AF37)" }} />
-                    <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-1">
-                      {navSections.map((section) => (
-                        <div key={section.title} className="min-w-0">
-                          <p className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-bold px-2 pt-2 pb-1.5 whitespace-nowrap">
-                            {section.title}
-                          </p>
-                          {section.items.map((item) => {
-                            const ItemIcon = item.icon;
-                            const isItemActive = location === item.href;
-                            return (
-                              <Link
-                                key={item.href}
-                                href={item.href}
-                                onClick={() => setMoreOpen(false)}
-                                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
-                                  isItemActive
-                                    ? "bg-[#FBF7EE] text-[#6D2B35]"
-                                    : "text-[#5a4a3a]/80 hover:bg-[#FBF7EE]/70 hover:text-[#6D2B35]"
-                                } ${item.comingSoon ? "opacity-50 pointer-events-none" : ""}`}
-                                data-testid={`more-link-${item.href.replace(/\//g, "-")}`}
-                              >
-                                <ItemIcon className="h-3.5 w-3.5 text-[#6D2B35]/50 shrink-0" strokeWidth={1.8} />
-                                <span className="truncate">{item.label}</span>
-                                {item.comingSoon && (
-                                  <span className="ml-auto text-[9px] bg-[#F5F0E6] text-[#6D2B35]/60 px-1.5 py-0.5 rounded-full shrink-0">Soon</span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="border-t border-[#D4AF37]/10 px-4 py-2.5 flex items-center justify-between bg-[#faf7f2]">
-                      <p className="text-[10px] text-[#5a4a3a]/50">✦ Vedic Tatva — Your Sacred Inner Circle</p>
-                      <Link href="/membership" onClick={() => setMoreOpen(false)} className="text-[10px] font-bold text-[#6D2B35] hover:text-[#D4AF37] transition-colors flex items-center gap-1" data-testid="more-link-membership-cta">
-                        Become a Member <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
+
+          {/* ── Command-palette overlay (portal-style, full page) ── */}
+          {moreOpen && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"
+                onClick={() => setMoreOpen(false)}
+              />
+              {/* Palette panel */}
+              <div
+                className="fixed left-1/2 top-[72px] -translate-x-1/2 z-[61] w-full"
+                style={{ maxWidth: "min(640px, calc(100vw - 32px))" }}
+                data-testid="nav-more-palette"
+              >
+                <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(109,43,53,0.18)] border border-[#D4AF37]/20 overflow-hidden">
+                  {/* Search bar */}
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-[#D4AF37]/10">
+                    <Search className="h-4 w-4 text-[#5a4a3a]/40 shrink-0" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Search services, pages…"
+                      className="flex-1 bg-transparent text-[13px] text-[#3a2a1a] placeholder:text-[#5a4a3a]/35 outline-none"
+                      value={paletteQuery}
+                      onChange={(e) => setPaletteQuery(e.target.value)}
+                      data-testid="palette-search-input"
+                    />
+                    <kbd className="hidden sm:flex items-center gap-0.5 text-[9px] font-mono text-[#5a4a3a]/30 border border-[#5a4a3a]/15 rounded px-1.5 py-0.5">ESC</kbd>
+                  </div>
+
+                  {/* Sections */}
+                  <div className="max-h-[60vh] overflow-y-auto p-3 space-y-4">
+                    {navSections.map((section) => {
+                      const filtered = section.items.filter((item) =>
+                        !paletteQuery || item.label.toLowerCase().includes(paletteQuery.toLowerCase())
+                      );
+                      if (filtered.length === 0) return null;
+                      return (
+                        <div key={section.title}>
+                          <p className="text-[9.5px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] px-2 mb-1.5">
+                            {section.title}
+                          </p>
+                          <div className="grid grid-cols-2 gap-1">
+                            {filtered.map((item) => {
+                              const ItemIcon = item.icon;
+                              const isItemActive = location === item.href;
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  onClick={() => { setMoreOpen(false); setPaletteQuery(""); }}
+                                  className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition-all duration-150 ${
+                                    isItemActive
+                                      ? "bg-[#6D2B35] text-white"
+                                      : item.comingSoon
+                                      ? "opacity-40 pointer-events-none text-[#5a4a3a]/70"
+                                      : "text-[#3a2a1a]/80 hover:bg-[#FBF7EE] hover:text-[#6D2B35]"
+                                  }`}
+                                  data-testid={`palette-link-${item.href.replace(/\//g, "-")}`}
+                                >
+                                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                    isItemActive ? "bg-white/20" : "bg-[#F5F0E6] group-hover:bg-[#D4AF37]/15"
+                                  }`}>
+                                    <ItemIcon className={`h-3.5 w-3.5 ${isItemActive ? "text-white" : "text-[#6D2B35]/60"}`} strokeWidth={1.8} />
+                                  </span>
+                                  <span className="truncate leading-tight">
+                                    {item.label}
+                                    {item.comingSoon && <span className="block text-[9px] font-normal opacity-60">Coming soon</span>}
+                                  </span>
+                                  {!item.comingSoon && !isItemActive && (
+                                    <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-30 transition-opacity shrink-0" />
+                                  )}
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="border-t border-[#D4AF37]/10 px-4 py-2.5 flex items-center justify-between bg-[#faf7f2]/80">
+                    <span className="text-[10px] text-[#5a4a3a]/40">✦ {navSections.reduce((s, sec) => s + sec.items.length, 0)} destinations</span>
+                    <Link
+                      href="/membership"
+                      onClick={() => { setMoreOpen(false); setPaletteQuery(""); }}
+                      className="text-[10px] font-bold text-[#6D2B35] hover:text-[#D4AF37] transition-colors flex items-center gap-1"
+                      data-testid="palette-link-membership-cta"
+                    >
+                      Join Prime <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-0.5">
             {location !== "/" && (
