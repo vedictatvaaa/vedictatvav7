@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from "react";
+import { reportWebVitals } from "@/lib/web-vitals";
 import { Switch, Route, useLocation, Link, useRoute, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -1076,6 +1077,7 @@ class GlobalErrorBoundary extends React.Component<{ children: React.ReactNode },
 }
 
 function App() {
+  useEffect(() => { reportWebVitals(); }, []);
   return (
     <GlobalErrorBoundary>
       <SmoothScrollProvider>

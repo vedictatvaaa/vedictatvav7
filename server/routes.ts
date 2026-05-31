@@ -1338,6 +1338,128 @@ Sitemap: ${baseUrl}/sitemap.xml
     res.type("application/xml").send(xml);
   });
 
+  // ---- SEO: Blog RSS / Atom / JSON feeds (via `feed` package) ----
+  app.get("/blog/feed.xml", async (req, res) => {
+    try {
+      const { Feed } = await import("feed");
+      const baseUrl = sitemapBase(req);
+      const feed = new Feed({
+        title: "Vedic Tatva — Spiritual Blog",
+        description: "Vedic wisdom, puja guides, astrology insights and festival articles from Vedic Tatva.",
+        id: `${baseUrl}/blog`,
+        link: `${baseUrl}/blog`,
+        language: "en",
+        image: `${baseUrl}/og/og-prime-services.jpg`,
+        favicon: `${baseUrl}/favicon.ico`,
+        copyright: `© ${new Date().getFullYear()} Vedic Tatva`,
+        updated: new Date(),
+        generator: "Vedic Tatva Feed",
+        feedLinks: {
+          rss: `${baseUrl}/blog/feed.xml`,
+          atom: `${baseUrl}/blog/feed.atom`,
+          json: `${baseUrl}/blog/feed.json`,
+        },
+        author: {
+          name: "Vedic Tatva Editorial",
+          link: `${baseUrl}/blog`,
+        },
+      });
+      const posts = await storage.getBlogPosts({ onlyPublished: true });
+      for (const post of posts.slice(0, 50)) {
+        const url = `${baseUrl}/blog/${post.slug}`;
+        feed.addItem({
+          title: post.title,
+          id: url,
+          link: url,
+          description: post.excerpt || post.title,
+          content: post.content || post.excerpt || "",
+          date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
+          image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
+          category: post.category ? [{ name: post.category }] : undefined,
+        });
+      }
+      feed.addCategory("Spirituality");
+      feed.addCategory("Vedic Wisdom");
+      res.type("application/rss+xml; charset=utf-8").send(feed.rss2());
+    } catch (err) {
+      res.status(500).send("Feed error");
+    }
+  });
+
+  app.get("/blog/feed.atom", async (req, res) => {
+    try {
+      const { Feed } = await import("feed");
+      const baseUrl = sitemapBase(req);
+      const feed = new Feed({
+        title: "Vedic Tatva — Spiritual Blog",
+        description: "Vedic wisdom, puja guides, astrology insights and festival articles.",
+        id: `${baseUrl}/blog`,
+        link: `${baseUrl}/blog`,
+        language: "en",
+        copyright: `© ${new Date().getFullYear()} Vedic Tatva`,
+        updated: new Date(),
+        feedLinks: { rss: `${baseUrl}/blog/feed.xml`, atom: `${baseUrl}/blog/feed.atom`, json: `${baseUrl}/blog/feed.json` },
+        author: { name: "Vedic Tatva Editorial", link: `${baseUrl}/blog` },
+      });
+      const posts = await storage.getBlogPosts({ onlyPublished: true });
+      for (const post of posts.slice(0, 50)) {
+        const url = `${baseUrl}/blog/${post.slug}`;
+        feed.addItem({
+          title: post.title, id: url, link: url,
+          description: post.excerpt || post.title,
+          content: post.content || post.excerpt || "",
+          date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
+          image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
+        });
+      }
+      res.type("application/atom+xml; charset=utf-8").send(feed.atom1());
+    } catch (err) {
+      res.status(500).send("Feed error");
+    }
+  });
+
+  app.get("/blog/feed.json", async (req, res) => {
+    try {
+      const { Feed } = await import("feed");
+      const baseUrl = sitemapBase(req);
+      const feed = new Feed({
+        title: "Vedic Tatva — Spiritual Blog",
+        description: "Vedic wisdom, puja guides, astrology insights and festival articles.",
+        id: `${baseUrl}/blog`,
+        link: `${baseUrl}/blog`,
+        language: "en",
+        copyright: `© ${new Date().getFullYear()} Vedic Tatva`,
+        updated: new Date(),
+        feedLinks: { rss: `${baseUrl}/blog/feed.xml`, atom: `${baseUrl}/blog/feed.atom`, json: `${baseUrl}/blog/feed.json` },
+        author: { name: "Vedic Tatva Editorial", link: `${baseUrl}/blog` },
+      });
+      const posts = await storage.getBlogPosts({ onlyPublished: true });
+      for (const post of posts.slice(0, 50)) {
+        const url = `${baseUrl}/blog/${post.slug}`;
+        feed.addItem({
+          title: post.title, id: url, link: url,
+          description: post.excerpt || post.title,
+          content: post.content || post.excerpt || "",
+          date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
+          image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
+        });
+      }
+      res.type("application/feed+json; charset=utf-8").send(feed.json1());
+    } catch (err) {
+      res.status(500).send("Feed error");
+    }
+  });
+
+  // ---- SEO: Core Web Vitals ingest endpoint ----
+  app.post("/api/vitals", express.json(), (req, res) => {
+    const { name, value, rating, delta, id } = req.body || {};
+    if (!name) return res.status(400).json({ error: "missing name" });
+    // Log for now — wire to analytics/DB later
+    console.log(`[CWV] ${name} ${rating?.toUpperCase() ?? "?"} val=${Math.round(value ?? 0)} delta=${Math.round(delta ?? 0)} id=${id}`);
+    res.json({ ok: true });
+  });
+
+  // Expose feed links in sitemap-blog.xml <link> autodiscovery header
   // ---- SEO: sitemap-sacred-library.xml — chalisas/mantras/aartis/stotras ----
   app.get("/sitemap-sacred-library.xml", async (req, res) => {
     const baseUrl = sitemapBase(req);

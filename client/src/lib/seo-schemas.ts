@@ -1,6 +1,97 @@
+// schema-dts provides TypeScript types for every Schema.org type — use them
+// for the `payload` field to catch mistakes at compile time.
+import type { WithContext, Article, BlogPosting, Organization, WebSite } from "schema-dts";
+
 export type Schema = { id: string; payload: Record<string, any> };
+export type TypedSchema<T extends import("schema-dts").Thing> = { id: string; payload: WithContext<T> };
 
 const CTX = "https://schema.org";
+
+/** Type-safe Article / BlogPosting schema. */
+export function article(args: {
+  headline: string;
+  description?: string;
+  url: string;
+  image?: string;
+  datePublished?: string;
+  dateModified?: string;
+  authorName?: string;
+  publisherName?: string;
+  publisherLogo?: string;
+  wordCount?: number;
+  keywords?: string[];
+  isBlog?: boolean;
+}): TypedSchema<Article | BlogPosting> {
+  const type = args.isBlog !== false ? "BlogPosting" : "Article";
+  return {
+    id: "article",
+    payload: {
+      "@context": "https://schema.org",
+      "@type": type,
+      headline: args.headline,
+      description: args.description,
+      url: abs(args.url),
+      ...(args.image ? { image: abs(args.image) } : {}),
+      ...(args.datePublished ? { datePublished: args.datePublished } : {}),
+      ...(args.dateModified ? { dateModified: args.dateModified } : {}),
+      ...(args.wordCount ? { wordCount: args.wordCount } : {}),
+      ...(args.keywords?.length ? { keywords: args.keywords.join(", ") } : {}),
+      author: { "@type": "Person", name: args.authorName || "Vedic Tatva Editorial" },
+      publisher: {
+        "@type": "Organization",
+        name: args.publisherName || "Vedic Tatva",
+        logo: { "@type": "ImageObject", url: abs(args.publisherLogo || "/logo.png") },
+      },
+      mainEntityOfPage: { "@type": "WebPage", "@id": abs(args.url) },
+    } as WithContext<BlogPosting>,
+  };
+}
+
+/** Type-safe Organization schema for the site's root JSON-LD. */
+export function organization(args: {
+  name: string;
+  url: string;
+  logo?: string;
+  description?: string;
+  sameAs?: string[];
+}): TypedSchema<Organization> {
+  return {
+    id: "organization",
+    payload: {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: args.name,
+      url: abs(args.url),
+      ...(args.logo ? { logo: abs(args.logo) } : {}),
+      ...(args.description ? { description: args.description } : {}),
+      ...(args.sameAs?.length ? { sameAs: args.sameAs } : {}),
+    } as WithContext<Organization>,
+  };
+}
+
+/** Type-safe WebSite schema with sitelinks search box. */
+export function webSite(args: {
+  name: string;
+  url: string;
+  searchUrl?: string;
+}): TypedSchema<WebSite> {
+  return {
+    id: "website",
+    payload: {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: args.name,
+      url: abs(args.url),
+      ...(args.searchUrl ? {
+        potentialAction: {
+          "@type": "SearchAction",
+          target: { "@type": "EntryPoint", urlTemplate: args.searchUrl },
+          "query-input": "required name=search_term_string",
+        },
+      } : {}),
+    } as WithContext<WebSite>,
+  };
+}
 
 function origin(): string {
   return typeof window !== "undefined" ? window.location.origin : "";
