@@ -207,8 +207,12 @@ export function blogPosting(args: {
   datePublished?: string;
   dateModified?: string;
   authorName?: string;
+  authorUrl?: string;
   publisherName?: string;
   publisherLogo?: string;
+  wordCount?: number;
+  articleSection?: string;
+  keywords?: string[];
 }): Schema {
   const payload: Record<string, any> = {
     "@context": CTX,
@@ -219,7 +223,20 @@ export function blogPosting(args: {
     mainEntityOfPage: { "@type": "WebPage", "@id": abs(args.url) },
     datePublished: args.datePublished,
     dateModified: args.dateModified || args.datePublished,
-    author: args.authorName ? { "@type": "Person", name: args.authorName } : undefined,
+    // Full Person author (with worksFor → the brand entity) is a stronger
+    // E-E-A-T signal than a bare string, especially for spiritual/YMYL content.
+    author: args.authorName
+      ? {
+          "@type": "Person",
+          name: args.authorName,
+          ...(args.authorUrl ? { url: abs(args.authorUrl) } : {}),
+          // worksFor references the canonical brand entity by @id (emitted by
+          // OrganizationSchema.tsx) so author authority links into the brand graph.
+          ...(args.publisherName
+            ? { worksFor: { "@type": "Organization", "@id": `${abs("/")}#organization`, name: args.publisherName } }
+            : {}),
+        }
+      : undefined,
     publisher: args.publisherName
       ? {
           "@type": "Organization",
@@ -227,6 +244,9 @@ export function blogPosting(args: {
           logo: args.publisherLogo ? { "@type": "ImageObject", url: args.publisherLogo } : undefined,
         }
       : undefined,
+    wordCount: args.wordCount,
+    articleSection: args.articleSection,
+    keywords: args.keywords?.length ? args.keywords.join(", ") : undefined,
   };
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
   return { id: "article", payload };

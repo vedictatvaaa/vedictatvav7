@@ -46,6 +46,10 @@ export default function SiteSchemas() {
     if (!origin) return;
     const siteName = site?.siteName || "Vedic Tatva";
 
+    // NOTE: the Organization (#organization) node is emitted by OrganizationSchema.tsx
+    // (mounted alongside this in App.tsx). Do not duplicate it here — the WebSite
+    // schema below references it by @id and Google consolidates the two.
+
     // WebSite schema with SearchAction = required pattern for Google sitelinks search box.
     setJsonLd("website", {
       "@context": "https://schema.org",

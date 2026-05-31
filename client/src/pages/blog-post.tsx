@@ -14,7 +14,7 @@ import type { BlogPost, Product } from "@shared/schema";
 import { getProductUrl } from "@/lib/utils";
 import { optImg } from "@/lib/optImg";
 import PageSeo from "@/components/PageSeo";
-import { blogPosting, abs } from "@/lib/seo-schemas";
+import { blogPosting, breadcrumbList, abs } from "@/lib/seo-schemas";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 
 export default function BlogPostPage() {
@@ -119,6 +119,13 @@ export default function BlogPostPage() {
     return { tocItems: items, bodyWithIds: html };
   }, [post.body]);
 
+  // Word count from the rendered body (tags stripped) — a BlogPosting signal
+  // Google uses to gauge article depth.
+  const wordCount = useMemo(() => {
+    const text = (post.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text ? text.split(" ").length : undefined;
+  }, [post.body]);
+
   return (
     <article className="w-full pb-20 bg-[#FBF7EE]" data-testid={`page-blog-post-${post.slug}`}>
       <PageSeo
@@ -138,9 +145,18 @@ export default function BlogPostPage() {
             datePublished: (post.publishedAt || post.createdAt)?.toString(),
             dateModified: (post.publishedAt || post.createdAt)?.toString(),
             authorName: post.authorName || "Vedic Tatva",
+            authorUrl: "/blog",
             publisherName: "Vedic Tatva",
             publisherLogo: abs("/logo.png"),
+            wordCount,
+            articleSection: post.category || undefined,
+            keywords: post.tags || undefined,
           }),
+          breadcrumbList([
+            { name: "Home", url: "/" },
+            { name: "Journal", url: "/blog" },
+            { name: post.title, url: `/blog/${post.slug}` },
+          ]),
         ]}
       />
       <div className="max-w-3xl mx-auto px-4 pt-8">
