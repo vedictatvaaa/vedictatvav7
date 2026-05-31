@@ -125,6 +125,7 @@ const PanditCityLanding = lazy(() => import("@/pages/pandit-city-landing"));
 const PanditCityPujaLanding = lazy(() => import("@/pages/pandit-city-puja-landing"));
 const PujaBooking = lazy(() => import("@/pages/puja-booking"));
 const Astrology = lazy(() => import("@/pages/astrology"));
+const Experience = lazy(() => import("@/pages/experience"));
 const Admin = lazy(() => import("@/pages/admin"));
 const SpiritualEssentials = lazy(() => import("@/pages/spiritual-essentials"));
 const FestivalLanding = lazy(() => import("@/pages/festival"));
@@ -639,6 +640,10 @@ function Router() {
   const lowerLoc = routerLocation.toLowerCase();
   const isBackOffice = lowerLoc.startsWith("/admin")
     || lowerLoc.startsWith("/pandit/portal");
+  // Immersive cinematic surfaces render their own chrome — suppress the
+  // global Navbar / ribbon / Footer / bottom-nav padding here too.
+  const isImmersive = lowerLoc.startsWith("/experience");
+  const hideChrome = isBackOffice || isImmersive;
   return (
     <div className="flex flex-col min-h-screen">
       <ScrollToTop />
@@ -655,9 +660,9 @@ function Router() {
       >
         Skip to main content
       </a>
-      {!isBackOffice && <Navbar />}
-      {!isBackOffice && <TithiToolRibbon />}
-      <main id="main-content" tabIndex={-1} className={isBackOffice ? "flex-grow" : "flex-grow pb-20 lg:pb-0"}>
+      {!hideChrome && <Navbar />}
+      {!hideChrome && <TithiToolRibbon />}
+      <main id="main-content" tabIndex={-1} className={hideChrome ? "flex-grow" : "flex-grow pb-20 lg:pb-0"}>
         <Suspense fallback={
           <div className="min-h-[60vh] flex items-center justify-center">
             <div className="animate-spin h-8 w-8 border-4 border-[#6D2B35] border-t-transparent rounded-full" />
@@ -775,6 +780,7 @@ function Router() {
           <Route path="/puja-call/:id" component={PujaCall} />
           <Route path="/refer" component={ReferPage} />
           <Route path="/astrology" component={Astrology} />
+          <Route path="/experience" component={Experience} />
           <Route path="/astrology/services/:slug">{() => <ServiceLanding vertical="astrology" pattern="/astrology/services/:slug" />}</Route>
           <Route path="/ai-kundli" component={AIKundli} />
           <Route path="/premium-kundli-pdf" component={PremiumKundliPDF} />
@@ -846,11 +852,11 @@ function Router() {
         </Switch>
         </Suspense>
       </main>
-      {!isBackOffice && <Footer />}
-      {!isBackOffice && <MobileBottomNav />}
-      {!isBackOffice && <PWAInstallBanner />}
+      {!hideChrome && <Footer />}
+      {!hideChrome && <MobileBottomNav />}
+      {!hideChrome && <PWAInstallBanner />}
       <AuthModal />
-      {!isBackOffice && <DeferredWidgets />}
+      {!hideChrome && <DeferredWidgets />}
     </div>
   );
 }

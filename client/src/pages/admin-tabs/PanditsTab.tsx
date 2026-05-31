@@ -499,6 +499,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         languages: pandit.languages,
         experience: pandit.experience,
         fees: pandit.fees,
+        rating: pandit.rating,
+        reviewCount: pandit.reviewCount,
         image: pandit.image ?? "",
         phone: pandit.phone ?? "",
         email: pandit.email ?? "",
@@ -523,6 +525,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         languages: form.languages,
         experience: Number(form.experience),
         fees: Number(form.fees),
+        rating: Math.max(0, Math.min(5, Number(form.rating) || 0)),
+        reviewCount: Math.max(0, Math.floor(Number(form.reviewCount) || 0)),
         image: form.image || null,
         phone: form.phone || null,
         email: form.email || null,
@@ -639,6 +643,14 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
             <div>
               <Label htmlFor="edit-pandit-fees">Fees (₹)</Label>
               <Input id="edit-pandit-fees" type="number" value={form.fees ?? 0} onChange={e => update("fees", Number(e.target.value))} data-testid="input-edit-pandit-fees" />
+            </div>
+            <div>
+              <Label htmlFor="edit-pandit-rating">Rating (0–5)</Label>
+              <Input id="edit-pandit-rating" type="number" step="0.1" min="0" max="5" value={form.rating ?? 0} onChange={e => update("rating", Number(e.target.value))} data-testid="input-edit-pandit-rating" />
+            </div>
+            <div>
+              <Label htmlFor="edit-pandit-review-count">Review Count</Label>
+              <Input id="edit-pandit-review-count" type="number" min="0" step="1" value={form.reviewCount ?? 0} onChange={e => update("reviewCount", Number(e.target.value))} data-testid="input-edit-pandit-review-count" />
             </div>
             <div>
               <Label htmlFor="edit-pandit-phone">Phone</Label>
