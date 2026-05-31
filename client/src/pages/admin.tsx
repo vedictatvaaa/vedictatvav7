@@ -85,6 +85,7 @@ const HeroSliderTab         = safeLazy(() => import("./admin-tabs/HeroSliderTab"
 const HomepageSectionsTab   = safeLazy(() => import("./admin-tabs/HomepageSectionsTab"));
 const AnalyticsTab          = safeLazy(() => import("./admin-tabs/AnalyticsTab"));
 const VisitorsTab           = safeLazy(() => import("./admin-tabs/VisitorsTab"));
+const ApiSetupGuideTab      = safeLazy(() => import("./admin-tabs/ApiSetupGuideTab"));
 const AplusListingsTab      = safeLazy(() => import("./admin-tabs/AplusListingsTab"));
 const SecurityTab           = safeLazy(() => import("./admin-tabs/SecurityTab"));
 const NotificationsTab      = safeLazy(() => import("./admin-tabs/NotificationsTab"));
@@ -549,6 +550,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "homepage-sections" && <HomepageSectionsTab />}
               {activeTab === "analytics" && <AnalyticsTab />}
               {activeTab === "visitors" && <VisitorsTab />}
+              {activeTab === "api-setup" && <ApiSetupGuideTab />}
               {activeTab === "aplus" && <AplusListingsTab adminToken={adminToken} />}
               {activeTab === "security" && <SecurityTab adminToken={adminToken} />}
               {activeTab === "notifications" && <NotificationsTab adminToken={adminToken} />}

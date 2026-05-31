@@ -607,6 +607,26 @@ export async function registerRoutes(
     });
   });
 
+  // Admin API key status — live env-var check for the Setup Guide tab
+  app.get("/api/admin/api-key-status", adminAuthMiddleware, (_req, res) => {
+    const e = process.env;
+    res.json({
+      razorpay:      { ok: !!(e.RAZORPAY_KEY_ID && e.RAZORPAY_KEY_SECRET), vars: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"] },
+      openai:        { ok: !!(e.OPENAI_API_KEY || e.AI_INTEGRATIONS_OPENAI_API_KEY), vars: ["OPENAI_API_KEY"] },
+      anthropic:     { ok: !!e.ANTHROPIC_API_KEY, vars: ["ANTHROPIC_API_KEY"] },
+      gemini:        { ok: !!e.GEMINI_API_KEY, vars: ["GEMINI_API_KEY"] },
+      mistral:       { ok: !!e.MISTRAL_API_KEY, vars: ["MISTRAL_API_KEY"] },
+      openrouter:    { ok: !!e.OPENROUTER_API_KEY, vars: ["OPENROUTER_API_KEY"] },
+      sendgrid:      { ok: !!e.SENDGRID_API_KEY, vars: ["SENDGRID_API_KEY"] },
+      msg91:         { ok: !!e.MSG91_AUTH_KEY, vars: ["MSG91_AUTH_KEY"] },
+      googleOauth:   { ok: !!e.GOOGLE_CLIENT_ID, vars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] },
+      googleIndexing:{ ok: !!e.GOOGLE_SERVICE_ACCOUNT_JSON, vars: ["GOOGLE_SERVICE_ACCOUNT_JSON", "GSC_SITE_URL"] },
+      shiprocket:    { ok: !!e.SHIPROCKET_WEBHOOK_TOKEN, vars: ["SHIPROCKET_WEBHOOK_TOKEN", "SHIPROCKET_EMAIL", "SHIPROCKET_PASSWORD"] },
+      database:      { ok: !!e.PG_DATABASE_URL, vars: ["PG_DATABASE_URL"] },
+      session:       { ok: !!e.SESSION_SECRET, vars: ["SESSION_SECRET", "UNSUBSCRIBE_SECRET"] },
+    });
+  });
+
   // Expose Google client ID to frontend (public)
   app.get("/api/auth/google/config", (_req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";

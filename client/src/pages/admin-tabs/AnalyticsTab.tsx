@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Users, FileText, Download } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -226,7 +227,6 @@ function AnalyticsTab() {
 }
 
 function SalesChart({ data }: { data: any[] }) {
-  const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = require("recharts") as any;
   const chartData = data.map((d: any) => ({
     date: new Date(d.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
     sales: Number(d.totalSales),
