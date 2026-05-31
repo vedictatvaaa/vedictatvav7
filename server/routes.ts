@@ -654,10 +654,23 @@ export async function registerRoutes(
     res.json({ clientId, enabled: Boolean(clientId) });
   });
 
+  // Returns a single user's profile. Guarded by the same identity check as
+  // PATCH /api/auth/profile/:id — the caller must present the user's own
+  // registered email (identityEmail body field or x-user-email header) so a
+  // stranger guessing a userId cannot enumerate PII (email, phone, birth chart).
   app.get("/api/auth/user/:id", async (req, res) => {
     try {
-      const user = await storage.getUser(parseInt(req.params.id));
+      const id = parseInt(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid id" });
+      const claimedEmail = String(
+        req.body?.identityEmail || req.headers["x-user-email"] || req.query?.email || "",
+      ).toLowerCase().trim();
+      if (!claimedEmail) return res.status(401).json({ message: "Identity check required" });
+      const user = await storage.getUser(id);
       if (!user) return res.status(404).json({ message: "User not found" });
+      if ((user.email || "").toLowerCase() !== claimedEmail) {
+        return res.status(403).json({ message: "Identity check failed" });
+      }
       const { password: _, ...safeUser } = user;
       res.json(safeUser);
     } catch (error) {

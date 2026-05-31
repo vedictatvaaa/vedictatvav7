@@ -2,3 +2,4 @@
 - [Lenis scroll panes](lenis-scroll-panes.md) — global Lenis smooth-scroll eats wheel events; inner scroll containers need `data-lenis-prevent` (+ `min-h-0` for flex children) or they won't scroll.
 - [SEO schema emitters](seo-schema-emitters.md) — JSON-LD comes from index.html (static) + OrganizationSchema.tsx (canonical #organization) + SiteSchemas.tsx + PageSeo builders; check before adding nodes to avoid duplicate Organization.
 - [Client/server discount parity](client-server-discount-parity.md) — any client-shown discount MUST equal the server recompute or checkout/payment hard-fails; the BUNDLE8 auto-discount is derived-only (never persisted), max(coupon,bundle), clamped.
+- [TS baseline is not a gate](ts-baseline-no-gate.md) — repo ships via tsx with ~565 pre-existing tsc errors; never gate on a clean `npm run check`, only watch for NEW errors in lines you touched (esp. TS2802 Set/Map iteration → wrap in Array.from).

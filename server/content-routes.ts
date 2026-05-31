@@ -155,6 +155,45 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
+  // Admin: bulk publish / unpublish / delete blog posts. Publish keeps any
+  // existing publishedAt (COALESCE) so re-publishing doesn't reset the date.
+  app.post("/api/admin/blog-posts/bulk", adminAuthMiddleware, async (req, res) => {
+    try {
+      const ids = Array.isArray(req.body?.ids)
+        ? req.body.ids.map((x: any) => parseInt(String(x))).filter((n: number) => Number.isFinite(n))
+        : [];
+      const action = String(req.body?.action || "");
+      if (!ids.length) return res.status(400).json({ message: "No posts selected" });
+      if (ids.length > 200) return res.status(400).json({ message: "Too many posts in one request (max 200)" });
+      if (!["publish", "unpublish", "delete"].includes(action)) {
+        return res.status(400).json({ message: "Invalid action" });
+      }
+
+      let affected = 0;
+      if (action === "publish") {
+        const rows = await db.update(blogPosts)
+          .set({ isPublished: true, status: "published", publishedAt: sql`COALESCE(${blogPosts.publishedAt}, now())` })
+          .where(inArray(blogPosts.id, ids))
+          .returning({ id: blogPosts.id });
+        affected = rows.length;
+      } else if (action === "unpublish") {
+        const rows = await db.update(blogPosts)
+          .set({ isPublished: false, status: "draft" })
+          .where(inArray(blogPosts.id, ids))
+          .returning({ id: blogPosts.id });
+        affected = rows.length;
+      } else {
+        const rows = await db.delete(blogPosts)
+          .where(inArray(blogPosts.id, ids))
+          .returning({ id: blogPosts.id });
+        affected = rows.length;
+      }
+      res.json({ success: true, action, affected });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Bulk action failed" });
+    }
+  });
+
   // ============================================================
   // P2 — Blog Comments
   // ============================================================

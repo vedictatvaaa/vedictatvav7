@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
@@ -19,7 +20,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, Upload, ExternalLink, Eye, EyeOff, BookOpen } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Upload, ExternalLink, Eye, EyeOff, BookOpen, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertBlogPostSchema, type BlogPost } from "@shared/schema";
@@ -187,6 +188,55 @@ export function BlogTab({ adminToken }: { adminToken?: string }) {
     onError: (e: unknown) => toast({ title: "Delete failed", description: errorMessage(e), variant: "destructive" }),
   });
 
+  // ---- Bulk selection + actions ----
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const toggleOne = (id: number) =>
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allFilteredSelected = filtered.length > 0 && filtered.every(p => selectedIds.has(p.id));
+  const toggleAll = () =>
+    setSelectedIds(prev => (filtered.length && filtered.every(p => prev.has(p.id)) ? new Set() : new Set(filtered.map(p => p.id))));
+
+  const bulkMut = useMutation({
+    mutationFn: async ({ ids, action }: { ids: number[]; action: "publish" | "unpublish" | "delete" }) => {
+      const res = await apiRequest("POST", "/api/admin/blog-posts/bulk", { ids, action }, adminHeaders);
+      return res.json() as Promise<{ affected: number; action: string }>;
+    },
+    onSuccess: async (data) => {
+      const verb = data.action === "delete" ? "deleted" : data.action === "publish" ? "published" : "unpublished";
+      toast({ title: `${data.affected} post${data.affected === 1 ? "" : "s"} ${verb}` });
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      await qc.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
+      await qc.invalidateQueries({ queryKey: ["/api/blog-posts"] });
+    },
+    onError: (e: unknown) => toast({ title: "Bulk action failed", description: errorMessage(e), variant: "destructive" }),
+  });
+
+  // ---- Automation settings (site-settings subset) ----
+  const { data: settings } = useQuery<Record<string, any>>({ queryKey: ["/api/site-settings"] });
+  const autoGen = settings?.blogAutoGenerate ?? true;
+  const autoPub = settings?.blogAutoPublish ?? false;
+  const festAware = settings?.blogFestivalAware ?? true;
+
+  const settingsMut = useMutation({
+    mutationFn: async (patch: Record<string, unknown>) => {
+      const res = await apiRequest("POST", "/api/site-settings", patch, adminHeaders);
+      return res.json();
+    },
+    onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["/api/site-settings"] }); },
+    onError: (e: unknown) => toast({ title: "Couldn't save automation settings", description: errorMessage(e), variant: "destructive" }),
+  });
+
+  const [countDraft, setCountDraft] = useState("3");
+  useEffect(() => { if (settings?.blogDailyCount != null) setCountDraft(String(settings.blogDailyCount)); }, [settings?.blogDailyCount]);
+  const saveCount = () => {
+    const n = Math.max(1, Math.min(12, parseInt(countDraft) || 3));
+    setCountDraft(String(n));
+    if (n !== (settings?.blogDailyCount ?? 3)) settingsMut.mutate({ blogDailyCount: n });
+  };
+
   const openCreate = () => { setEditing(null); setSlugTouched(false); form.reset(EMPTY); setOpen(true); };
   const openEdit = (p: BlogPost) => { setEditing(p); setSlugTouched(true); form.reset(fromPost(p)); setOpen(true); };
 
@@ -233,6 +283,55 @@ export function BlogTab({ adminToken }: { adminToken?: string }) {
       </div>
 
       <Card>
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600" />
+            <h3 className="text-sm font-semibold text-foreground">Blog Automation</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Auto-generate SEO articles each day — optionally timed to upcoming festivals, Ekadashi, Purnima and Amavasya.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+              <div>
+                <div className="text-sm font-medium">Daily auto-generate</div>
+                <div className="text-xs text-muted-foreground">Create new draft articles automatically every day.</div>
+              </div>
+              <Switch checked={autoGen} onCheckedChange={(v) => settingsMut.mutate({ blogAutoGenerate: v })} data-testid="switch-auto-generate" />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+              <div>
+                <div className="text-sm font-medium">Auto-publish</div>
+                <div className="text-xs text-muted-foreground">Publish generated posts instantly instead of queuing for review.</div>
+              </div>
+              <Switch checked={autoPub} onCheckedChange={(v) => settingsMut.mutate({ blogAutoPublish: v })} data-testid="switch-auto-publish" />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+              <div>
+                <div className="text-sm font-medium">Festival-aware topics</div>
+                <div className="text-xs text-muted-foreground">Prioritise upcoming festivals &amp; lunar days as topics.</div>
+              </div>
+              <Switch checked={festAware} onCheckedChange={(v) => settingsMut.mutate({ blogFestivalAware: v })} data-testid="switch-festival-aware" />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
+              <div>
+                <div className="text-sm font-medium">Posts per day</div>
+                <div className="text-xs text-muted-foreground">Articles to generate each run (1–12).</div>
+              </div>
+              <Input
+                type="number" min={1} max={12}
+                value={countDraft}
+                onChange={(e) => setCountDraft(e.target.value)}
+                onBlur={saveCount}
+                className="w-20"
+                data-testid="input-daily-count"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="pt-4">
           <div className="relative max-w-md">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -247,10 +346,36 @@ export function BlogTab({ adminToken }: { adminToken?: string }) {
         </CardContent>
       </Card>
 
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2" data-testid="bar-bulk-actions">
+          <span className="text-sm font-medium" data-testid="text-bulk-count">{selectedIds.size} selected</span>
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            <Button size="sm" variant="outline" disabled={bulkMut.isPending} onClick={() => bulkMut.mutate({ ids: Array.from(selectedIds), action: "publish" })} data-testid="button-bulk-publish">
+              <Eye className="w-3.5 h-3.5" /> Publish
+            </Button>
+            <Button size="sm" variant="outline" disabled={bulkMut.isPending} onClick={() => bulkMut.mutate({ ids: Array.from(selectedIds), action: "unpublish" })} data-testid="button-bulk-unpublish">
+              <EyeOff className="w-3.5 h-3.5" /> Unpublish
+            </Button>
+            <Button size="sm" variant="destructive" disabled={bulkMut.isPending} onClick={() => setBulkDeleteOpen(true)} data-testid="button-bulk-delete">
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} data-testid="button-bulk-clear">Clear</Button>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-md border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
+              <th className="px-3 py-2 w-8">
+                <Checkbox
+                  checked={allFilteredSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all posts"
+                  data-testid="checkbox-select-all-blog"
+                />
+              </th>
               <th className="text-left px-3 py-2">Title</th>
               <th className="text-left px-3 py-2 hidden md:table-cell">Category</th>
               <th className="text-left px-3 py-2 hidden lg:table-cell">Published</th>
@@ -261,16 +386,24 @@ export function BlogTab({ adminToken }: { adminToken?: string }) {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-8">Loading posts...</td></tr>
+              <tr><td colSpan={7} className="text-center text-muted-foreground py-8">Loading posts...</td></tr>
             )}
             {!isLoading && filtered.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-10" data-testid="text-blog-empty">
+              <tr><td colSpan={7} className="text-center text-muted-foreground py-10" data-testid="text-blog-empty">
                 <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 {search ? "No posts match your search." : "No posts yet. Create your first article."}
               </td></tr>
             )}
             {filtered.map(p => (
               <tr key={p.id} className="border-t border-border" data-testid={`row-blog-${p.id}`}>
+                <td className="px-3 py-2">
+                  <Checkbox
+                    checked={selectedIds.has(p.id)}
+                    onCheckedChange={() => toggleOne(p.id)}
+                    aria-label={`Select ${p.title}`}
+                    data-testid={`checkbox-blog-${p.id}`}
+                  />
+                </td>
                 <td className="px-3 py-2">
                   <div className="font-medium text-foreground">{p.title}</div>
                   <div className="text-xs text-muted-foreground">/{p.slug}</div>
@@ -522,6 +655,26 @@ export function BlogTab({ adminToken }: { adminToken?: string }) {
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-delete-blog">Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteId && deleteMut.mutate(deleteId)} data-testid="button-confirm-delete-blog">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={o => !o && setBulkDeleteOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} post{selectedIds.size === 1 ? "" : "s"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected articles. Their URLs will start returning 404 and they will drop from your sitemap on the next refresh.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-bulk-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => bulkMut.mutate({ ids: Array.from(selectedIds), action: "delete" })}
+              data-testid="button-confirm-bulk-delete"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

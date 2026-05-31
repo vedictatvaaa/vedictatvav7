@@ -7,6 +7,7 @@ import { pingIndexNowAsync, pingSitemap } from "./indexnow";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
 import { runDailyBlogGeneration, startSeedInBackground, seedRunStatus } from "./blog-ai";
 import { regenerateForCurrentAndNextYear } from "./muhurat-engine";
+import { storage } from "./storage";
 
 // Builds the canonical list of high-priority URLs the search engines should
 // recheck on a daily basis. Mirrors the sitemap but stays within IndexNow's
@@ -126,11 +127,23 @@ export const blogGenStatus = {
   lastErrors: [] as string[],
   totalRuns: 0,
 };
-async function runBlogGenOnce() {
+// `force` bypasses the blogAutoGenerate toggle — used by the admin "run now"
+// button so an operator can always trigger a run on demand. The scheduled run
+// passes force=false and respects the toggle.
+async function runBlogGenOnce(force = false) {
   blogGenStatus.lastRunAt = new Date().toISOString();
   blogGenStatus.totalRuns += 1;
   try {
-    const r = await runDailyBlogGeneration(10);
+    const settings = await storage.getSiteSettings().catch(() => undefined);
+    if (!force && settings?.blogAutoGenerate === false) {
+      blogGenStatus.lastInserted = 0;
+      blogGenStatus.lastErrors = ["auto-generation disabled in site settings"];
+      return;
+    }
+    const count = Math.max(1, Math.min(12, settings?.blogDailyCount ?? 3));
+    const autoPublish = !!settings?.blogAutoPublish;
+    const festivalAware = settings?.blogFestivalAware !== false;
+    const r = await runDailyBlogGeneration(count, { autoPublish, festivalAware });
     blogGenStatus.lastInserted = r.inserted;
     blogGenStatus.lastErrors = r.errors;
   } catch (e: any) {
@@ -191,7 +204,7 @@ export function registerSeoSchedulerRoutes(app: Express) {
   });
 
   app.post("/api/admin/blog-gen/run-now", adminAuthMiddleware, async (_req: Request, res: Response) => {
-    await runBlogGenOnce();
+    await runBlogGenOnce(true);
     res.json({ success: true, status: blogGenStatus });
   });
 

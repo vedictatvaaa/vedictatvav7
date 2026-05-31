@@ -759,6 +759,16 @@ export const siteSettings = pgTable("site_settings", {
   // routes, /admin and /offline.html itself are never affected. Useful
   // during deploys, DB migrations, or any planned downtime.
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
+  // Blog automation. blogAutoGenerate gates the daily AI generation run;
+  // blogAutoPublish, when on, publishes generated posts immediately instead of
+  // parking them in the pending review queue (auto-gen + auto-publish vs.
+  // auto-gen + manual-publish). blogDailyCount is the admin-configurable number
+  // of posts the daily run attempts. blogFestivalAware prefers upcoming
+  // festivals / Ekadashi / Amavasya / Purnima as topics over the rotating pool.
+  blogAutoGenerate: boolean("blog_auto_generate").notNull().default(true),
+  blogAutoPublish: boolean("blog_auto_publish").notNull().default(false),
+  blogDailyCount: integer("blog_daily_count").notNull().default(3),
+  blogFestivalAware: boolean("blog_festival_aware").notNull().default(true),
 });
 
 // Abandoned cart capture. The frontend POSTs here when a shopper enters
@@ -1221,6 +1231,10 @@ export const insertSiteSettingsSchema = createInsertSchema(siteSettings, {
   ribbonRotationMs: z.number().int().min(1500).max(60000).optional(),
   ribbonEnabled: z.boolean().optional(),
   maintenanceMode: z.boolean().optional(),
+  blogAutoGenerate: z.boolean().optional(),
+  blogAutoPublish: z.boolean().optional(),
+  blogDailyCount: z.number().int().min(1).max(12).optional(),
+  blogFestivalAware: z.boolean().optional(),
 });
 export const insertAstrologerSchema = createInsertSchema(astrologers);
 export const insertCouponSchema = createInsertSchema(coupons);

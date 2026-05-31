@@ -3,6 +3,7 @@ import { db } from "./db";
 import { blogPosts, qaQuestions, qaAnswers } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { sanitizeRichHtml } from "./html-sanitizer";
+import { getUpcomingSpiritualEvents, type SpiritualEvent } from "./muhurat-engine";
 
 // SEO content clusters. Each cluster carries: name, category label,
 // keyword pool (deep — drives daily rotation without repetition for months),
@@ -316,6 +317,7 @@ async function insertDraft(
   keyword: string,
   result: RunResult,
   suffix?: string,
+  publish = false,
 ): Promise<void> {
   // Build candidate slug. Pre-check is best-effort; the parallel batched runners
   // can race past this check, so we also catch the unique-constraint violation
@@ -339,8 +341,11 @@ async function insertDraft(
     metaKeywords: draft.metaKeywords,
     readMinutes: draft.readMinutes,
     authorName: "Vedic Tatva Editorial",
-    isPublished: false,
-    status: "pending",
+    // When auto-publish is on, the post goes live immediately; otherwise it
+    // parks in the pending review queue for manual approval.
+    isPublished: publish,
+    status: publish ? "published" : "pending",
+    publishedAt: publish ? new Date() : null,
     aiGenerated: true,
     sourcePrompt: keyword,
   } as const;
@@ -383,17 +388,68 @@ function pickTargets(count: number, dayOfYear: number) {
   return targets;
 }
 
-// Generate N drafts. Stored as status="pending" so the admin can review before
-// publishing — Google penalizes auto-publish of low-quality AI content at scale.
-export async function runDailyBlogGeneration(count = 10): Promise<RunResult> {
+const clusterByKey = (key: string) => CLUSTERS.find((c) => c.key === key) || CLUSTERS[0];
+
+// Map an upcoming spiritual-calendar event to a timely, SEO-friendly topic.
+function eventToTarget(ev: SpiritualEvent): { cluster: typeof CLUSTERS[number]; keyword: string } {
+  const year = ev.date.slice(0, 4);
+  switch (ev.type) {
+    case "festival":
+      return { cluster: clusterByKey("festivals"), keyword: `${ev.name} ${year} puja vidhi, muhurat and significance` };
+    case "ekadashi":
+      return { cluster: clusterByKey("panchang"), keyword: `Ekadashi ${year} vrat vidhi, fasting rules and significance` };
+    case "purnima":
+      return { cluster: clusterByKey("panchang"), keyword: `Purnima ${year} vrat, puja and spiritual remedies` };
+    case "amavasya":
+      return { cluster: clusterByKey("remedies"), keyword: `Amavasya ${year} remedies, pitru tarpan and significance` };
+  }
+}
+
+// Build up to `count` targets from the spiritual calendar (festivals + Ekadashi
+// + Purnima + Amavasya) within the next `leadDays` days, de-duplicated.
+function festivalTargets(count: number, leadDays = 21) {
+  const targets: Array<{ cluster: typeof CLUSTERS[number]; keyword: string }> = [];
+  const seen = new Set<string>();
+  for (const ev of getUpcomingSpiritualEvents(new Date(), leadDays)) {
+    if (targets.length >= count) break;
+    const t = eventToTarget(ev);
+    if (seen.has(t.keyword)) continue;
+    seen.add(t.keyword);
+    targets.push(t);
+  }
+  return targets;
+}
+
+// Generate N drafts. By default stored as status="pending" so the admin can
+// review before publishing — Google penalizes auto-publish of low-quality AI
+// content at scale. When `opts.autoPublish` is true they go live immediately.
+// When `opts.festivalAware` is true (default) the run leads with upcoming
+// spiritual-calendar topics and tops up from the evergreen rotating pool.
+export async function runDailyBlogGeneration(
+  count = 10,
+  opts: { autoPublish?: boolean; festivalAware?: boolean } = {},
+): Promise<RunResult> {
   const result: RunResult = { attempted: 0, inserted: 0, skippedDuplicateSlug: 0, errors: [], postIds: [] };
   const openai = getOpenAI();
   if (!openai) {
     result.errors.push("OPENAI_API_KEY not configured");
     return result;
   }
+  const { autoPublish = false, festivalAware = true } = opts;
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-  const targets = pickTargets(count, dayOfYear);
+
+  let targets: Array<{ cluster: typeof CLUSTERS[number]; keyword: string }> = [];
+  if (festivalAware) targets = festivalTargets(count);
+  if (targets.length < count) {
+    const seen = new Set(targets.map((t) => t.keyword));
+    for (const t of pickTargets(count * 2, dayOfYear)) {
+      if (targets.length >= count) break;
+      if (seen.has(t.keyword)) continue;
+      seen.add(t.keyword);
+      targets.push(t);
+    }
+  }
+  targets = targets.slice(0, count);
 
   // Run in parallel batches of 4 to stay well under provider rate limits while
   // keeping wall-clock time low. A 10-post run completes in ~30-40s.
@@ -408,7 +464,7 @@ export async function runDailyBlogGeneration(count = 10): Promise<RunResult> {
           result.errors.push(`generation failed for "${keyword}"`);
           return;
         }
-        await insertDraft(draft, keyword, result, `${dayOfYear}-${i + j}`);
+        await insertDraft(draft, keyword, result, `${dayOfYear}-${i + j}`, autoPublish);
       } catch (e: any) {
         result.errors.push(`${keyword}: ${e?.message || "unknown"}`);
       }

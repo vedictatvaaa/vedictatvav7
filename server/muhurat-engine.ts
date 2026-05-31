@@ -114,6 +114,23 @@ const PURNIMA_DATES: Record<number, string[]> = {
   ],
 };
 
+// Amavasya (new moon) — Pitru tarpan, shraddha, certain remedies. Curated &
+// approximate (aligned to the astronomical new moon; e.g. Diwali Amavasya
+// matches the festival table). Used only for blog-topic scheduling, never for
+// ritual muhurat timing.
+const AMAVASYA_DATES: Record<number, string[]> = {
+  2026: [
+    "2026-01-18", "2026-02-17", "2026-03-19", "2026-04-17",
+    "2026-05-16", "2026-06-15", "2026-07-14", "2026-08-12",
+    "2026-09-11", "2026-10-10", "2026-11-09", "2026-12-09",
+  ],
+  2027: [
+    "2027-01-07", "2027-02-06", "2027-03-08", "2027-04-06",
+    "2027-05-06", "2027-06-04", "2027-07-04", "2027-08-02",
+    "2027-08-31", "2027-09-30", "2027-10-29", "2027-11-28", "2027-12-27",
+  ],
+};
+
 interface MuhuratEntry {
   date: string;       // YYYY-MM-DD
   label: string;      // human-readable
@@ -276,4 +293,52 @@ export async function regenerateForCurrentAndNextYear(): Promise<RegenerateResul
     updated: a.updated + b.updated,
     skipped: a.skipped + b.skipped,
   };
+}
+
+export type SpiritualEventType = "festival" | "ekadashi" | "purnima" | "amavasya";
+
+export interface SpiritualEvent {
+  date: string;       // YYYY-MM-DD
+  type: SpiritualEventType;
+  name: string;       // human-readable
+  key?: string;       // festival key when type=festival
+}
+
+function titleCase(s: string): string {
+  return s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Returns the spiritual calendar events (major festivals + Ekadashi + Purnima +
+// Amavasya) falling within the next `leadDays` days from `from` (inclusive),
+// sorted chronologically. When a date carries both a festival and a generic
+// lunar marker, the festival wins (deduped by date). Drives festival-aware blog
+// topic selection.
+export function getUpcomingSpiritualEvents(from = new Date(), leadDays = 21): SpiritualEvent[] {
+  const start = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + leadDays);
+  const startStr = start.toISOString().slice(0, 10);
+  const endStr = end.toISOString().slice(0, 10);
+
+  const years = Array.from(new Set<number>([start.getUTCFullYear(), end.getUTCFullYear()]));
+  const byDate = new Map<string, SpiritualEvent>();
+  const inWindow = (d: string) => d >= startStr && d <= endStr;
+
+  for (const year of years) {
+    // Festivals take priority over generic lunar markers on the same date.
+    for (const [key, date] of Object.entries(FESTIVAL_DATES[year] || {})) {
+      if (inWindow(date)) byDate.set(date, { date, type: "festival", name: titleCase(key), key });
+    }
+    for (const date of EKADASHI_DATES[year] || []) {
+      if (inWindow(date) && !byDate.has(date)) byDate.set(date, { date, type: "ekadashi", name: "Ekadashi" });
+    }
+    for (const date of PURNIMA_DATES[year] || []) {
+      if (inWindow(date) && !byDate.has(date)) byDate.set(date, { date, type: "purnima", name: "Purnima" });
+    }
+    for (const date of AMAVASYA_DATES[year] || []) {
+      if (inWindow(date) && !byDate.has(date)) byDate.set(date, { date, type: "amavasya", name: "Amavasya" });
+    }
+  }
+
+  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
