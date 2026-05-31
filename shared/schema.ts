@@ -2202,3 +2202,28 @@ export const insertHomepageSectionSchema = createInsertSchema(homepageSections, 
 
 export type HomepageSection = typeof homepageSections.$inferSelect;
 export type InsertHomepageSection = z.infer<typeof insertHomepageSectionSchema>;
+
+// ============================================================================
+// Page Views — lightweight visitor analytics captured server-side.
+// Each SPA route change fires POST /api/track/pageview which stores this row.
+// IP → city/country enrichment happens asynchronously via ipapi.co (free tier).
+// ============================================================================
+export const pageViews = pgTable("page_views", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sessionId: text("session_id"),
+  path: text("path").notNull(),
+  referrer: text("referrer"),
+  userAgent: text("user_agent"),
+  ip: text("ip"),
+  country: text("country"),
+  city: text("city"),
+  device: text("device"),
+  browser: text("browser"),
+  os: text("os"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  createdAtIdx: index("page_views_created_at_idx").on(t.createdAt),
+  sessionIdx:   index("page_views_session_idx").on(t.sessionId),
+}));
+
+export type PageView = typeof pageViews.$inferSelect;

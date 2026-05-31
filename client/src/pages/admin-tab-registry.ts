@@ -3,7 +3,7 @@ import {
   CalendarClock, HandHeart, Heart, Search, Globe, BarChart3, Settings, Truck,
   Shield, Lock, Eye, BellRing, Trophy, Inbox, AlertTriangle, FileText, Megaphone,
   Mail, Sparkles, Database, Wallet, Share2, Crown, Music, Code2, GitCommit,
-  Image as ImageIcon,
+  Image as ImageIcon, Activity,
 } from "lucide-react";
 import type { TabId, TabSection } from "./admin-shared";
 
@@ -12,6 +12,7 @@ export type TabDef = { id: TabId; label: string; icon: typeof TrendingUp; sectio
 export const TABS: TabDef[] = [
   { id: "dashboard",       label: "Dashboard",        icon: TrendingUp,    section: "Overview" },
   { id: "analytics",       label: "Analytics",        icon: BarChart3,     section: "Overview" },
+  { id: "visitors",        label: "Visitors",         icon: Activity,      section: "Overview" },
   { id: "products",        label: "Products",         icon: Package,       section: "Catalog" },
   { id: "inventory",       label: "Inventory Health", icon: AlertTriangle, section: "Catalog" },
   { id: "bestsellers",     label: "Bestsellers",      icon: Trophy,        section: "Catalog" },

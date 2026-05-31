@@ -286,6 +286,33 @@ function InteractionTracker() {
       trackPageVisit(location, cat);
     });
   }, [location]);
+
+  // ── Visitor analytics beacon ─────────────────────────────────────────────
+  // Fires on every SPA route change. Skips admin/pandit portal.
+  // sessionId persists for the browser tab lifetime (localStorage).
+  useEffect(() => {
+    if (location.startsWith("/admin") || location.startsWith("/pandit/portal")) return;
+    let sessionId = "";
+    try {
+      sessionId = localStorage.getItem("vt_session_id") || "";
+      if (!sessionId) {
+        sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem("vt_session_id", sessionId);
+      }
+    } catch { /* storage blocked */ }
+    // Best-effort, fire-and-forget
+    fetch("/api/track/pageview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: location,
+        referrer: document.referrer || "",
+        sessionId,
+      }),
+      keepalive: true,
+    }).catch(() => { /* silent */ });
+  }, [location]);
+
   return null;
 }
 

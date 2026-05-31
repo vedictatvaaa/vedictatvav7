@@ -11833,5 +11833,183 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   const { seoHeadMiddleware } = await import("./seo-ssr");
   app.use(seoHeadMiddleware());
 
+  // ── Visitor Tracking ──────────────────────────────────────────────────────
+  // Lightweight UA parser — no external package needed.
+  function parseUserAgent(ua: string) {
+    let device = "desktop";
+    if (/ipad|tablet/i.test(ua)) device = "tablet";
+    else if (/mobile|iphone|ipod|android.*mobile|blackberry/i.test(ua)) device = "mobile";
+
+    let browser = "Other";
+    if (/edg\//i.test(ua)) browser = "Edge";
+    else if (/opr\/|opera/i.test(ua)) browser = "Opera";
+    else if (/chrome|crios/i.test(ua) && !/edg\//i.test(ua)) browser = "Chrome";
+    else if (/firefox|fxios/i.test(ua)) browser = "Firefox";
+    else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = "Safari";
+
+    let os = "Other";
+    if (/windows/i.test(ua)) os = "Windows";
+    else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
+    else if (/android/i.test(ua)) os = "Android";
+    else if (/mac os/i.test(ua)) os = "macOS";
+    else if (/linux/i.test(ua)) os = "Linux";
+
+    return { device, browser, os };
+  }
+
+  // Track page view — public endpoint, rate-limited by global limiter.
+  // Body: { path, referrer?, sessionId? }
+  app.post("/api/track/pageview", async (req, res) => {
+    try {
+      const { path: pagePath, referrer, sessionId } = req.body || {};
+      if (!pagePath || typeof pagePath !== "string") return res.status(400).json({ ok: false });
+      // Reject tracking calls that look like bots or admin/api paths
+      if (pagePath.startsWith("/api/") || pagePath.startsWith("/admin")) return res.json({ ok: true });
+
+      const rawIp: string = (req.headers["x-forwarded-for"] as string || req.ip || "").split(",")[0].trim();
+      const ua = req.headers["user-agent"] || "";
+      const { device, browser, os } = parseUserAgent(ua);
+
+      const { db } = await import("./db");
+      const { pageViews } = await import("@shared/schema");
+
+      const [row] = await db.insert(pageViews).values({
+        sessionId: sessionId?.slice(0, 64) || null,
+        path: pagePath.slice(0, 500),
+        referrer: referrer?.slice(0, 500) || null,
+        userAgent: ua.slice(0, 500),
+        ip: rawIp.slice(0, 64),
+        device,
+        browser,
+        os,
+        country: null,
+        city: null,
+      }).returning();
+
+      // Async geo-enrichment — fire-and-forget, never blocks response
+      if (rawIp && rawIp !== "::1" && rawIp !== "127.0.0.1") {
+        setImmediate(async () => {
+          try {
+            const geoRes = await fetch(`https://ipapi.co/${rawIp}/json/`, {
+              headers: { "User-Agent": "VedicTatva-Analytics/1.0" },
+              signal: AbortSignal.timeout(4000),
+            });
+            if (geoRes.ok) {
+              const geo = await geoRes.json() as any;
+              const country = geo.country_name || null;
+              const city = geo.city || null;
+              if (country || city) {
+                const { eq } = await import("drizzle-orm");
+                await db.update(pageViews).set({ country, city }).where(eq(pageViews.id, row.id));
+              }
+            }
+          } catch { /* geo failure is silent — we still have the view row */ }
+        });
+      }
+
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ ok: false });
+    }
+  });
+
+  // Admin visitor analytics endpoint
+  app.get("/api/admin/analytics/visitors", adminAuthMiddleware, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { pageViews } = await import("@shared/schema");
+      const { sql, gte, desc } = await import("drizzle-orm");
+
+      const days = Math.min(Number(req.query.days || 30), 365);
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const allInRange = await db.select().from(pageViews).where(gte(pageViews.createdAt, since));
+      const allTime   = await db.select({ id: pageViews.id }).from(pageViews);
+
+      // Summary counts
+      const todayCount     = allInRange.filter(r => r.createdAt && r.createdAt >= today).length;
+      const yesterdayCount = allInRange.filter(r => r.createdAt && r.createdAt >= yesterday && r.createdAt < today).length;
+      const weekCount      = allInRange.filter(r => r.createdAt && r.createdAt >= weekAgo).length;
+      const monthCount     = allInRange.filter(r => r.createdAt && r.createdAt >= monthAgo).length;
+
+      // Daily chart — group by date string
+      const dailyMap: Record<string, number> = {};
+      for (const r of allInRange) {
+        if (!r.createdAt) continue;
+        const d = r.createdAt.toISOString().slice(0, 10);
+        dailyMap[d] = (dailyMap[d] || 0) + 1;
+      }
+      const daily = Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
+
+      // Device / browser / OS breakdowns
+      function countBy(arr: typeof allInRange, key: keyof typeof allInRange[0]) {
+        const map: Record<string, number> = {};
+        for (const r of arr) {
+          const v = (r[key] as string) || "Unknown";
+          map[v] = (map[v] || 0) + 1;
+        }
+        return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+      }
+
+      const devices   = countBy(allInRange, "device");
+      const browsers  = countBy(allInRange, "browser");
+      const oses      = countBy(allInRange, "os");
+
+      // Top pages
+      const pageMap: Record<string, number> = {};
+      for (const r of allInRange) {
+        const p = r.path || "/";
+        pageMap[p] = (pageMap[p] || 0) + 1;
+      }
+      const topPages = Object.entries(pageMap).map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 15);
+
+      // Top cities & countries (skip nulls)
+      const cityMap: Record<string, number> = {};
+      const countryMap: Record<string, number> = {};
+      for (const r of allInRange) {
+        if (r.city) cityMap[r.city] = (cityMap[r.city] || 0) + 1;
+        if (r.country) countryMap[r.country] = (countryMap[r.country] || 0) + 1;
+      }
+      const topCities    = Object.entries(cityMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
+      const topCountries = Object.entries(countryMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
+
+      // Traffic sources — extract domain from referrer
+      const refMap: Record<string, number> = {};
+      for (const r of allInRange) {
+        let source = "Direct";
+        if (r.referrer) {
+          try {
+            const domain = new URL(r.referrer).hostname.replace(/^www\./, "");
+            source = domain || "Direct";
+          } catch { source = r.referrer.slice(0, 60); }
+        }
+        refMap[source] = (refMap[source] || 0) + 1;
+      }
+      const topReferrers = Object.entries(refMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
+
+      // Recent 50 visits
+      const recent = await db.select().from(pageViews).orderBy(desc(pageViews.id)).limit(50);
+
+      res.json({
+        summary: { today: todayCount, yesterday: yesterdayCount, week: weekCount, month: monthCount, total: allTime.length },
+        daily,
+        devices,
+        browsers,
+        os: oses,
+        topPages,
+        topCities,
+        topCountries,
+        topReferrers,
+        recent,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message });
+    }
+  });
+
   return httpServer;
 }
