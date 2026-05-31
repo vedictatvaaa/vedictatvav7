@@ -13,6 +13,7 @@ import { auditSite, auditPage } from "./seo-auditor";
 import { autoFillMissingSeo, generateSeoForPage, KNOWN_SEO_PATHS } from "./seo-ai";
 import { pingIndexNow, pingIndexNowAsync, pingSitemap, getIndexNowKey } from "./indexnow";
 import { notifyPublish, notifyUnpublish, getGoogleQuotaState } from "./publish-notify";
+import { distributionStatus, broadcast, ALL_CHANNELS, type ChannelId } from "./distribution";
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
 import { adminAuthMiddleware as sharedAdminAuth, validateAdminSession as sharedValidateAdminSession } from "./admin-auth";
 import { redirectMiddleware, registerRedirectAdminRoutes } from "./seo-redirects";
@@ -1372,7 +1373,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           id: url,
           link: url,
           description: post.excerpt || post.title,
-          content: post.content || post.excerpt || "",
+          content: post.body || post.excerpt || "",
           date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
           image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
           category: post.category ? [{ name: post.category }] : undefined,
@@ -1407,7 +1408,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         feed.addItem({
           title: post.title, id: url, link: url,
           description: post.excerpt || post.title,
-          content: post.content || post.excerpt || "",
+          content: post.body || post.excerpt || "",
           date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
           image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
         });
@@ -1439,7 +1440,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         feed.addItem({
           title: post.title, id: url, link: url,
           description: post.excerpt || post.title,
-          content: post.content || post.excerpt || "",
+          content: post.body || post.excerpt || "",
           date: post.publishedAt ? new Date(post.publishedAt) : new Date((post as any).createdAt || Date.now()),
           image: post.coverImage ? (post.coverImage.startsWith("http") ? post.coverImage : `${baseUrl}${post.coverImage}`) : undefined,
         });
@@ -1448,6 +1449,24 @@ Sitemap: ${baseUrl}/sitemap.xml
     } catch (err) {
       res.status(500).send("Feed error");
     }
+  });
+
+  // ---- SEO: Google News sitemap (rolling 48h published articles) ----
+  app.get("/sitemap-news.xml", async (req, res) => {
+    const baseUrl = sitemapBase(req);
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n`;
+    try {
+      const posts = await storage.getBlogPosts({ onlyPublished: true });
+      for (const post of posts) {
+        const pubSrc = post.publishedAt || (post as any).createdAt;
+        const pubDate = pubSrc ? new Date(pubSrc) : null;
+        if (!pubDate || pubDate.getTime() < cutoff) continue;
+        xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}/blog/${post.slug}`)}</loc>\n    <news:news>\n      <news:publication>\n        <news:name>Vedic Tatva</news:name>\n        <news:language>en</news:language>\n      </news:publication>\n      <news:publication_date>${pubDate.toISOString()}</news:publication_date>\n      <news:title>${escapeXml(post.title)}</news:title>\n    </news:news>\n  </url>\n`;
+      }
+    } catch {}
+    xml += `</urlset>\n`;
+    res.type("application/xml").send(xml);
   });
 
   // ---- SEO: Core Web Vitals ingest endpoint ----
@@ -1581,6 +1600,181 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   app.get("/api/admin/seo/notify-status", adminAuthMiddleware, async (_req, res) => {
     res.json({ google: getGoogleQuotaState() });
+  });
+
+  // ===================================================================
+  // Content Distribution Hub — unified one-click push across every
+  // search engine + AI-crawler discovery channel.
+  // ===================================================================
+
+  // Channel configuration snapshot for the dashboard.
+  app.get("/api/admin/distribution/status", adminAuthMiddleware, async (req, res) => {
+    try {
+      res.json(distributionStatus(req));
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  // Pushable URL catalogue, grouped so the admin can pick what to broadcast.
+  app.get("/api/admin/distribution/targets", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const groups: Array<{ id: string; label: string; urls: Array<{ path: string; title: string }> }> = [];
+
+      groups.push({
+        id: "core",
+        label: "Core pages",
+        urls: [
+          { path: "/", title: "Homepage" },
+          { path: "/puja", title: "Online Puja" },
+          { path: "/book-pandit-online", title: "Book a Pandit" },
+          { path: "/astrology", title: "Astrology" },
+          { path: "/spiritual-essentials", title: "Puja Essentials" },
+          { path: "/puja-samagri-online", title: "Puja Samagri" },
+          { path: "/pind-daan-booking", title: "Pind Daan" },
+          { path: "/kathas", title: "Spiritual Kathas" },
+          { path: "/panchang-calendar", title: "Panchang" },
+          { path: "/membership", title: "Prime Membership" },
+          { path: "/donations", title: "Donations" },
+          { path: "/blog", title: "Blog" },
+        ],
+      });
+
+      try {
+        const posts = await storage.getBlogPosts({ onlyPublished: true });
+        if (posts.length) {
+          groups.push({
+            id: "blog",
+            label: "Blog posts",
+            urls: posts.slice(0, 100).map((p) => ({ path: `/blog/${p.slug}`, title: p.title })),
+          });
+        }
+      } catch {}
+
+      try {
+        const products = await storage.getProducts();
+        if (products.length) {
+          groups.push({
+            id: "products",
+            label: "Products",
+            urls: products.slice(0, 200).map((p) => ({ path: `/product/${p.slug || p.id}`, title: p.name })),
+          });
+        }
+      } catch {}
+
+      res.json({ groups });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  // One-click broadcast. Body: { urls: string[], channels?: ChannelId[] }.
+  app.post("/api/admin/distribution/broadcast", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const rawUrls = Array.isArray(req.body?.urls) ? req.body.urls : [];
+      if (rawUrls.length > 200) {
+        return res.status(400).json({ message: "Too many URLs in one broadcast (max 200)." });
+      }
+      // Same-site policy: accept relative paths or absolute URLs whose host
+      // matches our canonical host. This stops the admin push from being used
+      // to submit arbitrary third-party URLs to Google/IndexNow on our behalf.
+      let canonicalHost = "";
+      try { canonicalHost = new URL(sitemapBase(req)).host; } catch {}
+      const urls: string[] = [];
+      const rejected: string[] = [];
+      for (const raw of rawUrls) {
+        if (typeof raw !== "string") continue;
+        const u = raw.trim();
+        if (!u || u.length > 2048) { if (u) rejected.push(u.slice(0, 80)); continue; }
+        if (u.startsWith("/")) { urls.push(u); continue; }
+        try {
+          const parsed = new URL(u);
+          if (!/^https?:$/.test(parsed.protocol) || (canonicalHost && parsed.host !== canonicalHost)) {
+            rejected.push(u);
+          } else {
+            urls.push(u);
+          }
+        } catch {
+          rejected.push(u);
+        }
+      }
+      const channels: ChannelId[] = Array.isArray(req.body?.channels) && req.body.channels.length
+        ? req.body.channels.filter((c: any) => ALL_CHANNELS.includes(c))
+        : ALL_CHANNELS;
+      if (urls.length === 0) {
+        return res.status(400).json({
+          message: rejected.length
+            ? "No valid same-site URLs to broadcast — off-site or malformed URLs were rejected."
+            : "Select at least one URL to broadcast.",
+          rejected: rejected.slice(0, 10),
+        });
+      }
+
+      const out = await broadcast(req, urls, channels);
+      try {
+        auditAdmin(req, "distribution.broadcast", urls.slice(0, 5).join(", "), { count: urls.length, channels });
+      } catch {}
+      res.json({ ok: out.results.some((r) => r.ok), ...out, googleQuota: getGoogleQuotaState() });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Broadcast failed" });
+    }
+  });
+
+  // OpenAI-assisted content draft generator. Body: { topic, kind }.
+  // kind: "announcement" | "blog" | "social"
+  app.post("/api/admin/distribution/generate", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const topic = (typeof req.body?.topic === "string" ? req.body.topic.trim() : "").slice(0, 500);
+      const kind = ["announcement", "blog", "social"].includes(req.body?.kind) ? req.body.kind : "announcement";
+      if (!topic) return res.status(400).json({ message: "topic is required" });
+      if (!process.env.OPENAI_API_KEY && !process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+        return res.status(503).json({ message: "OpenAI is not configured (set OPENAI_API_KEY)." });
+      }
+
+      const openai = new OpenAI({
+        apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      });
+
+      const kindGuide: Record<string, string> = {
+        announcement: "a short, punchy site announcement (max 120 words) suitable for a homepage banner or push notification",
+        blog: "an SEO-optimised blog article outline plus a 250-word intro paragraph",
+        social: "3 short social-media captions (WhatsApp/Instagram/X) each under 280 characters with relevant hashtags",
+      };
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are the content & SEO lead for Vedic Tatva, a premium Indian spiritual e-commerce + services brand (puja booking, verified pandits, puja samagri, Vedic astrology). Tone: warm, authentic, devotional yet modern — never cheap or clickbait. Always return valid JSON.",
+          },
+          {
+            role: "user",
+            content:
+              `Create ${kindGuide[kind]} about: "${topic}".\n\n` +
+              `Return JSON with EXACTLY these keys: ` +
+              `{ "title": string, "metaTitle": string (<=60 chars), "metaDescription": string (<=155 chars), ` +
+              `"keywords": string[] (5-8), "body": string (the main content as markdown), ` +
+              `"hashtags": string[] (4-6, with #), "suggestedPaths": string[] (relevant existing site paths to push, e.g. "/puja", "/blog") }`,
+          },
+        ],
+      });
+
+      const raw = completion.choices[0]?.message?.content || "{}";
+      let draft: any;
+      try {
+        draft = JSON.parse(raw);
+      } catch {
+        draft = { title: topic, body: raw, keywords: [], hashtags: [], suggestedPaths: [], metaTitle: topic, metaDescription: "" };
+      }
+      res.json({ ok: true, kind, draft });
+    } catch (e: any) {
+      console.error("[distribution-generate]", e);
+      res.status(500).json({ message: e?.message || "Generation failed" });
+    }
   });
 
   app.post("/api/admin/seo/ping", adminAuthMiddleware, async (req, res) => {

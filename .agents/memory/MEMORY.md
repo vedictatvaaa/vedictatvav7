@@ -1,0 +1,1 @@
+- [Dev route additions need restart](dev-route-restart.md) — new Express routes silently fall through to the SPA (200 HTML) until the workflow is restarted; tsx watch doesn't reliably hot-add them.

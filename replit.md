@@ -83,6 +83,7 @@ Vedic Tatva is a premium spiritual e-commerce and service marketplace offering s
 *   **Admin Analytics:** Dashboard with sales trends, product/service revenue, customer insights, and stock alerts.
 *   **Progressive Web App (PWA):** Installable app with offline capabilities and app shortcuts.
 *   **Comprehensive SEO:** Dynamic sitemap, IndexNow integration, Google Indexing API, and robust on-page SEO controls.
+*   **Content Distribution Hub:** Admin one-click broadcast of pages to Google (Indexing API), the IndexNow network (Bing/Yahoo/Yandex/Seznam/Naver/Yep), Google News (rolling 48h `/sitemap-news.xml`), the master sitemap, and AI assistants (llms.txt nudge), plus an OpenAI-assisted content draft studio. Broadcast enforces a same-site URL policy.
 
 ## User preferences
 

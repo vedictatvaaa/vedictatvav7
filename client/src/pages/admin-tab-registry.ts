@@ -3,7 +3,7 @@ import {
   CalendarClock, HandHeart, Heart, Search, Globe, BarChart3, Settings, Truck,
   Shield, Lock, Eye, BellRing, Trophy, Inbox, AlertTriangle, FileText, Megaphone,
   Mail, Sparkles, Database, Wallet, Share2, Crown, Music, Code2, GitCommit,
-  Image as ImageIcon, Activity, BookKey,
+  Image as ImageIcon, Activity, BookKey, Radio,
 } from "lucide-react";
 import type { TabId, TabSection } from "./admin-shared";
 
@@ -47,6 +47,7 @@ export const TABS: TabDef[] = [
   { id: "mantras",         label: "Mantras & Chants", icon: Music,         section: "Marketing" },
   { id: "festivals",       label: "Festivals",        icon: Calendar,      section: "Marketing" },
   { id: "seo",             label: "SEO Manager",      icon: Search,        section: "System" },
+  { id: "distribution",    label: "Distribution Hub", icon: Radio,         section: "System" },
   { id: "site-settings",   label: "Site Settings",    icon: Settings,      section: "System" },
   { id: "integrations",    label: "Integrations",     icon: Truck,         section: "System" },
   { id: "payment-gateways", label: "Payment Gateways", icon: Wallet,       section: "System" },

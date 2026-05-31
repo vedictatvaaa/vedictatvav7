@@ -74,6 +74,7 @@ const SubscriptionsTab      = safeLazy(() => import("./admin-tabs/SubscriptionsT
 const DonationsTab          = safeLazy(() => import("./admin-tabs/DonationsTab"));
 const MatrimonyTab          = safeLazy(() => import("./admin-tabs/MatrimonyTab"));
 const SeoManagerTab         = safeLazy(() => import("./admin-tabs/SeoManagerTab"));
+const DistributionTab       = safeLazy(() => import("./admin-tabs/DistributionTab"));
 const MerchantCenterTab     = safeLazy(() => import("./admin-tabs/MerchantCenterTab"));
 const SiteSettingsTab       = safeLazy(() => import("./admin-tabs/SiteSettingsTab"));
 const IntegrationsTab       = safeLazy(() => import("./admin-tabs/IntegrationsTab"));
@@ -538,6 +539,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "donations" && <DonationsTab />}
               {activeTab === "matrimony" && <MatrimonyTab />}
               {activeTab === "seo" && <SeoManagerTab />}
+              {activeTab === "distribution" && <DistributionTab adminToken={adminToken} />}
               {activeTab === "merchant" && <MerchantCenterTab adminToken={adminToken} />}
               {activeTab === "site-settings" && <SiteSettingsTab />}
               {activeTab === "integrations" && <IntegrationsTab />}
