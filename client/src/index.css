@@ -168,6 +168,26 @@
   display: none;
 }
 
+/* Modern thin, auto-fading scrollbar for in-app scroll panes (admin nav etc.) */
+.admin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.admin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+.admin-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.45);
+}
+
 /* Incense smoke wisps for Puja Samagri category icon */
 .vt-smoke {
   position: absolute;

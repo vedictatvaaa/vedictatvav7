@@ -340,7 +340,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
           </div>
         </div>
 
-        <nav className="flex-1 p-2 space-y-4 overflow-y-auto" data-testid="admin-nav">
+        <nav className="flex-1 min-h-0 p-2 space-y-4 overflow-y-auto overscroll-contain admin-scrollbar" data-lenis-prevent data-testid="admin-nav" aria-label="Admin sections">
           {TAB_SECTIONS.map((sec) => {
             const isActiveSection = activeTabMeta?.section === sec;
             return (
@@ -367,6 +367,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
                     title={!sidebarOpen ? `${item.label}${badge ? ` (${badge})` : ""}` : undefined}
+                    aria-current={isActive ? "page" : undefined}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative hover-elevate ${
                       isActive
                         ? "bg-[hsl(var(--accent))] text-[hsl(var(--primary))]"
