@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed } from "lucide-react";
+import { Edit, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -161,6 +161,32 @@ function PanditsTab() {
     },
   });
 
+  const TIER_META: Record<string, { label: string; color: string }> = {
+    free:       { label: "Free",       color: "bg-stone-100 text-stone-600" },
+    silver:     { label: "Silver",     color: "bg-slate-100 text-slate-600" },
+    gold:       { label: "Gold",       color: "bg-yellow-100 text-yellow-700" },
+    guru_elite: { label: "Guru Elite", color: "bg-purple-100 text-purple-700" },
+  };
+
+  const upgradeTierMutation = useMutation({
+    mutationFn: async ({ id, tier }: { id: number; tier: string }) => {
+      const res = await fetch(`/api/pandits/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        // null tierExpiresAt = permanent admin grant (no subscription expiry)
+        body: JSON.stringify({ tier, tierExpiresAt: null }),
+      });
+      if (!res.ok) throw new Error("Update failed");
+      return { pandit: await res.json(), tier };
+    },
+    onSuccess: ({ tier }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      const meta = TIER_META[tier] ?? { label: tier };
+      toast({ title: `Tier Updated`, description: `Pandit upgraded to ${meta.label} tier.` });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to update tier.", variant: "destructive" }),
+  });
+
   const handleBulkSetLocations = async () => {
     const missing = (pandits || []).filter(p => p.latitude == null || p.longitude == null);
     if (!missing.length) {
@@ -267,6 +293,17 @@ function PanditsTab() {
                         <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${pandit.verified ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`} data-testid={`status-pandit-${pandit.id}`}>
                           {pandit.verified ? "Verified" : "Pending"}
                         </span>
+                        {(() => {
+                          const effectiveTier = (pandit.tier || "free").toLowerCase();
+                          const meta = TIER_META[effectiveTier] ?? TIER_META.free;
+                          const expired = pandit.tierExpiresAt && new Date(pandit.tierExpiresAt as any) < new Date();
+                          return (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold ${expired ? "bg-red-100 text-red-600" : meta.color}`}>
+                              <Crown className="w-2.5 h-2.5" />
+                              {meta.label}{expired ? " (expired)" : ""}
+                            </span>
+                          );
+                        })()}
                         {hasGps ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 flex items-center gap-1" title={`${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)}`}>
                             <MapPin className="w-2.5 h-2.5" /> GPS set
@@ -311,6 +348,24 @@ function PanditsTab() {
                           </button>
                         </div>
                       )}
+
+                      <select
+                        value={pandit.tier || "free"}
+                        onChange={e => upgradeTierMutation.mutate({ id: pandit.id, tier: e.target.value })}
+                        disabled={upgradeTierMutation.isPending}
+                        className={`h-8 text-xs rounded-md border px-2 font-semibold cursor-pointer ${
+                          (pandit.tier || "free") === "guru_elite" ? "border-purple-300 bg-purple-50 text-purple-700" :
+                          (pandit.tier || "free") === "gold"       ? "border-yellow-300 bg-yellow-50 text-yellow-700" :
+                          (pandit.tier || "free") === "silver"     ? "border-slate-300 bg-slate-50 text-slate-600" :
+                                                                      "border-stone-200 bg-stone-50 text-stone-600"
+                        }`}
+                        data-testid={`select-tier-${pandit.id}`}
+                      >
+                        <option value="free">Free</option>
+                        <option value="silver">Silver</option>
+                        <option value="gold">Gold</option>
+                        <option value="guru_elite">Guru Elite</option>
+                      </select>
 
                       {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() ? (
                         <Button size="sm" variant="outline" onClick={() => deactivateBoostMutation.mutate(pandit.id)} className="h-8 text-secondary border-secondary/30 text-xs gap-1" data-testid={`btn-deactivate-boost-${pandit.id}`}>
