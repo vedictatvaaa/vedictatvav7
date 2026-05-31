@@ -20,6 +20,20 @@ export default function CartPage() {
   } | null>(null);
   const [couponError, setCouponError] = useState("");
 
+  // The current auto "Bundle & Save" coupon object (8% off when the cart holds
+  // 2+ distinct products), or null. Mirrors the server's trusted recompute.
+  function currentBundleCoupon() {
+    const distinct = new Set(items.map((i) => i.product.id)).size;
+    const discount = distinct >= 2 ? Math.round((totalAmount * 8) / 100) : 0;
+    if (discount <= 0) return null;
+    return {
+      id: -1,
+      code: "BUNDLE8",
+      discount,
+      description: "Bundle & Save — 8% off for buying together",
+    };
+  }
+
   async function handleApplyCoupon() {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
@@ -32,9 +46,18 @@ export default function CartPage() {
       });
       const data = await res.json();
       if (data.valid) {
-        setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discount, description: data.coupon.description });
-        setCouponError("");
-        toast({ title: "Coupon Applied!", description: data.message });
+        const bundle = currentBundleCoupon();
+        if (bundle && bundle.discount >= data.discount) {
+          // Bundle already saves at least as much — keep it (derived) instead of
+          // storing the weaker coupon.
+          setAppliedCoupon(null);
+          setCouponError("");
+          toast({ title: "Even better offer applied", description: `Your bundle saves ₹${bundle.discount} — more than ${data.coupon.code}.` });
+        } else {
+          setAppliedCoupon({ id: data.coupon.id, code: data.coupon.code, discount: data.discount, description: data.coupon.description });
+          setCouponError("");
+          toast({ title: "Coupon Applied!", description: data.message });
+        }
       } else {
         setCouponError(data.message);
         setAppliedCoupon(null);
@@ -52,20 +75,29 @@ export default function CartPage() {
     if (totalAmount <= 0) return;
     if (autoTriedRef.current === totalAmount) return;
     autoTriedRef.current = totalAmount;
+    // "Bundle & Save" (8% for 2+ distinct products) competes with the best
+    // public coupon; the larger wins (mirrored server-side).
+    const bundle = currentBundleCoupon();
+    // Only persist a real public coupon when it beats the auto bundle; the
+    // bundle is derived every render (never stored), so no stale snapshot.
     fetch(`/api/coupons/best?orderAmount=${totalAmount}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data?.best && !appliedCoupon) {
+        if (appliedCoupon) return;
+        const best = data?.best;
+        if (best && best.discount > (bundle?.discount || 0)) {
           setAppliedCoupon({
-            id: data.best.id,
-            code: data.best.code,
-            discount: data.best.discount,
-            description: data.best.description,
+            id: best.id,
+            code: best.code,
+            discount: best.discount,
+            description: best.description,
           });
           toast({
             title: "Best offer auto-applied",
-            description: `${data.best.code} — you save ₹${data.best.discount}`,
+            description: `${best.code} — you save ₹${best.discount}`,
           });
+        } else if (bundle) {
+          toast({ title: "Bundle saving applied", description: `You save ₹${bundle.discount} for buying together` });
         }
       })
       .catch(() => {});
@@ -73,13 +105,23 @@ export default function CartPage() {
   }, [totalAmount]);
 
   function removeCoupon() {
+    // The auto bundle is derived every render, so clearing the manual coupon
+    // lets the bundle (if still eligible) remain active automatically.
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponError("");
   }
 
   const shippingCost = totalAmount >= 499 ? 0 : 49;
-  const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.discount, totalAmount) : 0;
+  // Effective discount = larger of the applied coupon and the live bundle,
+  // recomputed each render so the preview matches what checkout/server grant.
+  const _bundleNow = currentBundleCoupon();
+  const _manualCoupon = appliedCoupon && appliedCoupon.code !== "BUNDLE8" ? appliedCoupon : null;
+  const _manualCouponDiscount = _manualCoupon?.discount || 0;
+  const bundleWins = (_bundleNow?.discount || 0) > _manualCouponDiscount;
+  const effectiveCouponCode = bundleWins ? "BUNDLE8" : (_manualCoupon?.code || "");
+  const rawDiscount = bundleWins ? (_bundleNow?.discount || 0) : _manualCouponDiscount;
+  const couponDiscount = Math.min(rawDiscount, totalAmount);
   const orderTotal = Math.max(0, totalAmount - couponDiscount) + shippingCost;
 
   if (items.length === 0) {
@@ -300,7 +342,7 @@ export default function CartPage() {
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-sm text-emerald-700">
-                    <span>Coupon ({appliedCoupon?.code})</span>
+                    <span>{effectiveCouponCode === "BUNDLE8" ? "Bundle & Save (8%)" : `Coupon (${effectiveCouponCode})`}</span>
                     <span data-testid="text-cart-coupon-discount">-₹{couponDiscount.toLocaleString()}</span>
                   </div>
                 )}
@@ -351,7 +393,7 @@ export default function CartPage() {
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-sm text-emerald-700">
-                    <span>Coupon ({appliedCoupon?.code})</span>
+                    <span>{effectiveCouponCode === "BUNDLE8" ? "Bundle & Save (8%)" : `Coupon (${effectiveCouponCode})`}</span>
                     <span>-₹{couponDiscount.toLocaleString()}</span>
                   </div>
                 )}

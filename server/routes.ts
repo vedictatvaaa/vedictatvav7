@@ -4016,6 +4016,24 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           }
         } catch {}
       }
+      // Server-authoritative "Bundle & Save" (mirrors /api/checkout): 8% off the
+      // item subtotal when the cart holds 2+ distinct products, recomputed from
+      // trusted items and routed through the coupon slot. Bundle vs a real
+      // coupon — the larger wins (no stacking).
+      {
+        const BUNDLE_DISCOUNT_PERCENT = 8;
+        const BUNDLE_MIN_DISTINCT = 2;
+        const distinctProductCount = new Set(
+          (enrichedItems as any[]).map((it) => it.productId).filter(Boolean),
+        ).size;
+        const bundleDiscount = distinctProductCount >= BUNDLE_MIN_DISTINCT
+          ? Math.round((itemsSubtotal * BUNDLE_DISCOUNT_PERCENT) / 100)
+          : 0;
+        if (bundleDiscount > safeCouponDiscount) {
+          safeCouponDiscount = bundleDiscount;
+          safeCouponCode = "BUNDLE8";
+        }
+      }
       const subtotalAfterCoupon = Math.max(0, itemsSubtotal - safeCouponDiscount);
       const safePrepaidDiscount = (orderData?.paymentMethod || "prepaid") === "prepaid"
         ? Math.round((subtotalAfterCoupon * 5) / 100)
@@ -4176,6 +4194,25 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           }
         } catch (e: any) {
           console.warn("[checkout] coupon revalidation failed:", e?.message);
+        }
+      }
+      // Server-authoritative "Bundle & Save": 8% off the item subtotal when the
+      // cart holds 2+ distinct products. Recomputed here from the TRUSTED items
+      // so it cannot be faked, and routed through the same coupon slot the
+      // invoice + GST proportional-distribution logic already understands.
+      // Bundle and a real coupon do NOT stack — the larger of the two wins.
+      {
+        const BUNDLE_DISCOUNT_PERCENT = 8;
+        const BUNDLE_MIN_DISTINCT = 2;
+        const distinctProductCount = new Set(
+          (enrichedItems as any[]).map((it) => it.productId).filter(Boolean),
+        ).size;
+        const bundleDiscount = distinctProductCount >= BUNDLE_MIN_DISTINCT
+          ? Math.round((itemsSubtotal * BUNDLE_DISCOUNT_PERCENT) / 100)
+          : 0;
+        if (bundleDiscount > safeCouponDiscount) {
+          safeCouponDiscount = bundleDiscount;
+          safeCouponCode = "BUNDLE8";
         }
       }
       // Server-authoritative prepaid discount: 5% of post-coupon subtotal when

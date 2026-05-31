@@ -31,6 +31,12 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 const PREPAID_DISCOUNT_PERCENT = 5;
+// "Bundle & Save": 8% off when the cart holds 2+ distinct products. Mirrored
+// server-side in /api/checkout (recomputed from trusted prices). Routed through
+// the coupon slot — bundle and a real coupon do not stack, the larger wins.
+const BUNDLE_DISCOUNT_PERCENT = 8;
+const BUNDLE_MIN_DISTINCT = 2;
+const BUNDLE_COUPON_CODE = "BUNDLE8";
 
 export default function Checkout() {
   const { items, totalAmount, clearCart } = useCart();
@@ -143,6 +149,25 @@ export default function Checkout() {
     return Object.keys(newErrors).length === 0;
   }
 
+  // The current auto "Bundle & Save" coupon object (8% off when the cart holds
+  // 2+ distinct products), or null when not eligible. Recomputed from the live
+  // cart so it always matches the server's trusted recompute.
+  function currentBundleCoupon() {
+    const distinct = new Set(items.map((i) => i.product.id)).size;
+    const discount = distinct >= BUNDLE_MIN_DISTINCT
+      ? Math.round((totalAmount * BUNDLE_DISCOUNT_PERCENT) / 100)
+      : 0;
+    if (discount <= 0) return null;
+    return {
+      id: -1,
+      code: BUNDLE_COUPON_CODE,
+      type: "percentage",
+      value: BUNDLE_DISCOUNT_PERCENT,
+      description: `Bundle & Save — ${BUNDLE_DISCOUNT_PERCENT}% off for buying together`,
+      discount,
+    };
+  }
+
   async function handleApplyCoupon() {
     if (!couponCode.trim()) return;
     setCouponLoading(true);
@@ -155,16 +180,26 @@ export default function Checkout() {
       });
       const data = await res.json();
       if (data.valid) {
-        setAppliedCoupon({
-          id: data.coupon.id,
-          code: data.coupon.code,
-          type: data.coupon.type,
-          value: data.coupon.value,
-          description: data.coupon.description,
-          discount: data.discount,
-        });
-        setCouponError("");
-        toast({ title: "Coupon Applied!", description: data.message });
+        const bundle = currentBundleCoupon();
+        if (bundle && bundle.discount >= data.discount) {
+          // The auto bundle already saves at least as much. Don't store the
+          // weaker coupon — the bundle is derived every render, so clearing to
+          // null keeps it active while the client total stays correct.
+          setAppliedCoupon(null);
+          setCouponError("");
+          toast({ title: "Even better offer applied", description: `Your bundle saves ₹${bundle.discount} — more than ${data.coupon.code}.` });
+        } else {
+          setAppliedCoupon({
+            id: data.coupon.id,
+            code: data.coupon.code,
+            type: data.coupon.type,
+            value: data.coupon.value,
+            description: data.coupon.description,
+            discount: data.discount,
+          });
+          setCouponError("");
+          toast({ title: "Coupon Applied!", description: data.message });
+        }
       } else {
         setCouponError(data.message);
         setAppliedCoupon(null);
@@ -176,6 +211,8 @@ export default function Checkout() {
   }
 
   function removeCoupon() {
+    // The auto bundle is derived every render, so simply clearing the manual
+    // coupon lets the bundle (if still eligible) remain active automatically.
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponError("");
@@ -187,17 +224,23 @@ export default function Checkout() {
     if (totalAmount <= 0) return;
     if (couponAutoTriedRef.current === totalAmount) return;
     couponAutoTriedRef.current = totalAmount;
+    const bundle = currentBundleCoupon();
+    // Only persist a real public coupon when it beats the auto bundle. The
+    // bundle itself is never stored in state — it's derived every render — so
+    // there's no stale snapshot to diverge from the server.
     fetch(`/api/coupons/best?orderAmount=${totalAmount}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data?.best && !appliedCoupon) {
+        if (appliedCoupon) return;
+        const best = data?.best;
+        if (best && best.discount > (bundle?.discount || 0)) {
           setAppliedCoupon({
-            id: data.best.id,
-            code: data.best.code,
-            type: data.best.type,
-            value: data.best.value,
-            description: data.best.description,
-            discount: data.best.discount,
+            id: best.id,
+            code: best.code,
+            type: best.type,
+            value: best.value,
+            description: best.description,
+            discount: best.discount,
           });
         }
       })
@@ -206,7 +249,19 @@ export default function Checkout() {
   }, [totalAmount]);
 
   const shipping = totalAmount >= 500 ? 0 : 50;
-  const couponDiscount = appliedCoupon?.discount || 0;
+  // Effective discount = the larger of the applied coupon and the auto bundle,
+  // recomputed every render so the client total ALWAYS matches the server
+  // (which grants the larger of coupon/bundle). Guards against a weaker manual
+  // coupon, coupon removal, or a quantity change leaving a stale total.
+  const _bundleNow = currentBundleCoupon();
+  // appliedCoupon only ever holds a real coupon; the bundle is derived here so a
+  // stale BUNDLE8 can never persist. Defensively ignore a BUNDLE8 code anyway.
+  const _manualCoupon = appliedCoupon && appliedCoupon.code !== BUNDLE_COUPON_CODE ? appliedCoupon : null;
+  const _manualCouponDiscount = _manualCoupon?.discount || 0;
+  const bundleWins = (_bundleNow?.discount || 0) > _manualCouponDiscount;
+  const _rawDiscount = bundleWins ? (_bundleNow?.discount || 0) : _manualCouponDiscount;
+  const couponDiscount = Math.min(_rawDiscount, totalAmount);
+  const effectiveCouponCode = bundleWins ? BUNDLE_COUPON_CODE : (_manualCoupon?.code || "");
   const subtotalAfterCoupon = totalAmount - couponDiscount;
   const prepaidDiscount = paymentMode === "prepaid" ? Math.round((subtotalAfterCoupon * PREPAID_DISCOUNT_PERCENT) / 100) : 0;
   const codCharges = paymentMode === "cod" ? 40 : 0;
@@ -244,7 +299,7 @@ export default function Checkout() {
             customerState: form.state,
             totalAmount: grandTotal,
             paymentMethod: "cod",
-            couponCode: appliedCoupon?.code || "",
+            couponCode: effectiveCouponCode,
             couponDiscount,
             prepaidDiscount,
             shippingCharges: shipping,
@@ -265,7 +320,7 @@ export default function Checkout() {
             String(placed?.id ?? placed?.orderId ?? `cod_${Date.now()}`),
             items,
             grandTotal,
-            { shipping, coupon: appliedCoupon?.code },
+            { shipping, coupon: effectiveCouponCode },
           );
           (window as any).__vt_orderCompleted = true;
           clearCart();
@@ -336,7 +391,7 @@ export default function Checkout() {
                   customerState: form.state,
                   totalAmount: grandTotal,
                   paymentMethod: "prepaid",
-                  couponCode: appliedCoupon?.code || "",
+                  couponCode: effectiveCouponCode,
                   couponDiscount,
                   prepaidDiscount,
                   shippingCharges: shipping,
@@ -357,7 +412,7 @@ export default function Checkout() {
                 String(verifyData.orderId ?? response.razorpay_payment_id),
                 items,
                 grandTotal,
-                { shipping, coupon: appliedCoupon?.code },
+                { shipping, coupon: effectiveCouponCode },
               );
               (window as any).__vt_orderCompleted = true;
               clearCart();
@@ -655,7 +710,7 @@ export default function Checkout() {
 
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-emerald-700">
-                    <span className="flex items-center gap-1"><Percent className="h-3 w-3" /> Coupon ({appliedCoupon?.code})</span>
+                    <span className="flex items-center gap-1"><Percent className="h-3 w-3" /> {effectiveCouponCode === BUNDLE_COUPON_CODE ? "Bundle & Save (8%)" : `Coupon (${effectiveCouponCode})`}</span>
                     <span data-testid="text-coupon-discount">−₹{couponDiscount.toLocaleString("en-IN")}</span>
                   </div>
                 )}
