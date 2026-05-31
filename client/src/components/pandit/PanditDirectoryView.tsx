@@ -519,7 +519,7 @@ function PanditCard({
               />
               Compare
             </label>
-            <Link href={p.slug ? `/pandit/${p.slug}` : `/pandit/${p.id}`}>
+            <Link href={p.slug ? `/p/${p.slug}` : `/pandit/${p.id}`}>
               <Button variant="outline" size="sm" data-testid={`button-view-${p.id}`}>View Profile</Button>
             </Link>
             <Button
@@ -628,7 +628,7 @@ function CompareDialog({
         </div>
         <DialogFooter className="gap-2">
           {selected.map((p) => (
-            <Link key={p.id} href={p.slug ? `/pandit/${p.slug}` : `/pandit/${p.id}`}>
+            <Link key={p.id} href={p.slug ? `/p/${p.slug}` : `/pandit/${p.id}`}>
               <Button size="sm" variant="outline">Book {p.name.split(" ")[0]}</Button>
             </Link>
           ))}
@@ -662,7 +662,7 @@ function PanditMap({
                   {p.rating?.toFixed(1)} · {p.experience}+ yrs
                 </div>
                 <div className="text-xs">From ₹{p.fees.toLocaleString("en-IN")}</div>
-                <Link href={p.slug ? `/pandit/${p.slug}` : `/pandit/${p.id}`}>
+                <Link href={p.slug ? `/p/${p.slug}` : `/pandit/${p.id}`}>
                   <button className="text-xs text-primary font-semibold underline">View profile →</button>
                 </Link>
               </div>
@@ -1054,7 +1054,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }
               <div className="text-xs text-muted-foreground">Top pick in {cityLabel}</div>
               <div className="text-sm font-semibold truncate">{sorted[0].name} · ₹{sorted[0].fees.toLocaleString("en-IN")}</div>
             </div>
-            <Link href={sorted[0].slug ? `/pandit/${sorted[0].slug}` : `/pandit/${sorted[0].id}`}>
+            <Link href={sorted[0].slug ? `/p/${sorted[0].slug}` : `/pandit/${sorted[0].id}`}>
               <Button size="sm" data-testid="button-mobile-book-top">
                 <MessageCircle className="h-4 w-4 mr-1.5" /> Book Now
               </Button>

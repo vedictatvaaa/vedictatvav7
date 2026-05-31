@@ -206,6 +206,8 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
   const DELIVERY_CITIES = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Varanasi", "Gaya", "Haridwar", "Other"];
   const [deliveryCity, setDeliveryCity] = useState<string>(() => {
     if (typeof window === "undefined") return "Mumbai";
@@ -230,6 +232,17 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [moreOpen]);
 
   const { data: searchData, isFetching: searchLoading } = useQuery<SearchResponse>({
     queryKey: ["/api/search", debouncedQuery],
@@ -505,6 +518,70 @@ export default function Navbar() {
                   </Link>
                 );
               })}
+
+              {/* Desktop "More" mega-menu */}
+              <div className="relative" ref={moreRef}>
+                <button
+                  type="button"
+                  onClick={() => { setMoreOpen(!moreOpen); setAccountOpen(false); setSearchOpen(false); }}
+                  className={`relative flex items-center gap-1 text-[11.5px] lg:text-[12px] font-medium tracking-wide transition-colors duration-200 px-2 lg:px-3 py-2 whitespace-nowrap ${
+                    moreOpen ? "text-[#6D2B35]" : "text-[#5a4a3a]/70 hover:text-[#6D2B35]"
+                  }`}
+                  data-testid="btn-nav-more"
+                  aria-expanded={moreOpen}
+                >
+                  More
+                  <ChevronRight className={`h-3 w-3 transition-transform duration-200 ${moreOpen ? "rotate-90" : "rotate-0"}`} strokeWidth={2.5} />
+                </button>
+
+                {moreOpen && (
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 bg-white rounded-2xl shadow-2xl border border-[#D4AF37]/15 overflow-hidden"
+                    style={{ width: "min(680px, 90vw)" }}
+                    data-testid="nav-more-dropdown"
+                  >
+                    <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #D4AF37, #f5d76e, #D4AF37)" }} />
+                    <div className="p-4 grid grid-cols-3 gap-x-4 gap-y-1">
+                      {navSections.map((section) => (
+                        <div key={section.title} className="min-w-0">
+                          <p className="text-[9px] uppercase tracking-[0.25em] text-[#D4AF37] font-bold px-2 pt-2 pb-1.5 whitespace-nowrap">
+                            {section.title}
+                          </p>
+                          {section.items.map((item) => {
+                            const ItemIcon = item.icon;
+                            const isItemActive = location === item.href;
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setMoreOpen(false)}
+                                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+                                  isItemActive
+                                    ? "bg-[#FBF7EE] text-[#6D2B35]"
+                                    : "text-[#5a4a3a]/80 hover:bg-[#FBF7EE]/70 hover:text-[#6D2B35]"
+                                } ${item.comingSoon ? "opacity-50 pointer-events-none" : ""}`}
+                                data-testid={`more-link-${item.href.replace(/\//g, "-")}`}
+                              >
+                                <ItemIcon className="h-3.5 w-3.5 text-[#6D2B35]/50 shrink-0" strokeWidth={1.8} />
+                                <span className="truncate">{item.label}</span>
+                                {item.comingSoon && (
+                                  <span className="ml-auto text-[9px] bg-[#F5F0E6] text-[#6D2B35]/60 px-1.5 py-0.5 rounded-full shrink-0">Soon</span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-[#D4AF37]/10 px-4 py-2.5 flex items-center justify-between bg-[#faf7f2]">
+                      <p className="text-[10px] text-[#5a4a3a]/50">✦ Vedic Tatva — Your Sacred Inner Circle</p>
+                      <Link href="/membership" onClick={() => setMoreOpen(false)} className="text-[10px] font-bold text-[#6D2B35] hover:text-[#D4AF37] transition-colors flex items-center gap-1" data-testid="more-link-membership-cta">
+                        Become a Member <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
