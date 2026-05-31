@@ -2,7 +2,7 @@
 // Imported by BOTH client (admin form fields) and server (env rehydration,
 // AI auto-detect, test routing) so adding a provider is one edit.
 
-export type ProviderKind = "payment" | "ai";
+export type ProviderKind = "payment" | "ai" | "communication" | "google" | "shipping";
 
 export interface ProviderField {
   key: string;
@@ -124,6 +124,57 @@ export const PROVIDER_CATALOG: ProviderDef[] = [
       { key: "apiKey", label: "API Key", secret: true, placeholder: "sk-or-..." },
     ],
     envMap: { apiKey: "OPENROUTER_API_KEY" },
+  },
+
+  // ---------------- Communication ----------------
+  {
+    id: "sendgrid", kind: "communication", label: "SendGrid",
+    docs: "https://docs.sendgrid.com/",
+    fields: [
+      { key: "apiKey", label: "API Key", secret: true, placeholder: "SG.xxxxxxxxxx" },
+    ],
+    envMap: { apiKey: "SENDGRID_API_KEY" },
+  },
+  {
+    id: "msg91", kind: "communication", label: "MSG91",
+    docs: "https://docs.msg91.com/",
+    fields: [
+      { key: "authKey", label: "Auth Key", secret: true },
+      { key: "senderId", label: "Sender ID", optional: true, placeholder: "VTPUJA" },
+    ],
+    envMap: { authKey: "MSG91_AUTH_KEY", senderId: "MSG91_SENDER_ID" },
+  },
+
+  // ---------------- Google ----------------
+  {
+    id: "googleOauth", kind: "google", label: "Google Sign-In (OAuth)",
+    docs: "https://console.cloud.google.com/apis/credentials",
+    fields: [
+      { key: "clientId", label: "Client ID", placeholder: "xxxxxxxxxx.apps.googleusercontent.com" },
+      { key: "clientSecret", label: "Client Secret", secret: true, placeholder: "GOCSPX-..." },
+    ],
+    envMap: { clientId: "GOOGLE_CLIENT_ID", clientSecret: "GOOGLE_CLIENT_SECRET" },
+  },
+  {
+    id: "googleIndexing", kind: "google", label: "Google Indexing API",
+    docs: "https://developers.google.com/search/apis/indexing-api/v3/quickstart",
+    fields: [
+      { key: "serviceAccountJson", label: "Service Account JSON", secret: true, placeholder: '{"type":"service_account","project_id":"..."}' },
+      { key: "gscSiteUrl", label: "Search Console Site URL", optional: true, placeholder: "https://vedictatva.com/" },
+    ],
+    envMap: { serviceAccountJson: "GOOGLE_SERVICE_ACCOUNT_JSON", gscSiteUrl: "GSC_SITE_URL" },
+  },
+
+  // ---------------- Shipping ----------------
+  {
+    id: "shiprocket", kind: "shipping", label: "Shiprocket",
+    docs: "https://apidocs.shiprocket.in/",
+    fields: [
+      { key: "webhookToken", label: "Webhook Token", secret: true },
+      { key: "email", label: "Account Email", optional: true, placeholder: "you@example.com" },
+      { key: "password", label: "Account Password", secret: true, optional: true },
+    ],
+    envMap: { webhookToken: "SHIPROCKET_WEBHOOK_TOKEN", email: "SHIPROCKET_EMAIL", password: "SHIPROCKET_PASSWORD" },
   },
 ];
 

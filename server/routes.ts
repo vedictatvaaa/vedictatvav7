@@ -607,6 +607,26 @@ export async function registerRoutes(
     });
   });
 
+  // Admin password verification — extra confirmation gate before credential mutations
+  app.post("/api/admin/verify-password", adminAuthMiddleware, async (req: any, res) => {
+    const { password } = req.body || {};
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ ok: false, message: "Password required" });
+    }
+    try {
+      const { users } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [userRow] = await db.select().from(users).where(eq(users.id, req.adminUserId!)).limit(1);
+      if (!userRow) return res.status(404).json({ ok: false, message: "User not found" });
+      const bcrypt = await import("bcryptjs");
+      const match = await bcrypt.compare(password, userRow.password || "");
+      res.json({ ok: match, message: match ? "Verified" : "Incorrect password" });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, message: err?.message || "Verification failed" });
+    }
+  });
+
   // Admin API key status — live env-var check for the Setup Guide tab
   app.get("/api/admin/api-key-status", adminAuthMiddleware, (_req, res) => {
     const e = process.env;
