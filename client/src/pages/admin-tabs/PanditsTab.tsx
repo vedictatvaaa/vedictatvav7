@@ -1,22 +1,38 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, CheckCircle, XCircle, Phone, Image, Type, Upload } from "lucide-react";
+import { Edit, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import type { Pandit } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { createFetcher } from "../admin-shared";
+
+// ============================================================
+// Geocode helper — uses OpenStreetMap Nominatim (free, no key)
+// ============================================================
+async function geocodeCity(city: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const q = encodeURIComponent(`${city}, India`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=0`,
+      { headers: { "Accept-Language": "en" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.length) return null;
+    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch {
+    return null;
+  }
+}
 
 // ============================================================
 // Pandits Tab
@@ -29,6 +45,7 @@ function PanditsTab() {
   const [editingFeesId, setEditingFeesId] = useState<number | null>(null);
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
+  const [geocodingId, setGeocodingId] = useState<number | null>(null);
 
   const { data: pandits, isLoading } = useQuery<Pandit[]>({
     queryKey: ["/api/book-pandit-online", "admin"],
@@ -113,6 +130,35 @@ function PanditsTab() {
     onError: () => toast({ title: "Error", description: "Failed to deactivate boost.", variant: "destructive" }),
   });
 
+  const setLocationMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const pandit = (pandits || []).find(p => p.id === id);
+      if (!pandit) throw new Error("Pandit not found");
+      setGeocodingId(id);
+      const coords = await geocodeCity(pandit.city);
+      if (!coords) throw new Error(`Could not find coordinates for "${pandit.city}"`);
+      const res = await fetch(`/api/pandits/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      return { pandit: await res.json(), coords };
+    },
+    onSuccess: ({ coords }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      toast({
+        title: "Location Set ✓",
+        description: `Coordinates saved: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
+      });
+      setGeocodingId(null);
+    },
+    onError: (e: Error) => {
+      toast({ title: "Location Failed", description: e.message, variant: "destructive" });
+      setGeocodingId(null);
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -126,95 +172,121 @@ function PanditsTab() {
         </div>
       ) : (
         <div className="space-y-3">
-          {(pandits || []).map((pandit) => (
-            <Card key={pandit.id} className="bg-card border-border" data-testid={`card-pandit-${pandit.id}`}>
-              <CardContent className="py-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-serif font-bold text-lg shrink-0">
-                    {pandit.name.charAt(0)}
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-primary">{pandit.name}</h3>
-                      <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${pandit.verified ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`} data-testid={`status-pandit-${pandit.id}`}>
-                        {pandit.verified ? "Verified" : "Pending"}
-                      </span>
+          {(pandits || []).map((pandit) => {
+            const hasGps = pandit.latitude != null && pandit.longitude != null;
+            const isGeocoding = geocodingId === pandit.id;
+            return (
+              <Card key={pandit.id} className="bg-card border-border" data-testid={`card-pandit-${pandit.id}`}>
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-serif font-bold text-lg shrink-0">
+                      {pandit.name.charAt(0)}
                     </div>
-                    <p className="text-sm text-muted-foreground">{pandit.city} · {pandit.specialization}</p>
-                    <p className="text-xs text-secondary">
-                      {pandit.experience} yrs exp · {pandit.languages} · ⭐ {pandit.rating}
-                      {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() && (
-                        <span className="ml-2 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full text-[10px] font-bold">BOOSTED ({pandit.boostType})</span>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-medium text-primary">{pandit.name}</h3>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${pandit.verified ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`} data-testid={`status-pandit-${pandit.id}`}>
+                          {pandit.verified ? "Verified" : "Pending"}
+                        </span>
+                        {hasGps ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 flex items-center gap-1" title={`${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)}`}>
+                            <MapPin className="w-2.5 h-2.5" /> GPS set
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
+                            <MapPinOff className="w-2.5 h-2.5" /> No GPS
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{pandit.city} · {pandit.specialization}</p>
+                      <p className="text-xs text-secondary">
+                        {pandit.experience} yrs exp · {pandit.languages} · ⭐ {pandit.rating}
+                        {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() && (
+                          <span className="ml-2 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full text-[10px] font-bold">BOOSTED ({pandit.boostType})</span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      {editingFeesId === pandit.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={editFees}
+                            onChange={(e) => setEditFees(Number(e.target.value))}
+                            className="w-24 h-8 text-sm"
+                            data-testid={`input-edit-fees-${pandit.id}`}
+                          />
+                          <Button size="sm" className="bg-emerald-600 text-white" onClick={() => updateFeesMutation.mutate({ id: pandit.id, fees: editFees })} data-testid={`btn-save-fees-${pandit.id}`}>
+                            Save
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setEditingFeesId(null)} data-testid={`btn-cancel-fees-${pandit.id}`}>
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-right">
+                          <p className="font-bold text-foreground">₹{pandit.fees.toLocaleString()}</p>
+                          <button onClick={() => { setEditingFeesId(pandit.id); setEditFees(pandit.fees); }} className="text-xs text-secondary hover:underline" data-testid={`btn-edit-fees-${pandit.id}`}>
+                            Edit Fees
+                          </button>
+                        </div>
                       )}
-                    </p>
-                  </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    {editingFeesId === pandit.id ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          value={editFees}
-                          onChange={(e) => setEditFees(Number(e.target.value))}
-                          className="w-24 h-8 text-sm"
-                          data-testid={`input-edit-fees-${pandit.id}`}
-                        />
-                        <Button size="sm" className="bg-emerald-600 text-white" onClick={() => updateFeesMutation.mutate({ id: pandit.id, fees: editFees })} data-testid={`btn-save-fees-${pandit.id}`}>
-                          Save
+                      {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() ? (
+                        <Button size="sm" variant="outline" onClick={() => deactivateBoostMutation.mutate(pandit.id)} className="h-8 text-secondary border-secondary/30 text-xs gap-1" data-testid={`btn-deactivate-boost-${pandit.id}`}>
+                          Remove Boost
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditingFeesId(null)} data-testid={`btn-cancel-fees-${pandit.id}`}>
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-right">
-                        <p className="font-bold text-foreground">₹{pandit.fees.toLocaleString()}</p>
-                        <button onClick={() => { setEditingFeesId(pandit.id); setEditFees(pandit.fees); }} className="text-xs text-secondary hover:underline" data-testid={`btn-edit-fees-${pandit.id}`}>
-                          Edit Fees
-                        </button>
-                      </div>
-                    )}
+                      ) : (
+                        <select
+                          onChange={e => { if (e.target.value) { boostMutation.mutate({ id: pandit.id, boostType: e.target.value as "monthly" | "yearly" }); e.target.value = ""; } }}
+                          className="h-8 text-xs rounded-md border border-secondary/30 bg-secondary/5 text-secondary px-2"
+                          defaultValue=""
+                          data-testid={`select-boost-${pandit.id}`}
+                        >
+                          <option value="" disabled>Boost</option>
+                          <option value="monthly">Monthly ₹499</option>
+                          <option value="yearly">Yearly ₹3,999</option>
+                        </select>
+                      )}
 
-                    {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() ? (
-                      <Button size="sm" variant="outline" onClick={() => deactivateBoostMutation.mutate(pandit.id)} className="h-8 text-secondary border-secondary/30 text-xs gap-1" data-testid={`btn-deactivate-boost-${pandit.id}`}>
-                        Remove Boost
-                      </Button>
-                    ) : (
-                      <select
-                        onChange={e => { if (e.target.value) { boostMutation.mutate({ id: pandit.id, boostType: e.target.value as "monthly" | "yearly" }); e.target.value = ""; } }}
-                        className="h-8 text-xs rounded-md border border-secondary/30 bg-secondary/5 text-secondary px-2"
-                        defaultValue=""
-                        data-testid={`select-boost-${pandit.id}`}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isGeocoding}
+                        onClick={() => setLocationMutation.mutate(pandit.id)}
+                        className={`h-8 text-xs gap-1 ${hasGps ? "text-sky-600 border-sky-200" : "text-amber-600 border-amber-300"}`}
+                        title={hasGps ? `GPS: ${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)} — click to refresh` : "Auto-detect coordinates from city"}
+                        data-testid={`btn-set-location-${pandit.id}`}
                       >
-                        <option value="" disabled>Boost</option>
-                        <option value="monthly">Monthly ₹499</option>
-                        <option value="yearly">Yearly ₹3,999</option>
-                      </select>
-                    )}
+                        <LocateFixed className={`w-3 h-3 ${isGeocoding ? "animate-spin" : ""}`} />
+                        {isGeocoding ? "Locating…" : hasGps ? "Re-locate" : "Set Location"}
+                      </Button>
 
-                    {pandit.verified && (
-                      <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="h-8 text-primary border-primary/30 text-xs gap-1" data-testid={`btn-edit-pandit-${pandit.id}`}>
-                        <Edit className="w-3 h-3" /> Edit
-                      </Button>
-                    )}
+                      {pandit.verified && (
+                        <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="h-8 text-primary border-primary/30 text-xs gap-1" data-testid={`btn-edit-pandit-${pandit.id}`}>
+                          <Edit className="w-3 h-3" /> Edit
+                        </Button>
+                      )}
 
-                    {pandit.verified ? (
-                      <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="h-8 text-orange-600 border-orange-200 text-xs gap-1" data-testid={`btn-delist-pandit-${pandit.id}`}>
-                        Delist
+                      {pandit.verified ? (
+                        <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="h-8 text-orange-600 border-orange-200 text-xs gap-1" data-testid={`btn-delist-pandit-${pandit.id}`}>
+                          Delist
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => approveMutation.mutate(pandit.id)} className="bg-emerald-600 text-white h-8 gap-1 text-xs" data-testid={`btn-approve-pandit-${pandit.id}`}>
+                          <CheckCircle className="w-3 h-3" /> Approve
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pandit.id)} className="h-8 text-red-500" data-testid={`btn-delete-pandit-${pandit.id}`}>
+                        <XCircle className="w-4 h-4" />
                       </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => approveMutation.mutate(pandit.id)} className="bg-emerald-600 text-white h-8 gap-1 text-xs" data-testid={`btn-approve-pandit-${pandit.id}`}>
-                        <CheckCircle className="w-3 h-3" /> Approve
-                      </Button>
-                    )}
-                    <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pandit.id)} className="h-8 text-red-500" data-testid={`btn-delete-pandit-${pandit.id}`}>
-                      <XCircle className="w-4 h-4" />
-                    </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
           {(pandits || []).length === 0 && (
             <p className="text-center text-muted-foreground py-8">No pandits registered.</p>
           )}
@@ -239,8 +311,9 @@ function PanditsTab() {
 // ============================================================
 function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
-  const [form, setForm] = useState<Partial<Pandit>>({});
+  const [form, setForm] = useState<Partial<Pandit & { latitude: number | null; longitude: number | null }>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
 
   const handlePhotoUpload = async (file: File) => {
@@ -266,6 +339,23 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
     setUploadingPhoto(false);
   };
 
+  const handleAutoDetectLocation = async () => {
+    const city = form.city || pandit?.city;
+    if (!city) {
+      toast({ title: "No City", description: "Enter a city name first.", variant: "destructive" });
+      return;
+    }
+    setGeocoding(true);
+    const coords = await geocodeCity(city);
+    setGeocoding(false);
+    if (!coords) {
+      toast({ title: "Not Found", description: `Could not find coordinates for "${city}". Try a more specific city name.`, variant: "destructive" });
+      return;
+    }
+    setForm(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
+    toast({ title: "Location Found", description: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} — save to apply.` });
+  };
+
   useEffect(() => {
     if (pandit) {
       setForm({
@@ -283,6 +373,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         serviceArea: pandit.serviceArea ?? "",
         regionalOrigin: pandit.regionalOrigin ?? "",
         availability: pandit.availability ?? "available",
+        latitude: (pandit.latitude as number | null) ?? null,
+        longitude: (pandit.longitude as number | null) ?? null,
       });
     }
   }, [pandit]);
@@ -305,6 +397,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         serviceArea: form.serviceArea || null,
         regionalOrigin: form.regionalOrigin || null,
         availability: form.availability || "available",
+        latitude: form.latitude != null ? Number(form.latitude) : null,
+        longitude: form.longitude != null ? Number(form.longitude) : null,
       };
       const res = await fetch(`/api/pandits/${pandit.id}`, {
         method: "PATCH",
@@ -324,7 +418,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
     onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  const update = (k: keyof Pandit, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+  const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+  const hasGps = form.latitude != null && form.longitude != null;
 
   return (
     <Dialog open={!!pandit} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -346,6 +441,50 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
             <div>
               <Label htmlFor="edit-pandit-service-area">Service Area</Label>
               <Input id="edit-pandit-service-area" value={form.serviceArea ?? ""} onChange={e => update("serviceArea", e.target.value)} data-testid="input-edit-pandit-service-area" />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label className="flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-sky-600" />
+                GPS Coordinates
+                {hasGps && (
+                  <span className="text-[10px] px-2 py-0.5 bg-sky-100 text-sky-700 rounded-full font-medium">Set</span>
+                )}
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Latitude (e.g. 28.6139)"
+                  type="number"
+                  step="any"
+                  value={form.latitude ?? ""}
+                  onChange={e => update("latitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                  className="flex-1"
+                  data-testid="input-edit-pandit-latitude"
+                />
+                <Input
+                  placeholder="Longitude (e.g. 77.2090)"
+                  type="number"
+                  step="any"
+                  value={form.longitude ?? ""}
+                  onChange={e => update("longitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                  className="flex-1"
+                  data-testid="input-edit-pandit-longitude"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={geocoding}
+                  onClick={handleAutoDetectLocation}
+                  className="shrink-0 gap-1.5 text-sky-600 border-sky-300 hover:bg-sky-50"
+                  data-testid="btn-auto-detect-location"
+                >
+                  <LocateFixed className={`w-4 h-4 ${geocoding ? "animate-spin" : ""}`} />
+                  {geocoding ? "Detecting…" : "Auto-detect"}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Auto-detect fills coordinates from the city name via OpenStreetMap. Or enter manually.
+              </p>
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="edit-pandit-specialization">Specialization / Services</Label>
@@ -459,6 +598,5 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
     </Dialog>
   );
 }
-
 
 export default PanditsTab;
