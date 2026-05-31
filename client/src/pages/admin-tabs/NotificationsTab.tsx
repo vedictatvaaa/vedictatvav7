@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Settings, BellRing, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, RefreshCw, FileText, Send } from "lucide-react";
+import { Settings, BellRing, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, RefreshCw, FileText, Send, Zap, ChevronDown, ChevronUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -16,6 +16,203 @@ import { useToast } from "@/hooks/use-toast";
 import type { Pandit, Order } from "@shared/schema";
 
 import { createFetcher } from "../admin-shared";
+
+// ============================================================
+// Quick Test Bar
+// ============================================================
+
+type ChannelResult = { ok: boolean; reason?: string };
+type TestResults = { sms?: ChannelResult; whatsapp?: ChannelResult; email?: ChannelResult };
+
+function QuickTestBar({ adminToken }: { adminToken?: string }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState(() => localStorage.getItem("qt_phone") || "");
+  const [email, setEmail] = useState(() => localStorage.getItem("qt_email") || "");
+  const [sending, setSending] = useState<"all" | "email" | "sms_wa" | null>(null);
+  const [results, setResults] = useState<TestResults | null>(null);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { localStorage.setItem("qt_phone", phone); }, [phone]);
+  useEffect(() => { localStorage.setItem("qt_email", email); }, [email]);
+
+  const clearResultsAfter = (ms: number) => {
+    if (clearTimer.current) clearTimeout(clearTimer.current);
+    clearTimer.current = setTimeout(() => setResults(null), ms);
+  };
+
+  const fire = async (mode: "all" | "email" | "sms_wa") => {
+    const p = phone.trim();
+    const e = email.trim();
+    if (mode === "email" && !e) { toast({ title: "Enter an email address first", variant: "destructive" }); return; }
+    if (mode === "sms_wa" && !p) { toast({ title: "Enter a mobile number first", variant: "destructive" }); return; }
+    if (mode === "all" && !p && !e) { toast({ title: "Enter a phone or email first", variant: "destructive" }); return; }
+
+    setSending(mode);
+    setResults(null);
+    try {
+      const body: any = {};
+      if (mode === "email") { body.email = e; }
+      else if (mode === "sms_wa") { body.phone = p; }
+      else { if (p) body.phone = p; if (e) body.email = e; }
+
+      const res = await fetch("/api/admin/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || "Test failed");
+      setResults(json.results ?? {});
+      clearResultsAfter(30_000);
+    } catch (err: any) {
+      toast({ title: "Test failed", description: err?.message || String(err), variant: "destructive" });
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const ResultBadge = ({ label, r }: { label: string; r?: ChannelResult }) => {
+    if (!r) return null;
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${r.ok ? "bg-emerald-50 border-emerald-300 text-emerald-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+        {r.ok ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+        {label}{!r.ok && r.reason ? `: ${r.reason.slice(0, 40)}` : ""}
+      </span>
+    );
+  };
+
+  const anyResult = results && (results.sms || results.whatsapp || results.email);
+
+  return (
+    <Card className="border-primary/30 bg-primary/5" data-testid="card-quick-test">
+      <CardContent className="py-3">
+        <button
+          className="w-full flex items-center justify-between gap-3 text-left"
+          onClick={() => setOpen(v => !v)}
+          data-testid="button-toggle-quick-test"
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            <span className="font-semibold text-primary text-sm">Quick Channel Test</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">— verify SendGrid &amp; MSG91 with one click</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {anyResult && !open && (
+              <div className="flex gap-1">
+                <ResultBadge label="Email" r={results?.email} />
+                <ResultBadge label="SMS" r={results?.sms} />
+                <ResultBadge label="WA" r={results?.whatsapp} />
+              </div>
+            )}
+            {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          </div>
+        </button>
+
+        {open && (
+          <div className="mt-4 space-y-4" data-testid="quick-test-panel">
+            {/* Inputs */}
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="qt-phone" className="text-xs uppercase tracking-wide text-secondary mb-1 block">
+                  <Phone className="w-3 h-3 inline mr-1" />Mobile (SMS &amp; WhatsApp)
+                </Label>
+                <Input
+                  id="qt-phone"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="9999911111"
+                  data-testid="input-qt-phone"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Saved automatically for next time.</p>
+              </div>
+              <div>
+                <Label htmlFor="qt-email" className="text-xs uppercase tracking-wide text-secondary mb-1 block">
+                  <Mail className="w-3 h-3 inline mr-1" />Email
+                </Label>
+                <Input
+                  id="qt-email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="admin@vedictatva.com"
+                  data-testid="input-qt-email"
+                />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => fire("all")}
+                disabled={!!sending}
+                data-testid="button-qt-all"
+              >
+                {sending === "all" ? "Sending…" : <><Zap className="w-3.5 h-3.5 mr-1" />Test All Channels</>}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fire("email")}
+                disabled={!!sending}
+                data-testid="button-qt-email"
+              >
+                {sending === "email" ? "Sending…" : <><Mail className="w-3.5 h-3.5 mr-1" />Email only</>}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => fire("sms_wa")}
+                disabled={!!sending}
+                data-testid="button-qt-sms"
+              >
+                {sending === "sms_wa" ? "Sending…" : <><Phone className="w-3.5 h-3.5 mr-1" />SMS &amp; WhatsApp</>}
+              </Button>
+              {anyResult && (
+                <Button size="sm" variant="ghost" onClick={() => setResults(null)} data-testid="button-qt-clear">
+                  Clear results
+                </Button>
+              )}
+            </div>
+
+            {/* Results */}
+            {anyResult && (
+              <div className="grid sm:grid-cols-3 gap-2" data-testid="qt-results">
+                {(["email", "sms", "whatsapp"] as const).map(ch => {
+                  const r = results?.[ch];
+                  if (!r) return null;
+                  return (
+                    <div
+                      key={ch}
+                      className={`rounded-lg border p-3 ${r.ok ? "border-emerald-300 bg-emerald-50" : "border-red-200 bg-red-50"}`}
+                      data-testid={`qt-result-${ch}`}
+                    >
+                      <div className="flex items-center gap-1.5 text-sm font-semibold capitalize mb-1">
+                        {r.ok
+                          ? <CheckCircle className="w-4 h-4 text-emerald-700" />
+                          : <XCircle className="w-4 h-4 text-red-700" />}
+                        {ch === "sms" ? "SMS" : ch === "whatsapp" ? "WhatsApp" : "Email"}
+                      </div>
+                      <p className={`text-xs ${r.ok ? "text-emerald-800" : "text-red-800"}`}>
+                        {r.ok ? "Delivered successfully ✓" : r.reason || "Failed"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="text-[11px] text-muted-foreground">
+              Sends a sample &ldquo;new puja booking&rdquo; notification to the numbers above using your configured MSG91 and SendGrid credentials.
+              Results auto-clear after 30 seconds.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // ============================================================
 interface NotificationsStatus {
@@ -104,6 +301,8 @@ function NotificationsTab({ adminToken }: { adminToken?: string }) {
           <RefreshCw className="w-4 h-4 mr-1" /> Refresh status
         </Button>
       </div>
+
+      <QuickTestBar adminToken={adminToken} />
 
       {isLoading || !data ? (
         <Skeleton className="h-40 w-full" />
