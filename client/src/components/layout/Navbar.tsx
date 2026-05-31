@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Search, User, Menu, X, ChevronRight, Sunrise, Sunset, Moon, Star, Calendar, LogIn, UserPlus, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
+import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogIn, UserPlus, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useI18n, languages, type Language } from "@/lib/i18n";
-import CurrencySelector from "@/components/CurrencySelector";
+import { useCurrency, listCurrencies } from "@/lib/currency";
 import { getProductUrl } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 import { MotifSVG, useFestivalTheme } from "@/components/festival/FestivalDecor";
@@ -186,6 +186,7 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const { user, logout, openAuth } = useAuth();
   const { t, language, setLanguage } = useI18n();
+  const { currency, setCurrency } = useCurrency();
   // Switch the i18n locale AND navigate between EN <-> /hi twin URLs so the
   // browser URL and locale state stay consistent (required for proper hreflang
   // pairing). Uses a hard navigation to remount the LocaleScope wrapper.
@@ -208,6 +209,7 @@ export default function Navbar() {
   const [langOpen, setLangOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const localeRef = useRef<HTMLDivElement>(null);
   const DELIVERY_CITIES = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Varanasi", "Gaya", "Haridwar", "Other"];
   const [deliveryCity, setDeliveryCity] = useState<string>(() => {
     if (typeof window === "undefined") return "Mumbai";
@@ -659,49 +661,6 @@ export default function Navbar() {
                         );
                       })}
                     </div>
-                    {/* Language sub-section (nested under account) */}
-                    {(() => {
-                      const currentLang = languages.find((l) => l.code === language) || languages[0];
-                      return (
-                        <div className="border-t border-[#D4AF37]/10">
-                          <button
-                            type="button"
-                            onClick={() => setLangOpen(!langOpen)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60 transition-all duration-200 min-h-[44px]"
-                            data-testid="btn-account-language"
-                            aria-expanded={langOpen}
-                          >
-                            <span className="flex items-center gap-2.5 min-w-0">
-                              <Globe className="h-4 w-4 text-[#6D2B35]/40 shrink-0" />
-                              <span>Language</span>
-                              <span className="text-[10px] text-[#5a4a3a]/50 truncate">· {currentLang.flag} {currentLang.nativeLabel}</span>
-                            </span>
-                            <ChevronRight className={`h-3.5 w-3.5 opacity-30 transition-transform shrink-0 ${langOpen ? "rotate-90" : ""}`} />
-                          </button>
-                          {langOpen && (
-                            <div className="bg-[#FBF7EE]/60 border-t border-[#D4AF37]/10 max-h-56 overflow-y-auto" data-testid="account-language-list">
-                              {languages.map((lang) => (
-                                <button
-                                  key={lang.code}
-                                  type="button"
-                                  onClick={() => { switchLanguageWithUrl(lang.code); setLangOpen(false); setAccountOpen(false); }}
-                                  className={`w-full flex items-center gap-3 pl-10 pr-4 py-2 text-xs transition-colors ${
-                                    language === lang.code
-                                      ? "text-[#6D2B35] bg-[#F5F0E6] font-semibold"
-                                      : "text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60"
-                                  }`}
-                                  data-testid={`lang-${lang.code}`}
-                                >
-                                  <span className="text-base">{lang.flag}</span>
-                                  <span>{lang.nativeLabel}</span>
-                                  {language === lang.code && <span className="ml-auto text-[#D4AF37]">✦</span>}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
 
                     {user && (
                       <div className="border-t border-[#D4AF37]/10">
@@ -719,6 +678,90 @@ export default function Navbar() {
                 </>
               )}
             </div>
+
+            {/* ── Flag Pill — Language + Currency combined (desktop only) ── */}
+            {(() => {
+              const currentLang = languages.find((l) => l.code === language) || languages[0];
+              return (
+                <div className="relative hidden md:block" ref={localeRef}>
+                  <button
+                    type="button"
+                    onClick={() => { setLangOpen(!langOpen); setAccountOpen(false); setSearchOpen(false); }}
+                    className={`h-8 px-2.5 flex items-center gap-1.5 rounded-full border transition-all duration-200 text-[11px] font-semibold ${
+                      langOpen
+                        ? "border-[#D4AF37]/50 bg-[#FBF7EE] text-[#6D2B35] shadow-sm"
+                        : "border-[#D4AF37]/20 bg-[#F5F0E6]/60 text-[#5a4a3a]/80 hover:border-[#D4AF37]/40 hover:bg-[#FBF7EE] hover:text-[#6D2B35]"
+                    }`}
+                    data-testid="btn-locale-pill"
+                    aria-label="Language and currency"
+                    aria-expanded={langOpen}
+                  >
+                    <span className="text-[13px] leading-none">{currentLang.flag}</span>
+                    <span className="tracking-wide">{currency}</span>
+                    <ChevronDown className={`h-2.5 w-2.5 opacity-50 transition-transform duration-200 ${langOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                  </button>
+
+                  {langOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setLangOpen(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-[#D4AF37]/15 overflow-hidden z-50" data-testid="locale-popover">
+                        <div className="h-0.5 w-full" style={{ background: "linear-gradient(90deg, #D4AF37, #f5d76e, #D4AF37)" }} />
+
+                        {/* Language section */}
+                        <div className="p-3">
+                          <p className="text-[9px] uppercase tracking-[0.22em] font-bold text-[#D4AF37] mb-2 px-1">Language</p>
+                          <div className="grid grid-cols-2 gap-1">
+                            {languages.map((lang) => (
+                              <button
+                                key={lang.code}
+                                type="button"
+                                onClick={() => { switchLanguageWithUrl(lang.code); setLangOpen(false); }}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11.5px] transition-colors text-left ${
+                                  language === lang.code
+                                    ? "bg-[#6D2B35] text-white font-semibold"
+                                    : "text-[#5a4a3a]/80 hover:bg-[#F5F0E6] hover:text-[#6D2B35]"
+                                }`}
+                                data-testid={`locale-lang-${lang.code}`}
+                              >
+                                <span className="text-base leading-none">{lang.flag}</span>
+                                <span className="truncate">{lang.nativeLabel}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="h-px mx-3 bg-[#D4AF37]/10" />
+
+                        {/* Currency section */}
+                        <div className="p-3">
+                          <p className="text-[9px] uppercase tracking-[0.22em] font-bold text-[#D4AF37] mb-2 px-1">Display Currency</p>
+                          <div className="grid grid-cols-2 gap-1">
+                            {listCurrencies().map((c) => (
+                              <button
+                                key={c.code}
+                                type="button"
+                                onClick={() => { setCurrency(c.code); setLangOpen(false); }}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11.5px] transition-colors text-left ${
+                                  currency === c.code
+                                    ? "bg-[#6D2B35] text-white font-semibold"
+                                    : "text-[#5a4a3a]/80 hover:bg-[#F5F0E6] hover:text-[#6D2B35]"
+                                }`}
+                                data-testid={`locale-currency-${c.code}`}
+                              >
+                                <span className="text-base leading-none">{c.flag}</span>
+                                <span className="font-mono tracking-wide">{c.code}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[9px] text-[#5a4a3a]/40 mt-2 px-1 leading-snug">Display only · payments in INR</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             <Link href="/cart">
               <button
