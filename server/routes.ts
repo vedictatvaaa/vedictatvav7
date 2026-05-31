@@ -3391,6 +3391,27 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
+  // Image library — list already-uploaded images in uploads/hero/ so the
+  // admin can pick an existing image without re-uploading.
+  app.get("/api/admin/hero-slides/library", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const heroDir = path.join(uploadsDir, "hero");
+      if (!fs.existsSync(heroDir)) return res.json({ images: [] });
+      const files = fs.readdirSync(heroDir)
+        .filter(f => /\.(jpe?g|png|webp|gif|avif)$/i.test(f))
+        .map(f => ({
+          filename: f,
+          url: `/uploads/hero/${f}`,
+          sizeBytes: (() => { try { return fs.statSync(path.join(heroDir, f)).size; } catch { return 0; } })(),
+          mtime: (() => { try { return fs.statSync(path.join(heroDir, f)).mtimeMs; } catch { return 0; } })(),
+        }))
+        .sort((a, b) => b.mtime - a.mtime);
+      res.json({ images: files });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Library read failed" });
+    }
+  });
+
   // ---- Social Proof Settings ----
   app.get("/api/social-proof/settings", async (_req, res) => {
     const settings = await storage.getSocialProofSettings();
