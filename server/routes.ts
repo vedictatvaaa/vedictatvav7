@@ -2386,8 +2386,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       // free: nearby only — within 20 km of user GPS.
       if (cityLc && (!p.city || !p.city.toLowerCase().includes(cityLc))) return false;
       if (!hasUserGps || p.latitude == null || p.longitude == null || distanceKm == null) {
-        // No way to verify proximity — only show free pandits when client passes GPS
-        return false;
+        // GPS check not possible (user hasn't shared location, or pandit has no coordinates).
+        // Fall back to city-match visibility so newly approved pandits without GPS
+        // coordinates are still discoverable — the city filter was already applied above.
+        return true;
       }
       return distanceKm <= 20;
     }
