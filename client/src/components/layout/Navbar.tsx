@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogIn, UserPlus, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
@@ -546,23 +547,24 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* ── Command-palette overlay (portal-style, full page) ── */}
-          {moreOpen && (
+          {/* palette rendered via portal so fixed positioning escapes the nav's backdrop-filter stacking context */}
+          {moreOpen && typeof document !== "undefined" && createPortal(
             <>
-              {/* Backdrop */}
+              {/* Backdrop — click anywhere outside palette to close */}
               <div
-                className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-[2px]"
-                onClick={() => setMoreOpen(false)}
+                className="fixed inset-0 z-[200] bg-black/25 backdrop-blur-[2px]"
+                onClick={() => { setMoreOpen(false); setPaletteQuery(""); }}
               />
               {/* Palette panel */}
               <div
-                className="fixed left-1/2 top-[72px] -translate-x-1/2 z-[61] w-full"
+                className="fixed left-1/2 top-[72px] -translate-x-1/2 z-[201] w-full"
                 style={{ maxWidth: "min(640px, calc(100vw - 32px))" }}
                 data-testid="nav-more-palette"
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(109,43,53,0.18)] border border-[#D4AF37]/20 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-[0_24px_64px_rgba(109,43,53,0.20)] border border-[#D4AF37]/20 flex flex-col" style={{ maxHeight: "min(75vh, 560px)" }}>
                   {/* Search bar */}
-                  <div className="flex items-center gap-3 px-4 py-3 border-b border-[#D4AF37]/10">
+                  <div className="flex items-center gap-3 px-4 py-3 border-b border-[#D4AF37]/10 shrink-0">
                     <Search className="h-4 w-4 text-[#5a4a3a]/40 shrink-0" />
                     <input
                       autoFocus
@@ -576,8 +578,8 @@ export default function Navbar() {
                     <kbd className="hidden sm:flex items-center gap-0.5 text-[9px] font-mono text-[#5a4a3a]/30 border border-[#5a4a3a]/15 rounded px-1.5 py-0.5">ESC</kbd>
                   </div>
 
-                  {/* Sections */}
-                  <div className="max-h-[60vh] overflow-y-auto p-3 space-y-4">
+                  {/* Sections — scrollable, Lenis disabled inside */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4" data-lenis-prevent>
                     {navSections.map((section) => {
                       const filtered = section.items.filter((item) =>
                         !paletteQuery || item.label.toLowerCase().includes(paletteQuery.toLowerCase())
@@ -628,7 +630,7 @@ export default function Navbar() {
                   </div>
 
                   {/* Footer */}
-                  <div className="border-t border-[#D4AF37]/10 px-4 py-2.5 flex items-center justify-between bg-[#faf7f2]/80">
+                  <div className="border-t border-[#D4AF37]/10 px-4 py-2.5 flex items-center justify-between bg-[#faf7f2]/80 rounded-b-2xl shrink-0">
                     <span className="text-[10px] text-[#5a4a3a]/40">✦ {navSections.reduce((s, sec) => s + sec.items.length, 0)} destinations</span>
                     <Link
                       href="/membership"
@@ -641,7 +643,8 @@ export default function Navbar() {
                   </div>
                 </div>
               </div>
-            </>
+            </>,
+            document.body
           )}
 
           <div className="flex items-center gap-0.5">

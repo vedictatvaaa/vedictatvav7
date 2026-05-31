@@ -520,7 +520,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
         </header>
 
         {/* Tab content */}
-        <div ref={contentScrollRef} className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8">
+        <div ref={contentScrollRef} className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8" data-lenis-prevent>
           <div key={activeTab} className="max-w-6xl animate-in fade-in duration-200">
             <Suspense fallback={fallback}>
               {activeTab === "dashboard" && <DashboardTab setActiveTab={setActiveTab} />}
