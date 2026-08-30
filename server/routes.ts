@@ -2694,6 +2694,34 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Pandits ----
+  // Public city chooser — only cities with currently bookable pandits.
+  // Keep this derived from the same approved/on-leave fields used by the
+  // public directory so the chooser never advertises an unavailable city.
+  app.get("/api/pandit-cities", async (_req, res) => {
+    try {
+      const allPandits = await storage.getPandits();
+      const byCity = new Map<string, { name: string; count: number }>();
+      for (const pandit of allPandits) {
+        if (!pandit.verified || pandit.onLeave || !pandit.city?.trim()) continue;
+        const name = pandit.city.trim();
+        const key = name.toLowerCase();
+        const existing = byCity.get(key);
+        if (existing) existing.count += 1;
+        else byCity.set(key, { name, count: 1 });
+      }
+      const cities = Array.from(byCity.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((city) => ({
+          ...city,
+          slug: city.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+        }));
+      res.json(cities);
+    } catch (error: any) {
+      console.error("[pandit-cities] failed:", error?.message || error);
+      res.status(500).json({ message: "Failed to load available cities" });
+    }
+  });
+
   app.get("/api/book-pandit-online", async (req, res) => {
     const city = req.query.city as string | undefined;
     const state = req.query.state as string | undefined;
