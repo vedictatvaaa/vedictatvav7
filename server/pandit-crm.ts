@@ -9,14 +9,14 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import Razorpay from "razorpay";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const writeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: any) => `${req.panditId || "anon"}:${req.ip}`,
+  keyGenerator: (req: any) => `${req.panditId || "anon"}:${ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown")}`,
 });
 
 const memoryUpdateSchema = insertPanditClientMemorySchema.partial().omit({ panditId: true });
