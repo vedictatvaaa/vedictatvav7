@@ -51,6 +51,14 @@ export async function resolveLocation(stateId: number, cityId: number, activeOnl
   return row;
 }
 
+export async function resolveCityLocation(cityId: number, activeOnly = true) {
+  const clauses = [eq(indianCities.id, cityId)];
+  if (activeOnly) clauses.push(eq(indianCities.isActive, true), eq(indianStates.isActive, true));
+  const [row] = await db.select({ state: indianStates, city: indianCities }).from(indianCities)
+    .innerJoin(indianStates, eq(indianCities.stateId, indianStates.id)).where(and(...clauses));
+  return row;
+}
+
 export async function resolveLocationName(cityName: string, stateName?: string | null) {
   const wanted = normalized(cityName);
   const rows = await db.select({ state: indianStates, city: indianCities }).from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id));

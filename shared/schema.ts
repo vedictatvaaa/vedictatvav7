@@ -277,6 +277,7 @@ export const pandits = pgTable("pandits", {
   cityId: integer("city_id").references(() => indianCities.id),
   // Keeps the submitted legacy value when a row is normalized to a master city.
   originalCity: text("original_city"),
+  originalState: text("original_state"),
   locationReviewStatus: text("location_review_status").default("needs_review"),
   // Pandit storefronts (Phase 2 affiliate program):
   // commission % the pandit earns on referred shop product orders.
@@ -325,6 +326,7 @@ export const panditApplications = pgTable("pandit_applications", {
   stateId: integer("state_id").references(() => indianStates.id),
   cityId: integer("city_id").references(() => indianCities.id),
   originalCity: text("original_city"),
+  originalState: text("original_state"),
   locationReviewStatus: text("location_review_status").default("needs_review"),
   serviceArea: text("service_area"),
   regionalOrigin: text("regional_origin"),

@@ -26,6 +26,7 @@ COPY script ./script
 COPY attached_assets ./attached_assets
 COPY uploads ./uploads
 COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
+COPY migrations ./migrations
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
@@ -47,6 +48,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/client/public ./client/public
 COPY --from=builder /app/attached_assets ./attached_assets

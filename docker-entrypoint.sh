@@ -40,6 +40,16 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
+# Apply committed, idempotent migrations before startup. This makes location
+# schema changes explicit and repeatable on existing Coolify databases.
+if compgen -G "/app/migrations/*.sql" >/dev/null; then
+  echo "[entrypoint] Applying committed SQL migrations…"
+  for migration in /app/migrations/*.sql; do
+    echo "[entrypoint] Applying $(basename "$migration")"
+    psql "$PG_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+  done
+fi
+
 # Apply schema (additive changes only — destructive changes need manual db:push)
 if [ "${SKIP_DB_PUSH:-0}" = "1" ]; then
   echo "[entrypoint] SKIP_DB_PUSH=1 — skipping drizzle-kit push."

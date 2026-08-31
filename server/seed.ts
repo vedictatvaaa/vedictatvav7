@@ -203,8 +203,8 @@ async function backfillPanditLocations() {
     for (const row of rows) {
       const match = await resolveLocationName(row.city, row.state);
       const patch = match
-        ? { stateId: match.state.id, cityId: match.city.id, state: match.state.name, city: match.city.name, originalCity: row.city, locationReviewStatus: "resolved" }
-        : { originalCity: row.city, locationReviewStatus: "needs_review" };
+        ? { stateId: match.state.id, cityId: match.city.id, state: match.state.name, city: match.city.name, originalCity: row.city, originalState: row.state, locationReviewStatus: "resolved" }
+        : { originalCity: row.city, originalState: row.state, locationReviewStatus: "needs_review" };
       await db.update(table).set(patch).where(eq(table.id, row.id));
     }
   };

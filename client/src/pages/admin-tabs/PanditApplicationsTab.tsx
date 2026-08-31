@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { useToast } from "@/hooks/use-toast";
 import type { Pandit, PanditApplication } from "@shared/schema";
@@ -106,6 +107,8 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   };
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [adminNote, setAdminNote] = useState("");
+  const [resolutionStateId, setResolutionStateId] = useState("");
+  const [resolutionCityId, setResolutionCityId] = useState("");
   const [sortKey, setSortKey] = useState<"createdAt" | "fullName" | "city" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -125,10 +128,42 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     queryFn: () => fetcher(`/api/admin/pandit-applications/${selectedId}`),
     enabled: selectedId !== null,
   });
+  const { data: locations = [] } = useQuery<Array<{
+    id: number;
+    name: string;
+    isActive: boolean;
+    cities: Array<{ id: number; name: string; isActive: boolean }>;
+  }>>({
+    queryKey: ["/api/admin/locations"],
+    queryFn: () => fetcher("/api/admin/locations"),
+  });
 
   useEffect(() => {
-    if (selected) setAdminNote(selected.adminNote || "");
+    if (selected) {
+      setAdminNote(selected.adminNote || "");
+      setResolutionStateId(selected.stateId ? String(selected.stateId) : "");
+      setResolutionCityId(selected.cityId ? String(selected.cityId) : "");
+    }
   }, [selected]);
+
+  const locationMutation = useMutation({
+    mutationFn: async ({ id, stateId, cityId }: { id: number; stateId: number; cityId: number }) => {
+      const res = await fetch(`/api/admin/pandit-applications/${id}/location`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+        body: JSON.stringify({ stateId, cityId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as any).message || "Location update failed");
+      return body;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/locations"] });
+      toast({ title: "Location resolved", description: "The application can now be approved." });
+    },
+    onError: (error: Error) => toast({ title: "Location update failed", description: error.message, variant: "destructive" }),
+  });
 
   const decisionMutation = useMutation({
     mutationFn: async ({ id, action, note }: { id: number; action: "approve" | "reject"; note: string }) => {
@@ -339,6 +374,49 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                   <DetailField label="Certificates" value={selected.certificates} />
                 </div>
 
+                {(selected.locationReviewStatus !== "resolved" || !selected.stateId || !selected.cityId) && selected.status === "pending" && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="location-resolution-panel">
+                    <div className="flex items-start gap-2 text-amber-900">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium">Location needs review</p>
+                        <p className="text-xs">Choose one canonical State and City before approving this application. The original value is preserved.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Select value={resolutionStateId} onValueChange={(value) => { setResolutionStateId(value); setResolutionCityId(""); }}>
+                        <SelectTrigger data-testid="select-resolution-state"><SelectValue placeholder="Select State" /></SelectTrigger>
+                        <SelectContent>
+                          {locations.filter((state) => state.isActive).map((state) => (
+                            <SelectItem key={state.id} value={String(state.id)}>{state.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={resolutionCityId} disabled={!resolutionStateId} onValueChange={setResolutionCityId}>
+                        <SelectTrigger data-testid="select-resolution-city"><SelectValue placeholder={resolutionStateId ? "Select City" : "Select State first"} /></SelectTrigger>
+                        <SelectContent>
+                          {locations.find((state) => String(state.id) === resolutionStateId)?.cities
+                            .filter((city) => city.isActive)
+                            .map((city) => <SelectItem key={city.id} value={String(city.id)}>{city.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!resolutionStateId || !resolutionCityId || locationMutation.isPending}
+                      onClick={() => locationMutation.mutate({
+                        id: selected.id,
+                        stateId: Number(resolutionStateId),
+                        cityId: Number(resolutionCityId),
+                      })}
+                      data-testid="btn-resolve-application-location"
+                    >
+                      {locationMutation.isPending ? "Saving…" : "Save canonical location"}
+                    </Button>
+                  </div>
+                )}
+
                 <DetailField label="Puja Types" value={selected.pujaTypes} block />
                 <DetailField label="Bio" value={selected.bio} block />
 
@@ -432,7 +510,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                           </Button>
                           <Button
                             onClick={() => decisionMutation.mutate({ id: selected.id, action: "approve", note: adminNote })}
-                            disabled={decisionMutation.isPending}
+                             disabled={decisionMutation.isPending || selected.locationReviewStatus !== "resolved" || !selected.stateId || !selected.cityId}
                             data-testid="btn-approve"
                             className="bg-primary text-white"
                           >

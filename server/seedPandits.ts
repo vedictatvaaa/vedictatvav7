@@ -161,8 +161,8 @@ export async function seedPanditProfiles() {
     const location = await resolveLocationName(p.city);
     const locationFields = location ? {
       city: location.city.name, state: location.state.name, stateId: location.state.id,
-      cityId: location.city.id, originalCity: p.city, locationReviewStatus: "resolved",
-    } : { originalCity: p.city, locationReviewStatus: "needs_review" };
+      cityId: location.city.id, originalCity: p.city, originalState: p.state, locationReviewStatus: "resolved",
+    } : { originalCity: p.city, originalState: p.state, locationReviewStatus: "needs_review" };
     // Match by slug first, then fall back to legacy hardcoded rows that have no slug
     let [existing] = await db.select().from(pandits).where(eq(pandits.slug, p.slug));
     if (!existing) {
