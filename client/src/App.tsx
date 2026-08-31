@@ -118,7 +118,23 @@ import { lazy, Suspense } from "react";
 import NotFound from "@/pages/not-found";
 const Home = lazy(() => import("@/pages/home"));
 const LocalLanding = lazy(() => import("@/pages/local-landing"));
-const AdminLogin = lazy(() => import("@/pages/admin-login"));
+const ADMIN_CHUNK_RELOAD_KEY = "vt-admin-entry-chunk-reload";
+function lazyAdminEntry<T extends React.ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+) {
+  return lazy(() => loader().catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const isChunkLoadError = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed|mime type/i.test(message);
+    const alreadyReloaded = typeof window !== "undefined" && sessionStorage.getItem(ADMIN_CHUNK_RELOAD_KEY) === "1";
+    if (isChunkLoadError && !alreadyReloaded && typeof window !== "undefined") {
+      try { sessionStorage.setItem(ADMIN_CHUNK_RELOAD_KEY, "1"); } catch {}
+      window.location.reload();
+      return new Promise<{ default: T }>(() => {});
+    }
+    throw error;
+  }));
+}
+const AdminLogin = lazyAdminEntry(() => import("@/pages/admin-login"));
 const Shop = lazy(() => import("@/pages/shop"));
 const PanditDirectory = lazy(() => import("@/pages/pandit-directory"));
 const PanditCityLanding = lazy(() => import("@/pages/pandit-city-landing"));
@@ -126,7 +142,7 @@ const PanditCityPujaLanding = lazy(() => import("@/pages/pandit-city-puja-landin
 const PujaBooking = lazy(() => import("@/pages/puja-booking"));
 const Astrology = lazy(() => import("@/pages/astrology"));
 const Experience = lazy(() => import("@/pages/experience"));
-const Admin = lazy(() => import("@/pages/admin"));
+const Admin = lazyAdminEntry(() => import("@/pages/admin"));
 const SpiritualEssentials = lazy(() => import("@/pages/spiritual-essentials"));
 const FestivalLanding = lazy(() => import("@/pages/festival"));
 const PujaKitPage = lazy(() => import("@/pages/puja-kit"));

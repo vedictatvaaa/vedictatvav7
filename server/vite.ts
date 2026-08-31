@@ -35,6 +35,14 @@ export async function setupVite(server: Server, app: Express) {
     const url = req.originalUrl;
 
     try {
+      // Never turn a missing JavaScript/CSS chunk into index.html. Browsers
+      // reject the HTML response as a module because it has text/html MIME
+      // type, which commonly happens when an admin tab is open across a
+      // deployment and requests an old Vite hash.
+      if (/\.(?:js|mjs|cjs|css|map|json|wasm)$/i.test(req.path)) {
+        return res.status(404).type("text/plain").send("Asset not found");
+      }
+
       const clientTemplate = path.resolve(
         import.meta.dirname,
         "..",

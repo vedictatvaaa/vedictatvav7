@@ -57,7 +57,7 @@ function safeLazy<T extends ComponentType<any>>(
       },
       (err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        const isChunkLoadError = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed/i.test(msg);
+        const isChunkLoadError = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed|mime type|JavaScript module script/i.test(msg);
         const alreadyReloaded = typeof sessionStorage !== "undefined" && sessionStorage.getItem(RELOAD_GUARD_KEY) === "1";
         if (isChunkLoadError && !alreadyReloaded && typeof window !== "undefined") {
           try { sessionStorage.setItem(RELOAD_GUARD_KEY, "1"); } catch {}
