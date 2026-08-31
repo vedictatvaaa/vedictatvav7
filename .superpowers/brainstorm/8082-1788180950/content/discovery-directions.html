@@ -1,0 +1,92 @@
+<h2>Choose the discovery experience</h2>
+<p class="subtitle">All three use only eligible, database-backed Pandits and preserve the existing booking flow. Click a direction to select it.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:18px;background:#fffaf0">
+      <div style="font:700 18px Georgia;color:#5b2516;margin-bottom:12px">What service do you need?</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:12px">
+        <div style="padding:9px;border:1px solid #f2c990;border-radius:10px;background:white">Griha Pravesh</div>
+        <div style="padding:9px;border:1px solid #f2c990;border-radius:10px;background:white">Wedding Puja</div>
+        <div style="padding:9px;border:1px solid #f2c990;border-radius:10px;background:white">Satyanarayan</div>
+        <div style="padding:9px;border:1px solid #f2c990;border-radius:10px;background:white">View all services</div>
+      </div>
+      <div style="display:flex;gap:7px">
+        <div style="flex:1;padding:10px;border:1px solid #ddd;border-radius:9px;color:#777">Search city</div>
+        <div style="padding:10px 14px;background:#b54b24;color:white;border-radius:9px">Near me</div>
+      </div>
+      <div style="margin-top:10px;color:#8b5a3c;font-size:12px">or Browse by State →</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Service-first guided</h3>
+      <p>Fastest for users who know the ritual but not where to start. Service stays selected through State and City.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="border:2px solid #b54b24">
+    <div class="card-image" style="padding:18px;background:#fffaf0">
+      <div style="font:700 18px Georgia;color:#5b2516;margin-bottom:5px">Find the right Pandit</div>
+      <div style="font-size:12px;color:#8b6b59;margin-bottom:12px">Choose a service, city, or use your location</div>
+      <div style="display:flex;gap:7px;margin-bottom:12px">
+        <div style="flex:1;padding:10px;border:1px solid #d7c7bc;border-radius:9px;background:white;color:#777">Search city or State</div>
+        <div style="padding:10px 13px;background:#b54b24;color:white;border-radius:9px">Near me</div>
+      </div>
+      <div style="display:flex;gap:6px;overflow:hidden;margin-bottom:12px">
+        <div style="white-space:nowrap;padding:8px 10px;border-radius:999px;background:#ffe8cb">Griha Pravesh</div>
+        <div style="white-space:nowrap;padding:8px 10px;border-radius:999px;background:white;border:1px solid #ead6c9">Wedding</div>
+        <div style="white-space:nowrap;padding:8px 10px;border-radius:999px;background:white;border:1px solid #ead6c9">Pind Daan</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+        <div style="padding:9px;background:white;border-radius:9px">Maharashtra <b style="float:right">24</b></div>
+        <div style="padding:9px;background:white;border-radius:9px">Karnataka <b style="float:right">18</b></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Balanced progressive <span style="font-size:11px;color:#b54b24">(recommended)</span></h3>
+      <p>Equal emphasis on service, search, State browsing, and real Near Me. Clearest fit for the brief across desktop and mobile.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:18px;background:#fffaf0">
+      <div style="font:700 18px Georgia;color:#5b2516;margin-bottom:12px">Pandits near Pune</div>
+      <div style="height:74px;border-radius:10px;background:linear-gradient(135deg,#e8dcc3,#cbd6c3);display:flex;align-items:center;justify-content:center;color:#56705b;margin-bottom:10px">Map + 12 eligible Pandits</div>
+      <div style="padding:10px;background:white;border-radius:10px;margin-bottom:7px">
+        <b>Pt. Rajesh Sharma</b><span style="float:right;color:#b54b24">2.4 km</span><br>
+        <small>Griha Pravesh · Hindi, Marathi</small>
+      </div>
+      <div style="padding:10px;background:white;border-radius:10px">
+        <b>Acharya Vivek</b><span style="float:right;color:#b54b24">5.1 km</span><br>
+        <small>Wedding Puja · Hindi, Sanskrit</small>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Location-first marketplace</h3>
+      <p>Results and map dominate. Powerful once location is known, but heavier and less useful before users choose a place.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px">
+  <h3>Shared rules in every direction</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Included</h4>
+      <ul>
+        <li>URL-backed State → City → Pandit flow</li>
+        <li>Database-derived service and filter options</li>
+        <li>Real counts from discoverable Pandits only</li>
+        <li>Real GPS distance only; missing coordinates stay unranked</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Removed or corrected</h4>
+      <ul>
+        <li>Hardcoded filter vocabularies</li>
+        <li>Static map city centers</li>
+        <li>Fake “available today” claims</li>
+        <li>Internal tier and precise-coordinate exposure</li>
+      </ul>
+    </div>
+  </div>
+</div>
