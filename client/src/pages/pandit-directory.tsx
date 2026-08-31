@@ -28,6 +28,7 @@ const PANDIT_FAQS = [
 ];
 
 type PanditWithDistance = Pandit & { distance: number | null };
+type ActivePanditCity = { slug: string; name: string; count: number };
 
 const REGIONAL_ORIGINS = [
   { value: "", label: "All Traditions" },
@@ -60,16 +61,6 @@ const BOOKING_GUIDE = [
   "Choose a verified pandit by city, tradition, language, and price.",
   "See availability, ratings, and live/online options upfront.",
   "Book instantly with transparent pricing and support after checkout.",
-];
-
-const CITY_TILES: Array<{ slug: string; name: string; tagline: string; defaultCity: string; live: boolean; }> = [
-  { slug: "delhi-ncr", name: "Delhi NCR", tagline: "Verified Pandits — Live Now", defaultCity: "Delhi", live: true },
-  { slug: "mumbai", name: "Mumbai", tagline: "Coming Soon", defaultCity: "Mumbai", live: false },
-  { slug: "bangalore", name: "Bangalore", tagline: "Coming Soon", defaultCity: "Bangalore", live: false },
-  { slug: "chennai", name: "Chennai", tagline: "Coming Soon", defaultCity: "Chennai", live: false },
-  { slug: "kolkata", name: "Kolkata", tagline: "Coming Soon", defaultCity: "Kolkata", live: false },
-  { slug: "guwahati", name: "Guwahati", tagline: "Coming Soon", defaultCity: "Guwahati", live: false },
-  { slug: "lucknow", name: "Lucknow", tagline: "Coming Soon", defaultCity: "Lucknow", live: false },
 ];
 
 // Unified cinematic hero — full-bleed image with dark warm wash for text contrast (no opaque block).
@@ -121,51 +112,19 @@ function SlimHero({ eyebrow, title, subtitle, children }: { eyebrow: string; tit
 }
 
 function CityChooser() {
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
-  const [comingSoonCity, setComingSoonCity] = useState<string | null>(null);
-  const [notifyEmail, setNotifyEmail] = useState("");
-  const [notifySent, setNotifySent] = useState(false);
-
-  useEffect(() => {
-    if (!comingSoonCity) {
-      setNotifyEmail("");
-      setNotifySent(false);
-    }
-  }, [comingSoonCity]);
-
-  const [notifySubmitting, setNotifySubmitting] = useState(false);
-  const handleNotify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = notifyEmail.trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast({ title: "Please enter a valid email", variant: "destructive" });
-      return;
-    }
-    setNotifySubmitting(true);
-    try {
-      const r = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, language: "en" }),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok || data?.ok === false) {
-        toast({ title: "Couldn't add you to the list", description: data?.message || "Please try again in a moment.", variant: "destructive" });
-        return;
-      }
-      setNotifySent(true);
-      toast({
-        title: data?.alreadySubscribed
-          ? `You're already subscribed — we'll email you when ${comingSoonCity} goes live`
-          : `You're on the list — we'll email you when ${comingSoonCity} goes live`,
-      });
-    } catch {
-      toast({ title: "Network error", description: "Please check your connection and try again.", variant: "destructive" });
-    } finally {
-      setNotifySubmitting(false);
-    }
-  };
+  const {
+    data: activeCities = [],
+    isLoading: citiesLoading,
+    isError: citiesError,
+    refetch: refetchCities,
+  } = useQuery<ActivePanditCity[]>({
+    queryKey: ["/api/pandit-cities"],
+    queryFn: async () => {
+      const response = await fetch("/api/pandit-cities");
+      if (!response.ok) throw new Error("Failed to load active cities");
+      return response.json();
+    },
+  });
 
   return (
     <div className="w-full pb-20 bg-white">
@@ -234,55 +193,58 @@ function CityChooser() {
         {/* Section header */}
         <div className="text-center mb-6">
           <h2 className="font-serif text-2xl sm:text-3xl text-[#6D2B35] font-semibold mb-1 tracking-tight">Pick Your City</h2>
-          <p className="text-xs sm:text-sm text-[#5a4a3a]/60">Live in Delhi NCR today — more cities arriving soon.</p>
+          <p className="text-xs sm:text-sm text-[#5a4a3a]/60">Choose from cities with verified pandits available now.</p>
         </div>
 
         {/* City tiles — slim hairline grid */}
-        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-md overflow-hidden border border-[#D4AF37]/25">
-          {CITY_TILES.map((tile) => {
-            const Inner = (
-              <div
-                className={`relative bg-white p-5 sm:p-6 text-center h-full hover-elevate ${tile.live ? "" : "opacity-90"}`}
-                data-testid={`tile-city-${tile.slug}`}
+        {citiesLoading ? (
+          <div className="max-w-5xl mx-auto py-14 flex items-center justify-center gap-2 text-sm text-[#5a4a3a]/65">
+            <Loader2 className="w-5 h-5 animate-spin text-[#6D2B35]" />
+            Loading live cities…
+          </div>
+        ) : citiesError ? (
+          <div className="max-w-5xl mx-auto border border-red-200 bg-red-50 rounded-md p-6 text-center">
+            <p className="text-sm text-red-800 mb-3">We couldn't load the live city list.</p>
+            <Button variant="outline" onClick={() => refetchCities()} className="border-red-300 text-red-800">
+              Try Again
+            </Button>
+          </div>
+        ) : activeCities.length === 0 ? (
+          <div className="max-w-5xl mx-auto border border-[#D4AF37]/25 bg-[#FBF7EE] rounded-md p-8 text-center">
+            <p className="text-sm text-[#5a4a3a]/75">No verified pandits are currently available. Please check again shortly.</p>
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-md overflow-hidden border border-[#D4AF37]/25">
+            {activeCities.map((city) => (
+              <Link
+                key={city.slug}
+                href={`/book-pandit-online?city=${encodeURIComponent(city.name)}`}
+                className="block h-full"
               >
-                {!tile.live && (
-                  <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider bg-[#5a4a3a]/10 text-[#5a4a3a]/70 px-2 py-0.5 rounded-md font-semibold">
-                    Soon
-                  </span>
-                )}
-                {tile.live && (
-                  <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Live
-                  </span>
-                )}
-                <div className={`w-11 h-11 mx-auto mb-3 rounded-md flex items-center justify-center border ${tile.live ? "bg-[#6D2B35] border-[#6D2B35]" : "bg-[#FBF7EE] border-[#D4AF37]/25"}`}>
-                  <Building2 className={`w-5 h-5 ${tile.live ? "text-[#D4AF37]" : "text-[#5a4a3a]/50"}`} strokeWidth={1.5} />
+              <div
+                className="relative bg-white p-5 sm:p-6 text-center h-full hover-elevate"
+                data-testid={`tile-city-${city.slug}`}
+              >
+                <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Live
+                </span>
+                <div className="w-11 h-11 mx-auto mb-3 rounded-md flex items-center justify-center border bg-[#6D2B35] border-[#6D2B35]">
+                  <Building2 className="w-5 h-5 text-[#D4AF37]" strokeWidth={1.5} />
                 </div>
-                <h3 className={`font-serif font-semibold text-base sm:text-lg mb-0.5 ${tile.live ? "text-[#6D2B35]" : "text-[#5a4a3a]/70"}`}>
-                  {tile.name}
+                <h3 className="font-serif font-semibold text-base sm:text-lg mb-0.5 text-[#6D2B35]">
+                  {city.name}
                 </h3>
-                <p className={`text-[11px] ${tile.live ? "text-[#D4AF37]" : "text-[#5a4a3a]/50"} font-medium`}>
-                  {tile.tagline}
+                <p className="text-[11px] text-[#9A7218] font-medium">
+                  {city.count} verified {city.count === 1 ? "pandit" : "pandits"} available
                 </p>
               </div>
-            );
-            if (tile.live) {
-              return (
-                <Link key={tile.slug} href={`/book-pandit-online/${tile.slug}`} className="block h-full">
-                  {Inner}
-                </Link>
-              );
-            }
-            return (
-              <button key={tile.slug} type="button" onClick={() => setComingSoonCity(tile.name)} className="block h-full text-left">
-                {Inner}
-              </button>
-            );
-          })}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
 
         <p className="text-center text-xs text-[#5a4a3a]/55 mt-8 max-w-md mx-auto">
-          We're onboarding verified pandits city-by-city. Tap any "Coming Soon" city to be notified — or book an online puja today.
+          This list updates automatically as verified pandits become available in each city.
         </p>
 
         {/* Pind Daan CTA — slim maroon panel, no gradient */}
@@ -311,56 +273,6 @@ function CityChooser() {
         </div>
       </div>
 
-      <Dialog open={!!comingSoonCity} onOpenChange={(o) => !o && setComingSoonCity(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-[#6D2B35]">
-              Pandits in {comingSoonCity} — Arriving Soon
-            </DialogTitle>
-            <DialogDescription className="pt-1 text-sm">
-              We're onboarding verified pandits in {comingSoonCity} right now. In the meantime, you can book any puja online — our pandits perform the full ritual live, with photo-video proof and prasad couriered to your home anywhere in the world.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-[#FBF7EE] border border-[#D4AF37]/30 rounded-md p-4 mt-2 text-sm text-[#5a4a3a]/80 leading-relaxed">
-            <p className="mb-3">
-              <span className="font-semibold text-[#6D2B35]">Tip:</span> Online puja is identical in shastra to in-person puja — Sankalp is taken in your name and gotra, the merit accrues fully to you.
-            </p>
-            {notifySent ? (
-              <div className="flex items-center gap-2 text-[#6D2B35] font-semibold text-sm" data-testid="text-notify-success">
-                <Check className="w-4 h-4 text-emerald-700" /> You're on the list — we'll email you when {comingSoonCity} goes live.
-              </div>
-            ) : (
-              <form onSubmit={handleNotify} className="flex flex-col sm:flex-row gap-2 items-stretch">
-                <div className="relative flex-1">
-                  <BellRing className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5a4a3a]/50" />
-                  <Input
-                    type="email"
-                    inputMode="email"
-                    placeholder="your@email.com"
-                    value={notifyEmail}
-                    onChange={(e) => setNotifyEmail(e.target.value)}
-                    className="pl-9 bg-white border-[#D4AF37]/40 rounded-md h-10"
-                    aria-label={`Notify me when ${comingSoonCity} goes live`}
-                    data-testid="input-notify-email"
-                  />
-                </div>
-                <Button type="submit" variant="outline" disabled={notifySubmitting} className="rounded-md h-10 border-[#6D2B35]/30 text-[#6D2B35] font-semibold text-[13px]" data-testid="btn-notify-me">
-                  {notifySubmitting ? "Adding..." : "Notify Me"}
-                </Button>
-              </form>
-            )}
-          </div>
-          <DialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
-            <Button variant="outline" onClick={() => { setComingSoonCity(null); navigate("/book-pandit-online/delhi-ncr"); }} className="rounded-md h-10 text-[13px]" data-testid="btn-try-delhi">
-              Browse Delhi NCR Instead
-            </Button>
-            <Button onClick={() => { setComingSoonCity(null); navigate("/puja?mode=online"); }} className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] rounded-md h-10 text-[13px] font-semibold" data-testid="btn-book-online-from-city">
-              <Globe className="w-4 h-4 mr-2" /> Book Online Puja
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <BecomePanditBanner />
     </div>
   );
@@ -368,18 +280,10 @@ function CityChooser() {
 
 export default function PanditDirectory() {
   const searchString = useSearch();
-  const [, navigate] = useLocation();
   const cityParam = new URLSearchParams(searchString).get("city") || "";
-  const knownTile = CITY_TILES.find(c => c.slug === cityParam);
-
-  // Legacy URL ?city=<slug> → canonical /book-pandit-online/<slug> (avoid
-  // duplicate content with the per-city landing pages). Replace in history
-  // so back button doesn't re-bounce.
-  useEffect(() => {
-    if (knownTile) navigate(`/book-pandit-online/${knownTile.slug}`, { replace: true });
-  }, [knownTile, navigate]);
-
-  if (knownTile) return null;
+  if (cityParam) {
+    return <PanditDirectoryForCity defaultCity={cityParam} cityLabel={cityParam} />;
+  }
   return <CityChooser />;
 }
 

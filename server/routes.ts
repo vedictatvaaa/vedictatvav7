@@ -2694,6 +2694,44 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Pandits ----
+  app.get("/api/pandit-cities", async (_req, res) => {
+    try {
+      const allPandits = await storage.getPandits();
+      const cityCounts = new Map<string, { name: string; count: number }>();
+
+      for (const pandit of allPandits) {
+        if (!pandit.verified || pandit.onLeave) continue;
+        const name = pandit.city?.trim();
+        if (!name) continue;
+
+        const key = name.toLocaleLowerCase("en-IN");
+        const existing = cityCounts.get(key);
+        cityCounts.set(key, {
+          name: existing?.name || name,
+          count: (existing?.count || 0) + 1,
+        });
+      }
+
+      const cities = Array.from(cityCounts.values())
+        .map(({ name, count }) => ({
+          name,
+          count,
+          slug: name
+            .toLocaleLowerCase("en-IN")
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
+
+      res.json(cities);
+    } catch (error) {
+      console.error("pandit-cities error:", error);
+      res.status(500).json({ message: "Failed to load active pandit cities" });
+    }
+  });
+
   app.get("/api/book-pandit-online", async (req, res) => {
     const city = req.query.city as string | undefined;
     const state = req.query.state as string | undefined;
