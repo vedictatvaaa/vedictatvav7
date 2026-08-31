@@ -6,9 +6,17 @@ WORKDIR /app
 # Build deps for native modules (bcrypt, sharp, pg-native if used)
 RUN apk add --no-cache python3 make g++ libc6-compat
 
-# Install ALL deps (force development so devDeps are included even if NODE_ENV=production is injected by CI)
+# Coolify can inject NODE_ENV=production while building. Keep the builder
+# independent from that runtime setting: script/build.ts uses tsx, vite, and
+# esbuild from devDependencies.
+ENV NODE_ENV=development
+ENV NPM_CONFIG_PRODUCTION=false
+ENV npm_config_production=false
+
+# Install ALL deps explicitly. --include=dev wins over production/omit
+# settings supplied by the build environment.
 COPY package.json package-lock.json* ./
-RUN NODE_ENV=development npm ci --no-audit --no-fund
+RUN npm ci --include=dev --no-audit --no-fund
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
@@ -19,6 +27,9 @@ COPY attached_assets ./attached_assets
 COPY uploads ./uploads
 COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN test -x node_modules/.bin/tsx && \
+    test -x node_modules/.bin/vite && \
+    test -x node_modules/.bin/esbuild
 RUN npm run build
 
 # ---------- Stage 2: runtime ----------
