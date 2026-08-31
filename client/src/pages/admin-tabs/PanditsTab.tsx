@@ -46,7 +46,7 @@ function PanditsTab() {
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
   const [viewingPandit, setViewingPandit] = useState<Pandit | null>(null);
-  const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all");
+  const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all"); const [activeFilter, setActiveFilter] = useState("all"); const [qualityFilter, setQualityFilter] = useState("all");
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
   const [bulkGeocoding, setBulkGeocoding] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
@@ -56,7 +56,10 @@ function PanditsTab() {
     queryFn: () => fetcher("/api/book-pandit-online?all=true"),
   });
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>fetcher("/api/admin/locations") });
-  const visiblePandits = (pandits || []).filter((p:any) => (!search || `${p.name} ${p.city} ${p.specialization}`.toLowerCase().includes(search.toLowerCase())) && (!stateFilter || stateFilter === "all" || String(p.stateId) === stateFilter) && (!cityFilter || cityFilter === "all" || String(p.cityId) === cityFilter) && (verificationFilter === "all" || String(!!p.verified) === verificationFilter) && (availabilityFilter === "all" || p.availability === availabilityFilter));
+  type DiscoveryHealth = { total:number; verified:number; active:number; publiclyDiscoverable:number; missingState:number; missingCity:number; locationIssues:number; missingProfileData:number; issuePanditIds:number[] };
+  const { data: health } = useQuery<DiscoveryHealth>({ queryKey:["/api/admin/pandit-discovery/health"], queryFn:()=>fetcher("/api/admin/pandit-discovery/health") });
+  const issueIds = new Set(health?.issuePanditIds || []);
+  const visiblePandits = (pandits || []).filter((p:any) => (!search || `${p.name} ${p.city} ${p.specialization}`.toLowerCase().includes(search.toLowerCase())) && (!stateFilter || stateFilter === "all" || String(p.stateId) === stateFilter) && (!cityFilter || cityFilter === "all" || String(p.cityId) === cityFilter) && (verificationFilter === "all" || String(!!p.verified) === verificationFilter) && (availabilityFilter === "all" || p.availability === availabilityFilter) && (activeFilter === "all" || String(!p.onLeave) === activeFilter) && (qualityFilter === "all" || (qualityFilter === "issues" ? issueIds.has(p.id) : !issueIds.has(p.id))));
 
   const approveMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -67,15 +70,19 @@ function PanditsTab() {
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ verified: newVerified }),
       });
-      if (!res.ok) throw new Error("Update failed");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || "Update failed");
+      }
       return { ...await res.json(), newVerified };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-discovery/health"] });
       toast({ title: data.newVerified ? "Pandit Approved" : "Pandit Delisted", description: data.newVerified ? "Pandit is now live and visible." : "Pandit has been delisted from public view." });
     },
-    onError: () => toast({ title: "Error", description: "Failed to update pandit.", variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Pandit not updated", description: error.message, variant: "destructive" }),
   });
 
   const updateFeesMutation = useMutation({
@@ -238,7 +245,7 @@ function PanditsTab() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif text-primary" data-testid="page-title-pandits">Pandits</h1>
-          <p className="text-sm text-muted-foreground">Manage pandit registrations, approvals & boosts</p>
+          <p className="text-sm text-muted-foreground">Manage profiles, publishing eligibility, locations and discovery health.</p>
         </div>
         {noGpsCount > 0 && (
           <Button
@@ -256,12 +263,29 @@ function PanditsTab() {
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+      {health && <Card><CardContent className="p-4">
+        <div className="mb-3"><h2 className="font-serif text-xl text-primary">Pandit Discovery Health</h2><p className="text-xs text-muted-foreground">Admin-controlled data that determines public marketplace visibility.</p></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
+          {[
+            ["Verified", health.verified],
+            ["Active", health.active],
+            ["Discoverable", health.publiclyDiscoverable],
+            ["Missing State", health.missingState],
+            ["Missing City", health.missingCity],
+            ["Location Issues", health.locationIssues],
+            ["Missing Profile Data", health.missingProfileData],
+            ["Total", health.total],
+          ].map(([label, value]) => <div key={String(label)} className="rounded-lg border bg-muted/20 p-3"><div className="text-xl font-semibold text-primary">{value}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}
+        </div>
+      </CardContent></Card>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
         <Input placeholder="Search pandits…" value={search} onChange={e=>setSearch(e.target.value)} />
         <Select value={stateFilter} onValueChange={v=>{setStateFilter(v);setCityFilter("");}}><SelectTrigger><SelectValue placeholder="All states"/></SelectTrigger><SelectContent><SelectItem value="all">All states</SelectItem>{locations.map(s=><SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent></Select>
         <Select value={cityFilter} onValueChange={setCityFilter} disabled={!stateFilter || stateFilter === "all"}><SelectTrigger><SelectValue placeholder={stateFilter && stateFilter !== "all" ? "All cities" : "Select state first"}/></SelectTrigger><SelectContent><SelectItem value="all">All cities</SelectItem>{locations.find(s=>String(s.id)===stateFilter)?.cities.map(c=><SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent></Select>
         <Select value={verificationFilter} onValueChange={setVerificationFilter}><SelectTrigger><SelectValue placeholder="Verification"/></SelectTrigger><SelectContent><SelectItem value="all">All verification</SelectItem><SelectItem value="true">Verified</SelectItem><SelectItem value="false">Pending</SelectItem></SelectContent></Select>
+        <Select value={activeFilter} onValueChange={setActiveFilter}><SelectTrigger><SelectValue placeholder="Listing status"/></SelectTrigger><SelectContent><SelectItem value="all">All listing status</SelectItem><SelectItem value="true">Active</SelectItem><SelectItem value="false">On leave</SelectItem></SelectContent></Select>
         <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}><SelectTrigger><SelectValue placeholder="Availability"/></SelectTrigger><SelectContent><SelectItem value="all">All availability</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="busy">Busy</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent></Select>
+        <Select value={qualityFilter} onValueChange={setQualityFilter}><SelectTrigger><SelectValue placeholder="Data quality"/></SelectTrigger><SelectContent><SelectItem value="all">All data quality</SelectItem><SelectItem value="issues">Needs review</SelectItem><SelectItem value="clean">No detected issues</SelectItem></SelectContent></Select>
       </div>
       {bulkGeocoding && bulkProgress && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3">
@@ -444,6 +468,7 @@ function PanditsTab() {
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
           queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-discovery/health"] });
           setEditingPandit(null);
         }}
       />

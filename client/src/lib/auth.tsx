@@ -80,7 +80,7 @@ function clearStoredUser() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Omit<User, "password"> | null>(loadUser);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<AuthMode>("login");
   const pendingActionRef = useRef<(() => void) | null>(null);
@@ -102,6 +102,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearStoredUser();
     }
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/auth/session")
+      .then(async (res) => {
+        if (!active) return;
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+        setUser(await res.json());
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const openAuth = useCallback((mode: AuthMode = "login") => {
     setAuthModalMode(mode);
@@ -229,7 +249,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    setUser(null);
+  };
 
   const updateProfile = async (data: Partial<RegisterData>) => {
     if (!user) return;

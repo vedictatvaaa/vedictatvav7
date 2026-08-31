@@ -137,8 +137,7 @@ function lazyAdminEntry<T extends React.ComponentType<any>>(
 const AdminLogin = lazyAdminEntry(() => import("@/pages/admin-login"));
 const Shop = lazy(() => import("@/pages/shop"));
 const PanditDirectory = lazy(() => import("@/pages/pandit-directory"));
-const PanditCityLanding = lazy(() => import("@/pages/pandit-city-landing"));
-const PanditCityPujaLanding = lazy(() => import("@/pages/pandit-city-puja-landing"));
+const PanditCanonicalLocation = lazy(() => import("@/pages/pandit-canonical-location"));
 const PujaBooking = lazy(() => import("@/pages/puja-booking"));
 const Astrology = lazy(() => import("@/pages/astrology"));
 const Experience = lazy(() => import("@/pages/experience"));
@@ -761,11 +760,11 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/book-pandit-online" component={PanditDirectory} />
-          <Route path="/book-pandit-online/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
-          <Route path="/book-pandit-online/:citySlug" component={PanditCityLanding} />
+          <Route path="/book-pandit-online/:citySlug/:pujaSlug" component={PanditCanonicalLocation} />
+          <Route path="/book-pandit-online/:citySlug" component={PanditCanonicalLocation} />
           {/* Legacy /pandits/* kept as inert fallbacks; server 301s redirect hard nav. */}
-          <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCityPujaLanding} />
-          <Route path="/pandits/:citySlug" component={PanditCityLanding} />
+          <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCanonicalLocation} />
+          <Route path="/pandits/:citySlug" component={PanditCanonicalLocation} />
           <Route path="/online-pandit-booking" component={PanditDirectory} />
           {/* Canonical puja-booking URL is /online-puja-booking. Any
               client-side nav to legacy /puja is redirected; hard nav is

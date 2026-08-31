@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { bookingContextParams } from "@/lib/puja-service-map";
 import type { Pandit, PanditReview, PanditChat } from "@shared/schema";
 
 export default function PanditProfile() {
@@ -378,7 +379,7 @@ export default function PanditProfile() {
                   className="w-full bg-[#6D2B35] hover:bg-[#5a2430] text-white rounded-md h-10 text-[13px] font-semibold gap-1.5"
                   data-testid="btn-book-pandit"
                   onClick={() => requireAuth(
-                    () => setLocation(`/puja?pandit=${pandit.id}`),
+                    () => setLocation(`/online-puja-booking?${bookingContextParams(typeof window !== "undefined" ? window.location.search : "", pandit.id)}`),
                     { title: "Sign in to book", description: "Please sign in to book this pandit" }
                   )}
                 >

@@ -23,6 +23,10 @@ function hasGtm(): boolean {
 
 function emit(eventName: string, params: Record<string, any>) {
   try {
+    const scalarParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)),
+    );
+    (window as any).umami?.track(eventName, scalarParams);
     // Prefer direct gtag for GA4 setups; fall back to dataLayer only when
     // GTM is the active tag container (GTM ingests events via dataLayer).
     const g = getGtag();
@@ -40,6 +44,10 @@ function emit(eventName: string, params: Record<string, any>) {
   } catch {
     /* analytics must never break the app */
   }
+}
+
+export function trackDiscoveryEvent(action: string, data: Record<string, string | number | boolean> = {}) {
+  emit("pandit_discovery", { action, ...data });
 }
 
 function toGtagItem(p: Product, quantity: number, variant?: string) {

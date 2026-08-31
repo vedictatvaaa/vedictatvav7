@@ -1,305 +1,118 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { optImg, optImgSrcSet, SIZES } from "@/lib/optImg";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Star, Languages, Award, Search, Crown, ChevronDown, ChevronRight, ArrowUpDown, MessageSquare, X, Loader2, Send, Clock, Sparkles, ExternalLink, Navigation, Filter, ShieldCheck, Heart as HeartIcon, Globe, Video, ArrowRight, Building2, Flame, BellRing, Check, IndianRupee, MessageCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { RelatedServicesSection } from "@/components/RelatedServices";
-import PageAPlusContent from "@/components/PageAPlusContent";
-import PageSeo from "@/components/PageSeo";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Building2, Compass, MapPin, Search, Sparkles, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
-import type { Pandit, PanditReview } from "@shared/schema";
-
-const PANDIT_DIR_H1 = "Book a Verified Vedic Pandit Near You — Same-Day Puja, Transparent Pricing";
-
-const PANDIT_FAQS = [
-  { q: "How do I book a pandit online?", a: "Browse verified pandits by city and ceremony, pick your preferred shubh muhurat date, and complete booking with secure payment. Confirmation arrives within minutes — usually with a WhatsApp message from your pandit." },
-  { q: "Are the pandits really verified?", a: "Yes. Every pandit on Vedic Tatva is identity-verified (Aadhaar + photo), scripture-trained (Veda / Karmakand certification), and rated by past clients. We display their experience, languages, and ceremony specialisations transparently." },
-  { q: "Can I book a pandit for same-day puja?", a: "Yes. Many pandits accept same-day bookings subject to availability. Use the 'Available Today' filter on the listing to instantly see pandits free for booking right now." },
-  { q: "What ceremonies do your pandits perform?", a: "Satyanarayan Puja, Griha Pravesh, Wedding (Vivah), Mundan, Namkaran, Rudrabhishek, Navagraha Shanti, Shradh, Vastu Shanti, Ganesh Puja, Lakshmi Puja, Saraswati Puja, Kaal Sarp Dosh Nivaran and 50+ other ceremonies." },
-  { q: "Will the pandit bring the puja samagri?", a: "You can choose to add a complete pre-checked samagri kit to your booking at checkout — delivered to your home before the puja. Or arrange your own using the checklist we share." },
-  { q: "What about dakshina? Is it included in the fee?", a: "The booking fee covers the pandit's professional services. Dakshina (a traditional offering) is given separately as per your wish — we share suggested ranges based on the ceremony." },
-  { q: "Can the pandit perform puja in my language?", a: "Yes. Filter pandits by language — Sanskrit, Hindi, Marathi, Tamil, Telugu, Kannada, Malayalam, Bengali, Gujarati, Punjabi, Odia and more — to ensure the rituals are explained in your preferred tongue." },
-  { q: "What if I need to reschedule or cancel?", a: "Free rescheduling up to 24 hours before the ceremony. Cancellations get a full refund up to 48 hours prior. Read our refund policy for full details." },
-];
-
-type PanditWithDistance = Pandit & { distance: number | null };
-type ActivePanditCity = { id: number; slug: string; name: string; count: number; stateId: number; stateName: string; stateCode: string };
-
-const REGIONAL_ORIGINS = [
-  { value: "", label: "All Traditions" },
-  { value: "Bengali", label: "Bengali" },
-  { value: "Bihari", label: "Bihari" },
-  { value: "Marwari", label: "Marwari" },
-  { value: "South Indian", label: "South Indian" },
-  { value: "Maharashtrian", label: "Maharashtrian" },
-  { value: "Gujarati", label: "Gujarati" },
-  { value: "Kashmiri", label: "Kashmiri" },
-  { value: "Odia", label: "Odia" },
-  { value: "UP", label: "UP / Awadhi" },
-  { value: "Punjabi", label: "Punjabi" },
-  { value: "Nepali", label: "Nepali" },
-];
-
-const BOOST_PLANS = [
-  { type: "monthly" as const, label: "Monthly Boost", price: 499, duration: "30 days", savings: "" },
-  { type: "yearly" as const, label: "Yearly Boost", price: 3999, duration: "365 days", savings: "Save 33%" },
-];
-
-const TRUST_SIGNALS = [
-  "Verified documents",
-  "Scripture-trained",
-  "Fast response",
-  "WhatsApp support",
-];
-
-const BOOKING_GUIDE = [
-  "Choose a verified pandit by city, tradition, language, and price.",
-  "See availability, ratings, and live/online options upfront.",
-  "Book instantly with transparent pricing and support after checkout.",
-];
-
-// Unified cinematic hero — full-bleed image with dark warm wash for text contrast (no opaque block).
-function SlimHero({ eyebrow, title, subtitle, children }: { eyebrow: string; title: string; subtitle?: string; children?: React.ReactNode }) {
-  return (
-    <div className="relative overflow-hidden bg-[#1a0a0e] border-b border-[#D4AF37]/30">
-      <img
-        src={optImg("/attached_assets/heroes/hero-scene-pandit.png", 1080) || "/attached_assets/heroes/hero-scene-pandit.png"}
-        srcSet={optImgSrcSet("/attached_assets/heroes/hero-scene-pandit.png", [320, 480, 768, 1080, 1440])}
-        sizes={SIZES.hero}
-        alt="Verified Vedic pandit performing havan with sacred fire and marigold petals"
-        className="absolute inset-0 w-full h-full object-cover object-[70%_center]"
-        loading="eager"
-        fetchPriority="high"
-        decoding="async"
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#1a0a0e]/85 via-[#1a0a0e]/55 to-[#1a0a0e]/15" aria-hidden="true" />
-      <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#1a0a0e]/65 to-transparent" aria-hidden="true" />
-      <div className="relative container mx-auto px-4 py-7 sm:py-10 md:py-14 text-center max-w-3xl">
-        <div className="flex items-center justify-center gap-2 mb-2.5">
-          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/70" />
-          <span
-            className="inline-flex items-center gap-1.5 text-[9px] sm:text-[11px] uppercase tracking-[0.28em] sm:tracking-[0.3em] text-[#D4AF37] font-semibold"
-            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.55)" }}
-          >
-            <Sparkles className="w-3 h-3" /> {eyebrow}
-          </span>
-          <span className="h-px w-6 sm:w-8 bg-[#D4AF37]/70" />
-        </div>
-        <h1
-          className="text-[19px] leading-[1.2] sm:text-2xl md:text-3xl lg:text-4xl font-serif text-white mb-2 sm:mb-3 font-semibold tracking-tight"
-          style={{ textShadow: "0 2px 18px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.5)" }}
-          data-testid="text-pandit-title"
-        >
-          {title}
-        </h1>
-        {subtitle && (
-          <p
-            className="text-white/90 text-[13px] sm:text-sm md:text-[15px] leading-snug sm:leading-relaxed max-w-xl mx-auto"
-            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.6)" }}
-          >
-            {subtitle}
-          </p>
-        )}
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function CityChooser() {
-  const {
-    data: activeCities = [],
-    isLoading: citiesLoading,
-    isError: citiesError,
-    refetch: refetchCities,
-  } = useQuery<ActivePanditCity[]>({
-    queryKey: ["/api/pandit-cities"],
-    queryFn: async () => {
-      const response = await fetch("/api/pandit-cities");
-      if (!response.ok) throw new Error("Failed to load active cities");
-      return response.json();
-    },
-  });
-
-  return (
-    <div className="w-full pb-20 bg-white">
-      <PageSeo
-        title="Book a Verified Vedic Pandit Online — Same-Day Puja Booking | Vedic Tatva"
-        description="Book a verified Vedic pandit online for Satyanarayan Puja, Griha Pravesh, Wedding, Rudrabhishek, Mundan, Namkaran, Navagraha Shanti and 50+ ceremonies across Delhi NCR, Mumbai, Bengaluru, Pune, Chennai, Kolkata, Hyderabad and 75+ Indian cities. Same-day booking, transparent dakshina, multi-language pandits (Sanskrit, Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada). 100% identity-verified, scripture-trained Brahmin pandits."
-        keywords="book pandit online, pandit near me, verified pandit booking, brahmin pandit, satyanarayan puja pandit, griha pravesh pandit, wedding pandit, rudrabhishek pandit, mundan pandit, namkaran pandit, navagraha shanti, same-day pandit, sanskrit pandit, hindi pandit, tamil pandit, marathi pandit, telugu pandit, bengali pandit, gujarati pandit, pandit in delhi, pandit in mumbai, pandit in bangalore, pandit in pune, pandit in chennai, pandit in hyderabad, pandit in kolkata"
-        canonical="/online-pandit-booking"
-        ogType="website"
-        twitterCard="summary_large_image"
-        schemas={[
-          breadcrumbListSchema([
-            { name: "Home", url: abs("/") },
-            { name: "Verified Pandits", url: abs("/book-pandit-online") },
-          ]),
-          faqPageSchema(PANDIT_FAQS.map(f => ({ question: f.q, answer: f.a })), "pandit-dir-faq"),
-          serviceSchema({
-            name: "Verified Vedic Pandit Booking",
-            description: "Book identity-verified, scripture-trained Vedic pandits across 75+ Indian cities for Satyanarayan, Griha Pravesh, Wedding, Rudrabhishek and 50+ ceremonies. Same-day booking, transparent pricing, multi-language support.",
-            url: abs("/book-pandit-online"),
-            providerName: "Vedic Tatva",
-            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
-          }),
-        ]}
-      />
-      <nav aria-label="Breadcrumb" className="bg-[#FBF7EE] border-b border-[#D4AF37]/15">
-        <ol className="container mx-auto px-4 py-1.5 flex items-center gap-1 text-[11px] sm:text-[12px] text-[#5a4a3a]/75">
-          <li><Link href="/" className="hover:text-[#6D2B35]" data-testid="link-breadcrumb-home">Home</Link></li>
-          <li aria-hidden="true"><ChevronRight className="w-3 h-3 inline" /></li>
-          <li aria-current="page" className="text-[#6D2B35] font-semibold">Verified Pandits</li>
-        </ol>
-      </nav>
-      <SlimHero
-        eyebrow="Verified Pandit Bookings"
-        title={PANDIT_DIR_H1}
-        subtitle="Choose your city to see verified, local Tirth Purohits and Karmakandi Brahmins for every ritual."
-      >
-        <p className="text-white/50 text-xs mt-2">
-          Don't see your city? You can still book any puja online — performed live by our pandits.
-        </p>
-      </SlimHero>
-
-      <div className="container mx-auto px-4 mt-10">
-        {/* Online Puja CTA — slim cream panel */}
-        <div className="max-w-5xl mx-auto bg-[#FBF7EE] border border-[#D4AF37]/30 rounded-md p-5 sm:p-6 mb-10">
-          <div className="flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-            <div className="w-12 h-12 shrink-0 rounded-md bg-[#6D2B35] flex items-center justify-center">
-              <Video className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.6} />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-serif text-lg sm:text-xl text-[#6D2B35] font-semibold mb-1">
-                Online Puja — Live, From Anywhere in the World
-              </h3>
-              <p className="text-sm text-[#5a4a3a]/75 leading-relaxed">
-                Live Sankalp via video call, full vidhi performed by verified pandits at the temple, photo-video proof and prasad couriered to your home. Available worldwide — book in any city.
-              </p>
-            </div>
-            <Link href="/puja?mode=online">
-              <Button className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] rounded-md h-10 px-5 text-[13px] font-semibold shrink-0" data-testid="btn-online-puja-cta-cities">
-                <Globe className="w-4 h-4 mr-2" /> Book Online Puja
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Section header */}
-        <div className="text-center mb-6">
-          <h2 className="font-serif text-2xl sm:text-3xl text-[#6D2B35] font-semibold mb-1 tracking-tight">Pick Your City</h2>
-          <p className="text-xs sm:text-sm text-[#5a4a3a]/60">Choose from cities with verified pandits available now.</p>
-        </div>
-
-        {/* City tiles — slim hairline grid */}
-        {citiesLoading ? (
-          <div className="max-w-5xl mx-auto py-14 flex items-center justify-center gap-2 text-sm text-[#5a4a3a]/65">
-            <Loader2 className="w-5 h-5 animate-spin text-[#6D2B35]" />
-            Loading live cities…
-          </div>
-        ) : citiesError ? (
-          <div className="max-w-5xl mx-auto border border-red-200 bg-red-50 rounded-md p-6 text-center">
-            <p className="text-sm text-red-800 mb-3">We couldn't load the live city list.</p>
-            <Button variant="outline" onClick={() => refetchCities()} className="border-red-300 text-red-800">
-              Try Again
-            </Button>
-          </div>
-        ) : activeCities.length === 0 ? (
-          <div className="max-w-5xl mx-auto border border-[#D4AF37]/25 bg-[#FBF7EE] rounded-md p-8 text-center">
-            <p className="text-sm text-[#5a4a3a]/75">No verified pandits are currently available. Please check again shortly.</p>
-          </div>
-        ) : (
-          <div className="max-w-5xl mx-auto space-y-7">
-            {Object.entries(activeCities.reduce<Record<string, ActivePanditCity[]>>((groups, city) => { (groups[city.stateName] ||= []).push(city); return groups; }, {})).map(([stateName, cities]) => (<section key={stateName}>
-              <h3 className="font-serif text-lg text-[#6D2B35] mb-2">{stateName}</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-md overflow-hidden border border-[#D4AF37]/25">
-            {cities.map((city) => (
-              <Link
-                key={city.id}
-                href={`/book-pandit-online?city=${encodeURIComponent(city.name)}&cityId=${city.id}`}
-                className="block h-full"
-              >
-              <div
-                className="relative bg-white p-5 sm:p-6 text-center h-full hover-elevate"
-                data-testid={`tile-city-${city.slug}`}
-              >
-                <span className="absolute top-2 right-2 text-[9px] uppercase tracking-wider bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" /> Live
-                </span>
-                <div className="w-11 h-11 mx-auto mb-3 rounded-md flex items-center justify-center border bg-[#6D2B35] border-[#6D2B35]">
-                  <Building2 className="w-5 h-5 text-[#D4AF37]" strokeWidth={1.5} />
-                </div>
-                <h3 className="font-serif font-semibold text-base sm:text-lg mb-0.5 text-[#6D2B35]">
-                  {city.name}
-                </h3>
-                <p className="text-[11px] text-[#9A7218] font-medium">
-                  {city.count} verified {city.count === 1 ? "pandit" : "pandits"} available
-                </p>
-              </div>
-              </Link>
-            ))}
-              </div></section>))}
-          </div>
-        )}
-
-        <p className="text-center text-xs text-[#5a4a3a]/55 mt-8 max-w-md mx-auto">
-          This list updates automatically as verified pandits become available in each city.
-        </p>
-
-        {/* Pind Daan CTA — slim maroon panel, no gradient */}
-        <div className="max-w-5xl mx-auto mt-12">
-          <Link href="/pind-daan-booking" className="block group" data-testid="link-pind-daan-cta">
-            <div className="rounded-md border border-[#D4AF37]/30 bg-[#6D2B35] p-6 sm:p-7 hover-elevate">
-              <div className="flex flex-col md:flex-row md:items-center gap-5">
-                <div className="w-12 h-12 shrink-0 rounded-md bg-[#D4AF37]/15 border border-[#D4AF37]/40 flex items-center justify-center">
-                  <Flame className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.6} />
-                </div>
-                <div className="flex-1">
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-[#D4AF37] font-semibold">Pitru Seva — Sacred Ancestor Rites</span>
-                  <h3 className="font-serif text-lg sm:text-xl text-white font-semibold mt-1 mb-1.5">
-                    Pind Daan, Tarpan &amp; Shradh — at Kashi, Gaya, Haridwar
-                  </h3>
-                  <p className="text-sm text-white/75 leading-relaxed max-w-2xl">
-                    Honour your ancestors at the holiest tirthas of Bharat — performed by verified Tirth Purohits with full shastric vidhi, bookable from anywhere in the world.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#D4AF37] shrink-0 self-start md:self-center">
-                  Explore Services <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      <BecomePanditBanner />
-    </div>
-  );
-}
-
-export default function PanditDirectory() {
-  const searchString = useSearch();
-  const cityParam = new URLSearchParams(searchString).get("city") || "";
-  const cityId = new URLSearchParams(searchString).get("cityId") || "";
-  if (cityParam) {
-    return <PanditDirectoryForCity defaultCity={cityParam} cityLabel={cityParam} cityId={cityId} />;
-  }
-  return <CityChooser />;
-}
-
-// Listing view extracted to its own component (advanced features:
-// smart filters, online status, compare, map, AI puja recommender,
-// trust signals, sticky CTAs).
+import PageSeo from "@/components/PageSeo";
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
 import { BecomePanditBanner, BecomePanditStrip } from "@/components/pandit/BecomePanditBanner";
+import { trackDiscoveryEvent } from "@/lib/analytics";
 
-function PanditDirectoryForCity({ defaultCity, cityLabel, cityId }: { defaultCity: string; cityLabel: string; cityId?: string }) {
-  return <PanditDirectoryView defaultCity={defaultCity} cityLabel={cityLabel} cityId={cityId} />;
+type City = { id: number; name: string; slug: string; count: number };
+type State = { id: number; name: string; code: string; slug: string; count: number; stateWideCount: number; cityCount: number; cities: City[] };
+type Summary = { states: State[]; facets: { services: string[]; languages: string[]; traditions: string[] } };
+
+const linkFor = (state: State, city?: City, service?: string) => {
+  const q = new URLSearchParams({ stateId: String(state.id), state: state.slug });
+  if (city) { q.set("cityId", String(city.id)); q.set("city", city.slug); }
+  if (service) q.set("service", service);
+  return `/book-pandit-online?${q}`;
+};
+
+export default function PanditDirectory() {
+  const search = new URLSearchParams(useSearch());
+  const stateId = search.get("stateId") || "";
+  const cityId = search.get("cityId") || "";
+  const mode = search.get("mode") || "";
+  const scope = search.get("scope") || "";
+  const service = search.get("service") || "";
+  const [, setLocation] = useLocation();
+  const { data, isLoading, isError, refetch } = useQuery<Summary>({
+    queryKey: ["/api/pandit-discovery", service],
+    queryFn: async () => { const r = await fetch(`/api/pandit-discovery${service ? `?service=${encodeURIComponent(service)}` : ""}`); if (!r.ok) throw new Error("Unable to load discovery"); return r.json(); },
+  });
+  const state = data?.states.find((s) => String(s.id) === stateId || s.slug === search.get("state"));
+  const city = state?.cities.find((c) => String(c.id) === cityId || c.slug === search.get("city"));
+  if (isLoading && (stateId || cityId)) {
+    return <div className="min-h-[60vh] bg-[#F5F0E6] px-5 py-20"><Skeleton className="mx-auto h-72 max-w-5xl bg-[#E9DEC9]" /></div>;
+  }
+  if ((stateId && !state) || (cityId && !city)) {
+    return <main className="min-h-[70vh] bg-[#F5F0E6] px-5 py-20 text-center text-[#2B1115]"><h1 className="font-serif text-3xl text-[#6D2B35]">Location not available</h1><p className="mt-3 text-[#5a4a3a]/70">This State or City is inactive, invalid, or has no eligible Pandits.</p><Button className="mt-6 bg-[#6D2B35]" onClick={() => setLocation("/book-pandit-online")}>Browse active locations</Button></main>;
+  }
+  if (mode === "nearMe" || city || (state && scope === "state")) {
+    return <PanditDirectoryView stateId={state?.id} cityId={city?.id} cityLabel={city?.name} stateLabel={state?.name} stateSlug={state?.slug} cityOptions={state?.cities} mode={mode === "nearMe" ? "nearMe" : city ? "city" : "state"} service={service} facetOptions={data?.facets} />;
+  }
+  if (state) {
+    return <StateChooser state={state} service={service} onNavigate={setLocation} />;
+  }
+  return <DiscoveryHome data={data} selectedService={service} isLoading={isLoading} isError={isError} retry={refetch} onNavigate={setLocation} />;
 }
 
+function StateChooser({ state, service, onNavigate }: { state: State; service?: string; onNavigate: (path: string) => void }) {
+  const stateWide = new URLSearchParams({ stateId: String(state.id), state: state.slug, scope: "state" });
+  if (service) stateWide.set("service", service);
+  return <main className="min-h-screen bg-[#F5F0E6] px-5 py-10 text-[#2B1115] sm:px-8">
+    <div className="mx-auto max-w-5xl">
+      <button onClick={() => onNavigate("/book-pandit-online")} className="text-sm font-semibold text-[#6D2B35]">← All States</button>
+      <p className="mt-8 text-[11px] uppercase tracking-[.24em] text-[#9A7218]">{state.code} · {state.count} Pandits based here</p>
+      <h1 className="mt-2 font-serif text-4xl font-semibold text-[#6D2B35]">Choose a City in {state.name}</h1>
+      {service ? <p className="mt-3 text-sm text-[#5a4a3a]/70">Service: <strong>{service}</strong></p> : null}
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {state.cities.map(city => <button key={city.id} onClick={() => { trackDiscoveryEvent("city_selected", { state_id: state.id, city_id: city.id, has_service: !!service }); onNavigate(linkFor(state, city, service)); }} className="rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 text-left transition-transform hover:-translate-y-0.5">
+          <span className="flex items-center justify-between"><strong className="font-serif text-xl text-[#6D2B35]">{city.name}</strong><MapPin className="h-5 w-5 text-[#9A7218]" /></span>
+          <span className="mt-2 block text-sm text-[#5a4a3a]/70">{city.count} eligible {city.count === 1 ? "Pandit" : "Pandits"} based here</span>
+        </button>)}
+      </div>
+      <div className="mt-8 rounded-md border border-[#D4AF37]/30 bg-[#6D2B35] p-5 text-[#FBF7EE] sm:flex sm:items-center sm:justify-between">
+        <div><h2 className="font-serif text-xl">Browse across {state.name}</h2><p className="mt-1 text-sm text-[#FBF7EE]/70">{state.stateWideCount} {state.stateWideCount === 1 ? "Pandit has" : "Pandits have"} State-wide or national reach.</p></div>
+        <Button disabled={state.stateWideCount === 0} onClick={() => { trackDiscoveryEvent("state_wide_selected", { state_id: state.id, has_service: !!service }); onNavigate(`/book-pandit-online?${stateWide}`); }} className="mt-4 bg-[#E9C96A] text-[#6D2B35] hover:bg-[#F4D983] sm:mt-0">View State-wide</Button>
+      </div>
+    </div>
+  </main>;
+}
+
+function DiscoveryHome({ data, selectedService, isLoading, isError, retry, onNavigate }: { data?: Summary; selectedService?: string; isLoading: boolean; isError: boolean; retry: () => void; onNavigate: (path: string) => void }) {
+  const [term, setTerm] = useState("");
+  const [showAllServices, setShowAllServices] = useState(false);
+  const results = useMemo(() => {
+    if (!data || !term.trim()) return [];
+    const q = term.toLowerCase();
+    return data.states.flatMap((s) => [
+      ...(s.name.toLowerCase().includes(q) ? [{ label: s.name, meta: `${s.count} eligible pandits · ${s.cityCount} cities`, href: linkFor(s, undefined, selectedService) }] : []),
+      ...s.cities.filter((c) => c.name.toLowerCase().includes(q)).map((c) => ({ label: c.name, meta: `${s.name} · ${c.count} eligible pandits`, href: linkFor(s, c, selectedService) })),
+    ]).slice(0, 6);
+  }, [data, term, selectedService]);
+  const nearby = () => { trackDiscoveryEvent("near_me_selected"); onNavigate("/book-pandit-online?mode=nearMe"); };
+  return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
+    <PageSeo title="Find a Vedic Pandit | Vedic Tatva" description="Find an eligible Vedic pandit by service, state, city, or your location." canonical="/book-pandit-online" />
+    <section className="relative overflow-hidden bg-[#6D2B35] text-[#FBF7EE]">
+      <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border border-[#D4AF37]/25" />
+      <div className="absolute right-16 -bottom-32 h-72 w-72 rounded-full border border-[#D4AF37]/15" />
+      <div className="relative mx-auto max-w-6xl px-5 pb-12 pt-14 sm:px-8 sm:pt-20">
+        <p className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.28em] text-[#E9C96A]"><Sparkles className="h-3.5 w-3.5" /> Vedic Tatva · trusted ritual care</p>
+        <h1 className="max-w-3xl text-4xl font-semibold leading-[1.06] sm:text-6xl">Find the right pandit<br /><span className="text-[#E9C96A]">for your family’s ritual.</span></h1>
+        <p className="mt-5 max-w-xl text-sm leading-6 text-[#FBF7EE]/70 sm:text-base">Search the places and services represented by eligible pandits. Choose with clarity, then book through the same secure Vedic Tatva flow.</p>
+        <div className="relative mt-8 max-w-2xl">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6D2B35]" />
+          <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Search a State or City" className="h-14 rounded-md border-0 bg-[#FBF7EE] pl-12 text-[#2B1115] shadow-xl placeholder:text-[#5a4a3a]/55" aria-label="Search states and cities" />
+          {results.length > 0 && <div className="absolute z-10 mt-2 w-full overflow-hidden rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE] text-[#2B1115] shadow-xl">{results.map((r) => <button key={r.href} onClick={() => { trackDiscoveryEvent("location_search_selected", { has_service: !!selectedService }); onNavigate(r.href); }} className="flex w-full items-center justify-between border-b border-[#D4AF37]/15 px-4 py-3 text-left last:border-0 hover:bg-[#F2E8D5]"><span className="font-serif font-semibold">{r.label}</span><span className="text-xs text-[#5a4a3a]/65">{r.meta}</span></button>)}</div>}
+        </div>
+        <button onClick={nearby} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#E9C96A] hover:text-[#FBF7EE]"><Compass className="h-4 w-4" /> Use my location <span className="text-xs font-normal text-[#FBF7EE]/50">only when you choose</span></button>
+      </div>
+    </section>
+    <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+      <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">A considered beginning</p><h2 className="mt-1 text-3xl font-semibold text-[#6D2B35]">Browse by State</h2>{selectedService ? <p className="mt-2 text-sm text-[#5a4a3a]/70">Showing locations for <strong>{selectedService}</strong> <button className="ml-2 underline" onClick={() => onNavigate("/book-pandit-online")}>Clear</button></p> : null}</div><span className="hidden text-sm text-[#5a4a3a]/60 sm:block">Counts reflect eligible pandits</span></div>
+      {isLoading ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-32 bg-[#E9DEC9]" />)}</div> :
+      isError ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center"><p className="font-serif text-xl text-[#6D2B35]">The directory is taking a moment.</p><Button onClick={retry} className="mt-4 bg-[#6D2B35]">Try again</Button></div> :
+      data?.states.length === 0 ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center">No eligible locations are available yet.</div> :
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{data?.states.map((s) => <div key={s.id} className="rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 transition-transform hover:-translate-y-0.5">
+        <button onClick={() => { trackDiscoveryEvent("state_selected", { state_id: s.id, has_service: !!selectedService }); onNavigate(linkFor(s, undefined, selectedService)); }} className="w-full text-left"><div className="flex items-start justify-between"><div><p className="text-xs uppercase tracking-[.2em] text-[#9A7218]">{s.code}</p><h3 className="mt-1 text-xl font-semibold text-[#6D2B35]">{s.name}</h3></div><Building2 className="h-5 w-5 text-[#9A7218]" /></div><p className="mt-4 text-sm text-[#5a4a3a]/70">{s.count} eligible pandits · {s.cityCount} cities</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#6D2B35]">Explore state <ArrowRight className="h-3.5 w-3.5" /></span></button>
+      </div>)}</div>}
+      {data?.facets.services.length ? <div className="mt-12 rounded-md bg-[#6D2B35] p-6 text-[#FBF7EE]"><p className="text-[11px] uppercase tracking-[.24em] text-[#E9C96A]">Start with a service</p><h2 className="mt-1 text-2xl font-semibold">What brings you here?</h2><div className="mt-4 flex flex-wrap gap-2">{data.facets.services.slice(0, showAllServices ? undefined : 8).map(s => <button key={s} onClick={() => { trackDiscoveryEvent("service_selected", { service: s }); onNavigate(`/book-pandit-online?service=${encodeURIComponent(s)}`); }} className="rounded-full border border-[#E9C96A]/45 px-3 py-1.5 text-sm hover:bg-[#E9C96A] hover:text-[#6D2B35]">{s}</button>)}</div>{data.facets.services.length > 8 ? <button className="mt-4 text-sm font-semibold text-[#E9C96A] underline underline-offset-4" onClick={() => setShowAllServices(value => !value)}>{showAllServices ? "Show fewer services" : `View all ${data.facets.services.length} services`}</button> : null}</div> : null}
+      <div className="mt-8 grid gap-3 sm:grid-cols-2"><Link href="/puja?mode=online" className="flex items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><Video className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Need a ritual from anywhere?</b><small className="text-[#5a4a3a]/65">Explore online puja</small></span></Link><Link href="/pind-daan-booking" className="flex items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><MapPin className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Sacred ancestor rites</b><small className="text-[#5a4a3a]/65">Pind daan and tarpan services</small></span></Link></div>
+    </section><BecomePanditBanner />
+  </main>;
+}
 export { BecomePanditBanner, BecomePanditStrip };

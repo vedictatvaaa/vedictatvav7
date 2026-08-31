@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check, Video, Sparkles, Star, MessageCircle, Coins, Zap } from "lucide-react";
@@ -50,6 +50,8 @@ export default function PujaBooking() {
   const searchParams = new URLSearchParams(searchString);
   const panditIdParam = searchParams.get("pandit");
   const panditId = panditIdParam ? parseInt(panditIdParam) : 0;
+  const bookingService = searchParams.get("service")?.trim() || "";
+  const customPujaType = bookingService ? `service:${bookingService}` : "";
 
   const { data: selectedPandit } = useQuery<Pandit>({
     queryKey: [`/api/pandits/${panditId}`],
@@ -59,17 +61,21 @@ export default function PujaBooking() {
 
   const initialPujaType = (() => {
     const v = searchParams.get("pujaType") || "";
-    return pujaOptions.some(p => p.value === v) ? v : "";
+    return pujaOptions.some(p => p.value === v) ? v : customPujaType;
   })();
   const initialMode = searchParams.get("mode") === "online" ? "online" : "offline";
 
   const [pujaType, setPujaType] = useState(initialPujaType);
   const [mode, setMode] = useState(initialMode);
+  const availablePujaOptions = useMemo(() => customPujaType
+    ? [...pujaOptions, { value: customPujaType, label: bookingService, price: selectedPandit?.fees || 5100 }]
+    : pujaOptions, [bookingService, customPujaType, selectedPandit?.fees]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const v = params.get("pujaType") || "";
-    const nextPuja = v && pujaOptions.some(p => p.value === v) ? v : "";
+    const service = params.get("service")?.trim() || "";
+    const nextPuja = v && pujaOptions.some(p => p.value === v) ? v : service ? `service:${service}` : "";
     if (nextPuja !== pujaType) setPujaType(nextPuja);
     const m = params.get("mode");
     const nextMode = m === "online" ? "online" : "offline";
@@ -82,7 +88,7 @@ export default function PujaBooking() {
   const [contactPhone, setContactPhone] = useState("");
   const [location, setLocation] = useState("");
 
-  const selectedPuja = pujaOptions.find(p => p.value === pujaType);
+  const selectedPuja = availablePujaOptions.find(p => p.value === pujaType);
   const samagriCost = selectedPuja ? Math.round(selectedPuja.price * 0.3) : 0;
   const totalAmount = selectedPuja ? selectedPuja.price + samagriCost : 0;
 
@@ -190,7 +196,7 @@ export default function PujaBooking() {
                     <Select value={pujaType} onValueChange={setPujaType}>
                       <SelectTrigger className="w-full" data-testid="select-puja-type"><SelectValue placeholder="Select a Puja" /></SelectTrigger>
                       <SelectContent>
-                        {pujaOptions.map(p => (
+                        {availablePujaOptions.map(p => (
                           <SelectItem key={p.value} value={p.value}>{p.label} - ₹{p.price.toLocaleString()}</SelectItem>
                         ))}
                       </SelectContent>

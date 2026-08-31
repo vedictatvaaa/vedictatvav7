@@ -17,7 +17,6 @@ import { distributionStatus, broadcast, ALL_CHANNELS, type ChannelId } from "./d
 import { pushUrlsToGoogle, submitSitemapToGoogle, isGoogleIndexingConfigured } from "./google-indexing";
 import { adminAuthMiddleware as sharedAdminAuth, validateAdminSession as sharedValidateAdminSession } from "./admin-auth";
 import { redirectMiddleware, registerRedirectAdminRoutes } from "./seo-redirects";
-import { isFestivalWindow } from "./festival-windows";
 import { registerLlmsRoutes, buildLlmsTxt } from "./seo-llms";
 import { registerProductSeoRoutes } from "./seo-products";
 import { registerMerchantHealthRoutes } from "./seo-merchant-health";
@@ -61,6 +60,7 @@ import { eq, and, gt, lt, like } from "drizzle-orm";
 import { panditApplications, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { matchesCanonicalCityReach } from "./pandit-location-reach";
+import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -182,6 +182,60 @@ export async function registerRoutes(
 ): Promise<Server> {
 
   const adminAuthMiddleware = sharedAdminAuth;
+  const customerSessionCookie = "vt_customer_session";
+  const customerSessionTtlMs = 30 * 24 * 60 * 60 * 1000;
+  const sessionSecret = () => {
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) throw new Error("SESSION_SECRET is required for customer sessions");
+    return secret;
+  };
+  const signCustomerSession = (userId: number) => {
+    const payload = Buffer.from(JSON.stringify({ userId, expiresAt: Date.now() + customerSessionTtlMs })).toString("base64url");
+    const signature = crypto.createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+    return `${payload}.${signature}`;
+  };
+  const readCustomerSession = (req: any): number | null => {
+    const token = req.cookies?.[customerSessionCookie];
+    if (!token || typeof token !== "string") return null;
+    const [payload, signature] = token.split(".");
+    if (!payload || !signature) return null;
+    const expected = crypto.createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+    const suppliedBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+    if (suppliedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(suppliedBuffer, expectedBuffer)) return null;
+    try {
+      const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+      return Number.isInteger(decoded.userId) && decoded.userId > 0 && decoded.expiresAt > Date.now() ? decoded.userId : null;
+    } catch {
+      return null;
+    }
+  };
+  const setCustomerSession = (res: any, userId: number) => {
+    res.cookie(customerSessionCookie, signCustomerSession(userId), {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: customerSessionTtlMs,
+      path: "/",
+    });
+  };
+  const clearCustomerSession = (res: any) => res.clearCookie(customerSessionCookie, {
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+  const customerAuthMiddleware = async (req: any, res: any, next: any) => {
+    try {
+      const userId = readCustomerSession(req);
+      if (!userId || !(await storage.getUser(userId))) return res.status(401).json({ message: "Authentication required" });
+      req.customerUserId = userId;
+      next();
+    } catch (error) {
+      console.error("Customer session validation failed:", error);
+      res.status(500).json({ message: "Authentication check failed" });
+    }
+  };
 
   // ---- SEO alias 301 redirects ----
   // Anchor URLs targeting the highest-intent commercial keyword clusters
@@ -380,6 +434,7 @@ export async function registerRoutes(
         }), "welcome-email");
       } catch (e: any) { console.warn("[welcome-email] failed:", e?.message); }
 
+      setCustomerSession(res, safeUser.id);
       res.status(201).json(safeUser);
     } catch (error) {
       console.error("Registration error:", error);
@@ -435,6 +490,7 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Invalid email or password" });
       }
       const { password: _, ...safeUser } = user;
+      setCustomerSession(res, safeUser.id);
       res.json(safeUser);
     } catch (error) {
       console.error("Login error:", error);
@@ -489,6 +545,7 @@ export async function registerRoutes(
         } as any);
       }
       const { password: _, ...safeUser } = user;
+      setCustomerSession(res, safeUser.id);
       res.json(safeUser);
     } catch (error: any) {
       console.error("Google auth error:", error?.message || error);
@@ -566,6 +623,7 @@ export async function registerRoutes(
       } as any);
       const fresh = await storage.getUser(user.id);
       const { password: _, ...safeUser } = fresh!;
+      setCustomerSession(res, safeUser.id);
       res.json(safeUser);
     } catch (error) {
       console.error("Reset-password error:", error);
@@ -654,6 +712,18 @@ export async function registerRoutes(
   app.get("/api/auth/google/config", (_req, res) => {
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || "";
     res.json({ clientId, enabled: Boolean(clientId) });
+  });
+
+  app.get("/api/auth/session", customerAuthMiddleware, async (req: any, res) => {
+    const user = await storage.getUser(req.customerUserId);
+    if (!user) return res.status(401).json({ message: "Authentication required" });
+    const { password: _, passwordResetToken: __, ...safeUser } = user as any;
+    res.json(safeUser);
+  });
+
+  app.post("/api/auth/logout", (_req, res) => {
+    clearCustomerSession(res);
+    res.status(204).end();
   });
 
   // Returns a single user's profile. Guarded by the same identity check as
@@ -2709,11 +2779,17 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
   app.get("/api/admin/locations", adminAuthMiddleware, async (_req, res) => {
     const [states, cities, allPandits, apps] = await Promise.all([db.select().from(indianStates), db.select().from(indianCities), storage.getPandits(), storage.getPanditApplications()]);
+    const discoverable = allPandits.filter(p => p.verified && !p.onLeave
+      && p.locationReviewStatus === "resolved"
+      && p.stateId != null && p.cityId != null
+      && states.some(s => s.id === p.stateId && s.isActive)
+      && cities.some(c => c.id === p.cityId && c.stateId === p.stateId && c.isActive));
     res.json(states
       .sort((a, b) => a.name.localeCompare(b.name, "en-IN"))
       .map(state => ({
         ...state,
         panditCount: allPandits.filter(p => p.stateId === state.id).length,
+        discoverablePanditCount: discoverable.filter(p => p.stateId === state.id).length,
         reviewCount: allPandits.filter(p => p.stateId === state.id && p.locationReviewStatus === "needs_review").length
           + apps.filter(a => a.stateId === state.id && a.locationReviewStatus === "needs_review").length,
         cities: cities
@@ -2722,6 +2798,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           .map(city => ({
             ...city,
             panditCount: allPandits.filter(p => p.cityId === city.id).length,
+            discoverablePanditCount: discoverable.filter(p => p.cityId === city.id).length,
             reviewCount: allPandits.filter(p => p.cityId === city.id && p.locationReviewStatus === "needs_review").length
               + apps.filter(a => a.cityId === city.id && a.locationReviewStatus === "needs_review").length,
           })),
@@ -2730,7 +2807,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.patch("/api/admin/locations/states/:id", adminAuthMiddleware, async (req, res) => {
     if (typeof req.body?.isActive !== "boolean") return res.status(400).json({ message: "isActive must be boolean" });
     const [state] = await db.update(indianStates).set({ isActive: req.body.isActive, updatedAt: new Date() }).where(eq(indianStates.id, Number(req.params.id))).returning();
-    if (!state) return res.status(404).json({ message: "State not found" }); res.json(state);
+    if (!state) return res.status(404).json({ message: "State not found" });
+    await auditAdmin(req, "pandit_location.state_status_changed", `state:${state.id}`, { isActive: state.isActive });
+    res.json(state);
   });
   app.post("/api/admin/locations/cities", adminAuthMiddleware, async (req, res) => {
     const parsed = z.object({ stateId: z.number().int().positive(), name: z.string().trim().min(1), aliases: z.array(z.string()).optional() }).safeParse(req.body);
@@ -2738,6 +2817,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const [state] = await db.select().from(indianStates).where(eq(indianStates.id, parsed.data.stateId));
     if (!state) return res.status(400).json({ message: "Invalid state" });
     const [city] = await db.insert(indianCities).values({ ...parsed.data, slug: locationSlug(`${state.code}-${parsed.data.name}`) }).returning();
+    await auditAdmin(req, "pandit_location.city_created", `city:${city.id}`, { stateId: city.stateId, name: city.name });
     res.status(201).json(city);
   });
   app.patch("/api/admin/locations/cities/:id", adminAuthMiddleware, async (req, res) => {
@@ -2756,25 +2836,27 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .returning();
       if (parsed.data.name !== undefined || parsed.data.stateId !== undefined) {
         await tx.update(pandits)
-          .set({ city: updated.name, state: state.name, stateId: state.id, locationReviewStatus: "resolved" })
+          .set({ city: updated.name, state: state.name, stateId: state.id, cityId: updated.id, locationReviewStatus: "resolved" })
           .where(eq(pandits.cityId, updated.id));
         await tx.update(panditApplications)
-          .set({ city: updated.name, state: state.name, stateId: state.id, locationReviewStatus: "resolved" })
+          .set({ city: updated.name, state: state.name, stateId: state.id, cityId: updated.id, locationReviewStatus: "resolved" })
           .where(eq(panditApplications.cityId, updated.id));
       }
       return updated;
+    });
+    await auditAdmin(req, "pandit_location.city_updated", `city:${city.id}`, {
+      before: { stateId: old.stateId, name: old.name, isActive: old.isActive },
+      after: { stateId: city.stateId, name: city.name, isActive: city.isActive },
     });
     res.json(city);
   });
   app.get("/api/pandit-cities", async (_req, res) => {
     try {
-      const allPandits = await storage.getPandits();
-      const [cities, states] = await Promise.all([db.select().from(indianCities).where(eq(indianCities.isActive, true)), db.select().from(indianStates).where(eq(indianStates.isActive, true))]);
+      const { pandits: allPandits, cities, states } = await publicEligibility();
       const cityCounts = new Map<number, number>();
 
       for (const pandit of allPandits) {
-        if (!pandit.verified || pandit.onLeave) continue;
-        if (!pandit.cityId || !cities.some(c => c.id === pandit.cityId)) continue;
+        if (!pandit.cityId) continue;
         cityCounts.set(pandit.cityId, (cityCounts.get(pandit.cityId) || 0) + 1);
       }
 
@@ -2796,165 +2878,176 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  app.get("/api/book-pandit-online", async (req, res) => {
-    const city = req.query.city as string | undefined;
-    const rawCityId = req.query.cityId;
-    const cityId = rawCityId !== undefined ? Number(rawCityId) : undefined;
-    const state = req.query.state as string | undefined;
-    const region = req.query.region as string | undefined; // cultural region (regionalOrigin)
-    const showAll = req.query.all === "true";
-    const userLat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
-    const userLng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
+  const facetValues = (value: string | null | undefined) => (value || "").split(",").map(v => v.trim()).filter(Boolean);
+  const validCoordinates = (lat: number | undefined, lng: number | undefined) =>
+    Number.isFinite(lat) && Number.isFinite(lng) && (lat as number) >= -90 && (lat as number) <= 90 && (lng as number) >= -180 && (lng as number) <= 180;
+  const distanceBetweenKm = (fromLat: number, fromLng: number, lat: number, lng: number) => {
+    const radians = Math.PI / 180;
+    const a = Math.sin((lat - fromLat) * radians / 2) ** 2 + Math.cos(fromLat * radians) * Math.cos(lat * radians) * Math.sin((lng - fromLng) * radians / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+  const effectivePanditTier = (p: { tier?: string | null; tierExpiresAt?: Date | string | null }) => {
+    let tier = (p.tier || "free").toLowerCase();
+    if (tier === "platinum") tier = "guru_elite";
+    if (p.tierExpiresAt && new Date(p.tierExpiresAt).getTime() < Date.now()) tier = "free";
+    return tier;
+  };
+  function publicPanditDto(p: any, isOnline: boolean, distance?: number) {
+    if (!p) return p;
+    // Never expose contact, moderation, membership, commercial, provenance, or exact GPS fields.
+    const { phone, email, passwordHash, lastLoginAt, latitude, longitude, leaveNote, leaveStartedAt,
+      verified, onLeave, tier, tierExpiresAt, commissionPct, productCommissionPct, membershipNo,
+      cardIssued, cardIssuedAt, originalCity, originalState, locationReviewStatus, boostType,
+      boostStartDate, boostEndDate, boostActive, ...safe } = p;
+    return { ...safe, verified: true, onLeave: false, isOnline, ...(distance === undefined ? {} : { distance }) };
+  }
+  function adminPanditDto(p: any, isOnline: boolean, distance?: number) {
+    if (!p) return p;
+    const { passwordHash, ...safe } = p;
+    return { ...safe, isOnline, ...(distance === undefined ? {} : { distance }) };
+  }
+  async function publicEligibility() {
+    const [all, states, cities] = await Promise.all([storage.getPandits(), db.select().from(indianStates).where(eq(indianStates.isActive, true)), db.select().from(indianCities).where(eq(indianCities.isActive, true))]);
+    const stateIds = new Set(states.map(s => s.id));
+    const cityById = new Map(cities.map(c => [c.id, c]));
+    return { states, cities, pandits: all.filter(p => isPanditPubliclyEligible(p, stateIds, cityById)) };
+  }
 
-    const hasCityId = Number.isInteger(cityId) && (cityId as number) > 0;
-    if (rawCityId !== undefined && !hasCityId) {
-      return res.status(400).json({ message: "Invalid cityId" });
-    }
-    let selectedLocation = hasCityId ? await resolveCityLocation(cityId as number) : undefined;
-    if (hasCityId && !selectedLocation) {
-      return res.status(400).json({ message: "Unknown or inactive cityId" });
-    }
-    if (!hasCityId && city) {
-      selectedLocation = await resolveLocationName(city, state);
-      if (!selectedLocation || !selectedLocation.city.isActive || !selectedLocation.state.isActive) {
-        return res.status(400).json({ message: "City is unknown or ambiguous; use a canonical cityId" });
+  app.get("/api/admin/pandit-discovery/health", adminAuthMiddleware, async (_req, res) => {
+    const [all, states, cities] = await Promise.all([
+      storage.getPandits(),
+      db.select().from(indianStates),
+      db.select().from(indianCities),
+    ]);
+    const stateById = new Map(states.map(state => [state.id, state]));
+    const cityById = new Map(cities.map(city => [city.id, city]));
+    const issueFor = (pandit: any) => {
+      const issues: string[] = [];
+      const state = pandit.stateId == null ? undefined : stateById.get(pandit.stateId);
+      const city = pandit.cityId == null ? undefined : cityById.get(pandit.cityId);
+      if (!state) issues.push("missing_state");
+      if (!city) issues.push("missing_city");
+      if (state && !state.isActive) issues.push("inactive_state");
+      if (city && !city.isActive) issues.push("inactive_city");
+      if (city && state && city.stateId !== state.id) issues.push("invalid_state_city");
+      if (pandit.locationReviewStatus !== "resolved") issues.push("location_review");
+      if (!pandit.name?.trim() || !pandit.specialization?.trim() || !pandit.languages?.trim() || !pandit.bio?.trim()) issues.push("missing_profile_data");
+      return issues;
+    };
+    const rows = all.map(pandit => ({ pandit, issues: issueFor(pandit) }));
+    const publiclyDiscoverable = rows.filter(({ pandit, issues }) => pandit.verified && !pandit.onLeave && !issues.some(issue => issue !== "missing_profile_data")).length;
+    res.json({
+      total: all.length,
+      verified: all.filter(pandit => pandit.verified).length,
+      active: all.filter(pandit => !pandit.onLeave).length,
+      publiclyDiscoverable,
+      missingState: rows.filter(row => row.issues.includes("missing_state")).length,
+      missingCity: rows.filter(row => row.issues.includes("missing_city")).length,
+      locationIssues: rows.filter(row => row.issues.some(issue => ["inactive_state", "inactive_city", "invalid_state_city", "location_review"].includes(issue))).length,
+      missingProfileData: rows.filter(row => row.issues.includes("missing_profile_data")).length,
+      issuePanditIds: rows.filter(row => row.issues.length > 0).map(row => row.pandit.id),
+    });
+  });
+
+  app.get("/api/pandit-discovery", async (req, res) => {
+    try {
+      const { states, cities, pandits: eligible } = await publicEligibility();
+      const service = typeof req.query.service === "string" ? req.query.service.trim().toLocaleLowerCase("en-IN") : "";
+      const visible = service
+        ? eligible.filter(p => facetValues(p.specialization).some(value => value.toLocaleLowerCase("en-IN").includes(service)))
+        : eligible;
+      const facets = { services: new Set<string>(), languages: new Set<string>(), traditions: new Set<string>() };
+      for (const p of eligible) {
+        facetValues(p.specialization).forEach(v => facets.services.add(v));
+        facetValues(p.languages).forEach(v => facets.languages.add(v));
+        facetValues(p.regionalOrigin).forEach(v => facets.traditions.add(v));
       }
+      res.json({
+        states: states.map(state => {
+          const statePandits = visible.filter(p => p.stateId === state.id);
+          const stateCities = cities.filter(city => city.stateId === state.id && statePandits.some(p => p.cityId === city.id));
+          const stateWideCount = visible.filter(p => {
+            const tier = effectivePanditTier(p);
+            return tier === "guru_elite" || (tier === "gold" && p.stateId === state.id);
+          }).length;
+          return { id: state.id, name: state.name, code: state.code, slug: locationSlug(state.name), count: statePandits.length, stateWideCount, cityCount: stateCities.length, cities: stateCities.sort((a, b) => a.name.localeCompare(b.name, "en-IN")).map(city => ({ id: city.id, name: city.name, slug: city.slug, count: statePandits.filter(p => p.cityId === city.id).length })) };
+        }).filter(state => state.count > 0).sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
+        facets: {
+          services: Array.from(facets.services).sort(),
+          languages: Array.from(facets.languages).sort(),
+          traditions: Array.from(facets.traditions).sort(),
+        },
+      });
+    } catch { res.status(500).json({ message: "Failed to load pandit discovery" }); }
+  });
+
+  app.get("/api/book-pandit-online", async (req, res) => {
+    const city = typeof req.query.city === "string" ? req.query.city : undefined;
+    const state = typeof req.query.state === "string" ? req.query.state : undefined;
+    const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
+    const language = typeof req.query.language === "string" ? req.query.language.trim() : "";
+    const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
+    const nearMe = req.query.nearMe === "true";
+    const showAll = req.query.all === "true";
+    const rawCityId = req.query.cityId, rawStateId = req.query.stateId;
+    const cityId = rawCityId === undefined ? undefined : Number(rawCityId);
+    const stateId = rawStateId === undefined ? undefined : Number(rawStateId);
+    if (rawCityId !== undefined && (!Number.isInteger(cityId) || cityId! <= 0)) return res.status(400).json({ message: "Invalid cityId" });
+    if (rawStateId !== undefined && (!Number.isInteger(stateId) || stateId! <= 0)) return res.status(400).json({ message: "Invalid stateId" });
+    const lat = req.query.lat === undefined ? undefined : Number(req.query.lat);
+    const lng = req.query.lng === undefined ? undefined : Number(req.query.lng);
+    const requestedRadius = req.query.radiusKm === undefined ? 50 : Number(req.query.radiusKm);
+    if (!Number.isFinite(requestedRadius) || requestedRadius <= 0 || requestedRadius > 100) return res.status(400).json({ message: "radiusKm must be greater than 0 and at most 100" });
+    if (nearMe && !validCoordinates(lat, lng)) return res.status(400).json({ message: "Near Me requires valid latitude and longitude" });
+
+    let selectedLocation = cityId ? await resolveCityLocation(cityId) : undefined;
+    if (cityId && !selectedLocation) return res.status(400).json({ message: "Unknown or inactive cityId" });
+    if (!cityId && city) {
+      selectedLocation = await resolveLocationName(city, state);
+      if (!selectedLocation || !selectedLocation.city.isActive || !selectedLocation.state.isActive) return res.status(400).json({ message: "City is unknown or ambiguous; use a canonical cityId" });
     }
-    let selectedStateId = selectedLocation?.state.id;
+    let selectedStateId = selectedLocation?.state.id ?? stateId;
+    if (stateId && selectedLocation && stateId !== selectedLocation.state.id) return res.status(400).json({ message: "cityId does not belong to stateId" });
+    if (stateId && !(await db.select().from(indianStates).where(and(eq(indianStates.id, stateId), eq(indianStates.isActive, true)))).length) return res.status(400).json({ message: "Unknown or inactive stateId" });
     if (!selectedStateId && state) {
       const wanted = state.trim().toLocaleLowerCase("en-IN");
-      const states = await db.select().from(indianStates).where(eq(indianStates.isActive, true));
-      const matches = states.filter((item) =>
-        item.name.toLocaleLowerCase("en-IN") === wanted || item.code.toLocaleLowerCase("en-IN") === wanted
-      );
+      const matches = (await db.select().from(indianStates).where(eq(indianStates.isActive, true))).filter(s => s.name.toLocaleLowerCase("en-IN") === wanted || s.code.toLocaleLowerCase("en-IN") === wanted);
       if (matches.length !== 1) return res.status(400).json({ message: "Unknown State" });
       selectedStateId = matches[0].id;
     }
     if (showAll) {
       const token = (req.headers["x-admin-token"] as string | undefined) || (req as any).cookies?.vt_admin_token;
-      if (!token || !(await sharedValidateAdminSession(token))) {
-        return res.status(401).json({ message: "Admin authentication required for all Pandits" });
-      }
+      if (!token || !(await sharedValidateAdminSession(token))) return res.status(401).json({ message: "Admin authentication required for all Pandits" });
     }
-
-    // Tier-aware fetch: free/silver are city-scoped (use existing storage methods),
-    // gold is state-scoped, guru_elite is global (national + international/NRI).
-    // We always start from getPandits() so the tier-reach filter can broaden
-    // the result beyond a single city.
-    const all = await storage.getPandits();
-    const visible = showAll ? all : all.filter(p => p.verified);
-
-    const regionLc = region?.trim().toLowerCase() || "";
-    const hasUserGps = userLat !== undefined && userLng !== undefined && !isNaN(userLat) && !isNaN(userLng);
-
-    function haversineKm(lat: number, lng: number) {
-      const R = 6371;
-      const dLat = (lat - (userLat as number)) * Math.PI / 180;
-      const dLng = (lng - (userLng as number)) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2
-        + Math.cos((userLat as number) * Math.PI / 180) * Math.cos(lat * Math.PI / 180)
-        * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
-    function passesReach(p: typeof visible[number], distanceKm: number | null): boolean {
-      // Effective tier: legacy "platinum" rows are treated as "guru_elite".
-      // Expired paid tiers degrade to "free" until renewed.
-      let tier = (p.tier || "free").toLowerCase();
-      if (tier === "platinum") tier = "guru_elite";
-      if (p.tierExpiresAt && new Date(p.tierExpiresAt as any) < new Date()) tier = "free";
-      // Optional cultural-region filter is independent of tier
-      if (regionLc && (!p.regionalOrigin || !p.regionalOrigin.toLowerCase().includes(regionLc))) return false;
-
-      if (tier === "guru_elite") return true; // national + international (NRI)
-
-      if (selectedLocation) {
-        const matchesLocation = matchesCanonicalCityReach(tier, p, {
-          cityId: selectedLocation.city.id,
-          stateId: selectedLocation.state.id,
-        });
-        if (!matchesLocation) return false;
-        if (tier === "gold" || tier === "silver") return true;
-      }
-
-      if (selectedStateId) {
-        return tier === "gold" && p.stateId === selectedStateId;
-      }
-
-      if (tier === "gold") {
-        return true;
-      }
-
-      if (tier === "silver") {
-        return true;
-      }
-
-      // free: nearby only — within 20 km of user GPS.
-      if (!hasUserGps || p.latitude == null || p.longitude == null || distanceKm == null) {
-        // GPS check not possible (user hasn't shared location, or pandit has no coordinates).
-        // Fall back to city-match visibility so newly approved pandits without GPS
-        // coordinates are still discoverable — the city filter was already applied above.
-        return true;
-      }
-      return distanceKm <= 20;
-    }
-
-    // Tier-based ranking weight: guru_elite > gold > silver > free. Layered
-    // on top of any client-side boost sort so paid pandits surface first.
-    // During a Hindu festival window, Gold gets bumped to 3.5 so it sits
-    // between Guru Elite and base Gold from previous days — this is the
-    // "festival boost" benefit advertised on the Gold tier card.
-    const festivalActive = isFestivalWindow();
-    const TIER_RANK: Record<string, number> = {
-      guru_elite: 4,
-      platinum:   4,
-      gold:       festivalActive ? 3.5 : 3,
-      silver:     2,
-      free:       1,
-    };
-
+    const { pandits: eligible } = await publicEligibility();
+    const candidates = showAll ? await storage.getPandits() : eligible;
     const { isPanditOnline } = await import("./pandit-portal");
-    const out = visible
-      .map(p => {
-        const distance = (hasUserGps && p.latitude != null && p.longitude != null)
-          ? Math.round(haversineKm(p.latitude, p.longitude) * 10) / 10
-          : null;
-        const expired = p.tierExpiresAt && new Date(p.tierExpiresAt as any) < new Date();
-        const effectiveTier = expired ? "free" : ((p.tier || "free").toLowerCase() === "platinum" ? "guru_elite" : (p.tier || "free").toLowerCase());
-        // Strip contact + credential fields from the public bulk list,
-        // mirroring publicPanditDto used on the single-id endpoint. Also
-        // strip the internal leaveNote — the public listing only needs the
-        // boolean onLeave to render an "Off duty" badge, not the team note.
-        const { phone: _ph, email: _em, passwordHash: _pw, lastLoginAt: _ll, leaveNote: _ln, ...safe } = p as any;
-        // On-leave pandits never show as "online" publicly, regardless of
-        // any stale heartbeat the in-memory map may still have.
-        const isOnline = !p.onLeave && isPanditOnline(p.id);
-        return { ...safe, distance, tier: effectiveTier, isOnline };
-      })
-      .filter(p => passesReach(p, p.distance))
-      .sort((a, b) => {
-        const tierDiff = (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0);
-        if (tierDiff !== 0) return tierDiff;
-        // Within same tier, surface live-online pandits first
-        return Number(b.isOnline) - Number(a.isOnline);
-      });
-
-    res.json(out);
+    const regionLc = region.toLocaleLowerCase("en-IN"), serviceLc = service.toLocaleLowerCase("en-IN"), languageLc = language.toLocaleLowerCase("en-IN");
+    const results = candidates.map(p => {
+      const distance = nearMe && p.latitude != null && p.longitude != null ? Math.round(distanceBetweenKm(lat!, lng!, p.latitude, p.longitude) * 10) / 10 : undefined;
+      return { p, distance };
+    }).filter(({ p, distance }) => {
+      if (nearMe && (distance === undefined || distance > requestedRadius)) return false;
+      if (!nearMe && selectedLocation && !matchesCanonicalCityReach(effectivePanditTier(p), p, { cityId: selectedLocation.city.id, stateId: selectedLocation.state.id })) return false;
+      if (!nearMe && !selectedLocation && selectedStateId) {
+        const tier = effectivePanditTier(p);
+        if (tier !== "guru_elite" && !(tier === "gold" && p.stateId === selectedStateId)) return false;
+      }
+      return (!serviceLc || facetValues(p.specialization).some(v => v.toLocaleLowerCase("en-IN").includes(serviceLc)))
+        && (!languageLc || facetValues(p.languages).some(v => v.toLocaleLowerCase("en-IN").includes(languageLc)))
+        && (!regionLc || facetValues(p.regionalOrigin).some(v => v.toLocaleLowerCase("en-IN").includes(regionLc)));
+    }).sort((a, b) => nearMe ? a.distance! - b.distance! : 0)
+      .map(({ p, distance }) => showAll
+        ? adminPanditDto(p, isPanditOnline(p.id), distance)
+        : publicPanditDto(p, isPanditOnline(p.id), distance));
+    res.json(results);
   });
-
-  // Public-safe pandit DTO — strips contact/credential fields. The internal
-  // leaveNote is also stripped; the public boolean `onLeave` is preserved
-  // so the listing card can render an "Off duty" badge.
-  function publicPanditDto(p: any, isOnline: boolean) {
-    if (!p) return p;
-    const { phone, email, passwordHash, lastLoginAt, leaveNote, ...safe } = p;
-    const effectiveOnline = !p.onLeave && isOnline;
-    return { ...safe, isOnline: effectiveOnline };
-  }
 
   app.get("/api/pandits/:id", async (req, res) => {
     const pandit = await storage.getPandit(Number(req.params.id));
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    const { pandits: eligible } = await publicEligibility();
+    if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
     const { isPanditOnline } = await import("./pandit-portal");
     res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
   });
@@ -2963,6 +3056,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     try {
       const pandit = await storage.getPanditBySlug(req.params.slug);
       if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
       const { isPanditOnline } = await import("./pandit-portal");
       res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
     } catch {
@@ -2979,6 +3074,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
     d.state = location.state.name; d.city = location.city.name; d.originalCity = d.originalCity || location.city.name; d.originalState = d.originalState || location.state.name; d.locationReviewStatus = "resolved";
     const pandit = await storage.createPandit(d);
+    await auditAdmin(req, "pandit.created", `pandit:${pandit.id}`, { stateId: pandit.stateId, cityId: pandit.cityId, verified: pandit.verified });
     notifyPublish(req, [`/pandit/${pandit.id}`, `/book-pandit-online`], { pingSitemap: true });
     res.status(201).json(pandit);
   });
@@ -2999,8 +3095,22 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       d.originalState = current.originalState || current.state || location.state.name;
       d.locationReviewStatus = "resolved";
     }
+    if (d.verified === true) {
+      const stateId = d.stateId ?? current.stateId;
+      const cityId = d.cityId ?? current.cityId;
+      const location = Number.isInteger(stateId) && Number.isInteger(cityId) ? await resolveLocation(stateId, cityId) : undefined;
+      const reviewStatus = d.locationReviewStatus ?? current.locationReviewStatus;
+      if (!location || reviewStatus !== "resolved") {
+        return res.status(400).json({ message: "Resolve the Pandit's active State and City before verification" });
+      }
+    }
     const pandit = await storage.updatePandit(Number(req.params.id), d);
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    await auditAdmin(req, "pandit.updated", `pandit:${pandit.id}`, {
+      fields: Object.keys(d),
+      verificationChanged: d.verified !== undefined && d.verified !== current.verified,
+      locationChanged: d.stateId !== undefined || d.cityId !== undefined,
+    });
     notifyPublish(req, [`/pandit/${pandit.id}`]);
     res.json(pandit);
   });
@@ -3008,6 +3118,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.delete("/api/pandits/:id", adminAuthMiddleware, async (req, res) => {
     const deleted = await storage.deletePandit(Number(req.params.id));
     if (!deleted) return res.status(404).json({ message: "Pandit not found" });
+    await auditAdmin(req, "pandit.deleted", `pandit:${req.params.id}`, {});
     notifyUnpublish(req, [`/pandit/${req.params.id}`]);
     res.json({ message: "Pandit deleted" });
   });
@@ -3078,6 +3189,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       boostActive: true,
     });
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    await auditAdmin(req, "pandit.boost_activated", `pandit:${pandit.id}`, { boostType, endDate });
     res.json(pandit);
   });
 
@@ -3089,6 +3201,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       boostEndDate: null,
     });
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    await auditAdmin(req, "pandit.boost_deactivated", `pandit:${pandit.id}`, {});
     res.json(pandit);
   });
 
@@ -3561,7 +3674,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Puja Bookings ----
-  app.get("/api/puja-bookings", async (_req, res) => {
+  app.get("/api/puja-bookings", adminAuthMiddleware, async (_req, res) => {
     const bookings = await storage.getPujaBookings();
     res.json(bookings);
   });
@@ -3585,11 +3698,23 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
 
-  app.post("/api/puja-bookings", async (req, res) => {
+  app.post("/api/puja-bookings", customerAuthMiddleware, async (req: any, res) => {
     const parsed = validate(insertPujaBookingSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
+    const requestedPanditId = parsed.data.panditId;
+    if (requestedPanditId != null) {
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(pandit => pandit.id === requestedPanditId)) {
+        return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
+      }
+    }
     const accessToken = (await import("crypto")).randomBytes(16).toString("hex");
-    const booking = await storage.createPujaBooking({ ...parsed.data, accessToken } as any);
+    const booking = await storage.createPujaBooking({
+      ...parsed.data,
+      userId: req.customerUserId,
+      status: "pending",
+      accessToken,
+    } as any);
     notifyPujaBooking(booking).catch((err) => console.error("[notify] booking notify failed", err));
     // Task #65 — pandit referral attribution for puja booking.
     try {
@@ -3605,6 +3730,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
     const booking = await storage.updatePujaBooking(Number(req.params.id), partial.data);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
+    await auditAdmin(req, "puja_booking.updated", `puja_booking:${booking.id}`, { fields: Object.keys(partial.data) });
     res.json(booking);
   });
 
@@ -10514,9 +10640,10 @@ ${accumulatedWisdom}`
     try {
       const pandit = await storage.getPanditBySlug(req.params.slug);
       if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
       const { isPanditOnline } = await import("./pandit-portal");
-      const { phone, email, passwordHash, lastLoginAt, ...safe } = pandit as any;
-      res.json({ ...safe, isOnline: isPanditOnline(pandit.id) });
+      res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch pandit" });
     }
