@@ -131,6 +131,7 @@ const BlogAiQueueTab        = safeLazy(() => import("./admin-tabs/BlogAiQueueTab
 const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab"));
 const CommunityTab          = safeLazy(() => import("./admin-tabs/CommunityTab"));
 const SacredLibraryTab      = safeLazy(() => import("./admin-tabs/SacredLibraryTab"));
+const LocationsTab          = safeLazy(() => import("./admin-tabs/LocationsTab"));
 
 // id → lazy component, used to warm a tab's JS chunk on hover/focus so the
 // click feels instant. Partial because a few legacy TabIds (e.g. the
@@ -142,6 +143,7 @@ const TAB_COMPONENTS: Partial<Record<TabId, { preload: () => Promise<unknown> }>
   orders: OrdersTab,
   pandits: PanditsTab,
   "pandit-apps": PanditApplicationsTab,
+  locations: LocationsTab,
   astrologers: AstrologersTab,
   festivals: FestivalsTab,
   bookings: BookingsTab,
@@ -679,6 +681,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "orders" && <OrdersTab />}
               {activeTab === "pandits" && <PanditsTab />}
               {activeTab === "pandit-apps" && <PanditApplicationsTab adminToken={adminToken} />}
+               {activeTab === "locations" && <LocationsTab adminToken={adminToken} />}
               {activeTab === "astrologers" && <AstrologersTab />}
               {activeTab === "festivals" && <FestivalsTab />}
               {activeTab === "bookings" && <BookingsTab />}

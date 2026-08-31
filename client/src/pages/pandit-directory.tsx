@@ -28,7 +28,7 @@ const PANDIT_FAQS = [
 ];
 
 type PanditWithDistance = Pandit & { distance: number | null };
-type ActivePanditCity = { slug: string; name: string; count: number };
+type ActivePanditCity = { id: number; slug: string; name: string; count: number; stateId: number; stateName: string; stateCode: string };
 
 const REGIONAL_ORIGINS = [
   { value: "", label: "All Traditions" },
@@ -214,11 +214,14 @@ function CityChooser() {
             <p className="text-sm text-[#5a4a3a]/75">No verified pandits are currently available. Please check again shortly.</p>
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-md overflow-hidden border border-[#D4AF37]/25">
-            {activeCities.map((city) => (
+          <div className="max-w-5xl mx-auto space-y-7">
+            {Object.entries(activeCities.reduce<Record<string, ActivePanditCity[]>>((groups, city) => { (groups[city.stateName] ||= []).push(city); return groups; }, {})).map(([stateName, cities]) => (<section key={stateName}>
+              <h3 className="font-serif text-lg text-[#6D2B35] mb-2">{stateName}</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#D4AF37]/20 rounded-md overflow-hidden border border-[#D4AF37]/25">
+            {cities.map((city) => (
               <Link
-                key={city.slug}
-                href={`/book-pandit-online?city=${encodeURIComponent(city.name)}`}
+                key={city.id}
+                href={`/book-pandit-online?city=${encodeURIComponent(city.name)}&cityId=${city.id}`}
                 className="block h-full"
               >
               <div
@@ -240,6 +243,7 @@ function CityChooser() {
               </div>
               </Link>
             ))}
+              </div></section>))}
           </div>
         )}
 
@@ -281,8 +285,9 @@ function CityChooser() {
 export default function PanditDirectory() {
   const searchString = useSearch();
   const cityParam = new URLSearchParams(searchString).get("city") || "";
+  const cityId = new URLSearchParams(searchString).get("cityId") || "";
   if (cityParam) {
-    return <PanditDirectoryForCity defaultCity={cityParam} cityLabel={cityParam} />;
+    return <PanditDirectoryForCity defaultCity={cityParam} cityLabel={cityParam} cityId={cityId} />;
   }
   return <CityChooser />;
 }
@@ -293,8 +298,8 @@ export default function PanditDirectory() {
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
 import { BecomePanditBanner, BecomePanditStrip } from "@/components/pandit/BecomePanditBanner";
 
-function PanditDirectoryForCity({ defaultCity, cityLabel }: { defaultCity: string; cityLabel: string }) {
-  return <PanditDirectoryView defaultCity={defaultCity} cityLabel={cityLabel} />;
+function PanditDirectoryForCity({ defaultCity, cityLabel, cityId }: { defaultCity: string; cityLabel: string; cityId?: string }) {
+  return <PanditDirectoryView defaultCity={defaultCity} cityLabel={cityLabel} cityId={cityId} />;
 }
 
 export { BecomePanditBanner, BecomePanditStrip };

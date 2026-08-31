@@ -54,11 +54,12 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
+  products, pandits, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
   type AbandonedCart,
 } from "@shared/schema";
 import { eq, and, gt, lt, like } from "drizzle-orm";
 import { panditApplications, insertFranchiseApplicationSchema } from "@shared/schema";
+import { locationSlug, resolveLocation } from "./locations";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -2694,38 +2695,100 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Pandits ----
+  app.get("/api/locations", async (_req, res) => {
+    const states = (await db.select().from(indianStates).where(eq(indianStates.isActive, true)))
+      .sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
+    const cities = await db.select().from(indianCities).where(eq(indianCities.isActive, true));
+    res.json(states.map(state => ({
+      ...state,
+      cities: cities
+        .filter(city => city.stateId === state.id)
+        .sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
+    })));
+  });
+  app.get("/api/admin/locations", adminAuthMiddleware, async (_req, res) => {
+    const [states, cities, allPandits, apps] = await Promise.all([db.select().from(indianStates), db.select().from(indianCities), storage.getPandits(), storage.getPanditApplications()]);
+    res.json(states
+      .sort((a, b) => a.name.localeCompare(b.name, "en-IN"))
+      .map(state => ({
+        ...state,
+        panditCount: allPandits.filter(p => p.stateId === state.id).length,
+        reviewCount: allPandits.filter(p => p.stateId === state.id && p.locationReviewStatus === "needs_review").length
+          + apps.filter(a => a.stateId === state.id && a.locationReviewStatus === "needs_review").length,
+        cities: cities
+          .filter(city => city.stateId === state.id)
+          .sort((a, b) => a.name.localeCompare(b.name, "en-IN"))
+          .map(city => ({
+            ...city,
+            panditCount: allPandits.filter(p => p.cityId === city.id).length,
+            reviewCount: allPandits.filter(p => p.cityId === city.id && p.locationReviewStatus === "needs_review").length
+              + apps.filter(a => a.cityId === city.id && a.locationReviewStatus === "needs_review").length,
+          })),
+      })));
+  });
+  app.patch("/api/admin/locations/states/:id", adminAuthMiddleware, async (req, res) => {
+    if (typeof req.body?.isActive !== "boolean") return res.status(400).json({ message: "isActive must be boolean" });
+    const [state] = await db.update(indianStates).set({ isActive: req.body.isActive, updatedAt: new Date() }).where(eq(indianStates.id, Number(req.params.id))).returning();
+    if (!state) return res.status(404).json({ message: "State not found" }); res.json(state);
+  });
+  app.post("/api/admin/locations/cities", adminAuthMiddleware, async (req, res) => {
+    const parsed = z.object({ stateId: z.number().int().positive(), name: z.string().trim().min(1), aliases: z.array(z.string()).optional() }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid city" });
+    const [state] = await db.select().from(indianStates).where(eq(indianStates.id, parsed.data.stateId));
+    if (!state) return res.status(400).json({ message: "Invalid state" });
+    const [city] = await db.insert(indianCities).values({ ...parsed.data, slug: locationSlug(`${state.code}-${parsed.data.name}`) }).returning();
+    res.status(201).json(city);
+  });
+  app.patch("/api/admin/locations/cities/:id", adminAuthMiddleware, async (req, res) => {
+    const parsed = z.object({ stateId: z.number().int().positive().optional(), name: z.string().trim().min(1).optional(), isActive: z.boolean().optional(), aliases: z.array(z.string()).optional() }).safeParse(req.body);
+    if (!parsed.success || !Object.keys(parsed.data).length) return res.status(400).json({ message: "Invalid city patch" });
+    const [old] = await db.select().from(indianCities).where(eq(indianCities.id, Number(req.params.id)));
+    if (!old) return res.status(404).json({ message: "City not found" });
+    const stateId = parsed.data.stateId ?? old.stateId;
+    const [state] = await db.select().from(indianStates).where(eq(indianStates.id, stateId));
+    if (!state) return res.status(400).json({ message: "Invalid state" });
+    const name = parsed.data.name ?? old.name;
+    const city = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(indianCities)
+        .set({ ...parsed.data, slug: locationSlug(`${state.code}-${name}`), updatedAt: new Date() })
+        .where(eq(indianCities.id, old.id))
+        .returning();
+      if (parsed.data.name !== undefined || parsed.data.stateId !== undefined) {
+        await tx.update(pandits)
+          .set({ city: updated.name, state: state.name, stateId: state.id, locationReviewStatus: "resolved" })
+          .where(eq(pandits.cityId, updated.id));
+        await tx.update(panditApplications)
+          .set({ city: updated.name, state: state.name, stateId: state.id, locationReviewStatus: "resolved" })
+          .where(eq(panditApplications.cityId, updated.id));
+      }
+      return updated;
+    });
+    res.json(city);
+  });
   app.get("/api/pandit-cities", async (_req, res) => {
     try {
       const allPandits = await storage.getPandits();
-      const cityCounts = new Map<string, { name: string; count: number }>();
+      const [cities, states] = await Promise.all([db.select().from(indianCities).where(eq(indianCities.isActive, true)), db.select().from(indianStates).where(eq(indianStates.isActive, true))]);
+      const cityCounts = new Map<number, number>();
 
       for (const pandit of allPandits) {
         if (!pandit.verified || pandit.onLeave) continue;
-        const name = pandit.city?.trim();
-        if (!name) continue;
-
-        const key = name.toLocaleLowerCase("en-IN");
-        const existing = cityCounts.get(key);
-        cityCounts.set(key, {
-          name: existing?.name || name,
-          count: (existing?.count || 0) + 1,
-        });
+        if (!pandit.cityId || !cities.some(c => c.id === pandit.cityId)) continue;
+        cityCounts.set(pandit.cityId, (cityCounts.get(pandit.cityId) || 0) + 1);
       }
 
-      const cities = Array.from(cityCounts.values())
-        .map(({ name, count }) => ({
-          name,
-          count,
-          slug: name
-            .toLocaleLowerCase("en-IN")
-            .normalize("NFKD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, ""),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
+      const result = Array.from(cityCounts.entries())
+        .map(([id, count]) => {
+          const city = cities.find(c => c.id === id);
+          const state = city && states.find(s => s.id === city.stateId);
+          return city && state
+            ? { id, name: city.name, slug: city.slug, stateId: state.id, stateName: state.name, stateCode: state.code, count }
+            : null;
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => a.stateName.localeCompare(b.stateName, "en-IN") || a.name.localeCompare(b.name, "en-IN"));
 
-      res.json(cities);
+      res.json(result);
     } catch (error) {
       console.error("pandit-cities error:", error);
       res.status(500).json({ message: "Failed to load active pandit cities" });
@@ -2734,6 +2797,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   app.get("/api/book-pandit-online", async (req, res) => {
     const city = req.query.city as string | undefined;
+    const cityId = req.query.cityId ? Number(req.query.cityId) : undefined;
     const state = req.query.state as string | undefined;
     const region = req.query.region as string | undefined; // cultural region (regionalOrigin)
     const showAll = req.query.all === "true";
@@ -2749,6 +2813,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const visible = showAll ? all : all.filter(p => p.verified);
 
     const cityLc = city?.trim().toLowerCase() || "";
+    const hasCityId = Number.isInteger(cityId) && (cityId as number) > 0;
     const stateLc = state?.trim().toLowerCase() || "";
     const regionLc = region?.trim().toLowerCase() || "";
     const hasUserGps = userLat !== undefined && userLng !== undefined && !isNaN(userLat) && !isNaN(userLng);
@@ -2785,12 +2850,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
       if (tier === "silver") {
         // Citywide reach.
+        if (hasCityId) return p.cityId === cityId;
         if (cityLc) return !!p.city && p.city.toLowerCase().includes(cityLc);
         if (stateLc) return false; // state-only search: silver out of reach
         return true;
       }
 
       // free: nearby only — within 20 km of user GPS.
+      if (hasCityId && p.cityId !== cityId) return false;
       if (cityLc && (!p.city || !p.city.toLowerCase().includes(cityLc))) return false;
       if (!hasUserGps || p.latitude == null || p.longitude == null || distanceKm == null) {
         // GPS check not possible (user hasn't shared location, or pandit has no coordinates).
@@ -2875,7 +2942,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.post("/api/book-pandit-online", adminAuthMiddleware, async (req, res) => {
     const parsed = validate(insertPanditSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
-    const pandit = await storage.createPandit(parsed.data);
+    const d: any = parsed.data;
+    if (!Number.isInteger(d.stateId) || !Number.isInteger(d.cityId)) return res.status(400).json({ message: "A valid stateId and cityId are required" });
+    const location = await resolveLocation(d.stateId, d.cityId);
+    if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
+    d.state = location.state.name; d.city = location.city.name; d.originalCity = d.originalCity || location.city.name; d.locationReviewStatus = "resolved";
+    const pandit = await storage.createPandit(d);
     notifyPublish(req, [`/pandit/${pandit.id}`, `/book-pandit-online`], { pingSitemap: true });
     res.status(201).json(pandit);
   });
@@ -2883,7 +2955,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.patch("/api/pandits/:id", adminAuthMiddleware, async (req, res) => {
     const partial = insertPanditSchema.partial().safeParse(req.body);
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
-    const pandit = await storage.updatePandit(Number(req.params.id), partial.data);
+    const d: any = partial.data;
+    if (d.stateId !== undefined || d.cityId !== undefined || d.state !== undefined || d.city !== undefined) {
+      if (!Number.isInteger(d.stateId) || !Number.isInteger(d.cityId)) return res.status(400).json({ message: "stateId and cityId are required together" });
+      const location = await resolveLocation(d.stateId, d.cityId);
+      if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
+      d.state = location.state.name; d.city = location.city.name; d.originalCity = d.originalCity || location.city.name; d.locationReviewStatus = "resolved";
+    }
+    const pandit = await storage.updatePandit(Number(req.params.id), d);
     if (!pandit) return res.status(404).json({ message: "Pandit not found" });
     notifyPublish(req, [`/pandit/${pandit.id}`]);
     res.json(pandit);
@@ -8050,7 +8129,8 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         fullName: z.string().min(1),
         phone: z.string().min(1),
         email: z.string().email(),
-        city: z.string().min(1),
+        stateId: z.number().int().positive(),
+        cityId: z.number().int().positive(),
         experience: z.string().min(1),
         specializations: z.string().optional(),
         education: z.string().optional(),
@@ -8068,6 +8148,8 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const d = parsed.data;
+      const location = await resolveLocation(d.stateId, d.cityId);
+      if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
       const photoStr = typeof d.photo === "string" ? d.photo : "";
       const photoTooLarge = photoStr.length > 200_000; // ~200KB cap on stored photo payload
       const expYears = Math.max(0, Math.min(80, parseInt(String(d.experience)) || 1));
@@ -8078,7 +8160,12 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         fullName: d.fullName,
         phone: d.phone,
         email: d.email,
-        city: d.city,
+        city: location.city.name,
+        state: location.state.name,
+        stateId: location.state.id,
+        cityId: location.city.id,
+        originalCity: location.city.name,
+        locationReviewStatus: "resolved",
         serviceArea: d.serviceArea || null,
         regionalOrigin: d.regionalOrigin || null,
         gotra: d.gotra || null,
@@ -8165,6 +8252,11 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const pandit = await storage.createPandit({
         name: claimed.fullName,
         city: claimed.city,
+        state: claimed.state,
+        stateId: claimed.stateId,
+        cityId: claimed.cityId,
+        originalCity: claimed.originalCity || claimed.city,
+        locationReviewStatus: claimed.locationReviewStatus || "resolved",
         specialization: claimed.pujaTypes,
         languages: claimed.languages,
         experience: claimed.yearsExperience,

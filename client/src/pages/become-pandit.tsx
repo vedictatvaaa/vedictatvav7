@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import PageSeo from "@/components/PageSeo";
 import {
   ShieldCheck,
@@ -138,6 +138,8 @@ export default function BecomePandit() {
     phone: "",
     email: "",
     city: "",
+    stateId: "",
+    cityId: "",
     experience: "",
     specializations: "",
     education: "",
@@ -164,12 +166,18 @@ export default function BecomePandit() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const { city: _city, stateId, cityId, ...rest } = form;
       const res = await fetch("/api/pandit-applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, photo: photoPreview }),
+        body: JSON.stringify({
+          ...rest,
+          stateId: Number(stateId),
+          cityId: Number(cityId),
+          photo: photoPreview,
+        }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Failed to submit application");
       return res.json();
     },
     onSuccess: () => {
@@ -177,13 +185,13 @@ export default function BecomePandit() {
         title: "Application Submitted",
         description: "We'll review your details and reach out within 48 hours.",
       });
-      setForm({ fullName: "", phone: "", email: "", city: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false });
+      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false });
       setPhotoPreview(null);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Submission Failed",
-        description: "Could not submit your application. Please try again later.",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -191,7 +199,7 @@ export default function BecomePandit() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName || !form.phone || !form.email || !form.city || !form.experience) {
+    if (!form.fullName || !form.phone || !form.email || !form.stateId || !form.cityId || !form.experience) {
       toast({ title: "Missing Fields", description: "Please fill all required fields.", variant: "destructive" });
       return;
     }
@@ -1247,6 +1255,7 @@ function DemoSection() {
 // ══════════════════════════════════════════════════════════════════════
 type FormState = {
   fullName: string; phone: string; email: string; city: string; experience: string;
+  stateId: string; cityId: string;
   specializations: string; education: string; languages: string; bio: string;
   regionalOrigin: string; membership: string; agreeTerms: boolean;
 };
@@ -1262,6 +1271,12 @@ function RegistrationSection({
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   isPending: boolean;
 }) {
+  const { data: locations = [] } = useQuery<Array<{ id: number; name: string; isActive: boolean; cities: Array<{ id: number; name: string; isActive: boolean }> }>>({
+    queryKey: ["/api/locations"],
+    queryFn: () => fetch("/api/locations").then(r => { if (!r.ok) throw new Error("Unable to load locations"); return r.json(); }),
+  });
+  const activeStates = locations.filter(s => s.isActive);
+  const cities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
   return (
     <section
       id="apply"
@@ -1305,8 +1320,15 @@ function RegistrationSection({
                     <Field label="Email *" id="email">
                       <Input id="email" name="email" type="email" value={form.email} onChange={onChange} placeholder="pandit@example.com" required data-testid="input-email" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <Field label="City *" id="city">
-                      <Input id="city" name="city" value={form.city} onChange={onChange} placeholder="Delhi, Mumbai..." required data-testid="input-city" style={{ borderColor: `${C.maroon}25` }} />
+                    <Field label="State *" id="stateId">
+                      <select id="stateId" value={form.stateId} required onChange={e => setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "" }))} className="w-full h-10 rounded-md px-3 text-sm bg-white" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
+                        <option value="">Select state</option>{activeStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="City *" id="cityId">
+                      <select id="cityId" value={form.cityId} required disabled={!form.stateId} onChange={e => { const city = cities.find(c => String(c.id) === e.target.value); setForm(p => ({ ...p, cityId: e.target.value, city: city?.name || "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-city">
+                        <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
                     </Field>
                   </div>
                 </FieldGroup>

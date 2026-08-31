@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { pandits, panditReviews } from "@shared/schema";
 import { and, eq, isNull } from "drizzle-orm";
+import { resolveLocationName } from "./locations";
 
 type SeedPandit = {
   name: string;
@@ -157,6 +158,11 @@ export async function seedPanditProfiles() {
   let inserted = 0;
   let updated = 0;
   for (const p of SEED_PANDITS) {
+    const location = await resolveLocationName(p.city);
+    const locationFields = location ? {
+      city: location.city.name, state: location.state.name, stateId: location.state.id,
+      cityId: location.city.id, originalCity: p.city, locationReviewStatus: "resolved",
+    } : { originalCity: p.city, locationReviewStatus: "needs_review" };
     // Match by slug first, then fall back to legacy hardcoded rows that have no slug
     let [existing] = await db.select().from(pandits).where(eq(pandits.slug, p.slug));
     if (!existing) {
@@ -177,6 +183,7 @@ export async function seedPanditProfiles() {
         languages: p.languages,
         specialization: p.specialization,
         verified: true,
+        ...locationFields,
       }).where(eq(pandits.id, existing.id));
       updated += 1;
       continue;
@@ -196,6 +203,7 @@ export async function seedPanditProfiles() {
       education: p.education,
       image: p.image,
       verified: true,
+      ...locationFields,
     });
     inserted += 1;
   }

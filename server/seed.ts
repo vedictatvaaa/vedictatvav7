@@ -1,8 +1,11 @@
 import { db } from "./db";
-import { eq, notLike } from "drizzle-orm";
-import { products, pandits, socialProofSettings, boostEvents, productReviews, donations, seoPages, users } from "@shared/schema";
+import { eq, notLike, isNull } from "drizzle-orm";
+import { products, pandits, panditApplications, socialProofSettings, boostEvents, productReviews, donations, seoPages, users } from "@shared/schema";
+import { resolveLocationName, seedLocationMasters } from "./locations";
 
 export async function seedDatabase() {
+  await seedLocationMasters();
+  await backfillPanditLocations();
   const existingAdmin = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
   if (existingAdmin.length === 0) {
     console.log("Seeding admin user...");
@@ -192,6 +195,21 @@ export async function seedDatabase() {
   } catch (e) {
     console.error("Pandit seed error:", e);
   }
+}
+
+async function backfillPanditLocations() {
+  const backfill = async (table: any) => {
+    const rows = await db.select().from(table).where(isNull(table.cityId));
+    for (const row of rows) {
+      const match = await resolveLocationName(row.city, row.state);
+      const patch = match
+        ? { stateId: match.state.id, cityId: match.city.id, state: match.state.name, city: match.city.name, originalCity: row.city, locationReviewStatus: "resolved" }
+        : { originalCity: row.city, locationReviewStatus: "needs_review" };
+      await db.update(table).set(patch).where(eq(table.id, row.id));
+    }
+  };
+  await backfill(pandits);
+  await backfill(panditApplications);
 }
 
 async function seedDonations() {

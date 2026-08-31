@@ -209,6 +209,35 @@ export const dispatches = pgTable("dispatches", {
   orderIdIdx: index("dispatches_order_id_idx").on(t.orderId),
 }));
 
+export const indianStates = pgTable("indian_states", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  code: varchar("code", { length: 3 }).notNull(),
+  isUnionTerritory: boolean("is_union_territory").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  nameUnique: uniqueIndex("indian_states_name_unique").on(t.name),
+  codeUnique: uniqueIndex("indian_states_code_unique").on(t.code),
+  activeIdx: index("indian_states_active_idx").on(t.isActive),
+}));
+
+export const indianCities = pgTable("indian_cities", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  stateId: integer("state_id").notNull().references(() => indianStates.id),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  aliases: text("aliases").array().notNull().default(sql`'{}'::text[]`),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  stateNameUnique: uniqueIndex("indian_cities_state_name_unique").on(t.stateId, t.name),
+  slugUnique: uniqueIndex("indian_cities_slug_unique").on(t.slug),
+  stateActiveIdx: index("indian_cities_state_active_idx").on(t.stateId, t.isActive),
+}));
+
 export const pandits = pgTable("pandits", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),
@@ -244,6 +273,11 @@ export const pandits = pgTable("pandits", {
   // Server treats expired rows as effectively "free" until renewal.
   tierExpiresAt: timestamp("tier_expires_at"),
   state: text("state"), // for gold-tier state-wide reach matching
+  stateId: integer("state_id").references(() => indianStates.id),
+  cityId: integer("city_id").references(() => indianCities.id),
+  // Keeps the submitted legacy value when a row is normalized to a master city.
+  originalCity: text("original_city"),
+  locationReviewStatus: text("location_review_status").default("needs_review"),
   // Pandit storefronts (Phase 2 affiliate program):
   // commission % the pandit earns on referred shop product orders.
   // Tier defaults: free=0, silver=8, gold=12, guru_elite=15.
@@ -267,6 +301,8 @@ export const pandits = pgTable("pandits", {
 }, (t) => ({
   cityIdx: index("pandits_city_idx").on(t.city),
   stateIdx: index("pandits_state_idx").on(t.state),
+  stateIdIdx: index("pandits_state_id_idx").on(t.stateId),
+  cityIdIdx: index("pandits_city_id_idx").on(t.cityId),
   verifiedIdx: index("pandits_verified_idx").on(t.verified),
   boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
 }));
@@ -285,6 +321,11 @@ export const panditApplications = pgTable("pandit_applications", {
   phone: text("phone").notNull(),
   email: text("email").notNull(),
   city: text("city").notNull(),
+  state: text("state"),
+  stateId: integer("state_id").references(() => indianStates.id),
+  cityId: integer("city_id").references(() => indianCities.id),
+  originalCity: text("original_city"),
+  locationReviewStatus: text("location_review_status").default("needs_review"),
   serviceArea: text("service_area"),
   regionalOrigin: text("regional_origin"),
   gotra: text("gotra"),
@@ -307,7 +348,10 @@ export const panditApplications = pgTable("pandit_applications", {
   adminNote: text("admin_note"),
   reviewedAt: timestamp("reviewed_at"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  stateIdIdx: index("pandit_applications_state_id_idx").on(t.stateId),
+  cityIdIdx: index("pandit_applications_city_id_idx").on(t.cityId),
+}));
 
 export const franchiseApplications = pgTable("franchise_applications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

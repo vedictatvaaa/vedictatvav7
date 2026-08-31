@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown } from "lucide-react";
+import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,8 @@ function PanditsTab() {
   const [editingFeesId, setEditingFeesId] = useState<number | null>(null);
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
+  const [viewingPandit, setViewingPandit] = useState<Pandit | null>(null);
+  const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all");
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
   const [bulkGeocoding, setBulkGeocoding] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
@@ -53,6 +55,8 @@ function PanditsTab() {
     queryKey: ["/api/book-pandit-online", "admin"],
     queryFn: () => fetcher("/api/book-pandit-online?all=true"),
   });
+  const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>fetcher("/api/admin/locations") });
+  const visiblePandits = (pandits || []).filter((p:any) => (!search || `${p.name} ${p.city} ${p.specialization}`.toLowerCase().includes(search.toLowerCase())) && (!stateFilter || stateFilter === "all" || String(p.stateId) === stateFilter) && (!cityFilter || cityFilter === "all" || String(p.cityId) === cityFilter) && (verificationFilter === "all" || String(!!p.verified) === verificationFilter) && (availabilityFilter === "all" || p.availability === availabilityFilter));
 
   const approveMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -60,7 +64,7 @@ function PanditsTab() {
       const newVerified = !pandit?.verified;
       const res = await fetch(`/api/pandits/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ verified: newVerified }),
       });
       if (!res.ok) throw new Error("Update failed");
@@ -78,7 +82,7 @@ function PanditsTab() {
     mutationFn: async ({ id, fees }: { id: number; fees: number }) => {
       const res = await fetch(`/api/pandits/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ fees }),
       });
       if (!res.ok) throw new Error("Update failed");
@@ -94,7 +98,7 @@ function PanditsTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/pandits/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/pandits/${id}`, { method: "DELETE", headers: { "x-admin-token": adminToken } });
       if (!res.ok) throw new Error("Delete failed");
       return res.json();
     },
@@ -108,7 +112,7 @@ function PanditsTab() {
 
   const boostMutation = useMutation({
     mutationFn: async ({ id, boostType }: { id: number; boostType: "monthly" | "yearly" }) => {
-      const res = await fetch(`/api/pandits/${id}/boost`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ boostType }) });
+      const res = await fetch(`/api/pandits/${id}/boost`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-token": adminToken }, body: JSON.stringify({ boostType }) });
       if (!res.ok) throw new Error("Boost failed");
       return res.json();
     },
@@ -121,7 +125,7 @@ function PanditsTab() {
 
   const deactivateBoostMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/pandits/${id}/boost/deactivate`, { method: "POST" });
+      const res = await fetch(`/api/pandits/${id}/boost/deactivate`, { method: "POST", headers: { "x-admin-token": adminToken } });
       if (!res.ok) throw new Error("Deactivate failed");
       return res.json();
     },
@@ -141,7 +145,7 @@ function PanditsTab() {
       if (!coords) throw new Error(`Could not find coordinates for "${pandit.city}"`);
       const res = await fetch(`/api/pandits/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -172,7 +176,7 @@ function PanditsTab() {
     mutationFn: async ({ id, tier }: { id: number; tier: string }) => {
       const res = await fetch(`/api/pandits/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         // null tierExpiresAt = permanent admin grant (no subscription expiry)
         body: JSON.stringify({ tier, tierExpiresAt: null }),
       });
@@ -203,7 +207,7 @@ function PanditsTab() {
         try {
           await fetch(`/api/pandits/${pandit.id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
             body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
           });
           done++;
@@ -252,6 +256,13 @@ function PanditsTab() {
           </Button>
         )}
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <Input placeholder="Search pandits…" value={search} onChange={e=>setSearch(e.target.value)} />
+        <Select value={stateFilter} onValueChange={v=>{setStateFilter(v);setCityFilter("");}}><SelectTrigger><SelectValue placeholder="All states"/></SelectTrigger><SelectContent><SelectItem value="all">All states</SelectItem>{locations.map(s=><SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent></Select>
+        <Select value={cityFilter} onValueChange={setCityFilter} disabled={!stateFilter || stateFilter === "all"}><SelectTrigger><SelectValue placeholder={stateFilter && stateFilter !== "all" ? "All cities" : "Select state first"}/></SelectTrigger><SelectContent><SelectItem value="all">All cities</SelectItem>{locations.find(s=>String(s.id)===stateFilter)?.cities.map(c=><SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+        <Select value={verificationFilter} onValueChange={setVerificationFilter}><SelectTrigger><SelectValue placeholder="Verification"/></SelectTrigger><SelectContent><SelectItem value="all">All verification</SelectItem><SelectItem value="true">Verified</SelectItem><SelectItem value="false">Pending</SelectItem></SelectContent></Select>
+        <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}><SelectTrigger><SelectValue placeholder="Availability"/></SelectTrigger><SelectContent><SelectItem value="all">All availability</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="busy">Busy</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent></Select>
+      </div>
       {bulkGeocoding && bulkProgress && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3">
           <LocateFixed className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
@@ -277,7 +288,7 @@ function PanditsTab() {
         </div>
       ) : (
         <div className="space-y-3">
-          {(pandits || []).map((pandit) => {
+          {visiblePandits.map((pandit) => {
             const hasGps = pandit.latitude != null && pandit.longitude != null;
             const isGeocoding = geocodingId === pandit.id;
             return (
@@ -314,9 +325,9 @@ function PanditsTab() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{pandit.city} · {pandit.specialization}</p>
+                      <p className="text-sm text-muted-foreground">{(pandit as any).state ? `${(pandit as any).state} · ` : ""}{pandit.city} · {pandit.specialization} · {(pandit as any).regionalOrigin || "Tradition not set"}</p>
                       <p className="text-xs text-secondary">
-                        {pandit.experience} yrs exp · {pandit.languages} · ⭐ {pandit.rating}
+                        {pandit.experience} yrs exp · {pandit.languages} · ⭐ {pandit.rating} · {pandit.availability || "available"}
                         {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() && (
                           <span className="ml-2 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full text-[10px] font-bold">BOOSTED ({pandit.boostType})</span>
                         )}
@@ -397,11 +408,11 @@ function PanditsTab() {
                         {isGeocoding ? "Locating…" : hasGps ? "Re-locate" : "Set Location"}
                       </Button>
 
-                      {pandit.verified && (
-                        <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="h-8 text-primary border-primary/30 text-xs gap-1" data-testid={`btn-edit-pandit-${pandit.id}`}>
+                      {(pandit as any).locationReviewStatus === "needs_review" && <span className="text-xs font-medium text-amber-700">⚠ Location needs review</span>}
+                      <Button size="sm" variant="outline" onClick={() => setViewingPandit(pandit)} className="h-8 text-xs gap-1"><Eye className="w-3 h-3"/> View</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="h-8 text-primary border-primary/30 text-xs gap-1" data-testid={`btn-edit-pandit-${pandit.id}`}>
                           <Edit className="w-3 h-3" /> Edit
                         </Button>
-                      )}
 
                       {pandit.verified ? (
                         <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="h-8 text-orange-600 border-orange-200 text-xs gap-1" data-testid={`btn-delist-pandit-${pandit.id}`}>
@@ -421,8 +432,8 @@ function PanditsTab() {
               </Card>
             );
           })}
-          {(pandits || []).length === 0 && (
-            <p className="text-center text-muted-foreground py-8">No pandits registered.</p>
+          {visiblePandits.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">{(pandits || []).length ? "No pandits match these filters." : "No pandits registered."}</p>
           )}
         </div>
       )}
@@ -436,6 +447,7 @@ function PanditsTab() {
           setEditingPandit(null);
         }}
       />
+      <Dialog open={!!viewingPandit} onOpenChange={o=>!o&&setViewingPandit(null)}><DialogContent><DialogHeader><DialogTitle>{viewingPandit?.name}</DialogTitle><DialogDescription>Read-only profile details</DialogDescription></DialogHeader>{viewingPandit && <div className="space-y-2 text-sm"><p>{(viewingPandit as any).state} · {viewingPandit.city}</p><p>{viewingPandit.specialization}</p><p>{viewingPandit.experience} years experience · {viewingPandit.availability}</p><p>{viewingPandit.bio}</p></div>}</DialogContent></Dialog>
     </div>
   );
 }
@@ -445,10 +457,11 @@ function PanditsTab() {
 // ============================================================
 function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
-  const [form, setForm] = useState<Partial<Pandit & { latitude: number | null; longitude: number | null }>>({});
+  const [form, setForm] = useState<Partial<Pandit & { latitude: number | null; longitude: number | null; stateId: number | null; cityId: number | null }>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
+  const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>createFetcher(adminToken)("/api/admin/locations") });
 
   const handlePhotoUpload = async (file: File) => {
     setUploadingPhoto(true);
@@ -495,6 +508,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
       setForm({
         name: pandit.name,
         city: pandit.city,
+        stateId: (pandit as any).stateId,
+        cityId: (pandit as any).cityId,
         specialization: pandit.specialization,
         languages: pandit.languages,
         experience: pandit.experience,
@@ -520,7 +535,8 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
       if (!pandit) throw new Error("No pandit");
       const payload: Record<string, unknown> = {
         name: form.name,
-        city: form.city,
+        stateId: form.stateId,
+        cityId: form.cityId,
         specialization: form.specialization,
         languages: form.languages,
         experience: Number(form.experience),
@@ -540,7 +556,7 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
       };
       const res = await fetch(`/api/pandits/${pandit.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
@@ -573,8 +589,12 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
               <Input id="edit-pandit-name" value={form.name ?? ""} onChange={e => update("name", e.target.value)} data-testid="input-edit-pandit-name" />
             </div>
             <div>
-              <Label htmlFor="edit-pandit-city">City</Label>
-              <Input id="edit-pandit-city" value={form.city ?? ""} onChange={e => update("city", e.target.value)} data-testid="input-edit-pandit-city" />
+              <Label>State</Label>
+              <Select value={String((form as any).stateId || "")} onValueChange={v=>setForm(p=>({...p,stateId:Number(v),cityId:null,city:""}))}><SelectTrigger><SelectValue placeholder="Select state"/></SelectTrigger><SelectContent>{locations.filter(s => s.isActive).map(s=><SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div>
+              <Label>City</Label>
+              <Select value={String((form as any).cityId || "")} disabled={!(form as any).stateId} onValueChange={v=>{const c=locations.find(s=>s.id===(form as any).stateId)?.cities.find(c=>String(c.id)===v);setForm(p=>({...p,cityId:Number(v),city:c?.name||""}));}}><SelectTrigger><SelectValue placeholder="Select city"/></SelectTrigger><SelectContent>{locations.find(s=>s.id===(form as any).stateId)?.cities.filter(c=>c.isActive).map(c=><SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent></Select>
             </div>
             <div>
               <Label htmlFor="edit-pandit-service-area">Service Area</Label>

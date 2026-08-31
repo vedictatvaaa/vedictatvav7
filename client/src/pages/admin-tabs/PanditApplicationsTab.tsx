@@ -251,6 +251,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                     <SortHeader label="Name" k="fullName" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                     <SortHeader label="City" k="city" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                     <th className="py-2 pr-3 font-medium hidden md:table-cell">Contact</th>
+                    <th className="py-2 pr-3 font-medium hidden lg:table-cell">State / location review</th>
                     <th className="py-2 pr-3 font-medium hidden sm:table-cell">Exp</th>
                     <th className="py-2 pr-3 font-medium hidden lg:table-cell">Fees</th>
                     <SortHeader label="Submitted" k="createdAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} className="hidden lg:table-cell" />
@@ -271,6 +272,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                         <div className="text-xs">{app.email}</div>
                         <div className="text-xs text-secondary">{app.phone}</div>
                       </td>
+                       <td className="py-3 pr-3 text-muted-foreground hidden lg:table-cell">{(app as any).state || (app as any).stateName || "—"}{(app as any).locationReviewStatus && <div className="text-xs text-amber-700">{(app as any).locationReviewStatus}</div>}</td>
                       <td className="py-3 pr-3 text-muted-foreground hidden sm:table-cell">{app.yearsExperience}y</td>
                       <td className="py-3 pr-3 text-muted-foreground hidden lg:table-cell whitespace-nowrap">₹{app.feeRangeMin.toLocaleString("en-IN")}–₹{app.feeRangeMax.toLocaleString("en-IN")}</td>
                       <td className="py-3 pr-3 text-secondary hidden lg:table-cell whitespace-nowrap text-xs">
@@ -304,7 +306,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                   <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${APP_STATUS_COLORS[selected.status] || "bg-muted text-foreground"}`}>
                     {selected.status}
                   </span>
-                  <span className="text-muted-foreground">{selected.city}</span>
+                  <span className="text-muted-foreground">{(selected as any).state || (selected as any).stateName ? `${(selected as any).state || (selected as any).stateName} · ` : ""}{selected.city}</span>
                 </DialogDescription>
               </DialogHeader>
 
@@ -327,6 +329,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <DetailField label="Regional Origin" value={selected.regionalOrigin} />
+                  <DetailField label="Location Review" value={(selected as any).locationReviewStatus} />
                   <DetailField label="Service Area" value={selected.serviceArea} />
                   <DetailField label="Gotra" value={selected.gotra} />
                   <DetailField label="Parampara" value={selected.parampara} />

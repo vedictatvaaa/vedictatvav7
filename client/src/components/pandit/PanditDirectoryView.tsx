@@ -682,7 +682,7 @@ function PanditMap({
 // =====================================================================
 // Main directory view
 // =====================================================================
-export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }: { defaultCity: string; cityLabel: string; embedded?: boolean }) {
+export function PanditDirectoryView({ defaultCity, cityLabel, cityId, embedded = false }: { defaultCity: string; cityLabel: string; cityId?: string; embedded?: boolean }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sortBy, setSortBy] = useState<"best" | "online" | "rating" | "price-low" | "price-high" | "distance" | "experience">("best");
   const [view, setView] = useState<"list" | "map">("list");
@@ -708,13 +708,14 @@ export function PanditDirectoryView({ defaultCity, cityLabel, embedded = false }
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
     params.set("city", defaultCity);
+    if (cityId) params.set("cityId", cityId);
     if (filters.tradition) params.set("region", filters.tradition);
     if (userLocation) {
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
     }
     return params.toString();
-  }, [defaultCity, filters.tradition, userLocation]);
+  }, [defaultCity, cityId, filters.tradition, userLocation]);
 
   const { data: pandits, isLoading, isError, refetch, isFetching } = useQuery<PanditWithMeta[]>({
     queryKey: ["/api/book-pandit-online", queryParams],

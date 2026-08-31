@@ -9,7 +9,7 @@ export type TabId =
   | "mantras" | "schema-changelog"
   | "payment-gateways" | "ai-providers"
   | "blog-ai" | "puja-library" | "community" | "sacred-library"
-  | "festivals" | "homepage-sections" | "visitors" | "api-setup" | "distribution";
+  | "festivals" | "homepage-sections" | "visitors" | "api-setup" | "distribution" | "locations";
 
 export type TabSection =
   | "Overview" | "Catalog" | "Orders & Bookings" | "People" | "Marketing" | "System";
