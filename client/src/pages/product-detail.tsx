@@ -30,6 +30,7 @@ import PincodeChecker from "@/components/PincodeChecker";
 import DeliveryEtaInline from "@/components/DeliveryEtaInline";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import PageSeo from "@/components/PageSeo";
+import NotFound from "@/pages/not-found";
 import { product as productSchemaBuilder, breadcrumbList, faqPage, abs } from "@/lib/seo-schemas";
 
 const TIME_AGO_OPTIONS = ["2 min ago", "5 min ago", "8 min ago", "12 min ago", "18 min ago", "25 min ago", "1 hour ago"];
@@ -204,13 +205,17 @@ export default function ProductDetail() {
   })();
   const shopBackLabel = shopBackPath === "/spiritual-essentials" ? "Puja Essentials" : "Shop";
 
-  const { data: product, isLoading } = useQuery<Product>({
+  const { data: product, isLoading } = useQuery<Product | null>({
     queryKey: ["/api/products", id],
     queryFn: () => {
       const url = /^\d+$/.test(String(id))
         ? `/api/products/${id}`
         : `/api/products/slug/${id}`;
-      return fetch(url).then(r => r.json());
+      return fetch(url).then(async (response) => {
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`Product request failed with ${response.status}`);
+        return response.json();
+      });
     },
     enabled: !!id,
   });
@@ -580,16 +585,7 @@ export default function ProductDetail() {
   }
 
   if (!product) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-3xl font-serif text-[#6D2B35] mb-4" data-testid="text-product-not-found">Product Not Found</h1>
-          <Link href={shopBackPath}>
-            <Button variant="outline" className="rounded-md" data-testid="link-back-to-shop">Back to {shopBackLabel}</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <NotFound />;
   }
 
   const currentEvent = relevantEvents[currentEventIndex];

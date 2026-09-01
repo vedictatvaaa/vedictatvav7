@@ -69,7 +69,8 @@ import {
   matchesPanditListingFilters,
   publicPanditDto,
 } from "./pandit-discovery-policy";
-import { publicPanditReviewDto } from "./pandit-public-access";
+import { getPubliclyEligiblePandits, isPanditStorefrontPublished, publicPanditReviewDto } from "./pandit-public-access";
+import { publicRouteIntegrityMiddleware } from "./seo-route-integrity";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
 import { notifyPujaBooking } from "./services/booking-notifications";
@@ -1375,7 +1376,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   // ---- SEO: sitemap-people.xml — pandits + astrologers ----
   app.get("/sitemap-people.xml", async (req, res) => {
     const [pandits, astrologers, seoPagesList] = await Promise.all([
-      storage.getPandits().catch(() => []),
+      getPubliclyEligiblePandits().catch(() => []),
       storage.getAstrologers().catch(() => []),
       storage.getSeoPages(),
     ]);
@@ -1387,7 +1388,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 
     for (const p of pandits as any[]) {
       const sf = p.slug ? await storage.getPanditStorefrontByPanditId(p.id).catch(() => null) : null;
-      if (!sf?.isPublished || sf.status !== "published" || !p.slug) continue;
+      if (!isPanditStorefrontPublished(sf) || !p.slug) continue;
       const pPath = `/pandit/${encodeURIComponent(p.slug)}`;
       const seo = seoMap.get(pPath);
       if (seo && !seo.robotsIndex) continue;
@@ -12813,6 +12814,7 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   // meta, canonical and OG tags are spliced into <head> before crawlers
   // see the response. The React SPA still hydrates and updates head as
   // before; this only fixes the *first* HTML payload.
+  app.use(publicRouteIntegrityMiddleware());
   const { seoHeadMiddleware } = await import("./seo-ssr");
   app.use(seoHeadMiddleware());
 

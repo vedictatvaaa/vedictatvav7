@@ -41,7 +41,7 @@ export function serveStatic(app: Express) {
     // A missing hashed asset must stay a 404. Returning index.html here makes
     // browsers report "text/html is not a valid JavaScript MIME type" for
     // stale admin chunks after a deployment.
-    if (/\.(?:js|mjs|cjs|css|map|json|wasm)$/i.test(req.path)) {
+    if (/\.[a-z0-9]{1,12}$/i.test(req.path)) {
       return res.status(404).type("text/plain").send("Asset not found");
     }
     res.type("html").send(indexHtml);

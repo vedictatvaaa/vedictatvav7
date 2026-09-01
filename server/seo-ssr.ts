@@ -71,7 +71,7 @@ function buildHeadHtml(h: Head, baseUrl: string): string {
   const can = h.canonical.startsWith("http") ? h.canonical : `${baseUrl}${h.canonical}`;
   const og = abs(baseUrl, h.ogImage || DEFAULT_OG_IMAGE);
   const robots = h.noindex
-    ? "noindex, nofollow"
+    ? "noindex, follow"
     : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
   // Build the en/hi hreflang pair so server-rendered HTML matches the
   // client-side <PageSeo> component (which emits all three alternates).
@@ -141,6 +141,12 @@ function injectHead(html: string, headHtml: string): string {
   // Insert the new head block right after the opening <head>.
   out = out.replace(/<head([^>]*)>/i, (m, attrs) => `<head${attrs}>\n    ${headHtml}\n`);
   return out;
+}
+
+export function stripNotFoundHeadConflicts(html: string): string {
+  return html
+    .replace(/<meta\s+[^>]*\bname=["'](?:googlebot|bingbot)["'][^>]*>\s*/gi, "")
+    .replace(/<script\s+[^>]*\btype=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, "");
 }
 
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
@@ -352,9 +358,16 @@ export function seoHeadMiddleware() {
     const baseUrl =
       process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
 
-    let head: Head | null = null;
+    let head: Head | null = res.locals.seoNotFound
+      ? {
+          title: `Page Not Found | ${SITE_NAME}`,
+          description: "The requested page could not be found.",
+          canonical: path,
+          noindex: true,
+        }
+      : null;
     try {
-      head = await resolveHead(path, baseUrl);
+      if (!head) head = await resolveHead(path, baseUrl);
     } catch (err) {
       // SEO is best-effort — never crash a page load over a missing meta lookup.
       console.warn("[seo-ssr] resolveHead failed:", (err as any)?.message);
@@ -370,7 +383,8 @@ export function seoHeadMiddleware() {
       try {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (typeof body === "string" && body.includes("<head") && (ctype.includes("html") || !ctype)) {
-          const out = injectHead(body, headHtml);
+          const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(body) : body;
+          const out = injectHead(source, headHtml);
           // Length changed — drop any precomputed Content-Length so the
           // runtime recomputes it (Express normally does this for strings,
           // but be explicit to avoid mismatches when called via res.end).
@@ -396,7 +410,10 @@ export function seoHeadMiddleware() {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (ctype.includes("html")) {
           const str = chunk.toString("utf-8");
-          if (str.includes("<head")) chunk = injectHead(str, headHtml);
+          if (str.includes("<head")) {
+            const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(str) : str;
+            chunk = injectHead(source, headHtml);
+          }
         }
       }
       return (originalEnd as any)(chunk, ...rest);

@@ -89,7 +89,7 @@ export default function PageSeo({
       setLinkTag("alternate", enCanonical, { hreflang: "x-default" });
     }
     if (noindex) {
-      setMetaTag("robots", "noindex, nofollow");
+      setMetaTag("robots", "noindex, follow");
     } else {
       setMetaTag("robots", "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1");
     }

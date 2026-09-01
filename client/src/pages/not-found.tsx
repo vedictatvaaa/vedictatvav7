@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Home, Search, ShoppingBag, UserCheck, Sparkles, Calendar, BookOpen, HandHeart, Brain, Flame, ArrowRight, Compass, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useEffect } from "react";
+import PageSeo from "@/components/PageSeo";
 
 const popularPages = [
   { title: "Home", href: "/", icon: Home, desc: "Back to homepage" },
@@ -22,6 +24,25 @@ export default function NotFound() {
   const [location] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
+  useEffect(() => {
+    const removed = new Set<HTMLScriptElement>();
+    const removeSchemas = () => {
+      document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]').forEach((script) => {
+        removed.add(script);
+        script.remove();
+      });
+    };
+    removeSchemas();
+    const observer = new MutationObserver(removeSchemas);
+    observer.observe(document.head, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      removed.forEach((script) => {
+        if (!script.isConnected) document.head.appendChild(script);
+      });
+    };
+  }, []);
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
       window.location.href = `/puja-samagri-online?search=${encodeURIComponent(searchQuery.trim())}`;
@@ -29,7 +50,15 @@ export default function NotFound() {
   };
 
   return (
-    <div className="min-h-[80vh] bg-[#F5F0E6] flex flex-col items-center justify-center px-4 py-16">
+    <>
+      <PageSeo
+        title="Page Not Found | Vedic Tatva"
+        description="The requested page could not be found."
+        canonical={location}
+        noindex
+        schemas={[]}
+      />
+      <div className="min-h-[80vh] bg-[#F5F0E6] flex flex-col items-center justify-center px-4 py-16">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -112,6 +141,7 @@ export default function NotFound() {
           </Button>
         </Link>
       </motion.div>
-    </div>
+      </div>
+    </>
   );
 }
