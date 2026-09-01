@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   setMetaTag,
-  setLinkTag,
   setJsonLd,
   incrementPageSeo,
   decrementPageSeo,
+  applySeoMetadata,
+  getInitialSsrMetadata,
 } from "@/lib/seo-dom";
 import type { Schema } from "@/lib/seo-schemas";
+import { normalizeSeoPath, resolveSeoMetadata } from "@shared/seo-metadata";
 
 interface PageSeoProps {
   title: string;
@@ -52,56 +54,22 @@ export default function PageSeo({
     // wouter's `location` is base-stripped when inside <Router base="/hi">.
     const actualPath =
       typeof window !== "undefined" ? window.location.pathname : location;
-    const isHiUrl = /^\/hi(\/|$)/.test(actualPath);
-    // Build EN and HI variant paths so canonical and hreflang stay aligned for
-    // every language variant of the same page.
-    const basePath = canonical && !canonical.startsWith("http")
-      ? canonical.replace(/^\/hi(?=\/|$)/, "") || "/"
-      : actualPath.replace(/^\/hi(?=\/|$)/, "") || "/";
-    const enPath = basePath;
-    const hiPath = enPath === "/" ? "/hi" : `/hi${enPath}`;
-    const finalCanonical = canonical && canonical.startsWith("http")
-      ? canonical
-      : origin
-        ? `${origin}${isHiUrl ? hiPath : enPath}`
-        : "";
-    const enCanonical = origin ? `${origin}${enPath}` : enPath;
-    const hiCanonical = origin ? `${origin}${hiPath}` : hiPath;
-
-    document.title = title;
-    setMetaTag("description", description);
-    if (keywords) setMetaTag("keywords", keywords);
-    setMetaTag("og:title", ogTitle || title, true);
-    setMetaTag("og:description", ogDescription || description, true);
-    if (ogImage) setMetaTag("og:image", ogImage, true);
-    if (ogType) setMetaTag("og:type", ogType, true);
-    if (twitterCard) setMetaTag("twitter:card", twitterCard);
-    if (ogTitle || title) setMetaTag("twitter:title", ogTitle || title);
-    if (ogDescription || description) setMetaTag("twitter:description", ogDescription || description);
-    if (ogImage) setMetaTag("twitter:image", ogImage);
-    if (finalCanonical) {
-      // Self-referential canonical per language variant: Hindi pages canonicalise
-      // to /hi/<path>, English pages to /<path>. Reciprocal hreflang alternates
-      // declare the other language twin so Google can pair them.
-      setLinkTag("canonical", finalCanonical);
-      setLinkTag("alternate", enCanonical, { hreflang: "en-IN" });
-      setLinkTag("alternate", hiCanonical, { hreflang: "hi-IN" });
-      setLinkTag("alternate", enCanonical, { hreflang: "x-default" });
-    }
-    if (noindex) {
-      setMetaTag("robots", "noindex, follow");
-    } else {
-      setMetaTag("robots", "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1");
-    }
-
-    // Reconcile optional tags so absent props don't leak between PageSeo navigations
-    if (!keywords) setMetaTag("keywords", "");
-    if (!ogImage) {
-      setMetaTag("og:image", "", true);
-      setMetaTag("twitter:image", "");
-    }
-    if (!ogType) setMetaTag("og:type", "", true);
-    if (!twitterCard) setMetaTag("twitter:card", "");
+    const pathname = normalizeSeoPath(actualPath);
+    const metadata = getInitialSsrMetadata(pathname) || resolveSeoMetadata({
+      title,
+      description,
+      keywords,
+      ogTitle,
+      ogDescription,
+      ogImage,
+      ogType,
+      twitterCard,
+      canonical: canonical || pathname,
+      requestPath: pathname,
+      origin,
+      noindex,
+    });
+    applySeoMetadata(metadata);
 
     extraMeta?.forEach((m) => setMetaTag(m.name, m.content, m.property));
 

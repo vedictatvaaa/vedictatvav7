@@ -354,7 +354,7 @@ export default function ProductDetail() {
       .slice(0, 160);
     const title = `${product.name} — Buy Online at ₹${product.price.toLocaleString()} | Vedic Tatva`;
     const description = cleanDesc || `Buy ${product.name} online at Vedic Tatva. Authentic, lab-certified, energised. Free shipping above ₹999. Cash on Delivery available.`;
-    const path = `/product/${product.id}`;
+    const path = `/product/${product.slug || product.id}`;
     const imgUrl = product.image?.startsWith("http") ? product.image : abs(product.image || "");
     const avg = reviews && reviews.length > 0
       ? reviews.reduce((s, r: any) => s + (r.rating || 0), 0) / reviews.length

@@ -3,7 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import type { SeoPage } from "@shared/schema";
 import { useSiteSettings } from "@/lib/site-settings";
-import { setMetaTag, setLinkTag, setJsonLd, usePageSeoActive } from "@/lib/seo-dom";
+import {
+  applySeoMetadata,
+  getInitialSsrMetadata,
+  setMetaTag,
+  setJsonLd,
+  usePageSeoActive,
+} from "@/lib/seo-dom";
+import { normalizeSeoPath, resolveSeoMetadata } from "@shared/seo-metadata";
 
 function buildBreadcrumbs(pathname: string, origin: string, siteName: string) {
   if (!pathname || pathname === "/") return null;
@@ -79,6 +86,9 @@ export default function SeoHead() {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const defaultCanonical = origin ? `${origin}${location}` : "";
     const siteName = site?.siteName || "Vedic Tatva";
+    const initialMetadata = getInitialSsrMetadata(normalizeSeoPath(
+      typeof window !== "undefined" ? window.location.pathname : location,
+    ));
 
     // Auto-breadcrumb only when no PageSeo owns the page — otherwise the
     // page's own breadcrumb schema (same id="breadcrumb") would race this one.
@@ -94,50 +104,49 @@ export default function SeoHead() {
     // If a <PageSeo /> is mounted, the page owns the rest of head — bail.
     if (pageManaged) return;
 
+    // Preserve the exact server-resolved head for the first hydrated route.
+    // Async site settings / seo_pages queries must not replace a crawler-visible
+    // title or share card with a different client fallback after mount.
+    if (initialMetadata) {
+      applySeoMetadata(initialMetadata);
+      return;
+    }
+
     const fallbackTitle = site?.siteName ? `${site.siteName} — ${site.tagline || DEFAULTS.description.split(",")[0]}` : DEFAULTS.title;
     const fallbackDesc = site?.tagline || DEFAULTS.description;
     const fallbackOgImage = site?.heroImageUrl || site?.logoUrl || DEFAULTS.ogImage;
 
     if (!seoData || !seoData.isActive) {
-      document.title = fallbackTitle;
-      setMetaTag("description", fallbackDesc);
-      setMetaTag("og:title", fallbackTitle, true);
-      setMetaTag("og:description", fallbackDesc, true);
-      setMetaTag("og:site_name", siteName, true);
-      if (fallbackOgImage) setMetaTag("og:image", fallbackOgImage, true);
-      if (defaultCanonical) {
-        setLinkTag("canonical", defaultCanonical);
-        setLinkTag("alternate", defaultCanonical, { hreflang: "en-IN" });
-        setLinkTag("alternate", defaultCanonical, { hreflang: "x-default" });
-      }
-      setMetaTag("robots", "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1");
+      applySeoMetadata(resolveSeoMetadata({
+        title: fallbackTitle,
+        description: fallbackDesc,
+        canonical: location,
+        requestPath: location,
+        origin,
+        siteName,
+        ogImage: fallbackOgImage,
+      }));
       return;
     }
 
-    document.title = seoData.metaTitle || fallbackTitle;
-    setMetaTag("description", seoData.metaDescription || fallbackDesc);
-    if (seoData.metaKeywords) setMetaTag("keywords", seoData.metaKeywords);
-
-    setMetaTag("og:site_name", siteName, true);
-    setMetaTag("og:title", seoData.ogTitle || seoData.metaTitle || fallbackTitle, true);
-    setMetaTag("og:description", seoData.ogDescription || seoData.metaDescription || fallbackDesc, true);
-    setMetaTag("og:image", seoData.ogImage || fallbackOgImage, true);
-    if (seoData.ogType) setMetaTag("og:type", seoData.ogType, true);
-
-    if (seoData.twitterTitle) setMetaTag("twitter:title", seoData.twitterTitle);
-    if (seoData.twitterDescription) setMetaTag("twitter:description", seoData.twitterDescription);
-    if (seoData.twitterImage) setMetaTag("twitter:image", seoData.twitterImage);
-
-    setLinkTag("canonical", seoData.canonicalUrl || defaultCanonical);
-    if (defaultCanonical) {
-      setLinkTag("alternate", defaultCanonical, { hreflang: "en-IN" });
-      setLinkTag("alternate", defaultCanonical, { hreflang: "x-default" });
-    }
-
-    const robotsParts: string[] = [];
-    robotsParts.push(seoData.robotsIndex ? "index" : "noindex");
-    robotsParts.push(seoData.robotsFollow ? "follow" : "nofollow");
-    setMetaTag("robots", robotsParts.join(", "));
+    applySeoMetadata(resolveSeoMetadata({
+      title: seoData.metaTitle || fallbackTitle,
+      description: seoData.metaDescription || fallbackDesc,
+      keywords: seoData.metaKeywords || undefined,
+      canonical: seoData.canonicalUrl || location,
+      requestPath: location,
+      origin,
+      siteName,
+      ogTitle: seoData.ogTitle || undefined,
+      ogDescription: seoData.ogDescription || undefined,
+      ogImage: seoData.ogImage || fallbackOgImage,
+      ogType: seoData.ogType || undefined,
+      twitterTitle: seoData.twitterTitle || undefined,
+      twitterDescription: seoData.twitterDescription || undefined,
+      twitterImage: seoData.twitterImage || undefined,
+      robotsIndex: seoData.robotsIndex,
+      robotsFollow: seoData.robotsFollow,
+    }));
 
     if (seoData.schemaMarkup) {
       let scriptEl = document.querySelector('script[data-seo-schema]') as HTMLScriptElement;

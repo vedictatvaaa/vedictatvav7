@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { useSiteSettings } from "@/lib/site-settings";
+import { setJsonLd } from "@/lib/seo-dom";
+import { SEO_CANONICAL_ORIGIN } from "@shared/seo-metadata";
 
 // OrganizationSchema injects a site-wide JSON-LD block so Google can connect
 // the Business Profile (GMB), social accounts, and contact points to this
@@ -13,8 +15,7 @@ export default function OrganizationSchema() {
 
   useEffect(() => {
     if (!site || !site.siteName) return;
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const id = `${origin}/#organization`;
+    const id = `${SEO_CANONICAL_ORIGIN}/#organization`;
 
     const sameAs = [
       site.socialInstagram,
@@ -53,7 +54,7 @@ export default function OrganizationSchema() {
       "@type": hasAddress ? "LocalBusiness" : "Organization",
       "@id": id,
       name: site.siteName,
-      url: origin || undefined,
+      url: SEO_CANONICAL_ORIGIN,
       description: site.tagline || undefined,
       logo: site.logoUrl || undefined,
       image: site.heroImageUrl || site.logoUrl || undefined,
@@ -66,14 +67,7 @@ export default function OrganizationSchema() {
     // Remove undefined keys for a clean payload.
     Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
 
-    let el = document.getElementById("ld-org-schema") as HTMLScriptElement | null;
-    if (!el) {
-      el = document.createElement("script");
-      el.id = "ld-org-schema";
-      el.type = "application/ld+json";
-      document.head.appendChild(el);
-    }
-    el.textContent = JSON.stringify(payload);
+    setJsonLd("organization", payload);
   }, [site]);
 
   return null;

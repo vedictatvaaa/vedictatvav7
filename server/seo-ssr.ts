@@ -30,6 +30,10 @@ import { storage } from "./storage";
 import { CATEGORY_HEAD, resolveCategorySlug } from "./seo-category-head";
 import { resolveExplicitOgCard } from "./og-meta";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
+import {
+  resolveSeoMetadata,
+  type ResolvedSeoMetadata,
+} from "../shared/seo-metadata";
 
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
@@ -43,14 +47,29 @@ const SKIP_PREFIXES = [
 const SITE_NAME = "Vedic Tatva";
 const DEFAULT_OG_IMAGE = "/attached_assets/og-default.png";
 
-type Head = {
+export type HeadSchema = {
+  id: string;
+  payload: Record<string, any>;
+};
+
+export type Head = {
   title: string;
   description: string;
   canonical: string;
+  keywords?: string;
+  ogTitle?: string;
+  ogDescription?: string;
   ogImage?: string;
   ogType?: string;
+  twitterCard?: string;
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImage?: string;
   noindex?: boolean;
-  jsonLd?: Array<Record<string, any>>;
+  robotsIndex?: boolean;
+  robotsFollow?: boolean;
+  preserveOnHydration?: boolean;
+  jsonLd?: HeadSchema[];
 };
 
 function abs(baseUrl: string, p: string | undefined | null): string {
@@ -67,54 +86,65 @@ function escapeHtmlAttr(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function buildHeadHtml(h: Head, baseUrl: string): string {
-  const can = h.canonical.startsWith("http") ? h.canonical : `${baseUrl}${h.canonical}`;
-  const og = abs(baseUrl, h.ogImage || DEFAULT_OG_IMAGE);
-  const robots = h.noindex
-    ? "noindex, follow"
-    : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
-  // Build the en/hi hreflang pair so server-rendered HTML matches the
-  // client-side <PageSeo> component (which emits all three alternates).
-  // Without the hi-IN entry here, crawlers see only English alternates and
-  // Google will discard the hreflang cluster for the Hindi pages entirely.
-  // Path layout matches client/src/components/PageSeo.tsx: Hindi pages live
-  // under /hi/<path>, English pages at /<path>; canonical = self.
-  // Normalize trailing slashes so SSR matches the client `PageSeo`
-  // output exactly (`/hi`, never `/hi/`; `/blog`, never `/blog/`).
-  // The single exception is the root `/` which must stay as-is.
-  const rawPath = h.canonical.replace(/^https?:\/\/[^/]+/, "") || "/";
-  const cleanPath = rawPath === "/" ? "/" : rawPath.replace(/\/+$/, "") || "/";
-  const isHindi = cleanPath === "/hi" || cleanPath.startsWith("/hi/");
-  const enPath = isHindi
-    ? (cleanPath === "/hi" ? "/" : cleanPath.replace(/^\/hi/, ""))
-    : cleanPath;
-  const hiPath = isHindi ? cleanPath : (cleanPath === "/" ? "/hi" : `/hi${cleanPath}`);
-  const enHref = enPath.startsWith("http") ? enPath : `${baseUrl}${enPath}`;
-  const hiHref = hiPath.startsWith("http") ? hiPath : `${baseUrl}${hiPath}`;
+export function resolveHeadMetadata(h: Head, baseUrl: string, requestPath = h.canonical): ResolvedSeoMetadata {
+  const metadata = resolveSeoMetadata({
+    title: h.title,
+    description: h.description,
+    canonical: h.canonical,
+    requestPath,
+    origin: baseUrl,
+    siteName: SITE_NAME,
+    keywords: h.keywords,
+    ogTitle: h.ogTitle,
+    ogDescription: h.ogDescription,
+    ogImage: h.ogImage || DEFAULT_OG_IMAGE,
+    ogType: h.ogType,
+    twitterCard: h.twitterCard,
+    twitterTitle: h.twitterTitle,
+    twitterDescription: h.twitterDescription,
+    twitterImage: h.twitterImage,
+    noindex: h.noindex,
+    robotsIndex: h.robotsIndex,
+    robotsFollow: h.robotsFollow,
+  });
+  return h.preserveOnHydration === false
+    ? { ...metadata, isFallback: true }
+    : metadata;
+}
+
+export function buildHeadHtml(h: Head, baseUrl: string, requestPath = h.canonical): string {
+  const metadata = resolveHeadMetadata(h, baseUrl, requestPath);
   const lines = [
-    `<title>${escapeHtmlAttr(h.title)}</title>`,
-    `<meta name="description" content="${escapeHtmlAttr(h.description)}" />`,
-    `<meta name="robots" content="${robots}" />`,
-    `<link rel="canonical" href="${escapeHtmlAttr(can)}" />`,
-    `<link rel="alternate" hreflang="en-IN" href="${escapeHtmlAttr(enHref)}" />`,
-    `<link rel="alternate" hreflang="hi-IN" href="${escapeHtmlAttr(hiHref)}" />`,
-    `<link rel="alternate" hreflang="x-default" href="${escapeHtmlAttr(enHref)}" />`,
-    `<meta property="og:site_name" content="${escapeHtmlAttr(SITE_NAME)}" />`,
-    `<meta property="og:title" content="${escapeHtmlAttr(h.title)}" />`,
-    `<meta property="og:description" content="${escapeHtmlAttr(h.description)}" />`,
-    `<meta property="og:url" content="${escapeHtmlAttr(can)}" />`,
-    `<meta property="og:type" content="${escapeHtmlAttr(h.ogType || "website")}" />`,
-    `<meta property="og:image" content="${escapeHtmlAttr(og)}" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escapeHtmlAttr(h.title)}" />`,
-    `<meta name="twitter:description" content="${escapeHtmlAttr(h.description)}" />`,
-    `<meta name="twitter:image" content="${escapeHtmlAttr(og)}" />`,
+    `<title>${escapeHtmlAttr(metadata.title)}</title>`,
+    `<meta name="description" content="${escapeHtmlAttr(metadata.description)}" />`,
+    ...(metadata.keywords
+      ? [`<meta name="keywords" content="${escapeHtmlAttr(metadata.keywords)}" />`]
+      : []),
+    `<meta name="robots" content="${metadata.robots}" />`,
+    `<link rel="canonical" href="${escapeHtmlAttr(metadata.canonical)}" />`,
+    `<link rel="alternate" hreflang="en-IN" href="${escapeHtmlAttr(metadata.alternates["en-IN"])}" />`,
+    `<link rel="alternate" hreflang="hi-IN" href="${escapeHtmlAttr(metadata.alternates["hi-IN"])}" />`,
+    `<link rel="alternate" hreflang="x-default" href="${escapeHtmlAttr(metadata.alternates["x-default"])}" />`,
+    `<meta property="og:site_name" content="${escapeHtmlAttr(metadata.openGraph.siteName)}" />`,
+    `<meta property="og:title" content="${escapeHtmlAttr(metadata.openGraph.title)}" />`,
+    `<meta property="og:description" content="${escapeHtmlAttr(metadata.openGraph.description)}" />`,
+    `<meta property="og:url" content="${escapeHtmlAttr(metadata.openGraph.url)}" />`,
+    `<meta property="og:type" content="${escapeHtmlAttr(metadata.openGraph.type)}" />`,
+    `<meta property="og:image" content="${escapeHtmlAttr(metadata.openGraph.image)}" />`,
+    `<meta property="og:locale" content="${metadata.openGraph.locale}" />`,
+    `<meta property="og:locale:alternate" content="${metadata.openGraph.alternateLocale}" />`,
+    `<meta name="twitter:card" content="${metadata.twitter.card}" />`,
+    `<meta name="twitter:site" content="${metadata.twitter.site}" />`,
+    `<meta name="twitter:title" content="${escapeHtmlAttr(metadata.twitter.title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtmlAttr(metadata.twitter.description)}" />`,
+    `<meta name="twitter:image" content="${escapeHtmlAttr(metadata.twitter.image)}" />`,
+    `<script id="ssr-seo-state" type="application/json">${JSON.stringify(metadata).replace(/</g, "\\u003c")}</script>`,
   ];
-  for (const j of h.jsonLd || []) {
+  for (const schema of h.jsonLd || []) {
     // Stringify safely — no </script> escape needed because JSON.stringify
     // escapes < as \u003c only in some engines; do it explicitly.
-    const json = JSON.stringify(j).replace(/</g, "\\u003c");
-    lines.push(`<script type="application/ld+json">${json}</script>`);
+    const json = JSON.stringify(schema.payload).replace(/</g, "\\u003c");
+    lines.push(`<script type="application/ld+json" data-jsonld="${escapeHtmlAttr(schema.id)}">${json}</script>`);
   }
   return `<!--ssr-seo-->\n    ${lines.join("\n    ")}\n    <!--/ssr-seo-->`;
 }
@@ -123,10 +153,12 @@ function buildHeadHtml(h: Head, baseUrl: string): string {
 // title from index.html) with the per-route head block. Also strip the
 // site-wide canonical, robots, og:*, twitter:* and JSON-LD tags that ship
 // in the static template so crawlers don't see two competing values.
-function injectHead(html: string, headHtml: string): string {
+export function injectHead(html: string, headHtml: string): string {
   let out = html;
   // Remove generic title.
   out = out.replace(/<title>[\s\S]*?<\/title>/i, "");
+  out = out.replace(/<meta\s+[^>]*\bname=["']description["'][^>]*>\s*/gi, "");
+  out = out.replace(/<meta\s+[^>]*\bname=["']keywords["'][^>]*>\s*/gi, "");
   // Remove existing canonical, alternate, robots, og:*, twitter:* tags so
   // there is exactly one of each in the head we ship. Preserve the
   // /llms.txt alternate (rel="alternate" type="text/markdown") which is
@@ -143,13 +175,55 @@ function injectHead(html: string, headHtml: string): string {
   return out;
 }
 
-export function stripNotFoundHeadConflicts(html: string): string {
-  return html
-    .replace(/<meta\s+[^>]*\bname=["'](?:googlebot|bingbot)["'][^>]*>\s*/gi, "")
-    .replace(/<script\s+[^>]*\btype=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, "");
-}
-
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
+  const staticHeads: Record<string, Head> = {
+    "/qa": {
+      title: "Spiritual Q&A — Pujas, Mantras, Vedic Wisdom | Vedic Tatva",
+      description: "Hundreds of answered questions on Hindu pujas, fasting, festivals, mantras, astrology and dharma — sourced from practising pandits and editorial review.",
+      canonical: "/qa",
+    },
+    "/puja-guide": {
+      title: "Puja Guide — Vidhi, Samagri, Muhurats for Every Major Hindu Puja",
+      description: "Authentic guide to Hindu pujas — Satyanarayan, Rudrabhishek, Lakshmi, Navagraha, Griha Pravesh and more. Vidhi, story, samagri checklist, and yearly muhurats.",
+      canonical: "/puja-guide",
+    },
+    "/accessibility": {
+      title: "Accessibility Statement | Vedic Tatva",
+      description: "Vedic Tatva is committed to WCAG 2.1 Level AA accessibility — keyboard navigation, screen reader support, color contrast, and an open feedback channel.",
+      canonical: "/accessibility",
+    },
+    "/product-compare": {
+      title: "Compare Sacred Puja Products Side-by-Side | Vedic Tatva",
+      description: "Compare up to 4 sacred Vedic Tatva products side-by-side — price, category, highlights, availability and more. Make informed choices for your puja and home.",
+      canonical: "/compare",
+    },
+    "/investors": {
+      title: "Investors — Vedic Tatva | Building India's Spiritual Operating System",
+      description: "Vedic Tatva is the premium platform unifying verified pandits, authentic spiritual products, AI consultations and the Sacred Library. Investor relations, market opportunity, traction and contact for funds, family offices and angels.",
+      canonical: "/investors",
+    },
+    "/puja-kit": {
+      title: "Build Your Puja Kit · Vedic Tatva",
+      description: "Pick your deity — get a curated kit of diyas, hawan samagri, akhand jot and everything you need, added to cart in one click.",
+      canonical: "/puja-kit",
+    },
+    "/japa": {
+      title: "Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva",
+      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
+      canonical: "/digital-japa-counter",
+      keywords: "japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप",
+      twitterCard: "summary_large_image",
+    },
+    "/digital-japa-counter": {
+      title: "Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva",
+      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
+      canonical: "/digital-japa-counter",
+      keywords: "japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप",
+      twitterCard: "summary_large_image",
+    },
+  };
+  if (staticHeads[reqPath]) return staticHeads[reqPath];
+
   // 0) Bespoke WhatsApp/social share cards (server/og-meta.ts).
   // These are hand-curated for the highest-intent routes (homepage,
   // /become-pandit, /puja-samagri-online, /spiritual-essentials, /book-pandit-online, /puja,
@@ -224,6 +298,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
           itemListSchema = {
             "@context": "https://schema.org",
             "@type": "ItemList",
+            "@id": `${baseUrl}${canonicalPath}#item-list`,
             name: c.category,
             numberOfItems: matches.length,
             itemListElement: matches.map((p: any, idx: number) => ({
@@ -242,6 +317,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
         ? {
             "@context": "https://schema.org",
             "@type": "FAQPage",
+            "@id": `${baseUrl}${canonicalPath}#faq`,
             mainEntity: c.faqs.map((f) => ({
               "@type": "Question",
               name: f.q,
@@ -253,6 +329,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
       const breadcrumbSchema = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
+        "@id": `${baseUrl}${canonicalPath}#breadcrumb`,
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: `${baseUrl}/` },
           { "@type": "ListItem", position: 2, name: "Shop", item: `${baseUrl}/puja-samagri-online` },
@@ -260,9 +337,11 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
         ],
       };
 
-      const jsonLd = [breadcrumbSchema, itemListSchema, faqSchema].filter(
-        (x): x is Record<string, any> => Boolean(x)
-      );
+      const jsonLd: HeadSchema[] = [
+        { id: "breadcrumb", payload: breadcrumbSchema },
+        ...(itemListSchema ? [{ id: "item-list", payload: itemListSchema }] : []),
+        ...(faqSchema ? [{ id: `faq-${canonicalKey}`, payload: faqSchema }] : []),
+      ];
 
       return {
         title: c.metaTitle,
@@ -307,8 +386,12 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
         ogType: "product",
         jsonLd: [
           {
+            id: "product",
+            payload: {
             "@context": "https://schema.org",
             "@type": "Product",
+            "@id": `${baseUrl}${canonical}#product`,
+            url: `${baseUrl}${canonical}`,
             name: p.name,
             description: desc,
             image: p.image ? abs(baseUrl, p.image) : undefined,
@@ -316,28 +399,113 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
             brand: { "@type": "Brand", name: p.brand || SITE_NAME },
             category: p.category,
             offers: offer,
+            },
           },
         ],
       };
     }
   }
 
-  // 3) Anything in seo_pages (admin-managed: hero/SEO copy for landings)
+  // 3) Published blog article — align the first response with BlogPostPage.
+  const blogMatch = reqPath.match(/^\/blog\/([^/?#]+)$/);
+  if (blogMatch) {
+    try {
+      const post = await storage.getBlogPostBySlug(decodeURIComponent(blogMatch[1]));
+      if (post && post.isPublished) {
+        const canonical = `/blog/${post.slug}`;
+        const description = post.metaDescription || post.excerpt || "";
+        const articleUrl = `${baseUrl}${canonical}`;
+        const bodyText = String(post.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        const published = (post.publishedAt || post.createdAt)?.toISOString();
+        return {
+          title: post.metaTitle || `${post.title} | ${SITE_NAME}`,
+          description,
+          canonical,
+          ogImage: post.coverImage || undefined,
+          ogType: "article",
+          jsonLd: [
+            {
+              id: "article",
+              payload: {
+                "@context": "https://schema.org",
+                "@type": "BlogPosting",
+                "@id": `${articleUrl}#article`,
+                headline: post.title,
+                description,
+                image: [abs(baseUrl, post.coverImage || "/opengraph.jpg")],
+                mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+                datePublished: published,
+                dateModified: published,
+                author: {
+                  "@type": "Person",
+                  name: post.authorName || SITE_NAME,
+                  url: `${baseUrl}/blog`,
+                  worksFor: { "@id": `${baseUrl}/#organization` },
+                },
+                publisher: { "@id": `${baseUrl}/#organization` },
+                wordCount: bodyText ? bodyText.split(" ").length : undefined,
+                articleSection: post.category || undefined,
+                keywords: post.tags?.length ? post.tags.join(", ") : undefined,
+              },
+            },
+            {
+              id: "breadcrumb",
+              payload: {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "@id": `${articleUrl}#breadcrumb`,
+                itemListElement: [
+                  { "@type": "ListItem", position: 1, name: "Home", item: `${baseUrl}/` },
+                  { "@type": "ListItem", position: 2, name: "Journal", item: `${baseUrl}/blog` },
+                  { "@type": "ListItem", position: 3, name: post.title, item: articleUrl },
+                ],
+              },
+            },
+          ],
+        };
+      }
+    } catch {}
+  }
+
+  // 4) Anything in seo_pages (admin-managed: hero/SEO copy for landings)
   try {
     const seo = await storage.getSeoPageByPath(reqPath);
     if (seo && seo.isActive) {
       return {
         title: seo.metaTitle || `${SITE_NAME}`,
         description: seo.metaDescription || "",
-        canonical: seo.canonical || reqPath,
+        canonical: seo.canonicalUrl || reqPath,
+        keywords: seo.metaKeywords || undefined,
+        ogTitle: seo.ogTitle || undefined,
+        ogDescription: seo.ogDescription || undefined,
         ogImage: seo.ogImage || undefined,
-        ogType: "website",
-        noindex: seo.robotsIndex === false,
+        ogType: seo.ogType || "website",
+        twitterTitle: seo.twitterTitle || undefined,
+        twitterDescription: seo.twitterDescription || undefined,
+        twitterImage: seo.twitterImage || undefined,
+        robotsIndex: seo.robotsIndex,
+        robotsFollow: seo.robotsFollow,
       };
     }
   } catch {}
 
   return null;
+}
+
+function fallbackHead(reqPath: string): Head {
+  const cleanPath = reqPath.replace(/^\/hi(?=\/|$)/, "").replace(/\/+$/, "") || "/";
+  const segment = cleanPath.split("/").filter(Boolean).pop();
+  const label = segment
+    ? decodeURIComponent(segment)
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : SITE_NAME;
+  return {
+    title: label === SITE_NAME ? SITE_NAME : `${label} | ${SITE_NAME}`,
+    description: "Explore authentic Vedic services, spiritual guidance, puja bookings, and sacred products from Vedic Tatva.",
+    canonical: reqPath,
+    preserveOnHydration: false,
+  };
 }
 
 export function seoHeadMiddleware() {
@@ -358,23 +526,16 @@ export function seoHeadMiddleware() {
     const baseUrl =
       process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
 
-    let head: Head | null = res.locals.seoNotFound
-      ? {
-          title: `Page Not Found | ${SITE_NAME}`,
-          description: "The requested page could not be found.",
-          canonical: path,
-          noindex: true,
-        }
-      : null;
+    let head: Head | null = null;
     try {
-      if (!head) head = await resolveHead(path, baseUrl);
+      head = await resolveHead(path, baseUrl);
     } catch (err) {
       // SEO is best-effort — never crash a page load over a missing meta lookup.
       console.warn("[seo-ssr] resolveHead failed:", (err as any)?.message);
     }
-    if (!head) return next();
+    if (!head) head = fallbackHead(path);
 
-    const headHtml = buildHeadHtml(head, baseUrl);
+    const headHtml = buildHeadHtml(head, baseUrl, path);
 
     // Wrap both res.send and res.end so HTML emitted by Vite (which calls
     // res.end(page) directly) AND by static/express handlers (res.send) get
@@ -383,8 +544,7 @@ export function seoHeadMiddleware() {
       try {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (typeof body === "string" && body.includes("<head") && (ctype.includes("html") || !ctype)) {
-          const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(body) : body;
-          const out = injectHead(source, headHtml);
+          const out = injectHead(body, headHtml);
           // Length changed — drop any precomputed Content-Length so the
           // runtime recomputes it (Express normally does this for strings,
           // but be explicit to avoid mismatches when called via res.end).
@@ -410,10 +570,7 @@ export function seoHeadMiddleware() {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (ctype.includes("html")) {
           const str = chunk.toString("utf-8");
-          if (str.includes("<head")) {
-            const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(str) : str;
-            chunk = injectHead(source, headHtml);
-          }
+          if (str.includes("<head")) chunk = injectHead(str, headHtml);
         }
       }
       return (originalEnd as any)(chunk, ...rest);

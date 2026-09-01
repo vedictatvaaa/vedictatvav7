@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { ResolvedSeoMetadata } from "@shared/seo-metadata";
 
 export function setMetaTag(name: string, content: string | undefined | null, property = false) {
   if (typeof document === "undefined") return;
@@ -48,6 +49,53 @@ export function setJsonLd(id: string, payload: any | null) {
     document.head.appendChild(el);
   }
   el.textContent = JSON.stringify(payload);
+}
+
+let initialSsrMetadata: ResolvedSeoMetadata | null | undefined;
+
+export function getInitialSsrMetadata(
+  pathname: string,
+  includeFallback = true,
+): ResolvedSeoMetadata | null {
+  if (typeof document === "undefined") return null;
+  if (initialSsrMetadata === undefined) {
+    const el = document.getElementById("ssr-seo-state");
+    try {
+      initialSsrMetadata = el?.textContent
+        ? JSON.parse(el.textContent) as ResolvedSeoMetadata
+        : null;
+    } catch {
+      initialSsrMetadata = null;
+    }
+  }
+  if (initialSsrMetadata?.pathname !== pathname) return null;
+  if (!includeFallback && initialSsrMetadata.isFallback) return null;
+  return initialSsrMetadata;
+}
+
+export function applySeoMetadata(metadata: ResolvedSeoMetadata) {
+  if (typeof document === "undefined") return;
+  document.title = metadata.title;
+  setMetaTag("description", metadata.description);
+  setMetaTag("keywords", metadata.keywords || "");
+  setMetaTag("robots", metadata.robots);
+  setLinkTag("canonical", metadata.canonical);
+  setLinkTag("alternate", metadata.alternates["en-IN"], { hreflang: "en-IN" });
+  setLinkTag("alternate", metadata.alternates["hi-IN"], { hreflang: "hi-IN" });
+  setLinkTag("alternate", metadata.alternates["x-default"], { hreflang: "x-default" });
+  setMetaTag("og:site_name", metadata.openGraph.siteName, true);
+  setMetaTag("og:title", metadata.openGraph.title, true);
+  setMetaTag("og:description", metadata.openGraph.description, true);
+  setMetaTag("og:url", metadata.openGraph.url, true);
+  setMetaTag("og:type", metadata.openGraph.type, true);
+  setMetaTag("og:image", metadata.openGraph.image, true);
+  setMetaTag("og:locale", metadata.openGraph.locale, true);
+  setMetaTag("og:locale:alternate", metadata.openGraph.alternateLocale, true);
+  setMetaTag("twitter:card", metadata.twitter.card);
+  setMetaTag("twitter:site", metadata.twitter.site);
+  setMetaTag("twitter:title", metadata.twitter.title);
+  setMetaTag("twitter:description", metadata.twitter.description);
+  setMetaTag("twitter:image", metadata.twitter.image);
 }
 
 let pageSeoActiveCount = 0;

@@ -62,10 +62,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
-    <script type="application/ld+json">
+    <script type="application/ld+json" data-jsonld="organization">
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": "https://vedictatva.com/#organization",
       "name": "Vedic Tatva",
       "alternateName": "VedicTatva",
       "url": "https://vedictatva.com",
@@ -98,28 +99,32 @@
       }
     }
     </script>
-    <script type="application/ld+json">
+    <script type="application/ld+json" data-jsonld="website">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": "https://vedictatva.com/#website",
       "name": "Vedic Tatva",
       "url": "https://vedictatva.com",
+      "publisher": { "@id": "https://vedictatva.com/#organization" },
       "potentialAction": {
         "@type": "SearchAction",
         "target": {
           "@type": "EntryPoint",
-          "urlTemplate": "https://vedictatva.com/shop?q={search_term_string}"
+          "urlTemplate": "https://vedictatva.com/puja-samagri-online?q={search_term_string}"
         },
         "query-input": "required name=search_term_string"
       }
     }
     </script>
-    <script type="application/ld+json">
+    <script type="application/ld+json" data-jsonld="online-store">
     {
       "@context": "https://schema.org",
       "@type": "OnlineStore",
+      "@id": "https://vedictatva.com/#online-store",
       "name": "Vedic Tatva",
       "url": "https://vedictatva.com",
+      "parentOrganization": { "@id": "https://vedictatva.com/#organization" },
       "image": "https://vedictatva.com/opengraph.jpg",
       "priceRange": "₹",
       "currenciesAccepted": "INR",

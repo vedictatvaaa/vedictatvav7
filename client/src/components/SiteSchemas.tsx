@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useSiteSettings } from "@/lib/site-settings";
+import { setJsonLd } from "@/lib/seo-dom";
+import { SEO_CANONICAL_ORIGIN } from "@shared/seo-metadata";
 
 // SiteSchemas emits WebSite (with SearchAction for the Google sitelinks search box)
 // and SiteNavigationElement schema listing primary nav so Google can pick rich
@@ -22,21 +24,6 @@ const PRIMARY_NAV: Array<{ name: string; url: string }> = [
   { name: "Become an Astrologer", url: "/become-astrologer" },
 ];
 
-function setJsonLd(id: string, payload: any) {
-  let el = document.querySelector(`script[data-jsonld="${id}"]`) as HTMLScriptElement | null;
-  if (!payload) {
-    el?.remove();
-    return;
-  }
-  if (!el) {
-    el = document.createElement("script");
-    el.type = "application/ld+json";
-    el.setAttribute("data-jsonld", id);
-    document.head.appendChild(el);
-  }
-  el.textContent = JSON.stringify(payload);
-}
-
 export default function SiteSchemas() {
   const site = useSiteSettings();
   const [location] = useLocation();
@@ -54,18 +41,18 @@ export default function SiteSchemas() {
     setJsonLd("website", {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "@id": `${origin}/#website`,
-      url: `${origin}/`,
+      "@id": `${SEO_CANONICAL_ORIGIN}/#website`,
+      url: `${SEO_CANONICAL_ORIGIN}/`,
       name: siteName,
       alternateName: ["Vedic Tatva", "VedicTatva"],
       description: site?.tagline || "India's premium Hindu spiritual ecommerce — puja samagri, pandit booking, astrology",
       inLanguage: "en-IN",
-      publisher: { "@id": `${origin}/#organization` },
+      publisher: { "@id": `${SEO_CANONICAL_ORIGIN}/#organization` },
       potentialAction: {
         "@type": "SearchAction",
         target: {
           "@type": "EntryPoint",
-          urlTemplate: `${origin}/puja-samagri-online?q={search_term_string}`,
+          urlTemplate: `${SEO_CANONICAL_ORIGIN}/puja-samagri-online?q={search_term_string}`,
         },
         "query-input": "required name=search_term_string",
       },

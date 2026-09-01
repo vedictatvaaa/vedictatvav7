@@ -1,6 +1,7 @@
 // schema-dts provides TypeScript types for every Schema.org type — use them
 // for the `payload` field to catch mistakes at compile time.
 import type { WithContext, Article, BlogPosting, Organization, WebSite } from "schema-dts";
+import { SEO_CANONICAL_ORIGIN } from "@shared/seo-metadata";
 
 export type Schema = { id: string; payload: Record<string, any> };
 export type TypedSchema<T extends import("schema-dts").Thing> = { id: string; payload: WithContext<T> };
@@ -28,6 +29,7 @@ export function article(args: {
     payload: {
       "@context": "https://schema.org",
       "@type": type,
+      "@id": `${abs(args.url)}#article`,
       headline: args.headline,
       description: args.description,
       url: abs(args.url),
@@ -60,6 +62,7 @@ export function organization(args: {
     payload: {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": `${abs(args.url).replace(/\/+$/, "")}/#organization`,
       name: args.name,
       url: abs(args.url),
       ...(args.logo ? { logo: abs(args.logo) } : {}),
@@ -80,6 +83,7 @@ export function webSite(args: {
     payload: {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": `${abs(args.url).replace(/\/+$/, "")}/#website`,
       name: args.name,
       url: abs(args.url),
       ...(args.searchUrl ? {
@@ -109,6 +113,7 @@ export function breadcrumbList(items: Array<{ name: string; url: string }>): Sch
     payload: {
       "@context": CTX,
       "@type": "BreadcrumbList",
+      "@id": `${abs(items[items.length - 1]?.url || "/")}#breadcrumb`,
       itemListElement: items.map((it, idx) => ({
         "@type": "ListItem",
         position: idx + 1,
@@ -127,6 +132,7 @@ export function faqPage(faqs: Array<{ question: string; answer: string }>, id = 
     payload: {
       "@context": CTX,
       "@type": "FAQPage",
+      "@id": `${typeof window !== "undefined" ? window.location.href.split(/[?#]/, 1)[0] : ""}#${id}`,
       mainEntity: cleaned.map((f) => ({
         "@type": "Question",
         name: f.question,
@@ -185,6 +191,7 @@ export function product(args: {
   const payload: Record<string, any> = {
     "@context": CTX,
     "@type": "Product",
+    ...(args.url ? { "@id": `${abs(args.url)}#product`, url: abs(args.url) } : {}),
     name: args.name,
     description: args.description,
     image: args.image,
@@ -217,6 +224,7 @@ export function blogPosting(args: {
   const payload: Record<string, any> = {
     "@context": CTX,
     "@type": "BlogPosting",
+    "@id": `${abs(args.url)}#article`,
     headline: args.title,
     description: args.description,
     image: args.image ? [args.image] : undefined,
@@ -233,13 +241,14 @@ export function blogPosting(args: {
           // worksFor references the canonical brand entity by @id (emitted by
           // OrganizationSchema.tsx) so author authority links into the brand graph.
           ...(args.publisherName
-            ? { worksFor: { "@type": "Organization", "@id": `${abs("/")}#organization`, name: args.publisherName } }
+            ? { worksFor: { "@type": "Organization", "@id": `${SEO_CANONICAL_ORIGIN}/#organization`, name: args.publisherName } }
             : {}),
         }
       : undefined,
     publisher: args.publisherName
       ? {
           "@type": "Organization",
+          "@id": `${SEO_CANONICAL_ORIGIN}/#organization`,
           name: args.publisherName,
           logo: args.publisherLogo ? { "@type": "ImageObject", url: args.publisherLogo } : undefined,
         }
