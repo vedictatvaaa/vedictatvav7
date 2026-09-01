@@ -18,7 +18,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # Install ALL deps explicitly. --include=dev wins over production/omit
 # settings supplied by the build environment. Pin npm because the npm 10.8.2
 # bundled with this Node image can crash with "Exit handler never called"
-# during the long native dependency install.
+# during the long native dependency install. Keep lifecycle work serial on
+# constrained Coolify builders; this project compiles multiple native modules.
 COPY package.json package-lock.json* ./
 RUN npm install --global npm@10.9.4 --no-audit --no-fund && \
     npm cache verify
@@ -26,7 +27,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --no-audit --no-fund && \
+        npm ci --include=dev --foreground-scripts --jobs=1 --maxsockets=1 --no-audit --no-fund && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
     test -x node_modules/.bin/esbuild
