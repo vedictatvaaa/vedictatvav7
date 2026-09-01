@@ -175,6 +175,12 @@ export function injectHead(html: string, headHtml: string): string {
   return out;
 }
 
+export function stripNotFoundHeadConflicts(html: string): string {
+  return html
+    .replace(/<meta\s+[^>]*\bname=["'](?:googlebot|bingbot)["'][^>]*>\s*/gi, "")
+    .replace(/<script\s+[^>]*\btype=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, "");
+}
+
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
   const staticHeads: Record<string, Head> = {
     "/qa": {
@@ -192,7 +198,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
       description: "Vedic Tatva is committed to WCAG 2.1 Level AA accessibility — keyboard navigation, screen reader support, color contrast, and an open feedback channel.",
       canonical: "/accessibility",
     },
-    "/product-compare": {
+    "/compare": {
       title: "Compare Sacred Puja Products Side-by-Side | Vedic Tatva",
       description: "Compare up to 4 sacred Vedic Tatva products side-by-side — price, category, highlights, availability and more. Make informed choices for your puja and home.",
       canonical: "/compare",
@@ -526,12 +532,22 @@ export function seoHeadMiddleware() {
     const baseUrl =
       process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`;
 
-    let head: Head | null = null;
-    try {
-      head = await resolveHead(path, baseUrl);
-    } catch (err) {
-      // SEO is best-effort — never crash a page load over a missing meta lookup.
-      console.warn("[seo-ssr] resolveHead failed:", (err as any)?.message);
+    let head: Head | null = res.locals.seoNotFound
+      ? {
+          title: `Page Not Found | ${SITE_NAME}`,
+          description: "The requested page could not be found. Explore Vedic Tatva's puja services, verified Pandits, spiritual guidance, and authentic puja essentials.",
+          canonical: path,
+          noindex: true,
+          jsonLd: [],
+        }
+      : null;
+    if (!head) {
+      try {
+        head = await resolveHead(path, baseUrl);
+      } catch (err) {
+        // SEO is best-effort — never crash a page load over a missing meta lookup.
+        console.warn("[seo-ssr] resolveHead failed:", (err as any)?.message);
+      }
     }
     if (!head) head = fallbackHead(path);
 
@@ -544,7 +560,8 @@ export function seoHeadMiddleware() {
       try {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (typeof body === "string" && body.includes("<head") && (ctype.includes("html") || !ctype)) {
-          const out = injectHead(body, headHtml);
+          const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(body) : body;
+          const out = injectHead(source, headHtml);
           // Length changed — drop any precomputed Content-Length so the
           // runtime recomputes it (Express normally does this for strings,
           // but be explicit to avoid mismatches when called via res.end).
@@ -570,7 +587,10 @@ export function seoHeadMiddleware() {
         const ctype = String(res.getHeader("Content-Type") || "");
         if (ctype.includes("html")) {
           const str = chunk.toString("utf-8");
-          if (str.includes("<head")) chunk = injectHead(str, headHtml);
+          if (str.includes("<head")) {
+            const source = res.locals.seoNotFound ? stripNotFoundHeadConflicts(str) : str;
+            chunk = injectHead(source, headHtml);
+          }
         }
       }
       return (originalEnd as any)(chunk, ...rest);

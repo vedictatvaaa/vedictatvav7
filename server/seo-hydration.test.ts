@@ -112,7 +112,7 @@ test("raw responses and hydrated DOM keep representative SEO metadata identical"
         expectedTitle: "Accessibility Statement | Vedic Tatva",
       },
       {
-        path: "/product-compare",
+        path: "/compare",
         expectedTitle: "Compare Sacred Puja Products Side-by-Side | Vedic Tatva",
       },
       {
@@ -135,20 +135,33 @@ test("raw responses and hydrated DOM keep representative SEO metadata identical"
       });
       assert.equal(response.status, 200, `${route.path} must return HTML`);
       const rawHtml = await response.text();
+      const rawHead = rawHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1] || "";
+      const metadataOnlyDocument = `<!doctype html><html><head>${rawHead
+        .replace(/<link\s+[^>]*\brel=["'](?:stylesheet|preload|modulepreload)["'][^>]*>\s*/gi, "")
+        .replace(/<script(?![^>]*\btype=["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>\s*/gi, "")
+      }</head><body></body></html>`;
 
       const rawPage = await browser.newPage();
       await rawPage.setJavaScriptEnabled(false);
-      await rawPage.setRequestInterception(true);
-      rawPage.on("request", (request) => request.abort());
-      await rawPage.setContent(rawHtml, { waitUntil: "domcontentloaded" });
+      await rawPage.setContent(metadataOnlyDocument, { waitUntil: "domcontentloaded" });
       const raw = await readMetadata(rawPage);
       await rawPage.close();
 
       const hydratedPage = await browser.newPage();
       await hydratedPage.goto(`${origin}${route.path}`, {
-        waitUntil: "networkidle2",
-        timeout: 90_000,
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
       });
+      await hydratedPage.waitForFunction(
+        (expected: { title: unknown; canonical: unknown }) =>
+          document.title === expected.title
+          && document.querySelector("link[rel=canonical]")?.getAttribute("href") === expected.canonical,
+        { timeout: 30_000 },
+        {
+          title: raw.metadata.title,
+          canonical: raw.metadata.canonical,
+        },
+      );
       const hydrated = await readMetadata(hydratedPage);
       await hydratedPage.close();
 
