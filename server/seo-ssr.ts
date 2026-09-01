@@ -29,6 +29,7 @@ import type { NextFunction, Request, Response } from "express";
 import { storage } from "./storage";
 import { CATEGORY_HEAD, resolveCategorySlug } from "./seo-category-head";
 import { resolveExplicitOgCard } from "./og-meta";
+import { getPubliclyEligiblePanditBySlug } from "./pandit-public-access";
 
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
@@ -160,7 +161,7 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
   const panditMatch = reqPath.match(/^\/p\/([a-z0-9-]+)\/?$/);
   if (panditMatch) {
     try {
-      const p = await storage.getPanditBySlug(panditMatch[1]);
+      const p = await getPubliclyEligiblePanditBySlug(panditMatch[1]);
       if (p) {
         const ratingPart = p.rating && p.reviewCount
           ? ` · ${Number(p.rating).toFixed(1)}★ (${p.reviewCount})`

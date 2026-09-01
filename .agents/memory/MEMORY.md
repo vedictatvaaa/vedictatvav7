@@ -3,3 +3,4 @@
 - [SEO schema emitters](seo-schema-emitters.md) — JSON-LD comes from index.html (static) + OrganizationSchema.tsx (canonical #organization) + SiteSchemas.tsx + PageSeo builders; check before adding nodes to avoid duplicate Organization.
 - [Client/server discount parity](client-server-discount-parity.md) — any client-shown discount MUST equal the server recompute or checkout/payment hard-fails; the BUNDLE8 auto-discount is derived-only (never persisted), max(coupon,bundle), clamped.
 - [TS baseline is not a gate](ts-baseline-no-gate.md) — repo ships via tsx with ~565 pre-existing tsc errors; never gate on a clean `npm run check`, only watch for NEW errors in lines you touched (esp. TS2802 Set/Map iteration → wrap in Array.from).
+- [One-off TSX probes](tsx-probes.md) — temporary TSX scripts outside the workspace compile as CJS; use static absolute imports and wrap awaits in an async IIFE.

@@ -1361,8 +1361,8 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ---- SEO: sitemap-people.xml — pandits + astrologers ----
   app.get("/sitemap-people.xml", async (req, res) => {
-    const [pandits, astrologers, seoPagesList] = await Promise.all([
-      storage.getPandits().catch(() => []),
+    const [publicPandits, astrologers, seoPagesList] = await Promise.all([
+      publicEligibility().then(result => result.pandits).catch(() => []),
       storage.getAstrologers().catch(() => []),
       storage.getSeoPages(),
     ]);
@@ -1372,7 +1372,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     const imageLicenseUrl = `${baseUrl}/terms-conditions`;
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
-    for (const p of pandits as any[]) {
+    for (const p of publicPandits as any[]) {
       // Prefer canonical /p/<slug> when the pandit has a published
       // storefront; falls back to legacy /pandit/:id otherwise so older
       // links still index.
@@ -2200,9 +2200,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const query = (req.query.q as string || "").trim();
       if (!query || query.length < 2) return res.json({ results: [], intent: null });
 
-      const [allProducts, allPandits, allAstrologers] = await Promise.all([
+      const [allProducts, publicPandits, allAstrologers] = await Promise.all([
         storage.getProducts(),
-        storage.getPandits(),
+        publicEligibility().then(result => result.pandits),
         storage.getAstrologers(),
       ]);
 
@@ -2268,9 +2268,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return { type: "product" as const, item: p, score: textScore };
       }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 8);
 
-      const panditResults = allPandits.filter(p => p.verified).map(p => {
+      const panditResults = publicPandits.map(p => {
         const textScore = scoreText(`${p.name} ${p.specialization} ${p.city} ${p.languages} ${p.bio || ""}`);
-        return { type: "pandit" as const, item: p, score: textScore };
+        return { type: "pandit" as const, item: publicPanditDto(p, false), score: textScore };
       }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 4);
 
       const astrologerResults = allAstrologers.filter((a: any) => a.verified).map((a: any) => {
@@ -2899,7 +2899,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       verified, onLeave, tier, tierExpiresAt, commissionPct, productCommissionPct, membershipNo,
       cardIssued, cardIssuedAt, originalCity, originalState, locationReviewStatus, boostType,
       boostStartDate, boostEndDate, boostActive, ...safe } = p;
-    return { ...safe, verified: true, onLeave: false, isOnline, ...(distance === undefined ? {} : { distance }) };
+    return { ...safe, verified: true, isOnline, ...(distance === undefined ? {} : { distance }) };
   }
   function adminPanditDto(p: any, isOnline: boolean, distance?: number) {
     if (!p) return p;

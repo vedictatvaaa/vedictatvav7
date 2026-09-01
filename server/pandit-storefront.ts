@@ -20,6 +20,7 @@ import { eq, desc, and, sql, gte, isNotNull } from "drizzle-orm";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import type { AdminRequest } from "./admin-auth";
 import { buildPanditPayoutEmail, sendEmailAsync } from "./email";
+import { getPubliclyEligiblePanditBySlug, publicStorefrontPanditDto } from "./pandit-public-access";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -46,7 +47,7 @@ async function isSlugAttributable(slug: string): Promise<boolean> {
   if (hit && hit.expiresAt > now) return hit.valid;
   let valid = false;
   try {
-    const pandit = await storage.getPanditBySlug(slug);
+    const pandit = await getPubliclyEligiblePanditBySlug(slug);
     valid = Boolean(pandit?.id);
   } catch {
     valid = false;
@@ -248,7 +249,7 @@ export async function attributeReferral(
   try {
     const slug = req.refSlug || (req.cookies?.[REF_COOKIE] || "").toLowerCase();
     if (!slug) return;
-    const pandit = await storage.getPanditBySlug(slug);
+    const pandit = await getPubliclyEligiblePanditBySlug(slug);
     if (!pandit) return;
     // Block self-referral — a pandit cannot earn commission off their own
     // email/phone purchases. Compare normalized identity fields. Phone match
@@ -293,7 +294,7 @@ export async function attributeReferral(
 // products. Keeps DB joins out of the route handler.
 // ---------------------------------------------------------------------
 async function buildStorefrontDto(slug: string) {
-  const pandit = await storage.getPanditBySlug(slug);
+  const pandit = await getPubliclyEligiblePanditBySlug(slug);
   if (!pandit) return null;
   const sf = await storage.getPanditStorefrontByPanditId(pandit.id);
   if (sf && !sf.isPublished) return null;
@@ -309,25 +310,7 @@ async function buildStorefrontDto(slug: string) {
     : [];
   const reviews = await storage.getPanditReviews(pandit.id).catch(() => []);
   return {
-    pandit: {
-      id: pandit.id,
-      name: pandit.name,
-      slug: pandit.slug,
-      city: pandit.city,
-      state: pandit.state,
-      regionalOrigin: pandit.regionalOrigin,
-      specialization: pandit.specialization,
-      languages: pandit.languages,
-      experience: pandit.experience,
-      fees: pandit.fees,
-      rating: pandit.rating,
-      reviewCount: pandit.reviewCount,
-      verified: pandit.verified,
-      image: pandit.image,
-      bio: pandit.bio,
-      tier: pandit.tier,
-      phone: pandit.phone,
-    },
+    pandit: publicStorefrontPanditDto(pandit),
     storefront: sf
       ? {
           bio: sf.bio,
@@ -417,12 +400,6 @@ async function fetchPanditPhotoCircle(req: Request, image: string | null | undef
   }
 }
 
-// Membership number — stored on the pandit row (lifelong, immutable).
-// Lazy-backfills via storage.ensurePanditMembershipNo for legacy rows.
-async function membershipNo(panditId: number): Promise<string> {
-  return storage.ensurePanditMembershipNo(panditId);
-}
-
 // ---------------------------------------------------------------------
 // Dual-sided business card PDF — A6 portrait, 2 pages.
 //   Page 1 (Front): brand header, pandit photo, name, contact number,
@@ -436,8 +413,7 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   if (!dto) throw new Error("Storefront not found");
   const qrPng = await storefrontQrPng(req, slug, 720);
   const photoPng = await fetchPanditPhotoCircle(req, dto.pandit.image);
-  const phone = dto.storefront?.social?.whatsapp || dto.pandit.phone || "";
-  const memberNo = await membershipNo(dto.pandit.id);
+  const phone = dto.storefront?.social?.whatsapp || "";
   const W = 105, H = 148; // A6 portrait, mm
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [W, H] });
@@ -528,15 +504,15 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   doc.addPage([W * (72 / 25.4), H * (72 / 25.4)], "portrait");
   drawHeader("Scan · Book · Shop · Connect");
 
-  // Membership block
+  // Public card label. Membership identifiers remain private.
   doc.setTextColor(90, 74, 58);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.text("MEMBERSHIP NO.", W / 2, 32, { align: "center" });
+  doc.text("VERIFIED VEDIC PANDIT", W / 2, 32, { align: "center" });
   doc.setTextColor(74, 26, 34);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.text(memberNo, W / 2, 39, { align: "center" });
+  doc.text("Book securely on Vedic Tatva", W / 2, 39, { align: "center" });
 
   // QR — large center
   const qrSize = 56;
@@ -619,15 +595,15 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.get("/api/og/p/:slug.jpg", async (req, res) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
-      const p = await storage.getPanditBySlug(slug);
+      const p = await getPubliclyEligiblePanditBySlug(slug);
       if (!p) return res.status(404).end();
       const path = await import("path");
       const fs = await import("fs/promises");
-      const cachePath = path.resolve(process.cwd(), "client/public/og", `p-${slug}.jpg`);
+      const cachePath = path.resolve("/tmp/vedic-tatva-og", `p-${slug}.jpg`);
       try {
         const cached = await fs.readFile(cachePath);
         res.setHeader("Content-Type", "image/jpeg");
-        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.setHeader("Cache-Control", "no-store");
         res.setHeader("X-OG-Cache", "HIT");
         return res.send(cached);
       } catch {}
@@ -737,7 +713,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         .catch((e) => console.warn("[og-pandit] cache write failed:", e?.message));
 
       res.setHeader("Content-Type", "image/jpeg");
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Cache-Control", "no-store");
       res.setHeader("X-OG-Cache", "MISS");
       res.send(buf);
     } catch (e: any) {
@@ -755,6 +731,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       if (!Number.isFinite(id)) return next();
       const p = await storage.getPandit(id);
       if (!p?.slug) return next();
+      if (!(await getPubliclyEligiblePanditBySlug(p.slug))) return next();
       const sf = await storage.getPanditStorefrontByPanditId(p.id).catch(() => null);
       if (!sf?.isPublished) return next();
       return res.redirect(301, `/p/${p.slug}`);
@@ -767,11 +744,11 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
       if (!slug) return res.status(400).end();
-      const pandit = await storage.getPanditBySlug(slug);
+      const pandit = await getPubliclyEligiblePanditBySlug(slug);
       if (!pandit) return res.status(404).end();
       const buf = await storefrontQrPng(req, slug, 512);
       res.setHeader("Content-Type", "image/png");
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Cache-Control", "no-store");
       res.send(buf);
     } catch (e: any) {
       console.error("[storefront] qr failed:", e?.message);
@@ -782,10 +759,11 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.get("/api/storefront/:slug/card.pdf", async (req, res) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
+      if (!(await getPubliclyEligiblePanditBySlug(slug))) return res.status(404).json({ message: "Card not available" });
       const buf = await storefrontCardPdf(req, slug);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="vedic-tatva-${slug}.pdf"`);
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "no-store");
       res.send(buf);
     } catch (e: any) {
       console.error("[storefront] pdf failed:", e?.message);

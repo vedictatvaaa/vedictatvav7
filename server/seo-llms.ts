@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import rateLimit from "express-rate-limit";
+import { getPubliclyEligiblePandits } from "./pandit-public-access";
 
 // llms.txt — convention for AI crawlers (ChatGPT/Claude/Perplexity) to discover
 // site structure and authoritative content.
@@ -28,14 +29,9 @@ const aiCrawlerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// In-process cache for /llms.txt (it scans 50 products + 20 pandits per call).
-let llmsTxtCache: { siteUrl: string; body: string; expires: number } | null = null;
-const LLMS_TXT_TTL_MS = 5 * 60_000;
-
 export async function buildLlmsTxt(siteUrl: string): Promise<string> {
   const products = (await storage.getProducts()).slice(0, 50);
-  const allPandits = await storage.getPandits();
-  const pandits = allPandits.filter((p: any) => p.verified === true).slice(0, 20);
+  const pandits = (await getPubliclyEligiblePandits()).slice(0, 20);
   const lines: string[] = [];
   lines.push(`# Vedic Tatva`);
   lines.push("");
@@ -81,13 +77,9 @@ export function registerLlmsRoutes(app: Express) {
   app.get("/llms.txt", aiCrawlerLimiter, async (req: Request, res: Response) => {
     try {
       const siteUrl = (process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
-      const now = Date.now();
-      if (!llmsTxtCache || llmsTxtCache.expires < now || llmsTxtCache.siteUrl !== siteUrl) {
-        const body = await buildLlmsTxt(siteUrl);
-        llmsTxtCache = { siteUrl, body, expires: now + LLMS_TXT_TTL_MS };
-      }
-      res.set("Cache-Control", "public, max-age=300, s-maxage=900, stale-while-revalidate=86400");
-      res.type("text/plain; charset=utf-8").send(llmsTxtCache.body);
+      const body = await buildLlmsTxt(siteUrl);
+      res.set("Cache-Control", "no-store");
+      res.type("text/plain; charset=utf-8").send(body);
     } catch (e: any) {
       res.status(500).type("text/plain").send(`# Error\n${e?.message || "failed to generate"}`);
     }
