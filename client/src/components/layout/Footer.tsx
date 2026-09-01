@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
+import { openConsentPreferences } from "@/lib/consent";
 
 const complianceBadges = [
   { label: "PCI-DSS", sub: "Level 1 secure" },
@@ -375,6 +376,14 @@ export default function Footer() {
                 <span className="uppercase tracking-[0.14em]">{b.sub}</span>
               </span>
             ))}
+            <button
+              type="button"
+              onClick={openConsentPreferences}
+              className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f5d76e] hover:text-white"
+              data-testid="footer-cookie-settings"
+            >
+              Cookie settings
+            </button>
           </div>
         </div>
       </div>

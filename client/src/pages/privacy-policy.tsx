@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
         <div className="bg-white rounded-2xl p-5 sm:p-8 md:p-12 shadow-sm border border-[#6D2B35]/5 space-y-6 md:space-y-8">
           <div className="text-center border-b border-[#6D2B35]/5 pb-6">
             <p className="text-xs text-[#5a4a3a]/40 uppercase tracking-wider">Vedic Tatva Private Limited</p>
-            <p className="text-xs text-[#5a4a3a]/30 mt-1">Last updated: February 2026</p>
+            <p className="text-xs text-[#5a4a3a]/30 mt-1">Last updated: September 2026</p>
           </div>
 
           <section className="space-y-3">
@@ -72,7 +72,15 @@ export default function PrivacyPolicy() {
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-serif text-[#6D2B35]">4. Cookies & Tracking Technologies</h2>
             <p className="text-sm text-[#5a4a3a]/70 leading-relaxed">
-              We use cookies and similar tracking technologies to enhance your browsing experience, analyze site traffic, and understand user behaviour. You can control cookie preferences through your browser settings. Disabling certain cookies may affect the functionality of the Platform.
+              We use necessary storage to operate security, login, checkout, and privacy-preference features. Optional analytics and marketing technologies are disabled until you consent. You may accept, reject, or change optional categories at any time through the “Cookie settings” link in the site footer.
+            </p>
+            <ul className="list-disc pl-6 text-sm text-[#5a4a3a]/70 leading-relaxed space-y-1.5">
+              <li><strong>Necessary:</strong> authentication, fraud prevention, cart and checkout functionality, and the <code>vt_consent</code> preference cookie. The preference cookie is retained for up to 6 months.</li>
+              <li><strong>Analytics:</strong> with consent, Google Analytics or Umami and anonymous Core Web Vitals help us understand page usage and technical performance. Analytics events do not include names, email addresses, phone numbers, postal addresses, or payment details.</li>
+              <li><strong>Marketing:</strong> with consent, Google Tag Manager and Meta Pixel may measure campaigns. The <code>vt_ref</code> cookie records a valid Pandit referral slug for attribution and is retained for 30 days.</li>
+            </ul>
+            <p className="text-sm text-[#5a4a3a]/70 leading-relaxed">
+              Google consent signals default to denied before any Google analytics or advertising tag is loaded. If you withdraw consent, optional tracking is disabled on reload. Browser controls can also remove previously stored cookies.
             </p>
           </section>
 

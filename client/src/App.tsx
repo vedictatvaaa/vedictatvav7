@@ -259,6 +259,8 @@ import SiteSchemas from "@/components/SiteSchemas";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useShakeToJapa } from "@/hooks/use-shake-to-japa";
 import ThemeApplier from "@/components/ThemeApplier";
+import ConsentManager from "@/components/ConsentManager";
+import { useConsentPreferences } from "@/lib/consent";
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -270,24 +272,28 @@ function ScrollToTop() {
 
 function InteractionTracker() {
   const [location] = useLocation();
+  const consent = useConsentPreferences();
+  const pagePath = location.split(/[?#]/, 1)[0] || "/";
   // Fire a single page_view on every route change so Single-Page-App
   // navigations show up correctly in Analytics. When GTM is installed it
   // owns the page-view tag (we push to dataLayer); otherwise we fall back
   // to direct gtag. Safe no-op if neither tag is present.
   useEffect(() => {
+    if (!consent?.analytics) return;
     const w = window as any;
     const hasGtm = !!document.getElementById("gtm-loader");
     if (hasGtm && Array.isArray(w.dataLayer)) {
-      w.dataLayer.push({ event: "page_view", page_path: location, page_title: document.title });
-    } else if (typeof w.gtag === "function") {
+      w.dataLayer.push({ event: "page_view", page_path: pagePath, page_title: document.title });
+    } else if (document.getElementById("ga4-loader") && typeof w.gtag === "function") {
       w.gtag("event", "page_view", {
-        page_path: location,
-        page_location: window.location.href,
+        page_path: pagePath,
+        page_location: `${window.location.origin}${pagePath}`,
         page_title: document.title,
       });
     }
-  }, [location]);
+  }, [consent?.analytics, pagePath]);
   useEffect(() => {
+    if (!consent?.analytics) return;
     import("@/lib/spiritual-tracker").then(({ trackPageVisit }) => {
       const pageCategories: Record<string, string> = {
         "/puja-samagri-online": "shopping", "/online-puja-booking": "puja", "/book-pandit-online": "pandit",
@@ -300,16 +306,17 @@ function InteractionTracker() {
         "/spiritual-dashboard": "spiritual_journey",
         "/membership": "membership",
       };
-      const cat = pageCategories[location] || "general";
-      trackPageVisit(location, cat);
+      const cat = pageCategories[pagePath] || "general";
+      trackPageVisit(pagePath, cat);
     });
-  }, [location]);
+  }, [consent?.analytics, pagePath]);
 
   // ── Visitor analytics beacon ─────────────────────────────────────────────
   // Fires on every SPA route change. Skips admin/pandit portal.
   // sessionId persists for the browser tab lifetime (localStorage).
   useEffect(() => {
-    if (location.startsWith("/admin") || location.startsWith("/pandit/portal")) return;
+    if (!consent?.analytics) return;
+    if (pagePath.startsWith("/admin") || pagePath.startsWith("/pandit/portal")) return;
     let sessionId = "";
     try {
       sessionId = localStorage.getItem("vt_session_id") || "";
@@ -323,15 +330,25 @@ function InteractionTracker() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        path: location,
-        referrer: document.referrer || "",
+        path: pagePath,
+        referrer: safeReferrer(document.referrer),
         sessionId,
       }),
       keepalive: true,
     }).catch(() => { /* silent */ });
-  }, [location]);
+  }, [consent?.analytics, pagePath]);
 
   return null;
+}
+
+function safeReferrer(value: string): string {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return "";
+  }
 }
 
 class AdminErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: string; stack: string }> {
@@ -1099,7 +1116,10 @@ class GlobalErrorBoundary extends React.Component<{ children: React.ReactNode },
 }
 
 function App() {
-  useEffect(() => { reportWebVitals(); }, []);
+  const consent = useConsentPreferences();
+  useEffect(() => {
+    if (consent?.analytics) reportWebVitals();
+  }, [consent?.analytics]);
   return (
     <GlobalErrorBoundary>
       <SmoothScrollProvider>
@@ -1112,6 +1132,7 @@ function App() {
                     <WishlistProvider>
                       <AmbientBackdropToggle />
                       <Toaster />
+                      <ConsentManager />
                       <LocaleScope>
                         <Router />
                       </LocaleScope>

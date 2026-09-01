@@ -1,8 +1,10 @@
 import type { Product } from "@shared/schema";
+import { hasConsent } from "./consent";
 
 type GtagFn = (...args: any[]) => void;
 
 function getGtag(): GtagFn | null {
+  if (typeof document === "undefined" || !document.getElementById("ga4-loader")) return null;
   const w = window as any;
   if (typeof w.gtag === "function") return w.gtag as GtagFn;
   return null;
@@ -22,6 +24,7 @@ function hasGtm(): boolean {
 }
 
 function emit(eventName: string, params: Record<string, any>) {
+  if (!hasConsent("analytics")) return;
   try {
     const scalarParams = Object.fromEntries(
       Object.entries(params).filter(([, value]) => ["string", "number", "boolean"].includes(typeof value)),

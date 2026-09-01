@@ -45,6 +45,7 @@ type PaidTier = typeof PAID_TIERS[number];
 
 const REF_COOKIE = "vt_ref";
 const REF_COOKIE_DAYS = 30;
+const CONSENT_COOKIE = "vt_consent";
 
 // Slug-validation cache for refCookieMiddleware. Pandits change rarely, so
 // a 5-minute TTL keeps the per-request cost at ~zero while still picking up
@@ -212,7 +213,20 @@ declare module "express-serve-static-core" {
   }
 }
 
+function hasMarketingConsent(req: Request): boolean {
+  return /^v1\.a[01]\.m1$/.test(String(req.cookies?.[CONSENT_COOKIE] || ""));
+}
+
+function hasAnalyticsConsent(req: Request): boolean {
+  return /^v1\.a1\.m[01]$/.test(String(req.cookies?.[CONSENT_COOKIE] || ""));
+}
+
 export function refCookieMiddleware(req: Request, res: Response, next: NextFunction) {
+  if (!hasMarketingConsent(req)) {
+    if (req.cookies?.[REF_COOKIE]) res.clearCookie(REF_COOKIE, { path: "/" });
+    next();
+    return;
+  }
   const ref = String(req.query?.ref || "").trim().toLowerCase().slice(0, 80);
   if (ref && /^[a-z0-9-]+$/.test(ref)) {
     // Validate the slug against the pandits table before stamping a cookie.
@@ -603,15 +617,19 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       // by hitting this endpoint) stamps the vt_ref cookie for 30 days, so
       // attribution survives even when the browser blocks document.cookie
       // writes from React.
-      res.cookie(REF_COOKIE, slug, {
-        maxAge: REF_COOKIE_DAYS * 24 * 60 * 60 * 1000,
-        httpOnly: false,
-        sameSite: "lax",
-        path: "/",
-      });
+      if (hasMarketingConsent(req)) {
+        res.cookie(REF_COOKIE, slug, {
+          maxAge: REF_COOKIE_DAYS * 24 * 60 * 60 * 1000,
+          httpOnly: false,
+          sameSite: "lax",
+          path: "/",
+        });
+      }
       res.setHeader("Cache-Control", "no-store");
       // Fire-and-forget view count bump.
-      storage.incrementStorefrontView(dto.pandit.id).catch(() => {});
+      if (hasAnalyticsConsent(req)) {
+        storage.incrementStorefrontView(dto.pandit.id).catch(() => {});
+      }
       res.json(dto);
     } catch (e: any) {
       console.error("[storefront] fetch failed:", e?.message);

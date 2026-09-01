@@ -1,4 +1,5 @@
 import type { Metric } from "web-vitals";
+import { hasConsent } from "./consent";
 
 const ENDPOINT = "/api/vitals";
 
@@ -7,6 +8,7 @@ function getRating(metric: Metric): "good" | "needs-improvement" | "poor" {
 }
 
 function send(metric: Metric) {
+  if (!hasConsent("analytics")) return;
   const body = JSON.stringify({
     name: metric.name,
     value: metric.value,
@@ -24,7 +26,7 @@ function send(metric: Metric) {
 }
 
 export async function reportWebVitals() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !hasConsent("analytics")) return;
 
   try {
     const { onCLS, onFID, onFCP, onLCP, onTTFB, onINP } = await import("web-vitals");

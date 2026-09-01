@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SiteSettings } from "@shared/schema";
+import { useConsentPreferences } from "@/lib/consent";
 
 // Converts #rrggbb (or #rgb) into Tailwind-compatible "H S% L%" string.
 // Returns null for invalid inputs so callers can skip applying.
@@ -34,6 +35,7 @@ function hexToHsl(hex: string): string | null {
 // analytics snippets (GA4 / FB Pixel) when configured. All mutations are
 // idempotent — we always write to fixed-id tags so re-renders don't duplicate.
 export default function ThemeApplier() {
+  const consent = useConsentPreferences();
   const { data } = useQuery<SiteSettings>({
     queryKey: ["/api/site-settings"],
     queryFn: () => fetch("/api/site-settings").then((r) => r.ok ? r.json() : null),
@@ -99,8 +101,8 @@ body { font-family: '${bodyFont}', sans-serif; }`;
     const isSafeGTM = !!(data as any).gtmContainerId && GTM_ID.test((data as any).gtmContainerId);
     const isSafeFB = !!data.facebookPixelId && FB_ID.test(data.facebookPixelId);
 
-    // (d) Analytics — inserted only once; changing IDs requires a page reload.
-    if (isSafeGA && !document.getElementById("ga4-loader")) {
+    // (d) Analytics. When GTM is configured it exclusively owns Google tags.
+    if (consent?.analytics && isSafeGA && !isSafeGTM && !document.getElementById("ga4-loader")) {
       const s1 = document.createElement("script");
       s1.id = "ga4-loader";
       s1.async = true;
@@ -111,7 +113,7 @@ body { font-family: '${bodyFont}', sans-serif; }`;
       s2.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${data.googleAnalyticsId}');`;
       document.head.appendChild(s2);
     }
-    if (isSafeFB && !document.getElementById("fb-pixel")) {
+    if (consent?.marketing && isSafeFB && !document.getElementById("fb-pixel")) {
       const s = document.createElement("script");
       s.id = "fb-pixel";
       s.textContent = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${data.facebookPixelId}');fbq('track','PageView');`;
@@ -121,7 +123,7 @@ body { font-family: '${bodyFont}', sans-serif; }`;
     // (e) Google Tag Manager — the single most flexible tag loader. When a
     // container ID is set, GTM owns all marketing tags (GA4, Ads, conversion).
     const gtmId = isSafeGTM ? ((data as any).gtmContainerId as string) : undefined;
-    if (gtmId && !document.getElementById("gtm-loader")) {
+    if (consent?.marketing && gtmId && !document.getElementById("gtm-loader")) {
       const s = document.createElement("script");
       s.id = "gtm-loader";
       s.textContent = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`;
@@ -153,7 +155,7 @@ body { font-family: '${bodyFont}', sans-serif; }`;
       }
       el.content = gsc;
     }
-  }, [data]);
+  }, [consent, data]);
 
   return null;
 }
