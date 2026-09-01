@@ -8,13 +8,15 @@ import {
   emailSends, newsletterCampaigns, emailUnsubscribes,
   notificationLog, notificationSettings,
   familyMembers, userNotifications, panditPayouts, spiritualJourney,
-  panditStorefronts, panditReferrals, panditCardOrders,
+  panditStorefronts, panditReferrals, panditCardOrders, masterServices, panditServices,
   type FamilyMember, type InsertFamilyMember,
   type UserNotification, type InsertUserNotification,
   type PanditPayout, type InsertPanditPayout,
   type PanditStorefront, type InsertPanditStorefront,
   type PanditReferral, type InsertPanditReferral,
   type PanditCardOrder, type InsertPanditCardOrder,
+  type MasterService, type InsertMasterService,
+  type PanditService, type InsertPanditService,
   type NotificationLog, type InsertNotificationLog, type NotificationSettings,
   type NotificationChannel, type NotificationKind, type NotificationStatus,
   type User, type InsertUser,
@@ -350,6 +352,17 @@ export interface IStorage {
   ensurePanditStorefront(panditId: number): Promise<PanditStorefront>;
   updatePanditStorefront(panditId: number, patch: Partial<InsertPanditStorefront>): Promise<PanditStorefront | undefined>;
   incrementStorefrontView(panditId: number): Promise<void>;
+  listActiveMasterServices(): Promise<MasterService[]>;
+  listAllMasterServices(): Promise<MasterService[]>;
+  getMasterService(id: number): Promise<MasterService | undefined>;
+  getMasterServiceBySlug(slug: string): Promise<MasterService | undefined>;
+  createMasterService(data: InsertMasterService): Promise<MasterService>;
+  updateMasterService(id: number, data: Partial<InsertMasterService>): Promise<MasterService | undefined>;
+  listPanditServices(panditId: number, activeOnly?: boolean): Promise<PanditService[]>;
+  listPanditServicesWithMaster(panditId: number, activeOnly?: boolean): Promise<Array<{ service: PanditService; master: MasterService }>>;
+  getPanditService(id: number): Promise<PanditService | undefined>;
+  createPanditService(data: InsertPanditService): Promise<PanditService>;
+  updatePanditService(id: number, data: Partial<InsertPanditService>): Promise<PanditService | undefined>;
 
   createPanditReferral(input: InsertPanditReferral): Promise<PanditReferral | undefined>;
   listPanditReferrals(panditId: number, opts?: { limit?: number; status?: string }): Promise<PanditReferral[]>;
@@ -1724,8 +1737,15 @@ export class DatabaseStorage implements IStorage {
   async ensurePanditStorefront(panditId: number): Promise<PanditStorefront> {
     const existing = await this.getPanditStorefrontByPanditId(panditId);
     if (existing) return existing;
-    const [row] = await db.insert(panditStorefronts).values({ panditId }).returning();
-    return row;
+    try {
+      const [row] = await db.insert(panditStorefronts).values({ panditId }).returning();
+      return row;
+    } catch (error: any) {
+      if (error?.code !== "23505") throw error;
+      const concurrent = await this.getPanditStorefrontByPanditId(panditId);
+      if (!concurrent) throw error;
+      return concurrent;
+    }
   }
   async updatePanditStorefront(panditId: number, patch: Partial<InsertPanditStorefront>): Promise<PanditStorefront | undefined> {
     await this.ensurePanditStorefront(panditId);
@@ -1739,6 +1759,68 @@ export class DatabaseStorage implements IStorage {
     await db.update(panditStorefronts)
       .set({ viewCount: sql`${panditStorefronts.viewCount} + 1` })
       .where(eq(panditStorefronts.panditId, panditId));
+  }
+
+  // ===== Pandit service catalogue =====
+  async listActiveMasterServices(): Promise<MasterService[]> {
+    return db.select().from(masterServices)
+      .where(eq(masterServices.isActive, true))
+      .orderBy(asc(masterServices.category), asc(masterServices.name));
+  }
+  async listAllMasterServices(): Promise<MasterService[]> {
+    return db.select().from(masterServices)
+      .orderBy(asc(masterServices.category), asc(masterServices.name));
+  }
+  async getMasterService(id: number): Promise<MasterService | undefined> {
+    const [row] = await db.select().from(masterServices).where(eq(masterServices.id, id)).limit(1);
+    return row;
+  }
+  async getMasterServiceBySlug(slug: string): Promise<MasterService | undefined> {
+    const [row] = await db.select().from(masterServices).where(eq(masterServices.slug, slug)).limit(1);
+    return row;
+  }
+  async createMasterService(data: InsertMasterService): Promise<MasterService> {
+    const [row] = await db.insert(masterServices).values(data).returning();
+    return row;
+  }
+  async updateMasterService(id: number, data: Partial<InsertMasterService>): Promise<MasterService | undefined> {
+    const [row] = await db.update(masterServices)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(masterServices.id, id))
+      .returning();
+    return row;
+  }
+  async listPanditServices(panditId: number, activeOnly = false): Promise<PanditService[]> {
+    const where = activeOnly
+      ? and(eq(panditServices.panditId, panditId), eq(panditServices.isActive, true))
+      : eq(panditServices.panditId, panditId);
+    return db.select().from(panditServices)
+      .where(where)
+      .orderBy(asc(panditServices.displayOrder), asc(panditServices.id));
+  }
+  async listPanditServicesWithMaster(panditId: number, activeOnly = false): Promise<Array<{ service: PanditService; master: MasterService }>> {
+    const filters = [eq(panditServices.panditId, panditId), eq(masterServices.isActive, true)];
+    if (activeOnly) filters.push(eq(panditServices.isActive, true));
+    return db.select({ service: panditServices, master: masterServices })
+      .from(panditServices)
+      .innerJoin(masterServices, eq(panditServices.masterServiceId, masterServices.id))
+      .where(and(...filters))
+      .orderBy(asc(panditServices.displayOrder), asc(panditServices.id));
+  }
+  async getPanditService(id: number): Promise<PanditService | undefined> {
+    const [row] = await db.select().from(panditServices).where(eq(panditServices.id, id)).limit(1);
+    return row;
+  }
+  async createPanditService(data: InsertPanditService): Promise<PanditService> {
+    const [row] = await db.insert(panditServices).values(data).returning();
+    return row;
+  }
+  async updatePanditService(id: number, data: Partial<InsertPanditService>): Promise<PanditService | undefined> {
+    const [row] = await db.update(panditServices)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(panditServices.id, id))
+      .returning();
+    return row;
   }
 
   // ===== Referrals =====

@@ -62,6 +62,8 @@ import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName
 import { matchesCanonicalCityReach } from "./pandit-location-reach";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import { publicPanditReviewDto } from "./pandit-public-access";
+import { masterServiceWriteSchema } from "./catalog-validation";
+import { seedMasterServices } from "./catalog-seed";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -181,6 +183,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  await seedMasterServices().catch(error => console.warn("[catalog] seed failed:", error?.message));
 
   const adminAuthMiddleware = sharedAdminAuth;
   const customerSessionCookie = "vt_customer_session";
@@ -2913,6 +2916,57 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const cityById = new Map(cities.map(c => [c.id, c]));
     return { states, cities, pandits: all.filter(p => isPanditPubliclyEligible(p, stateIds, cityById)) };
   }
+
+  // Backfill the presentation row for existing eligible Pandits. The unique
+  // constraint plus ensurePanditStorefront's conflict handling makes this safe
+  // across restarts and concurrent workers.
+  publicEligibility()
+    .then(({ pandits: eligible }) => Promise.all(eligible.map(pandit => storage.ensurePanditStorefront(pandit.id))))
+    .catch(error => console.warn("[pandit-storefront] eligible backfill failed:", error?.message));
+
+  app.get("/api/admin/master-services", adminAuthMiddleware, async (_req, res) => {
+    res.json(await storage.listAllMasterServices());
+  });
+
+  app.post("/api/admin/master-services", adminAuthMiddleware, async (req: any, res) => {
+    const parsed = masterServiceWriteSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
+    try {
+      const service = await storage.createMasterService({ ...parsed.data, isActive: true });
+      await auditAdmin(req, "master_service.created", `master_service:${service.id}`, { slug: service.slug });
+      res.status(201).json(service);
+    } catch (error: any) {
+      if (error?.code === "23505") return res.status(409).json({ message: "A service with this slug already exists" });
+      throw error;
+    }
+  });
+
+  app.patch("/api/admin/master-services/:id", adminAuthMiddleware, async (req: any, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid service ID" });
+    const parsed = masterServiceWriteSchema.partial().extend({ isActive: z.boolean().optional() }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
+    const service = await storage.updateMasterService(id, parsed.data);
+    if (!service) return res.status(404).json({ message: "Master service not found" });
+    await auditAdmin(req, "master_service.updated", `master_service:${service.id}`, { fields: Object.keys(parsed.data) });
+    res.json(service);
+  });
+
+  app.patch("/api/admin/pandit-storefronts/:panditId/status", adminAuthMiddleware, async (req: any, res) => {
+    const panditId = Number(req.params.panditId);
+    if (!Number.isInteger(panditId) || panditId <= 0) return res.status(400).json({ message: "Invalid Pandit ID" });
+    const parsed = z.object({ status: z.enum(["draft", "pending_review", "published", "suspended"]) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid store status" });
+    const pandit = await storage.getPandit(panditId);
+    if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    await storage.ensurePanditStorefront(panditId);
+    const storefront = await storage.updatePanditStorefront(panditId, {
+      status: parsed.data.status,
+      isPublished: parsed.data.status === "published",
+    });
+    await auditAdmin(req, "pandit_storefront.status_changed", `pandit:${panditId}`, { status: parsed.data.status });
+    res.json(storefront);
+  });
 
   app.get("/api/admin/pandit-discovery/health", adminAuthMiddleware, async (_req, res) => {
     const [all, states, cities] = await Promise.all([
@@ -8504,6 +8558,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         serviceArea: claimed.serviceArea || null,
         slug,
       } as any);
+      await storage.ensurePanditStorefront(pandit.id);
 
       if (claimed.email) {
         const msg = buildPanditApprovalEmail({

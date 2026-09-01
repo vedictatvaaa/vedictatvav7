@@ -1696,6 +1696,9 @@ export const panditStorefronts = pgTable("pandit_storefronts", {
   // Curated puja types (subset of services the pandit offers) shown above the
   // generic "book any puja" CTA. Free-text array.
   featuredPujas: text("featured_pujas").array().notNull().default(sql`'{}'::text[]`),
+  // Editorial status is separate from Pandit public eligibility. Public reads
+  // require both status=published and the shared eligibility predicate.
+  status: text("status").notNull().default("published"),
   isPublished: boolean("is_published").notNull().default(true),
   viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1704,6 +1707,57 @@ export const panditStorefronts = pgTable("pandit_storefronts", {
 export const insertPanditStorefrontSchema = createInsertSchema(panditStorefronts).omit({ id: true, viewCount: true, createdAt: true, updatedAt: true });
 export type PanditStorefront = typeof panditStorefronts.$inferSelect;
 export type InsertPanditStorefront = z.infer<typeof insertPanditStorefrontSchema>;
+
+// Admin-owned identity for a puja/service. Pandits can configure an offering
+// only after selecting an active master service; they cannot invent service
+// identities in their own records.
+export const masterServices = pgTable("master_services", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  category: text("category").notNull(),
+  description: text("description").notNull().default(""),
+  serviceType: text("service_type").notNull().default("puja"),
+  supportedModes: text("supported_modes").array().notNull().default(sql`'{}'::text[]`),
+  onlineAvailable: boolean("online_available").notNull().default(false),
+  physicalAvailable: boolean("physical_available").notNull().default(true),
+  searchMetadata: jsonb("search_metadata"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  slugUnique: uniqueIndex("master_services_slug_unique").on(t.slug),
+  activeIdx: index("master_services_active_idx").on(t.isActive),
+}));
+export const insertMasterServiceSchema = createInsertSchema(masterServices).omit({ id: true, createdAt: true, updatedAt: true });
+export type MasterService = typeof masterServices.$inferSelect;
+export type InsertMasterService = z.infer<typeof insertMasterServiceSchema>;
+
+// Pandit-owned configuration for one approved master service.
+export const panditServices = pgTable("pandit_services", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  masterServiceId: integer("master_service_id").notNull().references(() => masterServices.id),
+  price: integer("price").notNull(),
+  durationMinutes: integer("duration_minutes").notNull(),
+  mode: text("mode").notNull().default("in_person"),
+  description: text("description").notNull().default(""),
+  preparation: text("preparation").notNull().default(""),
+  inclusions: text("inclusions").array().notNull().default(sql`'{}'::text[]`),
+  serviceAreas: text("service_areas").array().notNull().default(sql`'{}'::text[]`),
+  availability: text("availability"),
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  panditMasterUnique: uniqueIndex("pandit_services_pandit_master_unique").on(t.panditId, t.masterServiceId),
+  panditActiveIdx: index("pandit_services_pandit_active_idx").on(t.panditId, t.isActive),
+  masterActiveIdx: index("pandit_services_master_active_idx").on(t.masterServiceId, t.isActive),
+}));
+export const insertPanditServiceSchema = createInsertSchema(panditServices).omit({ id: true, createdAt: true, updatedAt: true });
+export type PanditService = typeof panditServices.$inferSelect;
+export type InsertPanditService = z.infer<typeof insertPanditServiceSchema>;
 
 // Referral attribution ledger. One row per attributable order/booking.
 // kind = "order" (shop purchase) | "booking" (puja booking) | "donation".

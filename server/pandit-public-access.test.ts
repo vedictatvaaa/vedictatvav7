@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { publicPanditReviewDto, publicStorefrontPanditDto } from "./pandit-public-access";
+import {
+  isPanditStorefrontPublished,
+  publicPanditReviewDto,
+  publicPanditServiceDto,
+  publicStorefrontPanditDto,
+} from "./pandit-public-access";
 
 test("public storefront DTO excludes private and commercial Pandit fields", () => {
   const dto = publicStorefrontPanditDto({
@@ -51,4 +56,41 @@ test("public review DTO excludes reviewer email", () => {
 
   assert.equal("reviewerEmail" in dto, false);
   assert.equal(dto.reviewerName, "Customer");
+});
+
+test("store publication requires both the legacy flag and published status", () => {
+  assert.equal(isPanditStorefrontPublished({ isPublished: true, status: "published" }), true);
+  assert.equal(isPanditStorefrontPublished({ isPublished: true, status: "draft" }), false);
+  assert.equal(isPanditStorefrontPublished({ isPublished: false, status: "published" }), false);
+});
+
+test("public service DTO exposes catalogue identity and offering fields only", () => {
+  const dto = publicPanditServiceDto({
+    service: {
+      id: 14,
+      panditId: 7,
+      masterServiceId: 3,
+      price: 5100,
+      durationMinutes: 90,
+      mode: "in_person",
+      description: "Traditional vidhi",
+      preparation: "Keep the puja area clean",
+      inclusions: ["Sankalp", "Havan"],
+      serviceAreas: ["Varanasi"],
+      availability: "Morning",
+      displayOrder: 1,
+      internalNote: "private",
+    },
+    master: {
+      name: "Griha Pravesh",
+      slug: "griha-pravesh",
+      category: "Home ceremonies",
+      serviceType: "puja",
+    },
+  });
+
+  assert.equal(dto.name, "Griha Pravesh");
+  assert.equal(dto.price, 5100);
+  assert.equal("panditId" in dto, false);
+  assert.equal("internalNote" in dto, false);
 });

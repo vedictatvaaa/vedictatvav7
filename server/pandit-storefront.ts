@@ -20,7 +20,15 @@ import { eq, desc, and, sql, gte, isNotNull } from "drizzle-orm";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import type { AdminRequest } from "./admin-auth";
 import { buildPanditPayoutEmail, sendEmailAsync } from "./email";
-import { getPubliclyEligiblePanditBySlug, publicPanditReviewDto, publicStorefrontPanditDto } from "./pandit-public-access";
+import {
+  getPubliclyEligiblePanditBySlug,
+  getPubliclyPublishedPanditBySlug,
+  isPanditStorefrontPublished,
+  publicPanditReviewDto,
+  publicPanditServiceDto,
+  publicStorefrontPanditDto,
+} from "./pandit-public-access";
+import { panditServiceWriteSchema } from "./catalog-validation";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -294,10 +302,10 @@ export async function attributeReferral(
 // products. Keeps DB joins out of the route handler.
 // ---------------------------------------------------------------------
 async function buildStorefrontDto(slug: string) {
-  const pandit = await getPubliclyEligiblePanditBySlug(slug);
+  const pandit = await getPubliclyPublishedPanditBySlug(slug);
   if (!pandit) return null;
   const sf = await storage.getPanditStorefrontByPanditId(pandit.id);
-  if (sf && !sf.isPublished) return null;
+  if (!isPanditStorefrontPublished(sf)) return null;
   // Tier gating: free-tier pandits get a services-only storefront — no
   // curated products and no referral commission section. Paid tiers get
   // up to 12 curated products.
@@ -309,6 +317,7 @@ async function buildStorefrontDto(slug: string) {
     ? (await Promise.all(productIds.map((id) => storage.getProduct(id)))).filter(Boolean)
     : [];
   const reviews = await storage.getPanditReviews(pandit.id).catch(() => []);
+  const services = await storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []);
   return {
     pandit: publicStorefrontPanditDto(pandit),
     storefront: sf
@@ -327,6 +336,7 @@ async function buildStorefrontDto(slug: string) {
         }
       : null,
     products,
+    services: services.map(publicPanditServiceDto),
     reviews: reviews.slice(0, 10).map(publicPanditReviewDto),
   };
 }
@@ -594,7 +604,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.get("/api/og/p/:slug.jpg", async (req, res) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
-      const p = await getPubliclyEligiblePanditBySlug(slug);
+      const p = await getPubliclyPublishedPanditBySlug(slug);
       if (!p) return res.status(404).end();
       const path = await import("path");
       const fs = await import("fs/promises");
@@ -730,9 +740,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       if (!Number.isFinite(id)) return next();
       const p = await storage.getPandit(id);
       if (!p?.slug) return next();
-      if (!(await getPubliclyEligiblePanditBySlug(p.slug))) return next();
-      const sf = await storage.getPanditStorefrontByPanditId(p.id).catch(() => null);
-      if (!sf?.isPublished) return next();
+      if (!(await getPubliclyPublishedPanditBySlug(p.slug))) return next();
       return res.redirect(301, `/p/${p.slug}`);
     } catch {
       next();
@@ -743,7 +751,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
       if (!slug) return res.status(400).end();
-      const pandit = await getPubliclyEligiblePanditBySlug(slug);
+      const pandit = await getPubliclyPublishedPanditBySlug(slug);
       if (!pandit) return res.status(404).end();
       const buf = await storefrontQrPng(req, slug, 512);
       res.setHeader("Content-Type", "image/png");
@@ -758,7 +766,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.get("/api/storefront/:slug/card.pdf", async (req, res) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
-      if (!(await getPubliclyEligiblePanditBySlug(slug))) return res.status(404).json({ message: "Card not available" });
+      if (!(await getPubliclyPublishedPanditBySlug(slug))) return res.status(404).json({ message: "Card not available" });
       const buf = await storefrontCardPdf(req, slug);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="vedic-tatva-${slug}.pdf"`);
@@ -812,15 +820,85 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         bannerImage: z.string().max(500).nullable().optional(),
         productIds: z.array(z.number().int().positive()).max(12).optional(),
         featuredPujas: z.array(z.string().min(1).max(80)).max(20).optional(),
+        status: z.enum(["draft", "pending_review"]).optional(),
         isPublished: z.boolean().optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid", errors: parsed.error.flatten() });
-      const out = await storage.updatePanditStorefront(req.panditId!, parsed.data);
+      const patch: any = { ...parsed.data };
+      if (patch.status) patch.isPublished = false;
+      if (patch.isPublished === true) patch.status = "published";
+      if (patch.isPublished === false && !patch.status) patch.status = "draft";
+      const out = await storage.updatePanditStorefront(req.panditId!, patch);
       res.json({ storefront: out });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
     }
+  });
+
+  app.get("/api/pandit/catalog/master-services", panditAuthMiddleware, async (_req: PanditRequest, res) => {
+    const services = await storage.listActiveMasterServices();
+    res.json(services.map(service => ({
+      id: service.id,
+      name: service.name,
+      slug: service.slug,
+      category: service.category,
+      description: service.description,
+      serviceType: service.serviceType,
+      supportedModes: service.supportedModes,
+      onlineAvailable: service.onlineAvailable,
+      physicalAvailable: service.physicalAvailable,
+    })));
+  });
+
+  app.get("/api/pandit/services", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const services = await storage.listPanditServicesWithMaster(req.panditId!);
+    res.json(services.map(row => ({ ...publicPanditServiceDto(row), isActive: row.service.isActive })));
+  });
+
+  app.post("/api/pandit/services", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const parsed = panditServiceWriteSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid service", errors: parsed.error.flatten() });
+    const master = await storage.getMasterService(parsed.data.masterServiceId);
+    if (!master?.isActive) return res.status(400).json({ message: "Select an active catalogue service" });
+    if (!master.supportedModes.includes(parsed.data.mode)) {
+      return res.status(400).json({ message: "Selected mode is not supported by this service" });
+    }
+    try {
+      const service = await storage.createPanditService({ ...parsed.data, panditId: req.panditId!, isActive: true });
+      const row = { service, master };
+      res.status(201).json(publicPanditServiceDto(row));
+    } catch (error: any) {
+      if (error?.code === "23505") return res.status(409).json({ message: "This service is already in your store" });
+      throw error;
+    }
+  });
+
+  app.patch("/api/pandit/services/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid service ID" });
+    const existing = await storage.getPanditService(id);
+    if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Service not found" });
+    const parsed = panditServiceWriteSchema.omit({ masterServiceId: true }).partial()
+      .extend({ isActive: z.boolean().optional() })
+      .safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid service", errors: parsed.error.flatten() });
+    const master = await storage.getMasterService(existing.masterServiceId);
+    if (!master?.isActive) return res.status(400).json({ message: "Catalogue service is inactive" });
+    if (parsed.data.mode && !master.supportedModes.includes(parsed.data.mode)) {
+      return res.status(400).json({ message: "Selected mode is not supported by this service" });
+    }
+    const service = await storage.updatePanditService(id, parsed.data);
+    res.json(publicPanditServiceDto({ service, master }));
+  });
+
+  app.delete("/api/pandit/services/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid service ID" });
+    const existing = await storage.getPanditService(id);
+    if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Service not found" });
+    await storage.updatePanditService(id, { isActive: false });
+    res.status(204).end();
   });
 
   app.get("/api/pandit/storefront/qr.png", panditAuthMiddleware, async (req: PanditRequest, res) => {

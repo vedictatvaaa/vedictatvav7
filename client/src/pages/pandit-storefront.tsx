@@ -31,6 +31,12 @@ interface StorefrontDto {
     social: { whatsapp?: string | null; youtube?: string | null; instagram?: string | null; facebook?: string | null; website?: string | null };
   } | null;
   products: Array<{ id: number; name: string; price: number; salePrice?: number | null; image?: string; slug?: string; description?: string }>;
+  services: Array<{
+    id: number; masterServiceId: number; name: string; slug: string; category: string;
+    serviceType: string; description: string; price: number; durationMinutes: number;
+    mode: "in_person" | "online" | "hybrid"; preparation?: string; inclusions: string[];
+    serviceAreas: string[]; availability?: string | null;
+  }>;
   reviews: Array<{ id: number; rating: number; comment: string; userName?: string }>;
 }
 
@@ -73,7 +79,7 @@ export default function PanditStorefrontPage() {
     );
   }
 
-  const { pandit, storefront, products, reviews } = data;
+  const { pandit, storefront, products, services, reviews } = data;
   const refQS = `?ref=${encodeURIComponent(slug)}`;
 
   return (
@@ -198,6 +204,54 @@ export default function PanditStorefrontPage() {
             </Card>
           </section>
         )}
+
+        {services.length > 0 ? (
+          <section data-testid="section-services">
+            <div className="mb-4">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-[#9B6A21]">Sacred services</div>
+              <h2 className="mt-1 text-2xl font-bold">Choose a ceremony</h2>
+              <p className="mt-1 max-w-2xl text-sm text-stone-600">Clear pricing, duration and ceremony details before you request a booking.</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {services.map(service => {
+                const bookingParams = new URLSearchParams({
+                  pandit: String(pandit.id),
+                  service: service.slug,
+                  pujaType: service.name,
+                  mode: service.mode === "online" ? "online" : "offline",
+                });
+                return (
+                  <Card key={service.id} className="overflow-hidden border-[#D4AF37]/35 bg-white/80 shadow-sm" data-testid={`card-service-${service.id}`}>
+                    <div className="h-1.5" style={{ background: themeColor }} />
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">{service.category}</div>
+                          <h3 className="mt-1 text-lg font-bold text-[#4a1a22]">{service.name}</h3>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 border-[#D4AF37]/60 bg-[#FFFAEC] text-[#6D2B35]">
+                          {service.mode === "in_person" ? "In person" : service.mode === "online" ? "Online" : "Online + in person"}
+                        </Badge>
+                      </div>
+                      {service.description ? <p className="mt-3 text-sm leading-relaxed text-stone-600">{service.description}</p> : null}
+                      <div className="mt-4 flex flex-wrap items-end justify-between gap-4 border-t border-stone-100 pt-4">
+                        <div>
+                          <div className="text-xs text-stone-500">{service.durationMinutes} minutes</div>
+                          <div className="text-xl font-bold text-[#6D2B35]">₹{service.price.toLocaleString("en-IN")}</div>
+                        </div>
+                        <Link href={`/online-puja-booking?${bookingParams.toString()}`}>
+                          <Button className="bg-[#6D2B35] text-white hover:bg-[#4a1a22]" data-testid={`button-book-service-${service.id}`}>
+                            <Calendar className="mr-2 h-4 w-4" />Book this service
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {/* Featured pujas */}
         {storefront?.featuredPujas && storefront.featuredPujas.length > 0 && (

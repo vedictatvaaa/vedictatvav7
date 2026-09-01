@@ -12,6 +12,18 @@ export async function getPubliclyEligiblePanditBySlug(slug: string) {
   return isPanditPubliclyEligible(pandit, stateIds, cityById) ? pandit : null;
 }
 
+export function isPanditStorefrontPublished(storefront: any) {
+  if (!storefront?.isPublished) return false;
+  return (storefront.status || "published") === "published";
+}
+
+export async function getPubliclyPublishedPanditBySlug(slug: string) {
+  const pandit = await getPubliclyEligiblePanditBySlug(slug);
+  if (!pandit) return null;
+  const storefront = await storage.getPanditStorefrontByPanditId(pandit.id);
+  return isPanditStorefrontPublished(storefront) ? pandit : null;
+}
+
 async function loadActiveLocationContext() {
   const [states, cities] = await Promise.all([
     db.select().from(indianStates).where(eq(indianStates.isActive, true)),
@@ -63,5 +75,27 @@ export function publicPanditReviewDto(review: any) {
     panditReply: review.panditReply,
     panditRepliedAt: review.panditRepliedAt,
     createdAt: review.createdAt,
+  };
+}
+
+export function publicPanditServiceDto(row: any) {
+  const service = row.service || row;
+  const master = row.master || row.masterService;
+  return {
+    id: service.id,
+    masterServiceId: service.masterServiceId,
+    name: master?.name || null,
+    slug: master?.slug || null,
+    category: master?.category || null,
+    serviceType: master?.serviceType || null,
+    description: service.description,
+    price: service.price,
+    durationMinutes: service.durationMinutes,
+    mode: service.mode,
+    preparation: service.preparation,
+    inclusions: service.inclusions || [],
+    serviceAreas: service.serviceAreas || [],
+    availability: service.availability,
+    displayOrder: service.displayOrder,
   };
 }

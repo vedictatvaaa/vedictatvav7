@@ -9,9 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert } from "lucide-react";
+import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw } from "lucide-react";
 import { getPanditToken } from "@/lib/panditAuth";
 
 const headers = () => ({
@@ -32,7 +31,7 @@ interface SfData {
     bio: string | null; tagline: string | null;
     whatsappNumber: string | null; youtubeUrl: string | null; instagramUrl: string | null; facebookUrl: string | null; websiteUrl: string | null;
     themeColor: string | null; bannerImage: string | null;
-    productIds: number[]; featuredPujas: string[]; isPublished: boolean; viewCount: number;
+    productIds: number[]; featuredPujas: string[]; status: "draft" | "pending_review" | "published" | "suspended"; isPublished: boolean; viewCount: number;
   };
   pandit: { id: number; name: string; slug: string; tier: string; productCommissionPct: number; membershipNo?: string | null; cardIssued?: boolean; cardIssuedAt?: string | null };
   products: ProductLite[];
@@ -51,8 +50,204 @@ type SfForm = {
   themeColor: string;
   productIds: number[];
   featuredPujas: string[];
-  isPublished: boolean;
 };
+
+type MasterServiceLite = {
+  id: number;
+  name: string;
+  category: string;
+  supportedModes: Array<"in_person" | "online" | "hybrid">;
+};
+
+type PanditServiceLite = {
+  id: number;
+  masterServiceId: number;
+  name: string;
+  category: string;
+  price: number;
+  durationMinutes: number;
+  mode: "in_person" | "online" | "hybrid";
+  description: string;
+  preparation: string;
+  inclusions: string[];
+  serviceAreas: string[];
+  availability?: string | null;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+const EMPTY_SERVICE_FORM = {
+  masterServiceId: 0,
+  price: 1100,
+  durationMinutes: 60,
+  mode: "in_person" as const,
+  description: "",
+  preparation: "",
+  inclusions: "",
+  serviceAreas: "",
+  availability: "",
+  displayOrder: 0,
+};
+
+function PanditServicesEditor() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const masters = useQuery<MasterServiceLite[]>({
+    queryKey: ["pandit-master-services"],
+    queryFn: () => api("/api/pandit/catalog/master-services"),
+  });
+  const offerings = useQuery<PanditServiceLite[]>({
+    queryKey: ["pandit-services"],
+    queryFn: () => api("/api/pandit/services"),
+  });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState(EMPTY_SERVICE_FORM);
+
+  const reset = () => {
+    setEditingId(null);
+    setForm(EMPTY_SERVICE_FORM);
+  };
+  const serialize = () => ({
+    masterServiceId: form.masterServiceId,
+    price: Number(form.price),
+    durationMinutes: Number(form.durationMinutes),
+    mode: form.mode,
+    description: form.description.trim(),
+    preparation: form.preparation.trim(),
+    inclusions: form.inclusions.split("\n").map(value => value.trim()).filter(Boolean),
+    serviceAreas: form.serviceAreas.split(",").map(value => value.trim()).filter(Boolean),
+    availability: form.availability.trim() || null,
+    displayOrder: Number(form.displayOrder),
+  });
+  const saveService = useMutation({
+    mutationFn: () => {
+      const payload = serialize();
+      if (!editingId) return api("/api/pandit/services", { method: "POST", body: JSON.stringify(payload) });
+      const { masterServiceId: _ignored, ...editable } = payload;
+      return api(`/api/pandit/services/${editingId}`, { method: "PATCH", body: JSON.stringify(editable) });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pandit-services"] });
+      toast({ title: editingId ? "Service updated" : "Service added" });
+      reset();
+    },
+    onError: (error: unknown) => toast({
+      title: "Could not save service",
+      description: error instanceof Error ? error.message : "Please check the details and try again.",
+      variant: "destructive",
+    }),
+  });
+  const visibility = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
+      api(`/api/pandit/services/${id}`, { method: "PATCH", body: JSON.stringify({ isActive }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pandit-services"] }),
+  });
+
+  const startEdit = (service: PanditServiceLite) => {
+    setEditingId(service.id);
+    setForm({
+      masterServiceId: service.masterServiceId,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
+      mode: service.mode,
+      description: service.description || "",
+      preparation: service.preparation || "",
+      inclusions: (service.inclusions || []).join("\n"),
+      serviceAreas: (service.serviceAreas || []).join(", "),
+      availability: service.availability || "",
+      displayOrder: service.displayOrder || 0,
+    });
+  };
+
+  const master = (masters.data || []).find(item => item.id === form.masterServiceId);
+  const usedMasterIds = new Set((offerings.data || []).filter(item => item.id !== editingId).map(item => item.masterServiceId));
+  const availableMasters = (masters.data || []).filter(item => !usedMasterIds.has(item.id));
+  const canSave = form.masterServiceId > 0 && form.price >= 0 && form.durationMinutes >= 15 && !saveService.isPending;
+
+  return (
+    <Card className="overflow-hidden border-[#D4AF37]/35">
+      <div className="bg-gradient-to-r from-[#4a1a22] to-[#6D2B35] px-5 py-4 text-[#FFFAEC]">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[#D4AF37]" />
+          <h3 className="font-bold">Service catalogue</h3>
+        </div>
+        <p className="mt-1 text-xs text-[#FFFAEC]/75">Choose approved ceremonies and set your own price, duration and service details.</p>
+      </div>
+      <CardContent className="space-y-5 p-5">
+        {offerings.isLoading ? (
+          <div className="py-4 text-center text-sm text-stone-500"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading services…</div>
+        ) : (offerings.data || []).length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(offerings.data || []).map(service => (
+              <div key={service.id} className={`rounded-lg border p-4 ${service.isActive ? "border-stone-200 bg-white" : "border-stone-200 bg-stone-50 opacity-70"}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">{service.category}</div>
+                    <div className="font-bold text-[#4a1a22]">{service.name}</div>
+                    <div className="mt-1 text-sm text-stone-600">₹{service.price.toLocaleString("en-IN")} · {service.durationMinutes} min</div>
+                  </div>
+                  <Badge variant="outline">{service.mode === "in_person" ? "In person" : service.mode === "online" ? "Online" : "Hybrid"}</Badge>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => startEdit(service)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</Button>
+                  <Button size="sm" variant="ghost" onClick={() => visibility.mutate({ id: service.id, isActive: !service.isActive })}>
+                    {service.isActive ? <><EyeOff className="mr-1.5 h-3.5 w-3.5" />Hide</> : <><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Restore</>}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-[#D4AF37]/50 bg-[#FFFAEC]/60 p-5 text-sm text-stone-600">
+            Add your first service so devotees can compare clear prices and book the right ceremony.
+          </div>
+        )}
+
+        <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="font-semibold text-[#4a1a22]">{editingId ? "Edit service" : "Add a service"}</div>
+            {editingId ? <Button variant="ghost" size="sm" onClick={reset}>Cancel</Button> : null}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label htmlFor="service-master">Approved ceremony</Label>
+              <select
+                id="service-master"
+                className="mt-1 h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                value={form.masterServiceId}
+                disabled={!!editingId}
+                onChange={event => {
+                  const nextId = Number(event.target.value);
+                  const nextMaster = (masters.data || []).find(item => item.id === nextId);
+                  setForm(current => ({ ...current, masterServiceId: nextId, mode: nextMaster?.supportedModes[0] || "in_person" }));
+                }}
+              >
+                <option value={0}>Select a service…</option>
+                {availableMasters.map(item => <option key={item.id} value={item.id}>{item.category} — {item.name}</option>)}
+              </select>
+            </div>
+            <div><Label htmlFor="service-price">Price (₹)</Label><Input id="service-price" type="number" min={0} max={10000000} value={form.price} onChange={event => setForm(current => ({ ...current, price: Number(event.target.value) }))} /></div>
+            <div><Label htmlFor="service-duration">Duration (minutes)</Label><Input id="service-duration" type="number" min={15} max={1440} value={form.durationMinutes} onChange={event => setForm(current => ({ ...current, durationMinutes: Number(event.target.value) }))} /></div>
+            <div>
+              <Label htmlFor="service-mode">Mode</Label>
+              <select id="service-mode" className="mt-1 h-10 w-full rounded-md border border-input bg-white px-3 text-sm" value={form.mode} onChange={event => setForm(current => ({ ...current, mode: event.target.value as typeof current.mode }))}>
+                {(master?.supportedModes || ["in_person"]).map(mode => <option key={mode} value={mode}>{mode === "in_person" ? "In person" : mode === "online" ? "Online" : "Hybrid"}</option>)}
+              </select>
+            </div>
+            <div><Label htmlFor="service-availability">Availability note</Label><Input id="service-availability" maxLength={500} value={form.availability} onChange={event => setForm(current => ({ ...current, availability: event.target.value }))} placeholder="e.g. Weekday mornings" /></div>
+            <div className="sm:col-span-2"><Label htmlFor="service-description">Description</Label><Textarea id="service-description" rows={3} maxLength={2000} value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} placeholder="Explain what the devotee can expect." /></div>
+            <div><Label htmlFor="service-inclusions">Inclusions (one per line)</Label><Textarea id="service-inclusions" rows={3} value={form.inclusions} onChange={event => setForm(current => ({ ...current, inclusions: event.target.value }))} placeholder={"Sankalp\nHavan\nAarti"} /></div>
+            <div><Label htmlFor="service-areas">Service areas (comma separated)</Label><Textarea id="service-areas" rows={3} value={form.serviceAreas} onChange={event => setForm(current => ({ ...current, serviceAreas: event.target.value }))} placeholder="Varanasi, Sarnath" /></div>
+          </div>
+          <Button className="mt-4 bg-[#6D2B35] text-[#D4AF37] hover:bg-[#4a1a22]" disabled={!canSave} onClick={() => saveService.mutate()}>
+            {saveService.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            {editingId ? "Save service" : "Add to storefront"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function PanditStorefrontEditor() {
   const { toast } = useToast();
@@ -76,7 +271,6 @@ export function PanditStorefrontEditor() {
         themeColor: data.storefront.themeColor || "#6D2B35",
         productIds: data.storefront.productIds || [],
         featuredPujas: data.storefront.featuredPujas || [],
-        isPublished: data.storefront.isPublished,
       });
     }
   }, [data, form]);
@@ -91,6 +285,14 @@ export function PanditStorefrontEditor() {
       const msg = e instanceof Error ? e.message : "Please try again.";
       toast({ title: "Save failed", description: msg, variant: "destructive" });
     },
+  });
+  const updateStatus = useMutation({
+    mutationFn: (status: "draft" | "pending_review") => api("/api/pandit/storefront", { method: "PATCH", body: JSON.stringify({ status }) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pandit-storefront"] });
+      toast({ title: "Store status updated" });
+    },
+    onError: (e: unknown) => toast({ title: "Status update failed", description: e instanceof Error ? e.message : "Please try again.", variant: "destructive" }),
   });
 
   if (isLoading || !form || !data) {
@@ -110,14 +312,18 @@ export function PanditStorefrontEditor() {
             </a>
             <div className="text-xs text-stone-500 mt-1">{data.storefront.viewCount} views · Tier <span className="capitalize font-medium text-[#4a1a22]">{data.pandit.tier}</span> · Commission <span className="font-medium text-[#4a1a22]">{data.commissionPct}%</span> on referred shop sales</div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Switch checked={form.isPublished} onCheckedChange={(v) => { setForm({ ...form, isPublished: v }); save.mutate({ ...form, isPublished: v }); }} data-testid="switch-published" />
-              <Label className="text-xs">{form.isPublished ? "Published" : "Hidden"}</Label>
-            </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="capitalize">{data.storefront.status.replace("_", " ")}</Badge>
+            {data.storefront.status === "published" ? (
+              <Button size="sm" variant="outline" onClick={() => updateStatus.mutate("draft")} disabled={updateStatus.isPending}>Move to draft</Button>
+            ) : data.storefront.status !== "pending_review" ? (
+              <Button size="sm" onClick={() => updateStatus.mutate("pending_review")} disabled={updateStatus.isPending} className="bg-[#6D2B35] text-white">Submit for review</Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>
+
+      <PanditServicesEditor />
 
       <Card>
         <CardContent className="p-5 space-y-4">
