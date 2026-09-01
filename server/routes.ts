@@ -73,6 +73,10 @@ import { getPubliclyEligiblePandits, isPanditStorefrontPublished, publicPanditRe
 import { publicRouteIntegrityMiddleware } from "./seo-route-integrity";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
+import {
+  registerPanditSeoNetworkInvalidation,
+  registerPanditSeoNetworkRoutes,
+} from "./pandit-seo-network/public-api";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -841,6 +845,7 @@ export async function registerRoutes(
   seedCommunityQa().catch((e) => console.warn("[seed:qa]", e?.message));
   registerPromoteProductRoutes(app);
   registerYatraPilgrimageRoutes(app);
+  registerPanditSeoNetworkRoutes(app);
   registerPanditPortalRoutes(app);
   registerAstroRealtimeRoutes(app);
   registerSpiritualTrackerRoutes(app);
@@ -1173,6 +1178,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         path.startsWith("/pandit/") ||
         path.startsWith("/astrologer/")
       ) {
+  registerPanditSeoNetworkInvalidation(app);
         continue;
       }
       // Skip the legacy slash-style city URLs (`/pind-daan/kashi`,
