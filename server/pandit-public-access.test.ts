@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { publicStorefrontPanditDto } from "./pandit-public-access";
+import { publicPanditReviewDto, publicStorefrontPanditDto } from "./pandit-public-access";
 
 test("public storefront DTO excludes private and commercial Pandit fields", () => {
   const dto = publicStorefrontPanditDto({
@@ -32,4 +32,23 @@ test("public storefront DTO excludes private and commercial Pandit fields", () =
   for (const field of ["phone", "email", "latitude", "longitude", "tier", "membershipNo", "locationReviewStatus"]) {
     assert.equal(field in dto, false, `${field} must not be public`);
   }
+});
+
+test("public review DTO excludes reviewer email", () => {
+  const dto = publicPanditReviewDto({
+    id: 9,
+    panditId: 7,
+    reviewerName: "Customer",
+    reviewerEmail: "private@example.com",
+    reviewerCity: "Mumbai",
+    rating: 5,
+    comment: "Excellent",
+    serviceType: "Griha Pravesh",
+    panditReply: null,
+    panditRepliedAt: null,
+    createdAt: new Date("2026-09-01T00:00:00Z"),
+  });
+
+  assert.equal("reviewerEmail" in dto, false);
+  assert.equal(dto.reviewerName, "Customer");
 });

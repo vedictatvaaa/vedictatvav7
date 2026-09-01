@@ -61,6 +61,7 @@ import { panditApplications, insertFranchiseApplicationSchema } from "@shared/sc
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { matchesCanonicalCityReach } from "./pandit-location-reach";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+import { publicPanditReviewDto } from "./pandit-public-access";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -3125,18 +3126,30 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   // ---- Pandit Reviews ----
   app.get("/api/pandit-reviews/:panditId", async (req, res) => {
-    const reviews = await storage.getPanditReviews(Number(req.params.panditId));
-    res.json(reviews);
+    const panditId = Number(req.params.panditId);
+    if (!Number.isInteger(panditId) || panditId <= 0) return res.status(400).json({ message: "Invalid Pandit ID" });
+    const { pandits: eligible } = await publicEligibility();
+    if (!eligible.some(pandit => pandit.id === panditId)) return res.status(404).json({ message: "Pandit not found" });
+    const reviews = await storage.getPanditReviews(panditId);
+    res.setHeader("Cache-Control", "no-store");
+    res.json(reviews.map(publicPanditReviewDto));
   });
 
   app.get("/api/pandit-reviews", async (_req, res) => {
-    const reviews = await storage.getAllPanditReviews();
-    res.json(reviews);
+    const [{ pandits: eligible }, reviews] = await Promise.all([
+      publicEligibility(),
+      storage.getAllPanditReviews(),
+    ]);
+    const eligibleIds = new Set(eligible.map(pandit => pandit.id));
+    res.setHeader("Cache-Control", "no-store");
+    res.json(reviews.filter(review => eligibleIds.has(review.panditId)).map(publicPanditReviewDto));
   });
 
   app.post("/api/pandit-reviews", async (req, res) => {
     const parsed = insertPanditReviewSchema.omit({ id: true, createdAt: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
+    const { pandits: eligible } = await publicEligibility();
+    if (!eligible.some(pandit => pandit.id === parsed.data.panditId)) return res.status(404).json({ message: "Pandit not found" });
     const review = await storage.createPanditReview(parsed.data);
 
     const allReviews = await storage.getPanditReviews(review.panditId);
@@ -3155,7 +3168,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       rating: review.rating,
     }).catch(() => {});
 
-    res.status(201).json(review);
+    res.status(201).json(publicPanditReviewDto(review));
   });
 
   app.delete("/api/pandit-reviews/:id", adminAuthMiddleware, async (req, res) => {

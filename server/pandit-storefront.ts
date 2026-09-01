@@ -20,7 +20,7 @@ import { eq, desc, and, sql, gte, isNotNull } from "drizzle-orm";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import type { AdminRequest } from "./admin-auth";
 import { buildPanditPayoutEmail, sendEmailAsync } from "./email";
-import { getPubliclyEligiblePanditBySlug, publicStorefrontPanditDto } from "./pandit-public-access";
+import { getPubliclyEligiblePanditBySlug, publicPanditReviewDto, publicStorefrontPanditDto } from "./pandit-public-access";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -319,7 +319,6 @@ async function buildStorefrontDto(slug: string) {
           bannerImage: sf.bannerImage,
           featuredPujas: sf.featuredPujas || [],
           social: {
-            whatsapp: sf.whatsappNumber,
             youtube: sf.youtubeUrl,
             instagram: sf.instagramUrl,
             facebook: sf.facebookUrl,
@@ -328,7 +327,7 @@ async function buildStorefrontDto(slug: string) {
         }
       : null,
     products,
-    reviews: reviews.slice(0, 10),
+    reviews: reviews.slice(0, 10).map(publicPanditReviewDto),
   };
 }
 
@@ -413,7 +412,6 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   if (!dto) throw new Error("Storefront not found");
   const qrPng = await storefrontQrPng(req, slug, 720);
   const photoPng = await fetchPanditPhotoCircle(req, dto.pandit.image);
-  const phone = dto.storefront?.social?.whatsapp || "";
   const W = 105, H = 148; // A6 portrait, mm
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [W, H] });
@@ -479,15 +477,15 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   doc.setLineWidth(0.3);
   doc.line(25, photoY + photoSize + 22, W - 25, photoY + photoSize + 22);
 
-  // Contact number — the headline of the front side.
+  // Keep contact details private; direct customers through the platform.
   doc.setTextColor(90, 74, 58);
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
-  doc.text("CONTACT", W / 2, photoY + photoSize + 28, { align: "center" });
+  doc.text("BOOK SECURELY", W / 2, photoY + photoSize + 28, { align: "center" });
   doc.setTextColor(74, 26, 34);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.text(phone || "—", W / 2, photoY + photoSize + 36, { align: "center" });
+  doc.setFontSize(10);
+  doc.text(`vedictatva.com/p/${slug}`, W / 2, photoY + photoSize + 36, { align: "center" });
 
   // City footer line
   if (dto.pandit.city) {
@@ -579,6 +577,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         sameSite: "lax",
         path: "/",
       });
+      res.setHeader("Cache-Control", "no-store");
       // Fire-and-forget view count bump.
       storage.incrementStorefrontView(dto.pandit.id).catch(() => {});
       res.json(dto);

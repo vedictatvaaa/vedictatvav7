@@ -50,3 +50,18 @@ export function publicStorefrontPanditDto(pandit: any) {
     bio: pandit.bio,
   };
 }
+
+export function publicPanditReviewDto(review: any) {
+  return {
+    id: review.id,
+    panditId: review.panditId,
+    reviewerName: review.reviewerName,
+    reviewerCity: review.reviewerCity,
+    rating: review.rating,
+    comment: review.comment,
+    serviceType: review.serviceType,
+    panditReply: review.panditReply,
+    panditRepliedAt: review.panditRepliedAt,
+    createdAt: review.createdAt,
+  };
+}
