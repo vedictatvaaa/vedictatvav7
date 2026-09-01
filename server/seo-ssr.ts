@@ -30,6 +30,9 @@ import { storage } from "./storage";
 import { CATEGORY_HEAD, resolveCategorySlug } from "./seo-category-head";
 import { resolveExplicitOgCard } from "./og-meta";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
+import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
+import { isPanditSeoNetworkEnabled, selectPublicProfile } from "./pandit-seo-network/public-api";
+import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
 import {
   resolveSeoMetadata,
   type ResolvedSeoMetadata,
@@ -46,6 +49,12 @@ const SKIP_PREFIXES = [
 
 const SITE_NAME = "Vedic Tatva";
 const DEFAULT_OG_IMAGE = "/attached_assets/og-default.png";
+
+class PanditSeoSsrResolutionError extends Error {
+  constructor(cause: unknown) {
+    super("Pandit SEO projection could not be resolved", { cause });
+  }
+}
 
 export type HeadSchema = {
   id: string;
@@ -246,6 +255,28 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
   // rating, and photo.
   const panditMatch = reqPath.match(/^\/pandit\/([a-z0-9-]+)\/?$/);
   if (panditMatch) {
+    try {
+      const settings = await storage.getSiteSettings();
+      if (isPanditSeoNetworkEnabled(settings)) {
+        const profile = selectPublicProfile(
+          await getPanditSeoNetworkProjection(),
+          panditMatch[1],
+        );
+        if (!profile) {
+          return {
+            title: `Pandit Profile Not Found | ${SITE_NAME}`,
+            description: "This Pandit profile is unavailable. Browse verified Vedic Pandits and authentic puja services on Vedic Tatva.",
+            canonical: reqPath,
+            robotsIndex: false,
+            robotsFollow: true,
+            jsonLd: [],
+          };
+        }
+        return buildPanditProfileSeoHead(profile, baseUrl);
+      }
+    } catch (error) {
+      throw new PanditSeoSsrResolutionError(error);
+    }
     try {
       const p = await getPubliclyPublishedPanditBySlug(panditMatch[1]);
       if (p) {
@@ -545,6 +576,7 @@ export function seoHeadMiddleware() {
       try {
         head = await resolveHead(path, baseUrl);
       } catch (err) {
+        if (err instanceof PanditSeoSsrResolutionError) return next(err);
         // SEO is best-effort — never crash a page load over a missing meta lookup.
         console.warn("[seo-ssr] resolveHead failed:", (err as any)?.message);
       }
