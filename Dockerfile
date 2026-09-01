@@ -13,15 +13,19 @@ ENV NODE_ENV=development
 ENV NPM_CONFIG_PRODUCTION=false
 ENV npm_config_production=false
 ENV NODE_OPTIONS=--max-old-space-size=1536
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 # Install ALL deps explicitly. --include=dev wins over production/omit
-# settings supplied by the build environment.
+# settings supplied by the build environment. Pin npm because the npm 10.8.2
+# bundled with this Node image can crash with "Exit handler never called"
+# during the long native dependency install.
 COPY package.json package-lock.json* ./
-RUN --mount=type=cache,target=/root/.npm \
+RUN npm install --global npm@10.9.4 --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --prefer-offline --no-audit --no-fund && \
+        npm ci --include=dev --foreground-scripts --no-audit --no-fund && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
     test -x node_modules/.bin/esbuild
