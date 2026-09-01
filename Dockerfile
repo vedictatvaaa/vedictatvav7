@@ -20,12 +20,13 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # bundled with this Node image can crash with "Exit handler never called"
 # during the long native dependency install.
 COPY package.json package-lock.json* ./
-RUN npm install --global npm@10.9.4 --no-audit --no-fund
+RUN npm install --global npm@10.9.4 --no-audit --no-fund && \
+    npm cache verify
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --foreground-scripts --no-audit --no-fund && \
+        npm ci --include=dev --no-audit --no-fund && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
     test -x node_modules/.bin/esbuild
@@ -36,7 +37,6 @@ COPY server ./server
 COPY shared ./shared
 COPY script ./script
 COPY attached_assets ./attached_assets
-COPY uploads ./uploads
 COPY vite.config.ts vite-plugin-meta-images.ts tsconfig.json drizzle.config.ts postcss.config.js components.json ./
 COPY migrations ./migrations
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
