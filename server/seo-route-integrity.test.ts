@@ -55,6 +55,14 @@ test("Pandit storefronts require the authoritative published resolver", async ()
     getPublishedPanditBySlug: async () => ({ id: 7 }),
   });
   assert.deepEqual(published, { kind: "entity", family: "pandit", found: true });
+
+  const incomplete = await resolvePublicRouteDecision("/pandit/incomplete-pandit", {
+    ...baseDependencies,
+    getPublishedPanditBySlug: async () => ({
+      indexability: { status: "noindex_incomplete_profile", indexable: false },
+    }),
+  });
+  assert.deepEqual(incomplete, { kind: "entity", family: "pandit", found: true });
 });
 
 test("blog routes reject drafts and accept published posts", async () => {

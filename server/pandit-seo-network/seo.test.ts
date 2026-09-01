@@ -34,7 +34,7 @@ test("profile SEO follows the central indexability decision and emits factual sc
 test("incomplete public profiles remain useful noindex follow pages", () => {
   const head = buildPanditProfileSeoHead({
     ...profile,
-    indexability: { indexable: false, status: "noindex_incomplete" },
+    indexability: { indexable: false, status: "noindex_incomplete_profile" },
   }, "https://vedictatva.com");
   assert.equal(head.robotsIndex, false);
   assert.equal(head.robotsFollow, true);

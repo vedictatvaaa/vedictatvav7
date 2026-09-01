@@ -24,6 +24,68 @@ export function selectPublicProfile(
   ) || null;
 }
 
+export function selectPublicProfileByPanditId(
+  projection: PanditSeoNetworkProjection,
+  panditId: number,
+): PanditProfileProjection | null {
+  return projection.profiles.find((profile) =>
+    profile.entityId === `pandit:${panditId}`
+    && Boolean(profile.pandit?.slug)
+    && profile.indexability.status !== "not_found",
+  ) || null;
+}
+
+export function selectablePublicPanditIds(
+  projection: PanditSeoNetworkProjection,
+): ReadonlySet<number> {
+  return new Set(
+    projection.profiles.flatMap((profile) =>
+      profile.indexability.status !== "not_found"
+      && profile.pandit?.slug
+      && Number.isSafeInteger(profile.pandit.id)
+        ? [profile.pandit.id]
+        : [],
+    ),
+  );
+}
+
+export function filterBySelectablePublicPandits<T extends { panditId: number }>(
+  rows: T[],
+  projection: PanditSeoNetworkProjection,
+): T[] {
+  const allowedIds = selectablePublicPanditIds(projection);
+  return rows.filter((row) => allowedIds.has(row.panditId));
+}
+
+/** Resolves the rollout boundary once per request for every public profile surface. */
+type PublicProfileResolverDependencies = {
+  getSettings: () => Promise<{ panditSeoNetworkEnabled?: boolean } | undefined>;
+  getProjection: () => Promise<PanditSeoNetworkProjection>;
+};
+
+const publicProfileResolverDependencies: PublicProfileResolverDependencies = {
+  getSettings: () => storage.getSiteSettings(),
+  getProjection: () => getPanditSeoNetworkProjection(),
+};
+
+export async function resolvePublicPanditProfile(
+  input: { slug?: string; panditId?: number },
+  dependencies: PublicProfileResolverDependencies = publicProfileResolverDependencies,
+): Promise<{ enabled: boolean; profile: PanditProfileProjection | null }> {
+  const enabled = isPanditSeoNetworkEnabled(await dependencies.getSettings());
+  if (!enabled) return { enabled: false, profile: null };
+  if (!input.slug && !input.panditId) return { enabled: true, profile: null };
+  const projection = await dependencies.getProjection();
+  return {
+    enabled: true,
+    profile: input.slug
+      ? selectPublicProfile(projection, input.slug)
+      : input.panditId
+        ? selectPublicProfileByPanditId(projection, input.panditId)
+        : null,
+  };
+}
+
 export function selectCityHub(
   projection: PanditSeoNetworkProjection,
   citySlug: string,

@@ -77,12 +77,14 @@ import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
 import {
   isPanditSeoNetworkEnabled,
+  filterBySelectablePublicPandits,
   registerPanditSeoNetworkInvalidation,
   registerPanditSeoNetworkRoutes,
+  resolvePublicPanditProfile,
 } from "./pandit-seo-network/public-api";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
 import { indexableProfileSlugs } from "./pandit-seo-network/sitemap";
-import { panditRedirectTarget } from "./pandit-route-context";
+import { canonicalPanditRedirectTarget, panditRedirectTarget } from "./pandit-route-context";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -319,6 +321,39 @@ export async function registerRoutes(
   });
   app.get(/^\/pandits\/([^/]+)$/, (req, res) => {
     res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}`, req.query));
+  });
+  // Once the projection-backed network is enabled, numeric profile URLs are
+  // aliases only. Resolve against the public projection so private identities
+  // can never be inferred from this route.
+  app.get(/^\/pandit-profile\/([1-9]\d*)\/?$/, async (req, res, next) => {
+    try {
+      const resolution = await resolvePublicPanditProfile({ panditId: Number(req.params[0]) });
+      if (!resolution.enabled) return next();
+      const profile = resolution.profile;
+      if (profile?.pandit?.slug) {
+        return res.redirect(301, canonicalPanditRedirectTarget(
+          `/pandit/${encodeURIComponent(profile.pandit.slug)}`,
+          req.query,
+        ));
+      }
+      res.locals.seoNotFound = true;
+      res.status(404);
+      res.setHeader("X-Robots-Tag", "noindex, follow");
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  });
+  app.get(/^\/pandit-profile\/([^/]+)\/?$/, async (_req, res, next) => {
+    try {
+      if (!(await resolvePublicPanditProfile({})).enabled) return next();
+      res.locals.seoNotFound = true;
+      res.status(404);
+      res.setHeader("X-Robots-Tag", "noindex, follow");
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   });
   // Legacy /pind-daan/:slug. The 3 city slugs (kashi|gaya|haridwar) have
   // dedicated hyphenated landing pages preserved by task scope, so they
@@ -3085,25 +3120,45 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(results);
   });
 
-  app.get("/api/pandits/:id", async (req, res) => {
-    const pandit = await storage.getPandit(Number(req.params.id));
-    if (!pandit) return res.status(404).json({ message: "Pandit not found" });
-    const { pandits: eligible } = await publicEligibility();
-    if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
-    const { isPanditOnline } = await import("./pandit-portal");
-    res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
-  });
-
-  app.get("/api/pandits/public/:slug", async (req, res) => {
+  app.get("/api/pandits/:id", async (req, res, next) => {
     try {
-      const pandit = await storage.getPanditBySlug(req.params.slug);
+      const id = Number(req.params.id);
+      if (!Number.isSafeInteger(id) || id < 1) {
+        return res.status(404).json({ message: "Pandit not found" });
+      }
+      const resolution = await resolvePublicPanditProfile({ panditId: id });
+      if (resolution.enabled) {
+        const profile = resolution.profile;
+        if (!profile?.pandit) return res.status(404).json({ message: "Pandit not found" });
+        return res.json(profile.pandit);
+      }
+      const pandit = await storage.getPandit(id);
       if (!pandit) return res.status(404).json({ message: "Pandit not found" });
       const { pandits: eligible } = await publicEligibility();
       if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
       const { isPanditOnline } = await import("./pandit-portal");
-      res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
-    } catch {
-      res.status(500).json({ message: "Failed to fetch pandit" });
+      return res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/api/pandits/public/:slug", async (req, res, next) => {
+    try {
+      const slug = typeof req.params.slug === "string" ? req.params.slug.toLowerCase().trim() : "";
+      const resolution = await resolvePublicPanditProfile({ slug });
+      if (resolution.enabled) {
+        if (!resolution.profile?.pandit) return res.status(404).json({ message: "Pandit not found" });
+        return res.json(resolution.profile.pandit);
+      }
+      const pandit = await storage.getPanditBySlug(slug);
+      if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
+      const { isPanditOnline } = await import("./pandit-portal");
+      return res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
+    } catch (error) {
+      return next(error);
     }
   });
 
@@ -3166,50 +3221,91 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Pandit Reviews ----
-  app.get("/api/pandit-reviews/:panditId", async (req, res) => {
-    const panditId = Number(req.params.panditId);
-    if (!Number.isInteger(panditId) || panditId <= 0) return res.status(400).json({ message: "Invalid Pandit ID" });
-    const { pandits: eligible } = await publicEligibility();
-    if (!eligible.some(pandit => pandit.id === panditId)) return res.status(404).json({ message: "Pandit not found" });
-    const reviews = await storage.getPanditReviews(panditId);
-    res.setHeader("Cache-Control", "no-store");
-    res.json(reviews.map(publicPanditReviewDto));
+  app.get("/api/pandit-reviews/:panditId", async (req, res, next) => {
+    try {
+      const panditId = Number(req.params.panditId);
+      if (!Number.isInteger(panditId) || panditId <= 0) {
+        return res.status(404).json({ message: "Pandit not found" });
+      }
+      const resolution = await resolvePublicPanditProfile({ panditId });
+      if (resolution.enabled) {
+        if (!resolution.profile?.pandit) return res.status(404).json({ message: "Pandit not found" });
+      } else {
+        const { pandits: eligible } = await publicEligibility();
+        if (!eligible.some(pandit => pandit.id === panditId)) {
+          return res.status(404).json({ message: "Pandit not found" });
+        }
+      }
+      const reviews = await storage.getPanditReviews(panditId);
+      res.setHeader("Cache-Control", "no-store");
+      return res.json(reviews.map(publicPanditReviewDto));
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  app.get("/api/pandit-reviews", async (_req, res) => {
-    const [{ pandits: eligible }, reviews] = await Promise.all([
-      publicEligibility(),
-      storage.getAllPanditReviews(),
-    ]);
-    const eligibleIds = new Set(eligible.map(pandit => pandit.id));
-    res.setHeader("Cache-Control", "no-store");
-    res.json(reviews.filter(review => eligibleIds.has(review.panditId)).map(publicPanditReviewDto));
+  app.get("/api/pandit-reviews", async (_req, res, next) => {
+    try {
+      const settings = await storage.getSiteSettings();
+      if (isPanditSeoNetworkEnabled(settings)) {
+        // Resolve public IDs before reading review rows. In enabled mode there
+        // is deliberately no eligibility fallback.
+        const projection = await getPanditSeoNetworkProjection();
+        const reviews = await storage.getAllPanditReviews();
+        res.setHeader("Cache-Control", "no-store");
+        return res.json(
+          filterBySelectablePublicPandits(reviews, projection).map(publicPanditReviewDto),
+        );
+      }
+      const [{ pandits: eligible }, reviews] = await Promise.all([
+        publicEligibility(),
+        storage.getAllPanditReviews(),
+      ]);
+      const eligibleIds = new Set(eligible.map(pandit => pandit.id));
+      res.setHeader("Cache-Control", "no-store");
+      return res.json(reviews.filter(review => eligibleIds.has(review.panditId)).map(publicPanditReviewDto));
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  app.post("/api/pandit-reviews", async (req, res) => {
-    const parsed = insertPanditReviewSchema.omit({ id: true, createdAt: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
-    const { pandits: eligible } = await publicEligibility();
-    if (!eligible.some(pandit => pandit.id === parsed.data.panditId)) return res.status(404).json({ message: "Pandit not found" });
-    const review = await storage.createPanditReview(parsed.data);
+  app.post("/api/pandit-reviews", async (req, res, next) => {
+    try {
+      const parsed = insertPanditReviewSchema.omit({ id: true, createdAt: true }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
+      const resolution = await resolvePublicPanditProfile({ panditId: parsed.data.panditId });
+      if (resolution.enabled) {
+        if (!resolution.profile?.pandit) {
+          return res.status(404).json({ message: "Pandit not found" });
+        }
+      } else {
+        const { pandits: eligible } = await publicEligibility();
+        if (!eligible.some(pandit => pandit.id === parsed.data.panditId)) {
+          return res.status(404).json({ message: "Pandit not found" });
+        }
+      }
+      const review = await storage.createPanditReview(parsed.data);
 
-    const allReviews = await storage.getPanditReviews(review.panditId);
-    const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-    await storage.updatePandit(review.panditId, {
-      rating: Math.round(avgRating * 10) / 10,
-      reviewCount: allReviews.length,
-    });
+      const allReviews = await storage.getPanditReviews(review.panditId);
+      const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+      await storage.updatePandit(review.panditId, {
+        rating: Math.round(avgRating * 10) / 10,
+        reviewCount: allReviews.length,
+      });
 
-    // Cross-surface handshake: notify the pandit that a new review arrived
-    // so they can reply from the portal. Best-effort; failure never blocks
-    // the customer's review submission.
-    notifyPanditOnNewReview({
-      panditId: review.panditId,
-      reviewerName: review.reviewerName,
-      rating: review.rating,
-    }).catch(() => {});
+      // Cross-surface handshake: notify the pandit that a new review arrived
+      // so they can reply from the portal. Best-effort; failure never blocks
+      // the customer's review submission.
+      notifyPanditOnNewReview({
+        panditId: review.panditId,
+        reviewerName: review.reviewerName,
+        rating: review.rating,
+      }).catch(() => {});
 
-    res.status(201).json(publicPanditReviewDto(review));
+      return res.status(201).json(publicPanditReviewDto(review));
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.delete("/api/pandit-reviews/:id", adminAuthMiddleware, async (req, res) => {
@@ -10871,16 +10967,22 @@ ${accumulatedWisdom}`
   });
 
   // Slug-based pandit lookup
-  app.get("/api/pandits/slug/:slug", async (req, res) => {
+  app.get("/api/pandits/slug/:slug", async (req, res, next) => {
     try {
-      const pandit = await storage.getPanditBySlug(req.params.slug);
+      const slug = typeof req.params.slug === "string" ? req.params.slug.toLowerCase().trim() : "";
+      const resolution = await resolvePublicPanditProfile({ slug });
+      if (resolution.enabled) {
+        if (!resolution.profile?.pandit) return res.status(404).json({ message: "Pandit not found" });
+        return res.json(resolution.profile.pandit);
+      }
+      const pandit = await storage.getPanditBySlug(slug);
       if (!pandit) return res.status(404).json({ message: "Pandit not found" });
       const { pandits: eligible } = await publicEligibility();
       if (!eligible.some(p => p.id === pandit.id)) return res.status(404).json({ message: "Pandit not found" });
       const { isPanditOnline } = await import("./pandit-portal");
-      res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
+      return res.json(publicPanditDto(pandit, isPanditOnline(pandit.id)));
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch pandit" });
+      return next(error);
     }
   });
 

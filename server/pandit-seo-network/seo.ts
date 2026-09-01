@@ -32,7 +32,7 @@ export function buildPanditProfileSeoHead(
   const languages = asList(pandit.languages);
   const specializations = asList(pandit.specialization);
   const description = pandit.bio?.slice(0, 200)
-    || `Book authentic Vedic pujas with ${pandit.name}${cityPart} through Vedic Tatva.`;
+    || `View published Vedic puja services from ${pandit.name}${cityPart} and request a booking through Vedic Tatva.`;
   const person: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -40,7 +40,9 @@ export function buildPanditProfileSeoHead(
     name: pandit.name,
     url: canonicalUrl,
     description,
-    image: pandit.image ? `${baseUrl}${pandit.image}` : undefined,
+    image: pandit.image
+      ? (/^https?:\/\//i.test(pandit.image) ? pandit.image : `${baseUrl}${pandit.image.startsWith("/") ? "" : "/"}${pandit.image}`)
+      : undefined,
     jobTitle: "Vedic Pandit",
     knowsLanguage: languages.length ? languages : undefined,
     knowsAbout: specializations.length ? specializations : undefined,
@@ -70,7 +72,7 @@ export function buildPanditProfileSeoHead(
       name: service.name,
       description: service.description || undefined,
       serviceType: service.serviceType || service.category || undefined,
-      areaServed: "IN",
+      areaServed: service.serviceAreas?.length ? service.serviceAreas : undefined,
       availableChannel: service.mode === "online" ? {
         "@type": "ServiceChannel",
         serviceUrl: canonicalUrl,

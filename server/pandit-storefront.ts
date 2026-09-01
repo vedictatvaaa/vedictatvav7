@@ -33,6 +33,12 @@ import {
 } from "./pandit-public-access";
 import { panditServiceWriteSchema, panditPackageWriteSchema, panditGalleryWriteSchema, panditAvailabilityWriteSchema } from "./catalog-validation";
 import { getConsentedReferralSlug, hasAnalyticsConsent, hasMarketingConsent } from "./consent";
+import {
+  resolvePublicPanditProfile,
+} from "./pandit-seo-network/public-api";
+import type { PanditProfileProjection } from "./pandit-seo-network/project";
+import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
+import { canonicalPanditRedirectTarget } from "./pandit-route-context";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -310,15 +316,15 @@ export async function attributeReferral(
 // Public storefront DTO — assembled from pandit + storefront + curated
 // products. Keeps DB joins out of the route handler.
 // ---------------------------------------------------------------------
-async function buildStorefrontDto(slug: string) {
-  const pandit = await getPubliclyPublishedPanditBySlug(slug);
+async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditProfileProjection) {
+  const pandit = authoritativeProfile?.pandit || await getPubliclyPublishedPanditBySlug(slug);
   if (!pandit) return null;
   const sf = await storage.getPanditStorefrontByPanditId(pandit.id);
-  if (!isPanditStorefrontPublished(sf)) return null;
+  if (!authoritativeProfile && !isPanditStorefrontPublished(sf)) return null;
   // Tier gating: free-tier pandits get a services-only storefront — no
   // curated products and no referral commission section. Paid tiers get
   // up to 12 curated products.
-  const tier = (pandit.tier || "free").toLowerCase();
+  const tier = String((pandit as any).tier || "free").toLowerCase();
   const productIds: number[] = tier === "free"
     ? []
     : ((sf?.productIds as number[]) || []).slice(0, 12);
@@ -326,13 +332,16 @@ async function buildStorefrontDto(slug: string) {
     ? (await Promise.all(productIds.map((id) => storage.getProduct(id)))).filter(Boolean)
     : [];
   const reviews = await storage.getPanditReviews(pandit.id).catch(() => []);
-  const [services, packages, gallery, availability] = await Promise.all([
-    storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []),
+  const [storedServices, packages, gallery, availability] = await Promise.all([
+    authoritativeProfile
+      ? Promise.resolve([])
+      : storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []),
     storage.listPanditPackages(pandit.id, true).catch(() => []),
     storage.listPanditGalleryItems(pandit.id, true).catch(() => []),
     storage.listPanditAvailabilityRules(pandit.id, true).catch(() => []),
   ]);
-  const activeServiceIds = new Set(services.map(row => row.service.id));
+  const services = authoritativeProfile?.services || storedServices.map(publicPanditServiceDto);
+  const activeServiceIds = new Set(services.map(service => service.id));
   const packageDtos = (await Promise.all(packages.map(async pkg => {
     const items = await storage.listPanditPackageItems(pkg.id);
     // A stale package is not public if an included offering was subsequently
@@ -359,13 +368,14 @@ async function buildStorefrontDto(slug: string) {
         }
       : null,
     products,
-    services: services.map(publicPanditServiceDto),
+    services,
     reviews: reviews.slice(0, 10).map(publicPanditReviewDto),
     packages: packageDtos,
     gallery: gallery.map(publicPanditGalleryItemDto),
     availability: availability.map(publicPanditAvailabilityRuleDto),
     canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`,
     share: { canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`, referralSlug: pandit.slug },
+    indexability: authoritativeProfile?.indexability,
   };
 }
 
@@ -445,8 +455,12 @@ async function fetchPanditPhotoCircle(req: Request, image: string | null | undef
 //                   storefront URL, languages/experience, verified badge,
 //                   brand watermark footer.
 // ---------------------------------------------------------------------
-async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
-  const dto = await buildStorefrontDto(slug);
+async function storefrontCardPdf(
+  req: Request,
+  slug: string,
+  authoritativeProfile?: PanditProfileProjection,
+): Promise<Buffer> {
+  const dto = await buildStorefrontDto(slug, authoritativeProfile);
   if (!dto) throw new Error("Storefront not found");
   const qrPng = await storefrontQrPng(req, slug, 720);
   const photoPng = await fetchPanditPhotoCircle(req, dto.pandit.image);
@@ -599,12 +613,23 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.use(refCookieMiddleware);
 
   // ===== PUBLIC =====
-  app.get("/api/storefront/:slug", storefrontLimiter, async (req, res) => {
+  app.get("/api/storefront/:slug", storefrontLimiter, async (req, res, next) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
       if (!slug) return res.status(400).json({ message: "Slug required" });
-      const dto = await buildStorefrontDto(slug);
+      const resolution = await resolvePublicPanditProfile({ slug });
+      const networkEnabled = resolution.enabled;
+      const profile = resolution.profile || undefined;
+      // With rollout enabled the projection is authoritative. Do not fall
+      // through to legacy storage, which could disclose an unpublished row.
+      if (networkEnabled && !profile) {
+        return res.status(404).json({ message: "Storefront not found" });
+      }
+      const dto = await buildStorefrontDto(slug, profile || undefined);
       if (!dto) return res.status(404).json({ message: "Storefront not found" });
+      const responseDto = profile
+        ? { ...dto, seo: buildPanditProfileSeoHead(profile, siteUrl(req)) }
+        : dto;
       // Server-side attribution: any visit to /p/<slug> (which the SPA loads
       // by hitting this endpoint) stamps the vt_ref cookie for 30 days, so
       // attribution survives even when the browser blocks document.cookie
@@ -622,10 +647,10 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       if (hasAnalyticsConsent(req)) {
         storage.incrementStorefrontView(dto.pandit.id).catch(() => {});
       }
-      res.json(dto);
+      res.json(responseDto);
     } catch (e: any) {
       console.error("[storefront] fetch failed:", e?.message);
-      res.status(500).json({ message: "Failed to load storefront" });
+      return next(e);
     }
   });
 
@@ -633,10 +658,13 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   // photo composited next to brand-styled text (name + city + rating +
   // verified badge). First request renders + caches to
   // client/public/og/p-<slug>.jpg so subsequent requests are static.
-  app.get("/api/og/p/:slug.jpg", async (req, res) => {
+  app.get("/api/og/p/:slug.jpg", async (req, res, next) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
-      const p = await getPubliclyPublishedPanditBySlug(slug);
+      const resolution = await resolvePublicPanditProfile({ slug });
+      const p = resolution.enabled
+        ? resolution.profile?.pandit
+        : await getPubliclyPublishedPanditBySlug(slug);
       if (!p) return res.status(404).end();
       const path = await import("path");
       const fs = await import("fs/promises");
@@ -759,41 +787,68 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       res.send(buf);
     } catch (e: any) {
       console.warn("[og-pandit] failed:", e?.message);
-      res.status(500).end();
+      return next(e);
     }
   });
 
-  // Legacy URL → canonical storefront URL. Only redirects when the pandit
-  // has a slug and a published storefront so SEO juice consolidates onto
-  // /p/<slug>. Falls through to SPA otherwise.
+  // Legacy URL → canonical storefront URL. During rollout, the public
+  // projection is the only authority; legacy storage is used only while the
+  // feature is disabled.
   app.get("/pandit/:id", async (req, res, next) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return next();
+      const resolution = await resolvePublicPanditProfile({ panditId: id });
+      if (resolution.enabled) {
+        const profile = resolution.profile;
+        if (!profile?.pandit?.slug) return next();
+        return res.redirect(301, canonicalPanditRedirectTarget(
+          `/pandit/${encodeURIComponent(profile.pandit.slug)}`,
+          req.query,
+        ));
+      }
       const p = await storage.getPandit(id);
       if (!p?.slug) return next();
       if (!(await getPubliclyPublishedPanditBySlug(p.slug))) return next();
-      return res.redirect(301, `/pandit/${p.slug}`);
-    } catch {
-      next();
+      return res.redirect(301, canonicalPanditRedirectTarget(
+        `/pandit/${encodeURIComponent(p.slug)}`,
+        req.query,
+      ));
+    } catch (error) {
+      return next(error);
     }
   });
   for (const legacyPath of ["/p/:slug", "/store/:slug"]) {
     app.get(legacyPath, async (req, res, next) => {
       try {
         const slug = String(req.params.slug || "").toLowerCase().trim();
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !(await getPubliclyPublishedPanditBySlug(slug))) return next();
-        const suffix = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
-        return res.redirect(301, `/pandit/${encodeURIComponent(slug)}${suffix}`);
-      } catch { next(); }
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return next();
+        const resolution = await resolvePublicPanditProfile({ slug });
+        if (resolution.enabled) {
+          const profile = resolution.profile;
+          if (!profile?.pandit?.slug) return next();
+          return res.redirect(301, canonicalPanditRedirectTarget(
+            `/pandit/${encodeURIComponent(profile.pandit.slug)}`,
+            req.query,
+          ));
+        }
+        if (!(await getPubliclyPublishedPanditBySlug(slug))) return next();
+        return res.redirect(301, canonicalPanditRedirectTarget(
+          `/pandit/${encodeURIComponent(slug)}`,
+          req.query,
+        ));
+      } catch (error) { return next(error); }
     });
   }
 
-  app.get("/api/storefront/:slug/qr.png", async (req, res) => {
+  app.get("/api/storefront/:slug/qr.png", async (req, res, next) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
       if (!slug) return res.status(400).end();
-      const pandit = await getPubliclyPublishedPanditBySlug(slug);
+      const resolution = await resolvePublicPanditProfile({ slug });
+      const pandit = resolution.enabled
+        ? resolution.profile?.pandit
+        : await getPubliclyPublishedPanditBySlug(slug);
       if (!pandit) return res.status(404).end();
       const buf = await storefrontQrPng(req, slug, 512);
       res.setHeader("Content-Type", "image/png");
@@ -801,22 +856,27 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       res.send(buf);
     } catch (e: any) {
       console.error("[storefront] qr failed:", e?.message);
-      res.status(500).end();
+      return next(e);
     }
   });
 
-  app.get("/api/storefront/:slug/card.pdf", async (req, res) => {
+  app.get("/api/storefront/:slug/card.pdf", async (req, res, next) => {
     try {
       const slug = String(req.params.slug || "").toLowerCase().trim();
-      if (!(await getPubliclyPublishedPanditBySlug(slug))) return res.status(404).json({ message: "Card not available" });
-      const buf = await storefrontCardPdf(req, slug);
+      const resolution = await resolvePublicPanditProfile({ slug });
+      const profile = resolution.profile || undefined;
+      const pandit = resolution.enabled
+        ? profile?.pandit
+        : await getPubliclyPublishedPanditBySlug(slug);
+      if (!pandit) return res.status(404).json({ message: "Not found" });
+      const buf = await storefrontCardPdf(req, slug, profile);
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="vedic-tatva-${slug}.pdf"`);
       res.setHeader("Cache-Control", "no-store");
       res.send(buf);
     } catch (e: any) {
       console.error("[storefront] pdf failed:", e?.message);
-      res.status(404).json({ message: "Card not available" });
+      return next(e);
     }
   });
 

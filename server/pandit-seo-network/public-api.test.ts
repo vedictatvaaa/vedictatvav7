@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 import {
   getPanditSeoNetworkProjection,
@@ -8,6 +9,9 @@ import {
   selectCityHub,
   selectCityService,
   selectPublicProfile,
+  selectPublicProfileByPanditId,
+  resolvePublicPanditProfile,
+  filterBySelectablePublicPandits,
   shouldInvalidatePanditSeoNetwork,
 } from "./public-api";
 import type { PanditSeoNetworkDependencies } from "./resolver";
@@ -69,9 +73,131 @@ test("public selectors expose known published entities and preserve noindex deci
     dependencies: dependencies({ count: 0 }),
   });
   assert.equal(selectPublicProfile(projection, "pandit-one")?.pandit?.name, "Pandit One");
+  assert.equal(selectPublicProfileByPanditId(projection, 1)?.pandit?.slug, "pandit-one");
+  assert.equal(selectPublicProfileByPanditId(projection, 999), null);
   assert.equal(selectPublicProfile(projection, "missing"), null);
   assert.equal(selectCityHub(projection, "varanasi")?.indexability.status, "noindex_insufficient_supply");
   assert.equal(selectCityService(projection, "varanasi", "rudrabhishek-puja")?.indexability.status, "noindex_insufficient_supply");
+});
+
+test("opaque not_found projections cannot be selected by slug or numeric identity", () => {
+  const projection = {
+    profiles: [{
+      entityId: null,
+      canonicalUrl: null,
+      pandit: null,
+      cityId: null,
+      stateId: null,
+      services: [],
+      indexability: {
+        status: "not_found",
+        indexable: false,
+        reasons: ["storefront_not_published"],
+      },
+    }],
+    cities: [],
+  } as any;
+  assert.equal(selectPublicProfile(projection, "private-pandit"), null);
+  assert.equal(selectPublicProfileByPanditId(projection, 42), null);
+});
+
+test("review collection excludes legacy-eligible Pandits that are projection not_found", () => {
+  const projection = {
+    profiles: [
+      {
+        entityId: "pandit:1",
+        canonicalUrl: "/pandit/public-pandit",
+        pandit: { id: 1, slug: "public-pandit" },
+        cityId: 10,
+        stateId: 1,
+        services: [],
+        indexability: { status: "noindex_incomplete_profile", indexable: false, reasons: [] },
+      },
+      {
+        // Pandit 2 may still pass the legacy eligibility policy, but the
+        // projection intentionally erases its identity when not public.
+        entityId: null,
+        canonicalUrl: null,
+        pandit: null,
+        cityId: null,
+        stateId: null,
+        services: [],
+        indexability: { status: "not_found", indexable: false, reasons: ["storefront_not_published"] },
+      },
+    ],
+    cities: [],
+  } as any;
+  const reviews = [
+    { id: 10, panditId: 1, comment: "Public review" },
+    { id: 11, panditId: 2, comment: "Must remain opaque" },
+  ];
+  assert.deepEqual(filterBySelectablePublicPandits(reviews, projection), [reviews[0]]);
+});
+
+test("shared public profile resolver is opaque, skips projection while disabled, and forwards failures", async () => {
+  const opaqueProjection = {
+    profiles: [{
+      entityId: null, canonicalUrl: null, pandit: null, cityId: null, stateId: null, services: [],
+      indexability: { status: "not_found", indexable: false, reasons: ["storefront_not_published"] },
+    }],
+    cities: [],
+  } as any;
+  let reads = 0;
+  const disabled = await resolvePublicPanditProfile({ slug: "private-pandit" }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: false }),
+    getProjection: async () => { reads += 1; return opaqueProjection; },
+  });
+  assert.deepEqual(disabled, { enabled: false, profile: null });
+  assert.equal(reads, 0);
+
+  const enabled = await resolvePublicPanditProfile({ panditId: 42 }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+    getProjection: async () => opaqueProjection,
+  });
+  assert.deepEqual(enabled, { enabled: true, profile: null });
+  await assert.rejects(
+    resolvePublicPanditProfile({ slug: "any" }, {
+      getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+      getProjection: async () => { throw new Error("projection unavailable"); },
+    }),
+    /projection unavailable/,
+  );
+});
+
+test("profile-adjacent public endpoints share the authoritative resolver boundary", () => {
+  const storefrontRoutes = fs.readFileSync(new URL("../pandit-storefront.ts", import.meta.url), "utf8");
+  for (const path of [
+    '/api/storefront/:slug"',
+    '/api/og/p/:slug.jpg"',
+    '/api/storefront/:slug/qr.png"',
+    '/api/storefront/:slug/card.pdf"',
+  ]) {
+    const start = storefrontRoutes.indexOf(path);
+    assert.notEqual(start, -1, `missing ${path}`);
+    assert.match(storefrontRoutes.slice(start, start + 900), /resolvePublicPanditProfile/);
+  }
+  const publicRoutes = fs.readFileSync(new URL("../routes.ts", import.meta.url), "utf8");
+  for (const path of ['"/api/pandits/:id"', '"/api/pandits/public/:slug"', '"/api/pandits/slug/:slug"', '"/api/pandit-reviews/:panditId"']) {
+    const start = publicRoutes.indexOf(path);
+    assert.notEqual(start, -1, `missing ${path}`);
+    assert.match(publicRoutes.slice(start, start + 1200), /resolvePublicPanditProfile/);
+  }
+});
+
+test("review creation resolves public projection before any review write or aggregate update", () => {
+  const source = fs.readFileSync(new URL("../routes.ts", import.meta.url), "utf8");
+  const start = source.indexOf('app.post("/api/pandit-reviews"');
+  const end = source.indexOf('app.delete("/api/pandit-reviews/:id"', start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const route = source.slice(start, end);
+  const boundary = route.indexOf("resolvePublicPanditProfile");
+  const create = route.indexOf("storage.createPanditReview");
+  const update = route.indexOf("storage.updatePandit");
+  assert.ok(boundary >= 0, "POST review route must resolve the public projection");
+  assert.ok(create > boundary, "projection boundary must run before creating a review");
+  assert.ok(update > boundary, "projection boundary must run before updating aggregates");
+  assert.match(route, /if \(resolution\.enabled\)[\s\S]*if \(!resolution\.profile\?\.pandit\)[\s\S]*status\(404\)/);
 });
 
 test("cache deduplicates reads, invalidates explicitly, and never caches failures", async () => {

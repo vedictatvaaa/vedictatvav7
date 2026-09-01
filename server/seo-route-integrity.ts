@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import { REGISTERED_SPA_ROUTE_PATTERNS } from "@shared/spa-route-patterns";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
 import { storage } from "./storage";
+import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
+import { isPanditSeoNetworkEnabled, selectPublicProfile } from "./pandit-seo-network/public-api";
 
 type PublicEntityDependencies = {
   getProductBySlug: (slug: string) => Promise<unknown | undefined>;
@@ -18,7 +20,13 @@ export type PublicRouteDecision =
 const defaultDependencies: PublicEntityDependencies = {
   getProductBySlug: (slug) => storage.getProductBySlug(slug),
   getProductById: (id) => storage.getProduct(id),
-  getPublishedPanditBySlug: (slug) => getPubliclyPublishedPanditBySlug(slug),
+  getPublishedPanditBySlug: async (slug) => {
+    const settings = await storage.getSiteSettings();
+    if (isPanditSeoNetworkEnabled(settings)) {
+      return selectPublicProfile(await getPanditSeoNetworkProjection(), slug);
+    }
+    return getPubliclyPublishedPanditBySlug(slug);
+  },
   getBlogPostBySlug: (slug) => storage.getBlogPostBySlug(slug),
 };
 
