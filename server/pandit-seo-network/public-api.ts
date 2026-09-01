@@ -9,6 +9,11 @@ import {
   getPanditSeoNetworkProjection,
   invalidatePanditSeoNetworkCache,
 } from "./cache";
+import { storage } from "../storage";
+
+export function isPanditSeoNetworkEnabled(settings: { panditSeoNetworkEnabled?: boolean } | undefined) {
+  return settings?.panditSeoNetworkEnabled === true;
+}
 
 export function selectPublicProfile(
   projection: PanditSeoNetworkProjection,
@@ -71,6 +76,18 @@ export function registerPanditSeoNetworkInvalidation(app: Express) {
 }
 
 export function registerPanditSeoNetworkRoutes(app: Express) {
+  // Keep this gate at the route boundary rather than in the pure projection
+  // selectors, so tests and internal coverage evaluation remain available.
+  app.use("/api/pandit-seo-network", async (_req, res, next) => {
+    try {
+      if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      return next();
+    } catch (error) {
+      return next(error);
+    }
+  });
   app.get("/api/pandit-seo-network/profiles/:slug", async (
     req: Request,
     res: Response,

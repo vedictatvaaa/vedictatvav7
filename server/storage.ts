@@ -3,7 +3,7 @@ import { db } from "./db";
 import {
   users, products, orders, pandits, panditReviews, panditApplications, franchiseApplications, pujaBookings, astrologyBookings,
   socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs, heroSlides, homepageSections,
-  coupons, subscriptions, donations, donationOrders, astrologers, seoPages, matrimonyProfiles,
+  coupons, subscriptions, donations, donationOrders, astrologers, seoPages, matrimonyProfiles, panditSeoEditorials,
   invoices, dispatches, orderStatusEvents, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
   emailSends, newsletterCampaigns, emailUnsubscribes,
   notificationLog, notificationSettings,
@@ -46,6 +46,7 @@ import {
   type Astrologer, type InsertAstrologer,
   type SeoPage, type InsertSeoPage,
   type MatrimonyProfile, type InsertMatrimonyProfile,
+  type PanditSeoEditorial,
   type Invoice, type InsertInvoice,
   type Dispatch, type InsertDispatch,
   type OrderLookupOtp, type InsertOrderLookupOtp,
@@ -161,6 +162,12 @@ export interface IStorage {
 
   getSiteSettings(): Promise<SiteSettings | undefined>;
   upsertSiteSettings(settings: InsertSiteSettings): Promise<SiteSettings>;
+  listPanditSeoEditorials(): Promise<PanditSeoEditorial[]>;
+  getPanditSeoEditorial(entityType: PanditSeoEditorial["entityType"], entityKey: string): Promise<PanditSeoEditorial | undefined>;
+  upsertPanditSeoEditorial(
+    editorial: PanditSeoEditorialWrite,
+    actor: string,
+  ): Promise<PanditSeoEditorial>;
 
   // Admin audit log (append-only).
   logAdminAction(entry: InsertAdminAuditLog): Promise<AdminAuditLog>;
@@ -398,6 +405,14 @@ export interface IStorage {
   listAllPanditCardOrders(opts?: { limit?: number; status?: string }): Promise<PanditCardOrder[]>;
   updatePanditCardOrder(id: number, patch: Partial<PanditCardOrder>): Promise<PanditCardOrder | undefined>;
 }
+
+type PanditSeoEditorialWrite = {
+  entityType: "profile" | "city" | "city_service";
+  entityKey: string;
+  introduction: string;
+  faqs: unknown;
+  status: "draft" | "reviewed" | "published";
+};
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
@@ -776,6 +791,54 @@ export class DatabaseStorage implements IStorage {
     }
     const [created] = await db.insert(siteSettings).values(settings).returning();
     return created;
+  }
+
+  async listPanditSeoEditorials(): Promise<PanditSeoEditorial[]> {
+    return db.select().from(panditSeoEditorials)
+      .orderBy(asc(panditSeoEditorials.entityType), asc(panditSeoEditorials.entityKey));
+  }
+
+  async getPanditSeoEditorial(
+    entityType: PanditSeoEditorial["entityType"],
+    entityKey: string,
+  ): Promise<PanditSeoEditorial | undefined> {
+    const [editorial] = await db.select().from(panditSeoEditorials)
+      .where(and(eq(panditSeoEditorials.entityType, entityType), eq(panditSeoEditorials.entityKey, entityKey)));
+    return editorial;
+  }
+
+  async upsertPanditSeoEditorial(
+    editorial: PanditSeoEditorialWrite,
+    actor: string,
+  ): Promise<PanditSeoEditorial> {
+    const now = new Date();
+    const isReviewed = editorial.status === "reviewed" || editorial.status === "published";
+    const isPublished = editorial.status === "published";
+    const [row] = await db.insert(panditSeoEditorials).values({
+      ...editorial,
+      createdBy: actor,
+      updatedBy: actor,
+      updatedAt: now,
+      reviewedBy: isReviewed ? actor : null,
+      reviewedAt: isReviewed ? now : null,
+      publishedBy: isPublished ? actor : null,
+      publishedAt: isPublished ? now : null,
+    }).onConflictDoUpdate({
+      target: [panditSeoEditorials.entityType, panditSeoEditorials.entityKey],
+      set: {
+        introduction: editorial.introduction,
+        faqs: editorial.faqs,
+        status: editorial.status,
+        revision: sql`${panditSeoEditorials.revision} + 1`,
+        updatedBy: actor,
+        updatedAt: now,
+        reviewedBy: isReviewed ? actor : null,
+        reviewedAt: isReviewed ? now : null,
+        publishedBy: isPublished ? actor : null,
+        publishedAt: isPublished ? now : null,
+      },
+    }).returning();
+    return row;
   }
 
   async logAdminAction(entry: InsertAdminAuditLog): Promise<AdminAuditLog> {

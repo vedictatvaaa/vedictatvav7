@@ -835,7 +835,31 @@ export const siteSettings = pgTable("site_settings", {
   blogAutoPublish: boolean("blog_auto_publish").notNull().default(false),
   blogDailyCount: integer("blog_daily_count").notNull().default(3),
   blogFestivalAware: boolean("blog_festival_aware").notNull().default(true),
+  // Controlled rollout gate for public Pandit SEO network endpoints.
+  panditSeoNetworkEnabled: boolean("pandit_seo_network_enabled").notNull().default(false),
 });
+
+// Editorial copy only. Marketplace facts continue to come from their owning
+// Pandit, location, storefront, and service records.
+export const panditSeoEditorials = pgTable("pandit_seo_editorials", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entityType: text("entity_type").notNull(),
+  entityKey: text("entity_key").notNull(),
+  introduction: text("introduction").notNull().default(""),
+  faqs: jsonb("faqs").notNull().default(sql`'[]'::jsonb`),
+  status: text("status").notNull().default("draft"),
+  revision: integer("revision").notNull().default(1),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  publishedBy: text("published_by"),
+  publishedAt: timestamp("published_at"),
+}, (t) => ({
+  entityUnique: uniqueIndex("pandit_seo_editorials_entity_unique").on(t.entityType, t.entityKey),
+}));
 
 // Abandoned cart capture. The frontend POSTs here when a shopper enters
 // their email at checkout but does not complete the order. A background
@@ -1302,6 +1326,26 @@ export const insertSiteSettingsSchema = createInsertSchema(siteSettings, {
   blogAutoPublish: z.boolean().optional(),
   blogDailyCount: z.number().int().min(1).max(12).optional(),
   blogFestivalAware: z.boolean().optional(),
+  panditSeoNetworkEnabled: z.boolean().optional(),
+});
+export const panditSeoEditorialEntityTypeSchema = z.enum(["profile", "city", "city_service"]);
+export const panditSeoEditorialStatusSchema = z.enum(["draft", "reviewed", "published"]);
+export const panditSeoEditorialFaqSchema = z.object({
+  question: z.string().trim().min(1).max(240),
+  answer: z.string().trim().min(1).max(1600),
+}).strict();
+export const insertPanditSeoEditorialSchema = createInsertSchema(panditSeoEditorials, {
+  entityType: panditSeoEditorialEntityTypeSchema,
+  entityKey: z.string().trim().min(1).max(200),
+  introduction: z.string().trim().max(8000),
+  faqs: z.array(panditSeoEditorialFaqSchema).max(12),
+  status: panditSeoEditorialStatusSchema,
+}).omit({
+  id: true, revision: true,
+  createdBy: true, createdAt: true,
+  updatedBy: true, updatedAt: true,
+  reviewedBy: true, reviewedAt: true,
+  publishedBy: true, publishedAt: true,
 });
 export const insertAstrologerSchema = createInsertSchema(astrologers);
 export const insertCouponSchema = createInsertSchema(coupons);
@@ -1353,6 +1397,8 @@ export type SalesPopup = typeof salesPopups.$inferSelect;
 export type InsertSalesPopup = z.infer<typeof insertSalesPopupSchema>;
 export type SiteSettings = typeof siteSettings.$inferSelect;
 export type InsertSiteSettings = z.infer<typeof insertSiteSettingsSchema>;
+export type PanditSeoEditorial = typeof panditSeoEditorials.$inferSelect;
+export type InsertPanditSeoEditorial = z.infer<typeof insertPanditSeoEditorialSchema>;
 export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;

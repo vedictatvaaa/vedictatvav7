@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Product, SeoPage } from "@shared/schema";
 
 import { createFetcher } from "../admin-shared";
+import { PanditSeoNetwork } from "@/components/admin-seo/PanditSeoNetwork";
 
 function SeoManagerTab() {
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
@@ -25,6 +26,7 @@ function SeoManagerTab() {
   const [editing, setEditing] = useState<SeoPage | null>(null);
   const [creating, setCreating] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
+  const [view, setView] = useState<"metadata" | "pandit-network">("metadata");
   const [form, setForm] = useState({
     pagePath: "", metaTitle: "", metaDescription: "", metaKeywords: "",
     canonicalUrl: "", ogTitle: "", ogDescription: "", ogImage: "", ogType: "website",
@@ -112,6 +114,22 @@ function SeoManagerTab() {
   );
 
   const FREQ_OPTIONS = ["always", "hourly", "daily", "weekly", "monthly", "yearly", "never"];
+
+  if (view === "pandit-network") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold">SEO Manager</h3>
+          <p className="text-sm text-muted-foreground">Control metadata and Pandit search-network coverage</p>
+        </div>
+        <div className="inline-flex rounded-lg bg-muted p-1" role="tablist" aria-label="SEO Manager views">
+          <Button variant="ghost" size="sm" role="tab" aria-selected={false} onClick={() => setView("metadata")}>Page Metadata</Button>
+          <Button variant="ghost" size="sm" role="tab" aria-selected={true} className="bg-background shadow-sm">Pandit Network</Button>
+        </div>
+        <PanditSeoNetwork adminToken={adminToken} fetcher={fetcher} />
+      </div>
+    );
+  }
 
   if (editing || creating) {
     return (
@@ -266,6 +284,10 @@ function SeoManagerTab() {
         <div>
           <h3 className="text-lg font-semibold" data-testid="text-seo-title">SEO Manager</h3>
           <p className="text-sm text-muted-foreground">Control meta tags, indexing, sitemap, and schema markup for every page</p>
+        </div>
+        <div className="inline-flex rounded-lg bg-muted p-1" role="tablist" aria-label="SEO Manager views">
+          <Button variant="ghost" size="sm" role="tab" aria-selected={true} className="bg-background shadow-sm">Page Metadata</Button>
+          <Button variant="ghost" size="sm" role="tab" aria-selected={false} onClick={() => setView("pandit-network")}>Pandit Network</Button>
         </div>
         <Button onClick={openCreate} data-testid="button-add-seo-page">
           <Plus className="w-4 h-4 mr-2" /> Add Page SEO
