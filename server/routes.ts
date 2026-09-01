@@ -82,6 +82,7 @@ import {
 } from "./pandit-seo-network/public-api";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
 import { indexableProfileSlugs } from "./pandit-seo-network/sitemap";
+import { panditRedirectTarget } from "./pandit-route-context";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -292,7 +293,7 @@ export async function registerRoutes(
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
     if (!dest) return res.status(404).end();
-    res.redirect(301, dest);
+    res.redirect(301, req.path === "/pandits" ? panditRedirectTarget(dest, req.query) : dest);
   });
 
   // Dynamic 301s for the renamed slug families. These mirror the
@@ -314,10 +315,10 @@ export async function registerRoutes(
     res.redirect(301, `/puja-samagri-online/${req.params[0]}`);
   });
   app.get(/^\/pandits\/([^/]+)\/([^/]+)$/, (req, res) => {
-    res.redirect(301, `/book-pandit-online/${req.params[0]}/${req.params[1]}`);
+    res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}/${req.params[1]}`, req.query));
   });
   app.get(/^\/pandits\/([^/]+)$/, (req, res) => {
-    res.redirect(301, `/book-pandit-online/${req.params[0]}`);
+    res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}`, req.query));
   });
   // Legacy /pind-daan/:slug. The 3 city slugs (kashi|gaya|haridwar) have
   // dedicated hyphenated landing pages preserved by task scope, so they
