@@ -18,7 +18,13 @@ ENV NODE_OPTIONS=--max-old-space-size=1536
 # settings supplied by the build environment.
 COPY package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --include=dev --prefer-offline --no-audit --no-fund
+    env NODE_ENV=development \
+        NPM_CONFIG_PRODUCTION=false \
+        npm_config_production=false \
+        npm ci --include=dev --prefer-offline --no-audit --no-fund && \
+    test -x node_modules/.bin/tsx && \
+    test -x node_modules/.bin/vite && \
+    test -x node_modules/.bin/esbuild
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
