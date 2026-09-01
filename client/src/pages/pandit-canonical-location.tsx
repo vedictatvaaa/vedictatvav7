@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageSeo from "@/components/PageSeo";
-import { discoveryServiceForPujaSlug } from "@/lib/puja-service-map";
+import { appendPanditRouteContext, discoveryServiceForPujaSlug } from "@/lib/puja-service-map";
 
 type LocationCity = { id: number; name: string; slug: string; aliases?: string[] };
 type LocationState = { id: number; name: string; slug?: string; cities: LocationCity[] };
@@ -68,6 +68,11 @@ export default function PanditCanonicalLocation() {
     });
     const service = discoveryServiceForPujaSlug(pujaSlug);
     if (service) query.set("service", service);
+    appendPanditRouteContext(
+      query,
+      typeof window !== "undefined" ? window.location.search : "",
+      pujaSlug ? "puja_city" : "city",
+    );
     navigate(`/book-pandit-online?${query}`, { replace: true });
   }, [canonical, navigate, pujaSlug]);
 

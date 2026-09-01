@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bookingContextParams } from "./puja-service-map";
+import { appendPanditRouteContext, bookingContextParams } from "./puja-service-map";
 
 test("booking handoff preserves canonical discovery context and sets the selected Pandit", () => {
   const params = bookingContextParams(
@@ -21,4 +21,13 @@ test("booking handoff drops hostile, private, and stale offering parameters", ()
     42,
   );
   assert.deepEqual([...params.entries()], [["pandit", "42"]]);
+});
+
+test("canonical city redirects retain only safe mode and provider context", () => {
+  const params = appendPanditRouteContext(
+    new URLSearchParams({ city: "up-varanasi" }),
+    "?mode=online&pandit=42&token=secret&email=user%40example.com",
+    "puja_city",
+  );
+  assert.equal(params.toString(), "city=up-varanasi&mode=online&pandit=42&source=puja_city");
 });

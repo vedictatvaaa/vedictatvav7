@@ -52,3 +52,21 @@ export function bookingContextParams(source: string, panditId: number) {
   if (mappedType) params.set("pujaType", mappedType);
   return params;
 }
+
+export function appendPanditRouteContext(
+  target: URLSearchParams,
+  source: string,
+  contextSource: "city" | "puja_city",
+) {
+  const incoming = new URLSearchParams(source);
+  const mode = incoming.get("mode");
+  const pandit = incoming.get("pandit");
+  if (mode === "online" || mode === "offline" || mode === "hybrid") {
+    target.set("mode", mode);
+  }
+  if (pandit && /^[1-9]\d{0,9}$/.test(pandit)) {
+    target.set("pandit", pandit);
+  }
+  target.set("source", contextSource);
+  return target;
+}
