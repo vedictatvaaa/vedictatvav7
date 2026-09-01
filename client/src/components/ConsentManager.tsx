@@ -9,10 +9,37 @@ import {
 
 export default function ConsentManager() {
   const preferences = useConsentPreferences();
-  const [open, setOpen] = useState(() => !getConsentPreferences());
+  const [open, setOpen] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const [analytics, setAnalytics] = useState(preferences?.analytics ?? false);
   const [marketing, setMarketing] = useState(preferences?.marketing ?? false);
+
+  useEffect(() => {
+    if (getConsentPreferences()) {
+      setOpen(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    fetch(`/api/privacy/region?timeZone=${encodeURIComponent(timeZone || "")}`, {
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Privacy region lookup failed");
+        return response.json();
+      })
+      .then((result) => {
+        // India bypasses the acknowledgement without writing a consent cookie
+        // or granting optional analytics/marketing permissions.
+        setOpen(result?.region !== "india");
+      })
+      .catch((error) => {
+        if (error?.name !== "AbortError") setOpen(true);
+      });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const handleOpen = () => {

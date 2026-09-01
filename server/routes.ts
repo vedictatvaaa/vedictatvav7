@@ -40,6 +40,7 @@ import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { registerContentRoutes } from "./content-routes";
 import { registerSacredLibraryRoutes } from "./sacred-library";
 import { hasAnalyticsConsent } from "./consent";
+import { privacyRegionForRequest } from "./privacy-region";
 import { seedPujaLibrary, seedCommunityQa } from "./content-seeds";
 import { registerWave1Routes, startWave1Scheduler, awardPoints, ensureReferralCode } from "./wave1";
 import { registerPromoteProductRoutes } from "./promote-product";
@@ -199,6 +200,10 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   registerPanditSeoNetworkInvalidation(app);
+  app.get("/api/privacy/region", (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json({ region: privacyRegionForRequest(req) });
+  });
   await seedMasterServices().catch(error => console.warn("[catalog] seed failed:", error?.message));
 
   const adminAuthMiddleware = sharedAdminAuth;
