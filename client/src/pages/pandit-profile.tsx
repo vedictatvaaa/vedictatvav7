@@ -18,9 +18,7 @@ import { bookingContextParams } from "@/lib/puja-service-map";
 import type { Pandit, PanditReview, PanditChat } from "@shared/schema";
 
 export default function PanditProfile() {
-  const [, paramsId] = useRoute("/pandit/:id");
-  const [, paramsSlug] = useRoute("/p/:slug");
-  const slug = paramsSlug?.slug;
+  const [, paramsId] = useRoute("/pandit-profile/:id");
   const { toast } = useToast();
   const { user, requireAuth } = useAuth();
   const [, setLocation] = useLocation();
@@ -30,18 +28,14 @@ export default function PanditProfile() {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Resolve pandit either by slug (/p/:slug) or by id (/pandit/:id).
   const { data: pandit, isLoading } = useQuery<Pandit>({
-    queryKey: slug ? ["/api/pandits/public", slug] : ["/api/book-pandit-online", paramsId?.id],
+    queryKey: ["/api/book-pandit-online", paramsId?.id],
     queryFn: async () => {
-      const url = slug
-        ? `/api/pandits/public/${encodeURIComponent(slug)}`
-        : `/api/pandits/${paramsId?.id}`;
-      const r = await fetch(url);
+      const r = await fetch(`/api/pandits/${paramsId?.id}`);
       if (!r.ok) throw new Error("Not found");
       return r.json();
     },
-    enabled: !!(slug || paramsId?.id),
+    enabled: !!paramsId?.id,
   });
 
   const panditId = pandit?.id ?? 0;
@@ -74,7 +68,7 @@ export default function PanditProfile() {
   }, [chats.length]);
 
   const profileUrl = typeof window !== "undefined"
-    ? `${window.location.origin}${pandit?.slug ? `/p/${pandit.slug}` : `/pandit/${panditId}`}`
+    ? `${window.location.origin}${pandit?.slug ? `/pandit/${pandit.slug}` : "/book-pandit-online"}`
     : "";
 
   const keywords = useMemo(() => [
@@ -176,14 +170,14 @@ export default function PanditProfile() {
         description={`Book ${pandit.name}, a verified Vedic pandit in ${pandit.city}, for puja, havan, griha pravesh, wedding, pind daan, and samskara ceremonies through Vedic Tatva.`}
         ogType="profile"
         ogImage={pandit.image || undefined}
-        canonical={pandit?.slug ? `/p/${pandit.slug}` : `/pandit/${pandit.id}`}
+        canonical={pandit?.slug ? `/pandit/${pandit.slug}` : "/book-pandit-online"}
         schemas={[
           personSchema({
             name: pandit.name,
             jobTitle: "Vedic Pandit",
             description: pandit.bio || `Verified Vedic pandit based in ${pandit.city}. Book for puja, havan, griha pravesh, wedding, pind daan, and samskara services.`,
             image: pandit.image || undefined,
-            url: pandit?.slug ? `/p/${pandit.slug}` : `/pandit/${pandit.id}`,
+            url: pandit?.slug ? `/pandit/${pandit.slug}` : "/book-pandit-online",
             worksFor: "Vedic Tatva",
           }),
         ]}

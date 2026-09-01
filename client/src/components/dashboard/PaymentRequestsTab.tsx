@@ -106,7 +106,7 @@ export default function PaymentRequestsTab() {
                 )}
                 {r.pandit?.slug && (
                   <Button asChild size="sm" variant="outline" data-testid={`button-view-pandit-${r.id}`}>
-                    <a href={`/p/${r.pandit.slug}`}>View pandit</a>
+                    <a href={`/pandit/${r.pandit.slug}`}>View pandit</a>
                   </Button>
                 )}
                 <span className="text-xs text-stone-400 ml-auto">

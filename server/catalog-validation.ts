@@ -28,3 +28,46 @@ export const panditServiceWriteSchema = z.object({
   availability: safeText(500).nullable().optional(),
   displayOrder: z.number().int().min(0).max(10_000).default(0),
 });
+
+const ianaTimezone = z.string().trim().min(1).max(80).refine(value => {
+  try { Intl.DateTimeFormat(undefined, { timeZone: value }); return true; } catch { return false; }
+}, "Timezone must be a valid IANA timezone");
+const managedMediaUrl = z.string().trim().max(500).refine(value => {
+  // Gallery uploads must use our managed storage path, never arbitrary remote media.
+  return /^\/(?:uploads|objects|api\/media)\//.test(value);
+}, "Media must be a managed storage URL");
+
+export const panditPackageWriteSchema = z.object({
+  name: safeText(120).min(1),
+  slug: z.string().trim().min(1).max(140).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase kebab-case"),
+  description: safeText(2000).default(""),
+  price: z.number().int().min(0).max(10_000_000),
+  compareAtPrice: z.number().int().min(1).max(10_000_000).nullable().optional(),
+  isActive: z.boolean().optional(),
+  isPublished: z.boolean().optional(),
+  displayOrder: z.number().int().min(0).max(10_000).default(0),
+  items: z.array(z.object({ panditServiceId: z.number().int().positive(), displayOrder: z.number().int().min(0).max(10_000).default(0) })).min(1).max(30),
+}).superRefine((value, ctx) => {
+  if (value.compareAtPrice != null && value.compareAtPrice <= value.price) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["compareAtPrice"], message: "Compare-at price must exceed price" });
+});
+export const panditGalleryWriteSchema = z.object({
+  mediaKind: z.enum(["image", "video"]).default("image"),
+  mediaUrl: managedMediaUrl,
+  altText: safeText(240).min(1),
+  caption: safeText(800).nullable().optional(),
+  displayOrder: z.number().int().min(0).max(10_000).default(0),
+  isPublished: z.boolean().optional(),
+});
+export const panditAvailabilityWriteSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  startMinutes: z.number().int().min(0).max(1439),
+  endMinutes: z.number().int().min(1).max(1440),
+  timezone: ianaTimezone,
+  mode: z.enum(["in_person", "online", "hybrid"]),
+  isActive: z.boolean().optional(),
+  effectiveFrom: z.coerce.date().nullable().optional(),
+  effectiveUntil: z.coerce.date().nullable().optional(),
+}).superRefine((value, ctx) => {
+  if (value.endMinutes <= value.startMinutes) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["endMinutes"], message: "End must be after start" });
+  if (value.effectiveFrom && value.effectiveUntil && value.effectiveUntil < value.effectiveFrom) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["effectiveUntil"], message: "End date must follow start date" });
+});

@@ -1385,11 +1385,9 @@ Sitemap: ${baseUrl}/sitemap.xml
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
     for (const p of pandits as any[]) {
-      // Prefer canonical /p/<slug> when the pandit has a published
-      // storefront; falls back to legacy /pandit/:id otherwise so older
-      // links still index.
       const sf = p.slug ? await storage.getPanditStorefrontByPanditId(p.id).catch(() => null) : null;
-      const pPath = sf?.isPublished && p.slug ? `/p/${p.slug}` : `/pandit/${p.id}`;
+      if (!sf?.isPublished || sf.status !== "published" || !p.slug) continue;
+      const pPath = `/pandit/${encodeURIComponent(p.slug)}`;
       const seo = seoMap.get(pPath);
       if (seo && !seo.robotsIndex) continue;
       const pSpec = p.specialization || "Vedic";
@@ -3808,7 +3806,72 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.post("/api/puja-bookings", customerAuthMiddleware, async (req: any, res) => {
     const parsed = validate(insertPujaBookingSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
-    const requestedPanditId = parsed.data.panditId;
+    const serviceId = Number(parsed.data.panditServiceId || 0);
+    const packageId = Number(parsed.data.panditPackageId || 0);
+    if (serviceId && packageId) return res.status(400).json({ message: "Choose either a service or a package" });
+
+    let resolvedBooking = { ...parsed.data } as any;
+    if (serviceId) {
+      const service = await storage.getPanditService(serviceId);
+      if (!service?.isActive) return res.status(400).json({ message: "This service is no longer available" });
+      const offering = (await storage.listPanditServicesWithMaster(service.panditId, true))
+        .find(row => row.service.id === serviceId);
+      if (!offering) return res.status(400).json({ message: "This service is no longer available" });
+      const requestedMode = resolvedBooking.mode === "online" ? "online" : "in_person";
+      if (offering.service.mode !== "hybrid" && offering.service.mode !== requestedMode) {
+        return res.status(400).json({ message: "The selected booking mode is not available for this service" });
+      }
+      const baseAmount = offering.service.price;
+      const samagriAmount = Math.round(baseAmount * 0.3);
+      resolvedBooking = {
+        ...resolvedBooking,
+        panditId: offering.service.panditId,
+        panditServiceId: offering.service.id,
+        panditPackageId: null,
+        pujaType: offering.master.name,
+        totalAmount: baseAmount + samagriAmount,
+        pricingSnapshot: {
+          version: 1,
+          source: "pandit_service",
+          sourceId: offering.service.id,
+          name: offering.master.name,
+          baseAmount,
+          samagriAmount,
+          totalAmount: baseAmount + samagriAmount,
+        },
+      };
+    } else if (packageId) {
+      const pkg = await storage.getPanditPackage(packageId);
+      if (!pkg?.isActive || !pkg.isPublished) return res.status(400).json({ message: "This package is no longer available" });
+      const items = await storage.listPanditPackageItems(pkg.id);
+      const activeServices = await storage.listPanditServicesWithMaster(pkg.panditId, true);
+      const activeIds = new Set(activeServices.map(row => row.service.id));
+      if (!items.length || !items.every(item => activeIds.has(item.panditServiceId))) {
+        return res.status(400).json({ message: "This package contains an unavailable service" });
+      }
+      const baseAmount = pkg.price;
+      const samagriAmount = Math.round(baseAmount * 0.3);
+      resolvedBooking = {
+        ...resolvedBooking,
+        panditId: pkg.panditId,
+        panditServiceId: null,
+        panditPackageId: pkg.id,
+        pujaType: pkg.name,
+        totalAmount: baseAmount + samagriAmount,
+        pricingSnapshot: {
+          version: 1,
+          source: "pandit_package",
+          sourceId: pkg.id,
+          name: pkg.name,
+          serviceIds: items.map(item => item.panditServiceId),
+          baseAmount,
+          samagriAmount,
+          totalAmount: baseAmount + samagriAmount,
+        },
+      };
+    }
+
+    const requestedPanditId = resolvedBooking.panditId;
     if (requestedPanditId != null) {
       const { pandits: eligible } = await publicEligibility();
       if (!eligible.some(pandit => pandit.id === requestedPanditId)) {
@@ -3817,7 +3880,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
     const accessToken = (await import("crypto")).randomBytes(16).toString("hex");
     const booking = await storage.createPujaBooking({
-      ...parsed.data,
+      ...resolvedBooking,
       userId: req.customerUserId,
       status: "pending",
       accessToken,
@@ -10813,35 +10876,28 @@ ${accumulatedWisdom}`
     return { text: out, sanitized };
   }
 
-  async function requireUserIdentity(req: any, res: any): Promise<{ id: number; email: string } | null> {
-    const claimedEmail = String(req.body?.identityEmail || req.headers["x-user-email"] || req.query?.email || "")
-      .toLowerCase().trim();
-    if (!claimedEmail) { res.status(401).json({ message: "Sign in required" }); return null; }
-    const user = await storage.getUserByEmail(claimedEmail);
-    if (!user) { res.status(403).json({ message: "Identity check failed" }); return null; }
-    return { id: user.id, email: claimedEmail };
-  }
-
-  app.get("/api/pandit-profile/:id/messages", async (req, res) => {
+  app.get("/api/pandit-profile/:id/messages", customerAuthMiddleware, async (req: any, res) => {
     try {
       const panditId = Number(req.params.id);
       if (!panditId) return res.status(400).json({ message: "Invalid pandit" });
-      const me = await requireUserIdentity(req, res); if (!me) return;
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(pandit => pandit.id === panditId)) return res.status(404).json({ message: "Pandit not found" });
       const sinceId = Number(req.query.sinceId || 0);
-      const rows = await storage.getPanditChats(panditId, me.id, sinceId);
+      const rows = await storage.getPanditChats(panditId, req.customerUserId, sinceId);
       res.json(rows);
     } catch {
       res.status(500).json({ message: "Failed to load messages" });
     }
   });
 
-  app.post("/api/pandit-profile/:id/messages", async (req, res) => {
+  app.post("/api/pandit-profile/:id/messages", customerAuthMiddleware, async (req: any, res) => {
     try {
       const panditId = Number(req.params.id);
       if (!panditId) return res.status(400).json({ message: "Invalid pandit" });
-      const pandit = await storage.getPandit(panditId);
-      if (!pandit) return res.status(404).json({ message: "Pandit not found" });
-      const me = await requireUserIdentity(req, res); if (!me) return;
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(pandit => pandit.id === panditId)) return res.status(404).json({ message: "Pandit not found" });
+      const me = await storage.getUser(req.customerUserId);
+      if (!me) return res.status(401).json({ message: "Authentication required" });
       const schema = z.object({
         message: z.string().min(1).max(2000),
         attachmentUrl: z.string().url().max(500).optional(),
@@ -10864,7 +10920,7 @@ ${accumulatedWisdom}`
       const { text, sanitized } = sanitizePrivateChat(parsed.data.message);
       const row = await storage.createPanditChat({
         panditId,
-        userId: me.id,
+        userId: req.customerUserId,
         userEmail: me.email,
         senderType: "user",
         message: text,

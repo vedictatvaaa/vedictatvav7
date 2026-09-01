@@ -69,7 +69,7 @@ function formatDistance(d: number | null): string {
 }
 
 function contextualProfileHref(p: PanditWithMeta) {
-  const path = p.slug ? `/p/${p.slug}` : `/pandit/${p.id}`;
+  const path = p.slug ? `/pandit/${p.slug}` : "/book-pandit-online";
   if (typeof window === "undefined" || !window.location.search) return path;
   return `${path}${window.location.search}`;
 }

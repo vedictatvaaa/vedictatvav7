@@ -154,7 +154,7 @@ const typeColors: Record<string, string> = {
 function getResultPath(result: SearchResult): string {
   switch (result.type) {
     case "product": return getProductUrl(result.item.id, result.item.name);
-    case "pandit": return `/pandit/${result.item.id}`;
+    case "pandit": return result.item.slug ? `/pandit/${result.item.slug}` : "/book-pandit-online";
     case "astrologer": return `/astrologer/${result.item.id}`;
     case "page": return result.item.path;
     default: return "/";

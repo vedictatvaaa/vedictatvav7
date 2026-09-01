@@ -45,6 +45,22 @@ type PayoutRow = {
   notes?: string | null; referralIds: number[];
   reversedAt?: string | null; reverseReason?: string | null;
 };
+type StorefrontSubmission = {
+  id: number;
+  type: "package" | "gallery";
+  panditId: number;
+  pandit: { id: number; name: string; slug?: string | null; city?: string | null };
+  isPublished: boolean;
+  createdAt: string;
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  mediaKind?: "image" | "video";
+  mediaUrl?: string;
+  altText?: string;
+  caption?: string | null;
+  removedAt?: string | null;
+};
 
 const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 
@@ -76,6 +92,10 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
   const payouts = useQuery<{ items: PayoutRow[] }>({
     queryKey: ["/api/admin/payouts"],
     queryFn: () => fetcher("/api/admin/payouts") as Promise<{ items: PayoutRow[] }>,
+  });
+  const submissions = useQuery<{ items: StorefrontSubmission[] }>({
+    queryKey: ["/api/admin/storefront-submissions"],
+    queryFn: () => fetcher("/api/admin/storefront-submissions") as Promise<{ items: StorefrontSubmission[] }>,
   });
 
   // ---- Selection (referrals tab) ----
@@ -193,6 +213,15 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/storefronts"] }); toast({ title: "Saved" }); },
     onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
+  const updateSubmission = useMutation({
+    mutationFn: (vars: { type: StorefrontSubmission["type"]; id: number; isPublished: boolean }) =>
+      apiRequest("PATCH", `/api/admin/storefront-submissions/${vars.type}/${vars.id}`, { isPublished: vars.isPublished }, headers),
+    onSuccess: (_d, v) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/storefront-submissions"] });
+      toast({ title: v.isPublished ? "Submission approved" : "Submission unpublished" });
+    },
+    onError: (e: Error) => toast({ title: "Moderation update failed", description: e.message, variant: "destructive" }),
+  });
 
   const payoutPanditName = selectedPandits.length === 1
     ? (selectedSettleable[0]?.panditName || `#${selectedPandits[0]}`)
@@ -210,8 +239,62 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
           <TabsTrigger value="referrals" data-testid="tab-referrals">Referrals & Commissions</TabsTrigger>
           <TabsTrigger value="payouts" data-testid="tab-payouts">Payout history</TabsTrigger>
           <TabsTrigger value="storefronts" data-testid="tab-storefronts">Storefronts</TabsTrigger>
+          <TabsTrigger value="moderation" data-testid="tab-storefront-moderation">Content moderation</TabsTrigger>
           <TabsTrigger value="cards" data-testid="tab-cards">Card Orders</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="moderation" className="space-y-4">
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="font-bold text-[#4a1a22]">Storefront content moderation</h3>
+                  <p className="text-sm text-stone-500">Review Pandit package and gallery submissions before they appear publicly.</p>
+                </div>
+                {submissions.data?.items && <Badge variant="outline">{submissions.data.items.length} submissions</Badge>}
+              </div>
+              {submissions.isLoading ? (
+                <div className="text-sm text-stone-500"><Loader2 className="w-4 h-4 inline animate-spin" /> Loading submissions…</div>
+              ) : submissions.isError ? (
+                <div className="text-sm text-red-600">Could not load submissions. Please refresh and try again.</div>
+              ) : (submissions.data?.items || []).length === 0 ? (
+                <div className="text-sm text-stone-500">No package or gallery submissions yet.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-sm">
+                    <thead><tr className="text-left text-xs text-stone-500"><th className="py-2">Type</th><th>Pandit</th><th>Submission</th><th>Submitted</th><th>State</th><th className="text-right">Action</th></tr></thead>
+                    <tbody>
+                      {(submissions.data?.items || []).map((item) => {
+                        const removed = Boolean(item.removedAt);
+                        const title = item.type === "package" ? item.name : item.altText;
+                        const preview = item.type === "package" ? item.description : item.caption;
+                        return (
+                          <tr key={`${item.type}-${item.id}`} className="border-t align-top" data-testid={`row-submission-${item.type}-${item.id}`}>
+                            <td className="py-3"><Badge variant="outline" className="capitalize">{item.type === "gallery" ? `${item.mediaKind || "image"} gallery` : "Package"}</Badge></td>
+                            <td className="py-3">{item.pandit.slug ? <a href={`/pandit/${item.pandit.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-[#6D2B35] underline">{item.pandit.name}</a> : <span className="font-medium">{item.pandit.name}</span>}<div className="text-xs text-stone-500">{item.pandit.city || item.pandit.slug || `Pandit #${item.pandit.id}`}</div></td>
+                            <td className="py-3 max-w-xs">
+                              <div className="flex gap-2">
+                                {item.type === "gallery" && item.mediaUrl && item.mediaKind === "image" && <img src={item.mediaUrl} alt="" className="h-10 w-10 rounded object-cover border" />}
+                                <div className="min-w-0"><div className="font-medium truncate">{title || "Untitled submission"}</div>{preview && <div className="text-xs text-stone-500 line-clamp-2">{preview}</div>}</div>
+                              </div>
+                            </td>
+                            <td className="py-3 text-xs text-stone-500">{new Date(item.createdAt).toLocaleDateString("en-IN")}</td>
+                            <td className="py-3">{removed ? <Badge className="bg-stone-200 text-stone-700 hover:bg-stone-200">Removed</Badge> : item.isPublished ? <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Published</Badge> : <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Draft</Badge>}{item.type === "package" && !item.isActive && <div className="text-xs text-red-600 mt-1">Inactive package</div>}</td>
+                            <td className="py-3 text-right">
+                              <Button size="sm" variant="outline" disabled={removed || updateSubmission.isPending} onClick={() => updateSubmission.mutate({ type: item.type, id: item.id, isPublished: !item.isPublished })} data-testid={`btn-${item.isPublished ? "unpublish" : "approve"}-${item.type}-${item.id}`}>
+                                {updateSubmission.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}{item.isPublished ? "Unpublish" : "Approve"}
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="storefronts" className="space-y-4">
           <Card>
@@ -231,7 +314,7 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
                     <tbody>
                       {(storefronts.data?.items || []).map((s) => (
                         <tr key={s.panditId} className="border-t" data-testid={`row-storefront-${s.panditId}`}>
-                          <td className="py-2"><a href={`/p/${s.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-[#6D2B35] underline">{s.name}</a><div className="text-xs text-stone-500">{s.city || "—"}</div></td>
+                          <td className="py-2"><a href={`/pandit/${s.slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-[#6D2B35] underline">{s.name}</a><div className="text-xs text-stone-500">{s.city || "—"}</div></td>
                           <td className="text-xs font-mono text-stone-700">{s.membershipNo || `VT-PND-${String(s.panditId).padStart(5, "0")}`}</td>
                           <td><Badge variant="outline" className="capitalize">{s.tier || "free"}</Badge></td>
                           <td><Switch checked={s.isPublished} onCheckedChange={(v) => updateStorefront.mutate({ panditId: s.panditId, body: { isPublished: v } })} data-testid={`switch-published-${s.panditId}`} /></td>

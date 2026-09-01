@@ -560,6 +560,9 @@ export const pujaBookings = pgTable("puja_bookings", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("user_id"),
   panditId: integer("pandit_id"),
+  panditServiceId: integer("pandit_service_id"),
+  panditPackageId: integer("pandit_package_id"),
+  pricingSnapshot: jsonb("pricing_snapshot"),
   pujaType: text("puja_type").notNull(),
   mode: text("mode").notNull().default("offline"),
   date: text("date").notNull(),
@@ -584,6 +587,8 @@ export const pujaBookings = pgTable("puja_bookings", {
 }, (t) => ({
   userIdIdx: index("puja_bookings_user_id_idx").on(t.userId),
   panditIdIdx: index("puja_bookings_pandit_id_idx").on(t.panditId),
+  panditServiceIdIdx: index("puja_bookings_pandit_service_id_idx").on(t.panditServiceId),
+  panditPackageIdIdx: index("puja_bookings_pandit_package_id_idx").on(t.panditPackageId),
   statusIdx: index("puja_bookings_status_idx").on(t.status),
   needsReassignmentIdx: index("puja_bookings_needs_reassignment_idx").on(t.needsReassignment),
 }));
@@ -1776,6 +1781,78 @@ export const panditServices = pgTable("pandit_services", {
 export const insertPanditServiceSchema = createInsertSchema(panditServices).omit({ id: true, createdAt: true, updatedAt: true });
 export type PanditService = typeof panditServices.$inferSelect;
 export type InsertPanditService = z.infer<typeof insertPanditServiceSchema>;
+
+// Pandit-owned bundles. Price is stored in rupees and is always revalidated by
+// the booking service; package items point only at the owner's pandit services.
+export const panditPackages = pgTable("pandit_packages", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description").notNull().default(""),
+  price: integer("price").notNull(),
+  compareAtPrice: integer("compare_at_price"),
+  isActive: boolean("is_active").notNull().default(true),
+  isPublished: boolean("is_published").notNull().default(false),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  panditSlugUnique: uniqueIndex("pandit_packages_pandit_slug_unique").on(t.panditId, t.slug),
+  panditPublicIdx: index("pandit_packages_pandit_public_idx").on(t.panditId, t.isActive, t.isPublished),
+}));
+export const panditPackageItems = pgTable("pandit_package_items", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  packageId: integer("package_id").notNull().references(() => panditPackages.id, { onDelete: "cascade" }),
+  panditServiceId: integer("pandit_service_id").notNull().references(() => panditServices.id),
+  displayOrder: integer("display_order").notNull().default(0),
+}, (t) => ({
+  packageServiceUnique: uniqueIndex("pandit_package_items_package_service_unique").on(t.packageId, t.panditServiceId),
+  packageOrderIdx: index("pandit_package_items_package_order_idx").on(t.packageId, t.displayOrder),
+}));
+export const panditGalleryItems = pgTable("pandit_gallery_items", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  mediaKind: text("media_kind").notNull().default("image"),
+  mediaUrl: text("media_url").notNull(),
+  altText: text("alt_text").notNull(),
+  caption: text("caption"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(false),
+  removedAt: timestamp("removed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  panditPublicIdx: index("pandit_gallery_items_pandit_public_idx").on(t.panditId, t.isPublished, t.displayOrder),
+}));
+export const panditAvailabilityRules = pgTable("pandit_availability_rules", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  weekday: integer("weekday").notNull(),
+  startMinutes: integer("start_minutes").notNull(),
+  endMinutes: integer("end_minutes").notNull(),
+  timezone: text("timezone").notNull().default("Asia/Kolkata"),
+  mode: text("mode").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  effectiveFrom: timestamp("effective_from"),
+  effectiveUntil: timestamp("effective_until"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  panditActiveIdx: index("pandit_availability_rules_pandit_active_idx").on(t.panditId, t.isActive, t.weekday),
+}));
+export const insertPanditPackageSchema = createInsertSchema(panditPackages).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPanditPackageItemSchema = createInsertSchema(panditPackageItems).omit({ id: true });
+export const insertPanditGalleryItemSchema = createInsertSchema(panditGalleryItems).omit({ id: true, createdAt: true, updatedAt: true, removedAt: true });
+export const insertPanditAvailabilityRuleSchema = createInsertSchema(panditAvailabilityRules).omit({ id: true, createdAt: true, updatedAt: true });
+export type PanditPackage = typeof panditPackages.$inferSelect;
+export type InsertPanditPackage = z.infer<typeof insertPanditPackageSchema>;
+export type PanditPackageItem = typeof panditPackageItems.$inferSelect;
+export type InsertPanditPackageItem = z.infer<typeof insertPanditPackageItemSchema>;
+export type PanditGalleryItem = typeof panditGalleryItems.$inferSelect;
+export type InsertPanditGalleryItem = z.infer<typeof insertPanditGalleryItemSchema>;
+export type PanditAvailabilityRule = typeof panditAvailabilityRules.$inferSelect;
+export type InsertPanditAvailabilityRule = z.infer<typeof insertPanditAvailabilityRuleSchema>;
 
 // Referral attribution ledger. One row per attributable order/booking.
 // kind = "order" (shop purchase) | "booking" (puja booking) | "donation".

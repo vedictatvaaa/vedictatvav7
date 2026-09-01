@@ -110,9 +110,9 @@ const ROUTE_CARDS: Array<{ match: string | RegExp; card: OgCard }> = [
     },
   },
 
-  // ── Pandit storefront (Task #65) — every /p/<slug> URL ─────────────
+  // ── Pandit storefront — every canonical /pandit/<slug> URL ─────────
   {
-    match: /^\/p\/[a-z0-9-]+/,
+    match: /^\/pandit\/[a-z0-9-]+/,
     card: {
       title: "Connect with a Verified Vedic Pandit · Vedic Tatva",
       description:

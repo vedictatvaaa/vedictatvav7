@@ -8,7 +8,7 @@ import {
   emailSends, newsletterCampaigns, emailUnsubscribes,
   notificationLog, notificationSettings,
   familyMembers, userNotifications, panditPayouts, spiritualJourney,
-  panditStorefronts, panditReferrals, panditCardOrders, masterServices, panditServices,
+  panditStorefronts, panditReferrals, panditCardOrders, masterServices, panditServices, panditPackages, panditPackageItems, panditGalleryItems, panditAvailabilityRules,
   type FamilyMember, type InsertFamilyMember,
   type UserNotification, type InsertUserNotification,
   type PanditPayout, type InsertPanditPayout,
@@ -17,6 +17,8 @@ import {
   type PanditCardOrder, type InsertPanditCardOrder,
   type MasterService, type InsertMasterService,
   type PanditService, type InsertPanditService,
+  type PanditPackage, type InsertPanditPackage, type PanditPackageItem, type InsertPanditPackageItem,
+  type PanditGalleryItem, type InsertPanditGalleryItem, type PanditAvailabilityRule, type InsertPanditAvailabilityRule,
   type NotificationLog, type InsertNotificationLog, type NotificationSettings,
   type NotificationChannel, type NotificationKind, type NotificationStatus,
   type User, type InsertUser,
@@ -366,6 +368,22 @@ export interface IStorage {
   getPanditService(id: number): Promise<PanditService | undefined>;
   createPanditService(data: InsertPanditService): Promise<PanditService>;
   updatePanditService(id: number, data: Partial<InsertPanditService>): Promise<PanditService | undefined>;
+  listPanditPackages(panditId: number, publicOnly?: boolean): Promise<PanditPackage[]>;
+  listAllPanditPackagesForModeration(): Promise<Array<{ package: PanditPackage; pandit: Pick<Pandit, "id" | "name" | "slug" | "city"> }>>;
+  getPanditPackage(id: number): Promise<PanditPackage | undefined>;
+  createPanditPackage(data: InsertPanditPackage): Promise<PanditPackage>;
+  updatePanditPackage(id: number, data: Partial<InsertPanditPackage>): Promise<PanditPackage | undefined>;
+  replacePanditPackageItems(packageId: number, items: Array<Omit<InsertPanditPackageItem, "packageId">>): Promise<PanditPackageItem[]>;
+  listPanditPackageItems(packageId: number): Promise<PanditPackageItem[]>;
+  listPanditGalleryItems(panditId: number, publicOnly?: boolean): Promise<PanditGalleryItem[]>;
+  listAllPanditGalleryItemsForModeration(): Promise<Array<{ item: PanditGalleryItem; pandit: Pick<Pandit, "id" | "name" | "slug" | "city"> }>>;
+  getPanditGalleryItem(id: number): Promise<PanditGalleryItem | undefined>;
+  createPanditGalleryItem(data: InsertPanditGalleryItem): Promise<PanditGalleryItem>;
+  updatePanditGalleryItem(id: number, data: Partial<InsertPanditGalleryItem> & { removedAt?: Date | null }): Promise<PanditGalleryItem | undefined>;
+  listPanditAvailabilityRules(panditId: number, activeOnly?: boolean): Promise<PanditAvailabilityRule[]>;
+  getPanditAvailabilityRule(id: number): Promise<PanditAvailabilityRule | undefined>;
+  createPanditAvailabilityRule(data: InsertPanditAvailabilityRule): Promise<PanditAvailabilityRule>;
+  updatePanditAvailabilityRule(id: number, data: Partial<InsertPanditAvailabilityRule>): Promise<PanditAvailabilityRule | undefined>;
 
   createPanditReferral(input: InsertPanditReferral): Promise<PanditReferral | undefined>;
   listPanditReferrals(panditId: number, opts?: { limit?: number; status?: string }): Promise<PanditReferral[]>;
@@ -1874,6 +1892,73 @@ export class DatabaseStorage implements IStorage {
       .where(eq(panditServices.id, id))
       .returning();
     return row;
+  }
+  async listPanditPackages(panditId: number, publicOnly = false): Promise<PanditPackage[]> {
+    const where = publicOnly ? and(eq(panditPackages.panditId, panditId), eq(panditPackages.isActive, true), eq(panditPackages.isPublished, true)) : eq(panditPackages.panditId, panditId);
+    return db.select().from(panditPackages).where(where).orderBy(asc(panditPackages.displayOrder), asc(panditPackages.id));
+  }
+  async listAllPanditPackagesForModeration(): Promise<Array<{ package: PanditPackage; pandit: Pick<Pandit, "id" | "name" | "slug" | "city"> }>> {
+    return db.select({
+      package: panditPackages,
+      pandit: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city },
+    })
+      .from(panditPackages)
+      .innerJoin(pandits, eq(panditPackages.panditId, pandits.id))
+      .orderBy(desc(panditPackages.createdAt), desc(panditPackages.id));
+  }
+  async getPanditPackage(id: number): Promise<PanditPackage | undefined> {
+    const [row] = await db.select().from(panditPackages).where(eq(panditPackages.id, id)).limit(1); return row;
+  }
+  async createPanditPackage(data: InsertPanditPackage): Promise<PanditPackage> {
+    const [row] = await db.insert(panditPackages).values(data).returning(); return row;
+  }
+  async updatePanditPackage(id: number, data: Partial<InsertPanditPackage>): Promise<PanditPackage | undefined> {
+    const [row] = await db.update(panditPackages).set({ ...data, updatedAt: new Date() }).where(eq(panditPackages.id, id)).returning(); return row;
+  }
+  async replacePanditPackageItems(packageId: number, items: Array<Omit<InsertPanditPackageItem, "packageId">>): Promise<PanditPackageItem[]> {
+    return db.transaction(async (tx) => {
+      await tx.delete(panditPackageItems).where(eq(panditPackageItems.packageId, packageId));
+      if (!items.length) return [];
+      return tx.insert(panditPackageItems).values(items.map(item => ({ ...item, packageId }))).returning();
+    });
+  }
+  async listPanditPackageItems(packageId: number): Promise<PanditPackageItem[]> {
+    return db.select().from(panditPackageItems).where(eq(panditPackageItems.packageId, packageId)).orderBy(asc(panditPackageItems.displayOrder), asc(panditPackageItems.id));
+  }
+  async listPanditGalleryItems(panditId: number, publicOnly = false): Promise<PanditGalleryItem[]> {
+    const where = publicOnly ? and(eq(panditGalleryItems.panditId, panditId), eq(panditGalleryItems.isPublished, true), isNull(panditGalleryItems.removedAt)) : and(eq(panditGalleryItems.panditId, panditId), isNull(panditGalleryItems.removedAt));
+    return db.select().from(panditGalleryItems).where(where).orderBy(asc(panditGalleryItems.displayOrder), asc(panditGalleryItems.id));
+  }
+  async listAllPanditGalleryItemsForModeration(): Promise<Array<{ item: PanditGalleryItem; pandit: Pick<Pandit, "id" | "name" | "slug" | "city"> }>> {
+    return db.select({
+      item: panditGalleryItems,
+      pandit: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city },
+    })
+      .from(panditGalleryItems)
+      .innerJoin(pandits, eq(panditGalleryItems.panditId, pandits.id))
+      .orderBy(desc(panditGalleryItems.createdAt), desc(panditGalleryItems.id));
+  }
+  async getPanditGalleryItem(id: number): Promise<PanditGalleryItem | undefined> {
+    const [row] = await db.select().from(panditGalleryItems).where(eq(panditGalleryItems.id, id)).limit(1); return row;
+  }
+  async createPanditGalleryItem(data: InsertPanditGalleryItem): Promise<PanditGalleryItem> {
+    const [row] = await db.insert(panditGalleryItems).values(data).returning(); return row;
+  }
+  async updatePanditGalleryItem(id: number, data: Partial<InsertPanditGalleryItem> & { removedAt?: Date | null }): Promise<PanditGalleryItem | undefined> {
+    const [row] = await db.update(panditGalleryItems).set({ ...data, updatedAt: new Date() }).where(eq(panditGalleryItems.id, id)).returning(); return row;
+  }
+  async listPanditAvailabilityRules(panditId: number, activeOnly = false): Promise<PanditAvailabilityRule[]> {
+    const where = activeOnly ? and(eq(panditAvailabilityRules.panditId, panditId), eq(panditAvailabilityRules.isActive, true)) : eq(panditAvailabilityRules.panditId, panditId);
+    return db.select().from(panditAvailabilityRules).where(where).orderBy(asc(panditAvailabilityRules.weekday), asc(panditAvailabilityRules.startMinutes), asc(panditAvailabilityRules.id));
+  }
+  async getPanditAvailabilityRule(id: number): Promise<PanditAvailabilityRule | undefined> {
+    const [row] = await db.select().from(panditAvailabilityRules).where(eq(panditAvailabilityRules.id, id)).limit(1); return row;
+  }
+  async createPanditAvailabilityRule(data: InsertPanditAvailabilityRule): Promise<PanditAvailabilityRule> {
+    const [row] = await db.insert(panditAvailabilityRules).values(data).returning(); return row;
+  }
+  async updatePanditAvailabilityRule(id: number, data: Partial<InsertPanditAvailabilityRule>): Promise<PanditAvailabilityRule | undefined> {
+    const [row] = await db.update(panditAvailabilityRules).set({ ...data, updatedAt: new Date() }).where(eq(panditAvailabilityRules.id, id)).returning(); return row;
   }
 
   // ===== Referrals =====

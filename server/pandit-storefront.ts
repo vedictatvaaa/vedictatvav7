@@ -25,10 +25,13 @@ import {
   getPubliclyPublishedPanditBySlug,
   isPanditStorefrontPublished,
   publicPanditReviewDto,
+  publicPanditPackageDto,
+  publicPanditGalleryItemDto,
+  publicPanditAvailabilityRuleDto,
   publicPanditServiceDto,
   publicStorefrontPanditDto,
 } from "./pandit-public-access";
-import { panditServiceWriteSchema } from "./catalog-validation";
+import { panditServiceWriteSchema, panditPackageWriteSchema, panditGalleryWriteSchema, panditAvailabilityWriteSchema } from "./catalog-validation";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -317,7 +320,21 @@ async function buildStorefrontDto(slug: string) {
     ? (await Promise.all(productIds.map((id) => storage.getProduct(id)))).filter(Boolean)
     : [];
   const reviews = await storage.getPanditReviews(pandit.id).catch(() => []);
-  const services = await storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []);
+  const [services, packages, gallery, availability] = await Promise.all([
+    storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []),
+    storage.listPanditPackages(pandit.id, true).catch(() => []),
+    storage.listPanditGalleryItems(pandit.id, true).catch(() => []),
+    storage.listPanditAvailabilityRules(pandit.id, true).catch(() => []),
+  ]);
+  const activeServiceIds = new Set(services.map(row => row.service.id));
+  const packageDtos = (await Promise.all(packages.map(async pkg => {
+    const items = await storage.listPanditPackageItems(pkg.id);
+    // A stale package is not public if an included offering was subsequently
+    // disabled; this prevents public bundles from advertising unbookable items.
+    return items.length && items.every(item => activeServiceIds.has(item.panditServiceId))
+      ? publicPanditPackageDto(pkg, items)
+      : null;
+  }))).filter(Boolean);
   return {
     pandit: publicStorefrontPanditDto(pandit),
     storefront: sf
@@ -338,6 +355,11 @@ async function buildStorefrontDto(slug: string) {
     products,
     services: services.map(publicPanditServiceDto),
     reviews: reviews.slice(0, 10).map(publicPanditReviewDto),
+    packages: packageDtos,
+    gallery: gallery.map(publicPanditGalleryItemDto),
+    availability: availability.map(publicPanditAvailabilityRuleDto),
+    canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`,
+    share: { canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`, referralSlug: pandit.slug },
   };
 }
 
@@ -346,7 +368,7 @@ async function buildStorefrontDto(slug: string) {
 // referral param baked in so every scan is attributable.
 // ---------------------------------------------------------------------
 async function storefrontQrPng(req: Request, slug: string, size = 512): Promise<Buffer> {
-  const url = `${siteUrl(req)}/p/${encodeURIComponent(slug)}?ref=${encodeURIComponent(slug)}`;
+  const url = `${siteUrl(req)}/pandit/${encodeURIComponent(slug)}?ref=${encodeURIComponent(slug)}`;
   return QRCode.toBuffer(url, {
     type: "png",
     width: size,
@@ -495,7 +517,7 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   doc.setTextColor(74, 26, 34);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(`vedictatva.com/p/${slug}`, W / 2, photoY + photoSize + 36, { align: "center" });
+  doc.text(`vedictatva.com/pandit/${slug}`, W / 2, photoY + photoSize + 36, { align: "center" });
 
   // City footer line
   if (dto.pandit.city) {
@@ -530,7 +552,7 @@ async function storefrontCardPdf(req: Request, slug: string): Promise<Buffer> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(109, 43, 53);
-  doc.text(`vedictatva.com/p/${slug}`, W / 2, 45 + qrSize + 6, { align: "center" });
+  doc.text(`vedictatva.com/pandit/${slug}`, W / 2, 45 + qrSize + 6, { align: "center" });
 
   // Meta line: experience · languages
   const metaParts: string[] = [];
@@ -637,7 +659,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect x="0" y="0" width="1200" height="90" fill="#6D2B35"/>
   <text x="60" y="60" font-family="Georgia,serif" font-size="36" font-weight="700" fill="#D4AF37">Vedic Tatva</text>
-  <text x="1140" y="60" font-family="serif" font-size="22" fill="#FFFAEC" text-anchor="end">vedictatva.com/p/${esc(slug)}</text>
+  <text x="1140" y="60" font-family="serif" font-size="22" fill="#FFFAEC" text-anchor="end">vedictatva.com/pandit/${esc(slug)}</text>
   <text x="540" y="220" font-family="Georgia,serif" font-size="56" font-weight="700" fill="#4a1a22">${esc(p.name).slice(0, 22)}</text>
   <text x="540" y="280" font-family="serif" font-size="32" fill="#6D2B35">${esc(cityLine)}</text>
   <text x="540" y="340" font-family="serif" font-size="26" fill="#5a4a3a">${esc(ratingLine)}</text>
@@ -741,11 +763,21 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       const p = await storage.getPandit(id);
       if (!p?.slug) return next();
       if (!(await getPubliclyPublishedPanditBySlug(p.slug))) return next();
-      return res.redirect(301, `/p/${p.slug}`);
+      return res.redirect(301, `/pandit/${p.slug}`);
     } catch {
       next();
     }
   });
+  for (const legacyPath of ["/p/:slug", "/store/:slug"]) {
+    app.get(legacyPath, async (req, res, next) => {
+      try {
+        const slug = String(req.params.slug || "").toLowerCase().trim();
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || !(await getPubliclyPublishedPanditBySlug(slug))) return next();
+        const suffix = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+        return res.redirect(301, `/pandit/${encodeURIComponent(slug)}${suffix}`);
+      } catch { next(); }
+    });
+  }
 
   app.get("/api/storefront/:slug/qr.png", async (req, res) => {
     try {
@@ -799,7 +831,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         },
         products,
         commissionPct: commissionForPandit(pandit),
-        publicUrl: `${siteUrl(req)}/p/${pandit.slug || ""}`,
+          publicUrl: `${siteUrl(req)}/pandit/${pandit.slug || ""}`,
       });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -899,6 +931,92 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Service not found" });
     await storage.updatePanditService(id, { isActive: false });
     res.status(204).end();
+  });
+
+  // Packages, gallery, and recurring availability are strictly owner-scoped.
+  // The token-derived panditId is deliberately the only owner selector.
+  const packageItemsAreOwnedActive = async (panditId: number, items: Array<{ panditServiceId: number }>) => {
+    const ids = new Set(items.map(item => item.panditServiceId));
+    if (ids.size !== items.length) return false;
+    const services = await Promise.all(Array.from(ids).map(id => storage.getPanditService(id)));
+    return services.every(service => service?.panditId === panditId && service.isActive);
+  };
+  app.get("/api/pandit/packages", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const packages = await storage.listPanditPackages(req.panditId!);
+    res.json(await Promise.all(packages.map(async pkg => ({ ...pkg, items: await storage.listPanditPackageItems(pkg.id) }))));
+  });
+  app.post("/api/pandit/packages", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const parsed = panditPackageWriteSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid package", errors: parsed.error.flatten() });
+    if (!(await packageItemsAreOwnedActive(req.panditId!, parsed.data.items))) return res.status(400).json({ message: "Packages require your active services" });
+    try {
+      const { items, ...data } = parsed.data;
+      const { isPublished: _ignored, ...panditData } = data;
+      const pkg = await storage.createPanditPackage({ ...panditData, panditId: req.panditId!, isActive: data.isActive ?? true, isPublished: false });
+      const savedItems = await storage.replacePanditPackageItems(pkg.id, items);
+      res.status(201).json({ ...pkg, items: savedItems });
+    } catch (error: any) {
+      if (error?.code === "23505") return res.status(409).json({ message: "This package slug is already in your store" });
+      throw error;
+    }
+  });
+  app.patch("/api/pandit/packages/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid package ID" });
+    const existing = await storage.getPanditPackage(id);
+    if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Package not found" });
+    const parsed = (panditPackageWriteSchema as any).partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid package", errors: parsed.error.flatten() });
+    if (parsed.data.items && (!(await packageItemsAreOwnedActive(req.panditId!, parsed.data.items)))) return res.status(400).json({ message: "Packages require your active services" });
+    const { items, isPublished: _ignored, ...patch } = parsed.data;
+    const pkg = await storage.updatePanditPackage(id, patch);
+    const savedItems = items ? await storage.replacePanditPackageItems(id, items) : await storage.listPanditPackageItems(id);
+    res.json({ ...pkg, items: savedItems });
+  });
+  app.delete("/api/pandit/packages/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const existing = await storage.getPanditPackage(Number(req.params.id));
+    if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Package not found" });
+    await storage.updatePanditPackage(existing.id, { isActive: false, isPublished: false }); res.status(204).end();
+  });
+  app.get("/api/pandit/gallery", panditAuthMiddleware, async (req: PanditRequest, res) => res.json(await storage.listPanditGalleryItems(req.panditId!)));
+  app.post("/api/pandit/gallery", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const parsed = panditGalleryWriteSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid gallery item", errors: parsed.error.flatten() });
+    res.status(201).json(await storage.createPanditGalleryItem({ ...parsed.data, panditId: req.panditId!, isPublished: false }));
+  });
+  app.patch("/api/pandit/gallery/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const item = await storage.getPanditGalleryItem(Number(req.params.id));
+    if (!item || item.panditId !== req.panditId || item.removedAt) return res.status(404).json({ message: "Gallery item not found" });
+    const parsed = panditGalleryWriteSchema.partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid gallery item", errors: parsed.error.flatten() });
+    // Publication is admin moderation territory; Pandits can only submit media as drafts.
+    const { isPublished: _ignored, ...patch } = parsed.data;
+    res.json(await storage.updatePanditGalleryItem(item.id, patch));
+  });
+  app.delete("/api/pandit/gallery/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const item = await storage.getPanditGalleryItem(Number(req.params.id));
+    if (!item || item.panditId !== req.panditId) return res.status(404).json({ message: "Gallery item not found" });
+    await storage.updatePanditGalleryItem(item.id, { removedAt: new Date(), isPublished: false } as any); res.status(204).end();
+  });
+  app.get("/api/pandit/availability", panditAuthMiddleware, async (req: PanditRequest, res) => res.json(await storage.listPanditAvailabilityRules(req.panditId!)));
+  app.post("/api/pandit/availability", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const parsed = panditAvailabilityWriteSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid availability rule", errors: parsed.error.flatten() });
+    res.status(201).json(await storage.createPanditAvailabilityRule({ ...parsed.data, panditId: req.panditId!, isActive: parsed.data.isActive ?? true }));
+  });
+  app.patch("/api/pandit/availability/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const rule = await storage.getPanditAvailabilityRule(Number(req.params.id));
+    if (!rule || rule.panditId !== req.panditId) return res.status(404).json({ message: "Availability rule not found" });
+    const parsed = (panditAvailabilityWriteSchema as any).partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid availability rule", errors: parsed.error.flatten() });
+    const candidate = { ...rule, ...parsed.data };
+    if (candidate.endMinutes <= candidate.startMinutes) return res.status(400).json({ message: "End must be after start" });
+    res.json(await storage.updatePanditAvailabilityRule(rule.id, parsed.data));
+  });
+  app.delete("/api/pandit/availability/:id", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    const rule = await storage.getPanditAvailabilityRule(Number(req.params.id));
+    if (!rule || rule.panditId !== req.panditId) return res.status(404).json({ message: "Availability rule not found" });
+    await storage.updatePanditAvailabilityRule(rule.id, { isActive: false }); res.status(204).end();
   });
 
   app.get("/api/pandit/storefront/qr.png", panditAuthMiddleware, async (req: PanditRequest, res) => {
@@ -1374,6 +1492,57 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   });
 
   // ===== ADMIN =====
+  // Storefront package and gallery publication is explicitly moderated by an
+  // admin. Pandits can submit drafts but cannot promote their own content.
+  app.get("/api/admin/storefront-submissions", adminAuthMiddleware, async (_req: Request, res: Response) => {
+    try {
+      const [packages, gallery] = await Promise.all([
+        storage.listAllPanditPackagesForModeration(),
+        storage.listAllPanditGalleryItemsForModeration(),
+      ]);
+      const items = [
+        ...packages.map(({ package: pkg, pandit }) => ({ type: "package" as const, ...pkg, pandit })),
+        ...gallery.map(({ item, pandit }) => ({ type: "gallery" as const, ...item, pandit })),
+      ].sort((a, b) => Number(new Date(b.createdAt)) - Number(new Date(a.createdAt)));
+      res.json({ items });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to load storefront submissions" });
+    }
+  });
+
+  app.patch("/api/admin/storefront-submissions/:type/:id", adminAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+      const type = z.enum(["package", "gallery"]).safeParse(req.params.type);
+      const id = Number(req.params.id);
+      const body = z.object({ isPublished: z.boolean() }).strict().safeParse(req.body);
+      if (!type.success || !Number.isInteger(id) || id <= 0 || !body.success) {
+        return res.status(400).json({ message: "Only an isPublished boolean may be changed" });
+      }
+
+      if (type.data === "package") {
+        const pkg = await storage.getPanditPackage(id);
+        if (!pkg) return res.status(404).json({ message: "Package not found" });
+        if (body.data.isPublished) {
+          if (!pkg.isActive) return res.status(400).json({ message: "Inactive packages cannot be approved" });
+          const packageItems = await storage.listPanditPackageItems(pkg.id);
+          if (!(await packageItemsAreOwnedActive(pkg.panditId, packageItems))) {
+            return res.status(400).json({ message: "Packages require at least one active service owned by the pandit before approval" });
+          }
+        }
+        const updated = await storage.updatePanditPackage(pkg.id, { isPublished: body.data.isPublished });
+        return res.json({ item: { type: "package", ...updated } });
+      }
+
+      const galleryItem = await storage.getPanditGalleryItem(id);
+      if (!galleryItem) return res.status(404).json({ message: "Gallery item not found" });
+      if (galleryItem.removedAt) return res.status(409).json({ message: "Removed gallery items cannot be published or changed" });
+      const updated = await storage.updatePanditGalleryItem(galleryItem.id, { isPublished: body.data.isPublished });
+      return res.json({ item: { type: "gallery", ...updated } });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to update storefront submission" });
+    }
+  });
+
   app.get("/api/admin/referrals", adminAuthMiddleware, async (req: Request, res: Response) => {
     try {
       const status = typeof req.query.status === "string" ? req.query.status : undefined;

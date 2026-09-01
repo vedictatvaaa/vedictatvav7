@@ -57,10 +57,24 @@ export function publicStorefrontPanditDto(pandit: any) {
     fees: pandit.fees,
     rating: pandit.rating,
     reviewCount: pandit.reviewCount,
-    verified: true,
+    verified: pandit.verified === true,
     image: pandit.image,
     bio: pandit.bio,
   };
+}
+
+export function publicPanditPackageDto(pkg: any, items: any[]) {
+  return {
+    id: pkg.id, name: pkg.name, slug: pkg.slug, description: pkg.description,
+    price: pkg.price, compareAtPrice: pkg.compareAtPrice, displayOrder: pkg.displayOrder,
+    items: items.map(item => ({ panditServiceId: item.panditServiceId, displayOrder: item.displayOrder })),
+  };
+}
+export function publicPanditGalleryItemDto(item: any) {
+  return { id: item.id, mediaKind: item.mediaKind, mediaUrl: item.mediaUrl, altText: item.altText, caption: item.caption, displayOrder: item.displayOrder };
+}
+export function publicPanditAvailabilityRuleDto(rule: any) {
+  return { weekday: rule.weekday, startMinutes: rule.startMinutes, endMinutes: rule.endMinutes, timezone: rule.timezone, mode: rule.mode };
 }
 
 export function publicPanditReviewDto(review: any) {

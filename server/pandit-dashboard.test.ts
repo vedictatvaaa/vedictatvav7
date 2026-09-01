@@ -25,7 +25,7 @@ test("pending classifications and publication states stay explicit", () => {
   assert.equal(storefrontPublicationState({ status: "pending_review", isPublished: false }), "pending_review");
   assert.equal(storefrontPublicationState({ status: "suspended", isPublished: true }), "suspended");
   assert.equal(storefrontPublicationState(null), "unavailable");
-  assert.equal(storefrontPublicPath("Pandit ji/Delhi", { status: "published", isPublished: true }), "/p/Pandit%20ji%2FDelhi");
+  assert.equal(storefrontPublicPath("Pandit ji/Delhi", { status: "published", isPublished: true }), "/pandit/Pandit%20ji%2FDelhi");
   assert.equal(storefrontPublicPath("pandit-ji", { status: "draft", isPublished: true }), null);
   assert.equal(storefrontPublicPath("pandit-ji", { status: "published", isPublished: false }), null);
   assert.equal(storefrontPublicPath(null, { status: "published", isPublished: true }), null);

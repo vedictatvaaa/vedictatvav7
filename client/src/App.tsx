@@ -836,8 +836,9 @@ function Router() {
           <Route path="/virtual-puja" component={VirtualPuja} />
           <Route path="/compare" component={ProductCompare} />
           <Route path="/kathas" component={Kathas} />
-          <Route path="/p/:slug" component={PanditProfile} />
-          <Route path="/pandit/:id" component={PanditProfile} />
+          <Route path="/p/:slug" component={PanditStorefront} />
+          <Route path="/pandit-profile/:id" component={PanditProfile} />
+          <Route path="/pandit/:slug" component={PanditStorefront} />
           <Route path="/astrologer/:id" component={AstrologerProfile} />
           <Route path="/register" component={Register} />
           <Route path="/login" component={Login} />

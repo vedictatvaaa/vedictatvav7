@@ -155,10 +155,10 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
   const isCategoryOrProduct =
     /^\/puja-samagri-online\/[^/?#]+$/.test(reqPath) || /^\/product\/[^/?#]+$/.test(reqPath);
 
-  // Per-pandit dynamic OG card for /p/<slug> — overrides the static fallback
+  // Per-pandit dynamic OG card for the canonical /pandit/<slug> storefront.
   // in og-meta.ts so each share preview shows the real pandit's name, city,
   // rating, and photo.
-  const panditMatch = reqPath.match(/^\/p\/([a-z0-9-]+)\/?$/);
+  const panditMatch = reqPath.match(/^\/pandit\/([a-z0-9-]+)\/?$/);
   if (panditMatch) {
     try {
       const p = await getPubliclyPublishedPanditBySlug(panditMatch[1]);

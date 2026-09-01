@@ -49,7 +49,7 @@ export function storefrontPublicationState(storefront: StorefrontPublication | n
 
 export function storefrontPublicPath(slug: string | null | undefined, storefront: StorefrontPublication | null): string | null {
   return slug && storefrontPublicationState(storefront) === "published"
-    ? `/p/${encodeURIComponent(slug)}`
+    ? `/pandit/${encodeURIComponent(slug)}`
     : null;
 }
 

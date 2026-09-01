@@ -50,13 +50,33 @@ export default function PujaBooking() {
   const searchParams = new URLSearchParams(searchString);
   const panditIdParam = searchParams.get("pandit");
   const panditId = panditIdParam ? parseInt(panditIdParam) : 0;
+  const bookingServiceId = Number(searchParams.get("serviceId") || 0);
+  const bookingPackageId = Number(searchParams.get("packageId") || 0);
   const bookingService = searchParams.get("service")?.trim() || "";
-  const customPujaType = bookingService ? `service:${bookingService}` : "";
+  const customPujaType = bookingPackageId
+    ? `package:${bookingPackageId}`
+    : bookingServiceId
+      ? `service:${bookingServiceId}`
+      : bookingService
+        ? `service:${bookingService}`
+        : "";
 
   const { data: selectedPandit } = useQuery<Pandit>({
     queryKey: [`/api/pandits/${panditId}`],
     queryFn: () => fetch(`/api/pandits/${panditId}`).then(r => { if (!r.ok) throw new Error("Not found"); return r.json(); }),
     enabled: panditId > 0,
+  });
+  const { data: selectedStorefront } = useQuery<{
+    services?: Array<{ id: number; name: string; price: number }>;
+    packages?: Array<{ id: number; name: string; price: number }>;
+  }>({
+    queryKey: ["/api/storefront", selectedPandit?.slug, "booking-pricing"],
+    queryFn: async () => {
+      const response = await fetch(`/api/storefront/${encodeURIComponent(selectedPandit!.slug!)}`);
+      if (!response.ok) throw new Error("Storefront unavailable");
+      return response.json();
+    },
+    enabled: Boolean(selectedPandit?.slug && (bookingServiceId || bookingPackageId)),
   });
 
   const initialPujaType = (() => {
@@ -67,9 +87,16 @@ export default function PujaBooking() {
 
   const [pujaType, setPujaType] = useState(initialPujaType);
   const [mode, setMode] = useState(initialMode);
+  const selectedOffering = bookingPackageId
+    ? selectedStorefront?.packages?.find(pkg => pkg.id === bookingPackageId)
+    : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
   const availablePujaOptions = useMemo(() => customPujaType
-    ? [...pujaOptions, { value: customPujaType, label: bookingService, price: selectedPandit?.fees || 5100 }]
-    : pujaOptions, [bookingService, customPujaType, selectedPandit?.fees]);
+    ? [...pujaOptions, {
+        value: customPujaType,
+        label: selectedOffering?.name || bookingService || "Selected Pandit offering",
+        price: selectedOffering?.price || selectedPandit?.fees || 5100,
+      }]
+    : pujaOptions, [bookingService, customPujaType, selectedOffering?.name, selectedOffering?.price, selectedPandit?.fees]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchString);
@@ -107,6 +134,8 @@ export default function PujaBooking() {
           location: mode === "offline" ? location : "Online",
           totalAmount,
           ...(panditId > 0 ? { panditId } : {}),
+          ...(bookingServiceId > 0 ? { panditServiceId: bookingServiceId } : {}),
+          ...(bookingPackageId > 0 ? { panditPackageId: bookingPackageId } : {}),
         }),
       });
       if (!res.ok) throw new Error("Failed to create booking");
