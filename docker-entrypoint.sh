@@ -32,31 +32,48 @@ fi
 
 # Wait for Postgres to accept connections (max ~60s)
 echo "[entrypoint] Waiting for Postgres…"
+DB_READY=0
 for i in $(seq 1 30); do
   if pg_isready -d "$PG_DATABASE_URL" >/dev/null 2>&1; then
     echo "[entrypoint] Postgres is ready."
+    DB_READY=1
     break
   fi
   sleep 2
 done
+if [ "$DB_READY" != "1" ]; then
+  echo "[entrypoint] FATAL: Postgres did not become ready within 60 seconds."
+  exit 1
+fi
 
-# Apply committed, idempotent migrations before startup. This makes location
-# schema changes explicit and repeatable on existing Coolify databases.
+# Apply each committed migration once. The ledger keeps normal Git-triggered
+# restarts fast and prevents already-applied migrations from running forever.
 if compgen -G "/app/migrations/*.sql" >/dev/null; then
-  echo "[entrypoint] Applying committed SQL migrations…"
+  psql "$PG_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+    "CREATE TABLE IF NOT EXISTS app_schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
   for migration in /app/migrations/*.sql; do
-    echo "[entrypoint] Applying $(basename "$migration")"
+    migration_name="$(basename "$migration")"
+    if psql "$PG_DATABASE_URL" -Atqc \
+      "SELECT 1 FROM app_schema_migrations WHERE name = '$migration_name'" | grep -q 1; then
+      echo "[entrypoint] Migration already applied: $migration_name"
+      continue
+    fi
+    echo "[entrypoint] Applying $migration_name"
     psql "$PG_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+    psql "$PG_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+      "INSERT INTO app_schema_migrations (name) VALUES ('$migration_name') ON CONFLICT (name) DO NOTHING"
   done
 fi
 
-# Apply schema (additive changes only — destructive changes need manual db:push)
-if [ "${SKIP_DB_PUSH:-0}" = "1" ]; then
-  echo "[entrypoint] SKIP_DB_PUSH=1 — skipping drizzle-kit push."
+# `drizzle-kit push` is deliberately opt-in. Running it on every container
+# restart can block startup for 90 seconds and make Coolify fail its health
+# check even when the application image is healthy. Production schema changes
+# must normally arrive through committed SQL migrations above.
+if [ "${RUN_DB_PUSH_ON_START:-0}" = "1" ] && [ "${SKIP_DB_PUSH:-1}" != "1" ]; then
+  echo "[entrypoint] RUN_DB_PUSH_ON_START=1 — running drizzle-kit push."
+  timeout 90 npx drizzle-kit push --force </dev/null
 else
-  echo "[entrypoint] Running drizzle-kit push (additive schema sync)…"
-  timeout 90 npx drizzle-kit push --force </dev/null || \
-    echo "[entrypoint] WARN: db:push failed or needed manual confirmation. Continuing — set SKIP_DB_PUSH=1 to silence."
+  echo "[entrypoint] Skipping drizzle-kit push; committed migrations are authoritative."
 fi
 
 echo "[entrypoint] Launching: $*"

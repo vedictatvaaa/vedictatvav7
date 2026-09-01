@@ -5,3 +5,4 @@
 - [TS baseline is not a gate](ts-baseline-no-gate.md) — repo ships via tsx with ~565 pre-existing tsc errors; never gate on a clean `npm run check`, only watch for NEW errors in lines you touched (esp. TS2802 Set/Map iteration → wrap in Array.from).
 - [One-off TSX probes](tsx-probes.md) — temporary TSX scripts outside the workspace compile as CJS; use static absolute imports and wrap awaits in an async IIFE.
 - [Swiss Ephemeris install override](swisseph-install.md) — keep its node-gyp override on Node 20; the package's declared v10 path pulls firewall-blocked tar 6.2.1.
+- [Coolify restart discipline](coolify-restarts.md) — preserve the expensive dependency layer and use committed migrations; never run drizzle push automatically on every container restart.

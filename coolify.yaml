@@ -21,7 +21,7 @@ applications:
         interval: 30
         timeout: 5
         retries: 3
-        start_period: 45
+        start_period: 120
     storage:
       - source: vedictatva-uploads
         destination: /app/uploads
@@ -48,4 +48,5 @@ applications:
       - BACKUP_DIR=/app/backups
       - BACKUP_RETENTION_DAYS=7
       - DEPLOY_FROM_BROWSER=0
-      - SKIP_DB_PUSH=0
+      - SKIP_DB_PUSH=1
+      - RUN_DB_PUSH_ON_START=0

@@ -60,6 +60,14 @@ import { eq, and, gt, lt, like } from "drizzle-orm";
 import { panditApplications, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+import {
+  adminPanditDto,
+  buildPanditDiscoverySummary,
+  canViewAllPandits,
+  matchesPanditDiscoveryReach,
+  matchesPanditListingFilters,
+  publicPanditDto,
+} from "./pandit-discovery-policy";
 import { publicPanditReviewDto } from "./pandit-public-access";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
@@ -2988,7 +2996,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const { states, cities, pandits: eligible } = await publicEligibility();
       const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
       res.json(buildPanditDiscoverySummary(eligible, states, cities, service));
-    } catch { res.status(500).json({ message: "Failed to load pandit discovery" }); }
+    } catch (error) {
+      console.error("pandit-discovery error:", error);
+      res.status(500).json({ message: "Failed to load pandit discovery" });
+    }
   });
 
   app.get("/api/book-pandit-online", async (req, res) => {

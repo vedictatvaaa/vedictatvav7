@@ -285,7 +285,7 @@ if [[ -n "$GH_APP_UUID" ]]; then
       health_check_interval: 30,
       health_check_timeout: 5,
       health_check_retries: 3,
-      health_check_start_period: 45
+      health_check_start_period: 120
     }')
   app_resp=$(api POST /api/v1/applications/private-github-app "$app_body")
 else
@@ -313,7 +313,7 @@ else
       health_check_interval: 30,
       health_check_timeout: 5,
       health_check_retries: 3,
-      health_check_start_period: 45
+      health_check_start_period: 120
     }')
   app_resp=$(api POST /api/v1/applications/public "$app_body")
 fi
@@ -369,7 +369,8 @@ env_payload=$(jq -n \
       {key: "BACKUP_DIR",                value: "/app/backups", is_secret: false},
       {key: "BACKUP_RETENTION_DAYS",     value: "7",       is_secret: false},
       {key: "DEPLOY_FROM_BROWSER",       value: "1",       is_secret: false},
-      {key: "SKIP_DB_PUSH",              value: "0",       is_secret: false},
+      {key: "SKIP_DB_PUSH",              value: "1",       is_secret: false},
+      {key: "RUN_DB_PUSH_ON_START",       value: "0",       is_secret: false},
       {key: "NODE_ENV",                  value: "production", is_secret: false}
     ]
   }')

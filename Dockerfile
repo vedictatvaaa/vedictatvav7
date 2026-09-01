@@ -12,11 +12,13 @@ RUN apk add --no-cache python3 make g++ libc6-compat
 ENV NODE_ENV=development
 ENV NPM_CONFIG_PRODUCTION=false
 ENV npm_config_production=false
+ENV NODE_OPTIONS=--max-old-space-size=1536
 
 # Install ALL deps explicitly. --include=dev wins over production/omit
 # settings supplied by the build environment.
 COPY package.json package-lock.json* ./
-RUN npm ci --include=dev --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --include=dev --prefer-offline --no-audit --no-fund
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
@@ -65,7 +67,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 5000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
   CMD curl -fsS http://localhost:5000/api/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
