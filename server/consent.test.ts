@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hasAnalyticsConsent, hasMarketingConsent, parseConsentCookie } from "./consent";
+import {
+  getConsentedReferralSlug,
+  hasAnalyticsConsent,
+  hasMarketingConsent,
+  parseConsentCookie,
+} from "./consent";
 
 test("consent cookie parser rejects missing and malformed values", () => {
   assert.equal(parseConsentCookie(undefined), null);
@@ -14,4 +19,22 @@ test("analytics and marketing require their explicit grant", () => {
   assert.equal(hasMarketingConsent({ cookies: { vt_consent: "v1.a1.m0" } } as any), false);
   assert.equal(hasAnalyticsConsent({ cookies: { vt_consent: "v1.a0.m1" } } as any), false);
   assert.equal(hasMarketingConsent({ cookies: { vt_consent: "v1.a0.m1" } } as any), true);
+});
+
+test("stale referral cookies cannot attribute without marketing consent", () => {
+  const staleReferral = { cookies: { vt_ref: "pt-example", vt_consent: "v1.a1.m0" } };
+  assert.equal(getConsentedReferralSlug(staleReferral), null);
+  assert.equal(
+    getConsentedReferralSlug({
+      cookies: { vt_ref: "pt-example", vt_consent: "v1.a0.m1" },
+    }),
+    "pt-example",
+  );
+  assert.equal(
+    getConsentedReferralSlug({
+      cookies: { vt_ref: "pt-example", vt_consent: "v1.a0.m0" },
+      refSlug: "pt-example",
+    }),
+    null,
+  );
 });

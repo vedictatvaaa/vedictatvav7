@@ -21,3 +21,12 @@ export function hasAnalyticsConsent(req: Pick<Request, "cookies">): boolean {
 export function hasMarketingConsent(req: Pick<Request, "cookies">): boolean {
   return parseConsentCookie(req.cookies?.vt_consent)?.marketing === true;
 }
+
+export function getConsentedReferralSlug(req: {
+  cookies?: Record<string, unknown>;
+  refSlug?: string;
+}): string | null {
+  if (!hasMarketingConsent(req as Pick<Request, "cookies">)) return null;
+  const slug = String(req.refSlug || req.cookies?.vt_ref || "").trim().toLowerCase();
+  return /^[a-z0-9-]{1,80}$/.test(slug) ? slug : null;
+}

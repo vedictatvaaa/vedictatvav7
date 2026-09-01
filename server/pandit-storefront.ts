@@ -32,7 +32,7 @@ import {
   publicStorefrontPanditDto,
 } from "./pandit-public-access";
 import { panditServiceWriteSchema, panditPackageWriteSchema, panditGalleryWriteSchema, panditAvailabilityWriteSchema } from "./catalog-validation";
-import { hasAnalyticsConsent, hasMarketingConsent } from "./consent";
+import { getConsentedReferralSlug, hasAnalyticsConsent, hasMarketingConsent } from "./consent";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -264,7 +264,7 @@ export async function attributeReferral(
   refEmail?: string | null,
 ): Promise<void> {
   try {
-    const slug = req.refSlug || (req.cookies?.[REF_COOKIE] || "").toLowerCase();
+    const slug = getConsentedReferralSlug(req);
     if (!slug) return;
     const pandit = await getPubliclyEligiblePanditBySlug(slug);
     if (!pandit) return;
