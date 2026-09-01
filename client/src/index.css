@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -29,8 +30,8 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  --font-sans: 'Inter', sans-serif;
-  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
 
   /* Register the top-bar marquee so Tailwind v4 recognizes
      `animate-marquee` as a utility (and `motion-safe:animate-marquee`
@@ -39,40 +40,38 @@
 }
 
 :root {
-  /* Beige background: #F5F0E6 */
-  --background: 40 33% 96%;
-  /* Dark Maroon text: #2B1115 */
-  --foreground: 350 43% 12%;
+  --background: 38 42% 95%;
+  --foreground: 20 30% 17%;
   
   /* White cards for contrast */
-  --card: 0 0% 100%;
-  --card-foreground: 350 43% 12%;
+  --card: 38 55% 98%;
+  --card-foreground: 20 30% 17%;
   
-  --popover: 0 0% 100%;
-  --popover-foreground: 350 43% 12%;
+  --popover: 38 55% 98%;
+  --popover-foreground: 20 30% 17%;
   
   /* Maroon Primary: #6D2B35 */
-  --primary: 350 43% 30%;
-  --primary-foreground: 40 33% 96%;
+  --primary: 9 48% 30%;
+  --primary-foreground: 38 42% 95%;
   
   /* Gold Secondary: #D4AF37 */
-  --secondary: 46 65% 52%;
-  --secondary-foreground: 350 43% 12%;
+  --secondary: 42 79% 56%;
+  --secondary-foreground: 20 30% 17%;
   
   /* Muted beige */
-  --muted: 40 20% 90%;
-  --muted-foreground: 350 20% 40%;
+  --muted: 37 28% 88%;
+  --muted-foreground: 20 16% 42%;
   
   /* Accent light gold/beige */
-  --accent: 46 40% 90%;
-  --accent-foreground: 350 43% 30%;
+  --accent: 38 68% 86%;
+  --accent-foreground: 9 48% 30%;
   
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
+  --destructive: 1 65% 42%;
+  --destructive-foreground: 38 42% 95%;
   
-  --border: 40 20% 85%;
-  --input: 40 20% 85%;
-  --ring: 46 65% 52%;
+  --border: 35 27% 81%;
+  --input: 35 27% 81%;
+  --ring: 42 79% 56%;
   
   --radius: 0.5rem;
 }

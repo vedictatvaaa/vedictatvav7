@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw } from "lucide-react";
 import { getPanditToken } from "@/lib/panditAuth";
@@ -101,6 +102,7 @@ function PanditServicesEditor() {
     queryFn: () => api("/api/pandit/services"),
   });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_SERVICE_FORM);
 
   const reset = () => {
@@ -130,6 +132,7 @@ function PanditServicesEditor() {
       qc.invalidateQueries({ queryKey: ["pandit-services"] });
       toast({ title: editingId ? "Service updated" : "Service added" });
       reset();
+      setServiceDialogOpen(false);
     },
     onError: (error: unknown) => toast({
       title: "Could not save service",
@@ -157,6 +160,15 @@ function PanditServicesEditor() {
       availability: service.availability || "",
       displayOrder: service.displayOrder || 0,
     });
+    setServiceDialogOpen(true);
+  };
+  const startAdd = () => {
+    reset();
+    setServiceDialogOpen(true);
+  };
+  const closeServiceDialog = () => {
+    setServiceDialogOpen(false);
+    reset();
   };
 
   const master = (masters.data || []).find(item => item.id === form.masterServiceId);
@@ -203,12 +215,23 @@ function PanditServicesEditor() {
           </div>
         )}
 
-        <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="font-semibold text-[#4a1a22]">{editingId ? "Edit service" : "Add a service"}</div>
-            {editingId ? <Button variant="ghost" size="sm" onClick={reset}>Cancel</Button> : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <Button className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#4a1a22]" onClick={startAdd}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add a service
+        </Button>
+      </CardContent>
+      <Dialog open={serviceDialogOpen} onOpenChange={open => open ? setServiceDialogOpen(true) : closeServiceDialog()}>
+        <DialogContent
+          className="z-[60] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl border-stone-200 bg-[#FFFAEC] p-0"
+          data-lenis-prevent
+        >
+          <DialogHeader className="border-b border-[#D4AF37]/30 px-5 py-4 pr-12 text-left">
+            <DialogTitle className="text-[#4a1a22]">{editingId ? "Edit service" : "Add a service"}</DialogTitle>
+            <DialogDescription className="text-stone-600">
+              Choose an approved ceremony and set the details devotees see on your storefront.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label htmlFor="service-master">Approved ceremony</Label>
               <select
@@ -239,12 +262,15 @@ function PanditServicesEditor() {
             <div><Label htmlFor="service-inclusions">Inclusions (one per line)</Label><Textarea id="service-inclusions" rows={3} value={form.inclusions} onChange={event => setForm(current => ({ ...current, inclusions: event.target.value }))} placeholder={"Sankalp\nHavan\nAarti"} /></div>
             <div><Label htmlFor="service-areas">Service areas (comma separated)</Label><Textarea id="service-areas" rows={3} value={form.serviceAreas} onChange={event => setForm(current => ({ ...current, serviceAreas: event.target.value }))} placeholder="Varanasi, Sarnath" /></div>
           </div>
-          <Button className="mt-4 bg-[#6D2B35] text-[#D4AF37] hover:bg-[#4a1a22]" disabled={!canSave} onClick={() => saveService.mutate()}>
-            {saveService.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            {editingId ? "Save service" : "Add to storefront"}
-          </Button>
-        </div>
-      </CardContent>
+          <DialogFooter className="border-t border-stone-200 px-5 py-4">
+            <Button variant="outline" onClick={closeServiceDialog} disabled={saveService.isPending}>Cancel</Button>
+            <Button className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#4a1a22]" disabled={!canSave} onClick={() => saveService.mutate()}>
+              {saveService.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {editingId ? "Save service" : "Add to storefront"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

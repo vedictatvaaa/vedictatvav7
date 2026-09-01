@@ -8,10 +8,21 @@ import {
   pujaBookings,
   pujaBookingMessages,
   pujaTips,
+  panditServices,
+  panditStorefronts,
   insertPujaBookingMessageSchema,
 } from "@shared/schema";
-import { and, desc, eq, gt, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+  buildChecklistStates,
+  dashboardIdentity,
+  indiaDateKey,
+  indiaDayBounds,
+  operationalTodayBookingStatuses,
+  storefrontPublicPath,
+  storefrontPublicationState,
+} from "./pandit-dashboard";
 
 const SESSION_TTL_DAYS = 30;
 
@@ -131,6 +142,83 @@ export function registerPanditPortalRoutes(app: Express) {
     if (!rows.length) return res.status(404).json({ error: "Not found" });
     const { passwordHash, ...safe } = rows[0] as any;
     res.json({ pandit: safe, mustChangePassword: !passwordHash, isOnline: isPanditOnline(req.panditId!) });
+  });
+
+  // Home is deliberately session-scoped: no Pandit ID is accepted from the
+  // browser, and every aggregate below is constrained to req.panditId.
+  app.get("/api/pandit/dashboard/summary", panditAuthMiddleware, async (req: PanditRequest, res) => {
+    try {
+      const panditId = req.panditId!;
+      const date = indiaDateKey();
+      const { start, end } = indiaDayBounds(date);
+      const [panditRows, storefrontRows, todayRows, pendingRows, unreadRows, serviceRows, earningsRows] = await Promise.all([
+        db.select({
+          id: pandits.id, name: pandits.name, city: pandits.city, experience: pandits.experience,
+          image: pandits.image, verified: pandits.verified, specialization: pandits.specialization,
+          languages: pandits.languages, bio: pandits.bio, availability: pandits.availability,
+          onLeave: pandits.onLeave, slug: pandits.slug, commissionPct: pandits.commissionPct,
+        }).from(pandits).where(eq(pandits.id, panditId)).limit(1),
+        db.select({ status: panditStorefronts.status, isPublished: panditStorefronts.isPublished })
+          .from(panditStorefronts).where(eq(panditStorefronts.panditId, panditId)).limit(1),
+        db.select({ count: sql<number>`count(*)::int` }).from(pujaBookings)
+          .where(and(
+            eq(pujaBookings.panditId, panditId),
+            eq(pujaBookings.date, date),
+            inArray(pujaBookings.status, operationalTodayBookingStatuses),
+          )),
+        db.select({ count: sql<number>`count(*)::int` }).from(pujaBookings)
+          .where(and(eq(pujaBookings.panditId, panditId), inArray(pujaBookings.status, ["pending", "requested", "assigned"]))),
+        db.select({ count: sql<number>`count(*)::int` }).from(pujaBookingMessages)
+          .innerJoin(pujaBookings, eq(pujaBookingMessages.bookingId, pujaBookings.id))
+          .where(and(
+            eq(pujaBookings.panditId, panditId),
+            eq(pujaBookingMessages.senderType, "customer"),
+            eq(pujaBookingMessages.readByPandit, false),
+          )),
+        db.select({ count: sql<number>`count(*)::int` }).from(panditServices)
+          .where(and(eq(panditServices.panditId, panditId), eq(panditServices.isActive, true))),
+        db.select({ net: sql<number>`coalesce(sum(${pujaBookings.totalAmount} - round(${pujaBookings.totalAmount} * coalesce(${pandits.commissionPct}, 15) / 100.0)), 0)::int` })
+          .from(pujaBookings)
+          .innerJoin(pandits, eq(pujaBookings.panditId, pandits.id))
+          .where(and(
+            eq(pujaBookings.panditId, panditId),
+            eq(pujaBookings.status, "completed"),
+            gte(pujaBookings.completedAt, start),
+            lt(pujaBookings.completedAt, end),
+          )),
+      ]);
+      const pandit = panditRows[0];
+      if (!pandit) return res.status(404).json({ error: "Pandit not found" });
+
+      const storefront = storefrontRows[0] || null;
+      const services = Number(serviceRows[0]?.count || 0);
+      const hasProfile = Boolean(pandit.name && pandit.city && pandit.specialization && pandit.languages && pandit.bio?.trim());
+      const hasAvailability = !pandit.onLeave && Boolean(pandit.availability && pandit.availability !== "unavailable");
+      res.json({
+        identity: dashboardIdentity(pandit),
+        today: {
+          date,
+          bookings: { state: "available", count: Number(todayRows[0]?.count || 0) },
+          pendingBookings: { state: "available", count: Number(pendingRows[0]?.count || 0) },
+          unreadMessages: { state: "available", count: Number(unreadRows[0]?.count || 0) },
+          // Tips lack a paid-at timestamp, so they cannot truthfully be
+          // assigned to a day and are intentionally excluded from this metric.
+          earnings: { state: "available", amountInr: Number(earningsRows[0]?.net || 0), scope: "completed_bookings_net_of_commission" },
+        },
+        storefront: {
+          state: storefrontPublicationState(storefront),
+          isPublished: storefront?.isPublished ?? false,
+          slug: pandit.slug || null,
+          publicPath: storefrontPublicPath(pandit.slug, storefront),
+        },
+        checklist: {
+          ...buildChecklistStates({ hasProfile, activeServiceCount: services, hasAvailability }),
+          inputs: { activeServiceCount: services, hasProfile, hasAvailability },
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || "Failed to load dashboard summary" });
+    }
   });
 
   // Live heartbeat — called from the pandit portal every ~60s.
