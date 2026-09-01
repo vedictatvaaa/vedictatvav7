@@ -14,6 +14,7 @@ import { useConsentPreferences } from "@/lib/consent";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
+import { trackPanditSeoEvent } from "@/lib/analytics";
 
 type Service = {
   id: number; name: string; slug: string; category?: string; description?: string;
@@ -45,7 +46,7 @@ const money = (n?: number) => typeof n === "number" ? `₹${n.toLocaleString("en
 const listify = (value?: string[] | string) => Array.isArray(value) ? value : value ? value.split(",").map(x => x.trim()).filter(Boolean) : [];
 
 function bookingHref(panditId: number, service?: Service, packageId?: number) {
-  const params = new URLSearchParams({ pandit: String(panditId) });
+  const params = new URLSearchParams({ pandit: String(panditId), source: "storefront" });
   if (service) {
     params.set("serviceId", String(service.id));
     params.set("service", service.slug || String(service.id));
@@ -64,7 +65,7 @@ function SectionHeading({ eyebrow, title, copy }: { eyebrow: string; title: stri
   </div>;
 }
 
-function ServiceCard({ service, panditId }: { service: Service; panditId: number }) {
+function ServiceCard({ service, panditId, panditSlug }: { service: Service; panditId: number; panditSlug?: string }) {
   return <Card className="group relative flex h-full flex-col overflow-hidden rounded-[4px] border-[#D5AE59]/35 bg-[#FFFDF7] shadow-[0_12px_36px_rgba(91,29,39,.06)] transition-transform duration-300 hover:-translate-y-1">
     <div className="h-1 bg-[#A33B29]" />
     <div className="flex flex-1 flex-col p-5 sm:p-6">
@@ -76,7 +77,7 @@ function ServiceCard({ service, panditId }: { service: Service; panditId: number
       {service.inclusions?.length ? <div className="mt-4 space-y-1.5">{service.inclusions.slice(0, 3).map(item => <div key={item} className="flex gap-2 text-xs text-[#6D5A50]"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#A86C1B]" />{item}</div>)}</div> : null}
       <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#E8D9B7] pt-5">
         <div><div className="flex items-center gap-1.5 text-xs text-[#806E62]"><Clock3 className="h-3.5 w-3.5" />{service.durationMinutes ? `${service.durationMinutes} minutes` : "Duration confirmed in booking"}</div><div className="mt-1 text-2xl font-semibold text-[#7C291F]">{money(service.price)}</div></div>
-        <Link href={bookingHref(panditId, service)} className="inline-flex"><Button className="rounded-none bg-[#7C291F] text-[#FFF8E8] hover:bg-[#5B1D27]">Book service <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+        <Link href={bookingHref(panditId, service)} onClick={() => { const mode = service.mode === "online" ? "online" : service.mode === "hybrid" ? "hybrid" : "offline"; trackPanditSeoEvent("discovery_cta", { slug: service.slug, mode, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug: panditSlug || service.slug, mode, source: "storefront" }); }} className="inline-flex"><Button className="rounded-none bg-[#7C291F] text-[#FFF8E8] hover:bg-[#5B1D27]">Book service <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
       </div>
     </div>
   </Card>;
@@ -108,6 +109,9 @@ export default function PanditStorefrontPage() {
     }
   }, [consent?.marketing, slug]);
   useEffect(() => {
+    if (data?.pandit) trackPanditSeoEvent("discovery_impression", { slug, source: "storefront" });
+  }, [data?.pandit, slug]);
+  useEffect(() => {
     if (lightbox < 0) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(-1); };
     window.addEventListener("keydown", handler);
@@ -129,7 +133,11 @@ export default function PanditStorefrontPage() {
   if (isLoading) return <div className="min-h-[100dvh] bg-[#FBF4E3] p-5"><div className="mx-auto max-w-6xl animate-pulse space-y-5"><div className="h-5 w-40 bg-[#E8D9B7]" /><div className="h-[430px] rounded-sm bg-[#E8D9B7]" /><div className="h-10 w-64 bg-[#E8D9B7]" /><div className="grid gap-4 md:grid-cols-3"><div className="h-52 bg-[#E8D9B7]" /><div className="h-52 bg-[#E8D9B7]" /><div className="h-52 bg-[#E8D9B7]" /></div></div></div>;
   if (isError || !data || !pandit) return <div className="grid min-h-[100dvh] place-items-center bg-[#FBF4E3] px-6 text-center"><div><div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full border border-[#D5AE59] text-[#7C291F]"><ShieldCheck /></div><h1 className="text-3xl text-[#5B1D27]">This storefront is unavailable</h1><p className="mt-2 text-sm text-[#715F55]">The page may be unpublished or the link may have changed.</p><div className="mt-6 flex justify-center gap-3"><Button onClick={() => refetch()} variant="outline" className="rounded-none border-[#7C291F] text-[#7C291F]">Try again</Button><Link href="/book-pandit-online" className="inline-flex"><Button className="rounded-none bg-[#7C291F]">Browse Pandits</Button></Link></div></div></div>;
 
-  const book = () => navigate(bookingHref(pandit.id));
+  const book = () => {
+    trackPanditSeoEvent("discovery_cta", { slug, source: "storefront" });
+    trackPanditSeoEvent("booking_handoff", { slug, source: "storefront" });
+    navigate(bookingHref(pandit.id));
+  };
   const chat = () => requireAuth(
     () => navigate(`/pandit-profile/${pandit.id}`),
     { title: "Sign in to message", description: "Private chat keeps your conversation inside Vedic Tatva." },

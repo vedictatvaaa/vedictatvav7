@@ -53,6 +53,36 @@ export function trackDiscoveryEvent(action: string, data: Record<string, string 
   emit("pandit_discovery", { action, ...data });
 }
 
+type PanditSeoAction = "discovery_impression" | "discovery_cta" | "booking_handoff" | "booking_outcome";
+type PanditSeoSource = "profile" | "storefront" | "directory" | "city" | "puja_city" | "booking";
+type PanditSeoMode = "online" | "offline" | "hybrid" | "unspecified";
+type PanditSeoOutcome = "success" | "error" | "auth_required";
+
+export function trackPanditSeoEvent(
+  action: PanditSeoAction,
+  data: {
+    slug?: string;
+    mode?: PanditSeoMode;
+    source: PanditSeoSource;
+    outcome?: PanditSeoOutcome;
+  },
+) {
+  const slug = normalizeAnalyticsSlug(data.slug);
+  emit("pandit_seo", {
+    action,
+    slug,
+    mode: data.mode || "unspecified",
+    source: data.source,
+    ...(data.outcome ? { outcome: data.outcome } : {}),
+  });
+}
+
+export function normalizeAnalyticsSlug(value: unknown): string {
+  return typeof value === "string" && /^[a-z][a-z0-9-]{0,99}$/.test(value)
+    ? value
+    : "unspecified";
+}
+
 function toGtagItem(p: Product, quantity: number, variant?: string) {
   return {
     item_id: String(p.id),

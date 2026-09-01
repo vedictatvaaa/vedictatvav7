@@ -16,6 +16,7 @@ import { PageHero } from "@/components/ui/section-primitives";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
+import { trackPanditSeoEvent } from "@/lib/analytics";
 
 const PUJA_PARENT_H1 = "Book a Verified Pandit for Puja at Home";
 
@@ -53,6 +54,7 @@ export default function PujaBooking() {
   const bookingServiceId = Number(searchParams.get("serviceId") || 0);
   const bookingPackageId = Number(searchParams.get("packageId") || 0);
   const bookingService = searchParams.get("service")?.trim() || "";
+  const bookingSource = searchParams.get("source") === "storefront" ? "storefront" : "booking";
   const customPujaType = bookingPackageId
     ? `package:${bookingPackageId}`
     : bookingServiceId
@@ -67,7 +69,7 @@ export default function PujaBooking() {
     enabled: panditId > 0,
   });
   const { data: selectedStorefront } = useQuery<{
-    services?: Array<{ id: number; name: string; price: number }>;
+    services?: Array<{ id: number; name: string; slug?: string; price: number }>;
     packages?: Array<{ id: number; name: string; price: number }>;
   }>({
     queryKey: ["/api/storefront", selectedPandit?.slug, "booking-pricing"],
@@ -90,6 +92,9 @@ export default function PujaBooking() {
   const selectedOffering = bookingPackageId
     ? selectedStorefront?.packages?.find(pkg => pkg.id === bookingPackageId)
     : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
+  const analyticsSlug = selectedPandit?.slug
+    || (bookingServiceId ? selectedStorefront?.services?.find(service => service.id === bookingServiceId)?.slug : undefined)
+    || (pujaOptions.some(option => option.value === pujaType) ? pujaType : undefined);
   const availablePujaOptions = useMemo(() => customPujaType
     ? [...pujaOptions, {
         value: customPujaType,
@@ -142,6 +147,12 @@ export default function PujaBooking() {
       return res.json();
     },
     onSuccess: () => {
+      trackPanditSeoEvent("booking_outcome", {
+        slug: analyticsSlug,
+        mode,
+        source: bookingSource,
+        outcome: "success",
+      });
       toast({ title: "Booking Confirmed!", description: "Your puja has been booked. You will receive a confirmation soon." });
       setPujaType("");
       setDate("");
@@ -151,6 +162,12 @@ export default function PujaBooking() {
       setLocation("");
     },
     onError: () => {
+      trackPanditSeoEvent("booking_outcome", {
+        slug: analyticsSlug,
+        mode,
+        source: bookingSource,
+        outcome: "error",
+      });
       toast({ title: "Booking Failed", description: "Something went wrong. Please try again.", variant: "destructive" });
     },
   });
