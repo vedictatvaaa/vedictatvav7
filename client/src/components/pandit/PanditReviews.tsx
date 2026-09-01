@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Star, MessageSquare, CheckCircle2 } from "lucide-react";
 import { panditApi } from "@/lib/panditAuth";
 import { useToast } from "@/hooks/use-toast";
+import { PanditEmptyState, PanditErrorState, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 interface Review {
   id: number; reviewerName: string; reviewerCity: string | null;
@@ -30,15 +31,18 @@ export default function PanditReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState<number | null>(null);
 
   async function load() {
     try {
       setLoading(true);
+      setError(null);
       const r = await panditApi("GET", "/api/pandit/reviews");
       setReviews(r.reviews || []); setSummary(r.summary || null);
     } catch (e: any) {
+      setError(e?.message || "Your reviews could not be loaded.");
       toast({ title: "Failed to load reviews", description: e?.message, variant: "destructive" });
     } finally { setLoading(false); }
   }
@@ -58,27 +62,16 @@ export default function PanditReviews() {
     } finally { setBusy(null); }
   }
 
+  if (loading) return <PanditLoadingState label="Loading reviews…" />;
+  if (error) return <div className="space-y-5"><PanditSectionHeader title="Reviews" description="See what yajamanas are saying and reply publicly from one place." /><PanditErrorState detail={error} onRetry={load} /></div>;
+
   return (
-    <div className="space-y-6" data-testid="pandit-reviews-tab">
-      <div>
-        <h2 className="text-2xl font-serif font-bold text-[#4a1a22]">Reviews</h2>
-        <p className="text-sm text-stone-600 mt-1">
-          What yajamanas are saying. Replies appear publicly on your profile and help future bookings.
-        </p>
-      </div>
+    <div className="space-y-5" data-testid="pandit-reviews-tab">
+      <PanditSectionHeader title="Reviews" description="See what yajamanas are saying and reply publicly from one place." actions={<Button size="sm" variant="outline" onClick={load}>Refresh</Button>} />
 
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card><CardContent className="p-4">
-            <div className="text-xs text-stone-500">Average rating</div>
-            <div className="flex items-baseline gap-2">
-              <div className="text-3xl font-serif font-bold text-[#4a1a22]" data-testid="text-avg-rating">
-                {summary.avg.toFixed(1)}
-              </div>
-              <StarRow rating={summary.avg} />
-            </div>
-            <div className="text-xs text-stone-500 mt-1">{summary.count} reviews</div>
-          </CardContent></Card>
+        <PanditKpiGrid className="md:grid-cols-3">
+          <PanditKpi label="Average rating" value={<span className="inline-flex items-center gap-2">{summary.avg.toFixed(1)} <StarRow rating={summary.avg} /></span>} detail={`${summary.count} reviews`} icon={Star} testId="text-avg-rating" />
           <Card><CardContent className="p-4">
             <div className="text-xs text-stone-500 mb-2">Distribution</div>
             <div className="space-y-1">
@@ -94,20 +87,12 @@ export default function PanditReviews() {
               ))}
             </div>
           </CardContent></Card>
-          <Card><CardContent className="p-4">
-            <div className="text-xs text-stone-500">Awaiting your reply</div>
-            <div className="text-3xl font-serif font-bold text-amber-700" data-testid="text-unanswered">{summary.unanswered}</div>
-            <div className="text-xs text-stone-500 mt-1">Replying boosts trust on your profile.</div>
-          </CardContent></Card>
-        </div>
+          <PanditKpi label="Awaiting your reply" value={summary.unanswered} detail="Replying boosts trust on your profile." icon={MessageSquare} tone="gold" testId="text-unanswered" />
+        </PanditKpiGrid>
       )}
 
-      {loading && <div className="text-sm text-stone-500">Loading…</div>}
       {!loading && reviews.length === 0 && (
-        <Card><CardContent className="p-8 text-center text-stone-500">
-          <MessageSquare className="w-8 h-8 mx-auto mb-2 text-stone-400" />
-          No reviews yet. They will appear here as yajamanas leave feedback.
-        </CardContent></Card>
+        <PanditEmptyState icon={MessageSquare} title="No reviews yet" detail="They’ll appear here as yajamanas leave feedback." />
       )}
 
       <div className="space-y-3">

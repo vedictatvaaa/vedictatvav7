@@ -6,7 +6,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { panditApi } from "@/lib/panditAuth";
 import { PanditReferralsPanel } from "@/components/pandit/PanditStorefrontPanel";
-import { Wallet, TrendingUp, ArrowDownToLine, Receipt, Sparkles, Download, RefreshCw, Loader2 } from "lucide-react";
+import { Wallet, TrendingUp, ArrowDownToLine, Receipt, Sparkles, Download, RefreshCw } from "lucide-react";
+import { PanditEmptyState, PanditErrorState, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 type Summary = {
   commissionPct: number;
@@ -39,10 +40,12 @@ export default function PanditEarnings() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"overview" | "transactions" | "payouts" | "affiliate">("overview");
 
   async function load() {
     setLoading(true);
+    setError(null);
     try {
       const [s, t] = await Promise.all([
         panditApi("GET", "/api/pandit/earnings") as Promise<Summary>,
@@ -51,6 +54,7 @@ export default function PanditEarnings() {
       setSummary(s);
       setTxs(t.transactions || []);
     } catch (e: any) {
+      setError(e?.message || "Your earnings could not be loaded.");
       toast({ title: "Failed to load earnings", description: e?.message || "Please retry", variant: "destructive" });
     } finally { setLoading(false); }
   }
@@ -81,9 +85,9 @@ export default function PanditEarnings() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading || !summary) {
-    return <Card><CardContent className="p-10 flex items-center justify-center text-sm text-[#5a4a3a]/70"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading earnings…</CardContent></Card>;
-  }
+  if (loading) return <PanditLoadingState label="Loading earnings…" />;
+  if (error) return <div className="space-y-5"><PanditSectionHeader title="Earnings" description="Track what your practice has earned and what is ready for payout." /><PanditErrorState detail={error} onRetry={load} /></div>;
+  if (!summary) return <div className="space-y-5"><PanditSectionHeader title="Earnings" description="Track what your practice has earned and what is ready for payout." /><PanditEmptyState icon={Wallet} title="Earnings are not available yet" detail="Complete a booking or receive a tip to see your practice ledger here." /></div>;
 
   const s = summary.summary;
   const kpis = [
@@ -95,30 +99,24 @@ export default function PanditEarnings() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5" data-testid="pandit-earnings">
+      <PanditSectionHeader
+        title="Earnings"
+        description="A clear view of puja income, tips, referrals, and the next payout."
+        actions={<><Button variant="outline" size="sm" onClick={load} data-testid="btn-earnings-refresh"><RefreshCw className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Refresh</span></Button><Button variant="outline" size="sm" onClick={exportCsv} data-testid="btn-earnings-export"><Download className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Export CSV</span></Button></>}
+      />
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <PanditKpiGrid className="md:grid-cols-5">
         {kpis.map((k, i) => {
           const I = k.i;
           return (
-            <Card key={i} className={k.emph ? "border-[#D4AF37]/40 bg-[#FFFAEC]" : ""} data-testid={`earn-kpi-${i}`}>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 text-[10px] text-[#5a4a3a]/65 uppercase tracking-wide font-bold"><I className={`h-3.5 w-3.5 ${k.c}`} />{k.l}</div>
-                <div className="text-xl font-bold text-[#4a1a22] mt-1">{k.v}</div>
-                <div className="text-[10px] text-[#5a4a3a]/60 mt-0.5">{k.sub}</div>
-              </CardContent>
-            </Card>
+            <PanditKpi key={i} label={k.l} value={k.v} detail={k.sub} icon={I} tone={k.emph ? "gold" : "maroon"} testId={`earn-kpi-${i}`} />
           );
         })}
-      </div>
-
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={load} data-testid="btn-earnings-refresh"><RefreshCw className="h-3.5 w-3.5 mr-1" />Refresh</Button>
-        <Button variant="outline" size="sm" onClick={exportCsv} data-testid="btn-earnings-export"><Download className="h-3.5 w-3.5 mr-1" />Export CSV</Button>
-      </div>
+      </PanditKpiGrid>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-        <TabsList className="grid grid-cols-4 w-full max-w-xl">
+        <TabsList className="flex w-full max-w-full justify-start overflow-x-auto sm:max-w-xl">
           <TabsTrigger value="overview" data-testid="tab-earn-overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions" data-testid="tab-earn-tx">Transactions</TabsTrigger>
           <TabsTrigger value="payouts" data-testid="tab-earn-payouts">Payouts</TabsTrigger>
@@ -126,7 +124,7 @@ export default function PanditEarnings() {
         </TabsList>
 
         <TabsContent value="affiliate" className="mt-4">
-          <PanditReferralsPanel />
+          <PanditReferralsPanel embedded />
         </TabsContent>
 
         <TabsContent value="overview" className="mt-4 space-y-4">
@@ -172,7 +170,7 @@ export default function PanditEarnings() {
           <Card>
             <CardContent className="p-0">
               {txs.length === 0 ? (
-                <div className="p-10 text-center text-sm text-[#5a4a3a]/65">No transactions yet. Completed bookings, tips and payouts will appear here.</div>
+                <PanditEmptyState icon={Receipt} title="No transactions yet" detail="Completed bookings, tips, and payouts will appear here." />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -207,7 +205,7 @@ export default function PanditEarnings() {
 
         <TabsContent value="payouts" className="mt-4 space-y-3">
           {summary.recentPayouts.length === 0 ? (
-            <Card><CardContent className="p-10 text-center text-sm text-[#5a4a3a]/65">No payouts recorded yet. Once we settle, you'll see them here.</CardContent></Card>
+            <PanditEmptyState icon={ArrowDownToLine} title="No payouts recorded yet" detail="Once a payout is settled, you’ll see the date, method, and reference here." />
           ) : (
             <>
             <div className="text-[11px] text-[#5a4a3a]/65 px-1">Showing your most recent {summary.recentPayouts.length} of {summary.summary.payoutsCount} payouts.</div>

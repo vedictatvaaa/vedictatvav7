@@ -10,6 +10,7 @@ import {
   Search, Copy, BookOpen, ListChecks, Sparkles, ChevronRight, Wrench,
   ScrollText, Calculator, Flame, Play, Pause, RotateCcw, Check, IndianRupee,
 } from "lucide-react";
+import { PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 type Mantra = {
   id: string; title: string; deity: string; tradition: string;
@@ -174,19 +175,11 @@ const SAMAGRI: SamagriTemplate[] = [
 
 export default function PanditTools() {
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="p-4 flex items-center gap-3">
-          <Wrench className="h-5 w-5 text-[#6D2B35]" />
-          <div>
-            <h3 className="font-serif font-bold text-[#4a1a22]">Pandit toolbox</h3>
-            <p className="text-xs text-[#5a4a3a]/70 mt-0.5">Quick-reference mantras and samagri checklists you can copy and share with yajamanas.</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-5" data-testid="pandit-tools">
+      <PanditSectionHeader title="Tools" description="Quick-reference mantras, puja stages, quotes, and samagri checklists for your daily practice." />
 
       <Tabs defaultValue="sankalpa">
-        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1">
+        <TabsList className="flex h-auto w-full max-w-full flex-wrap justify-start gap-1">
           <TabsTrigger value="sankalpa" data-testid="tab-tools-sankalpa"><ScrollText className="h-3.5 w-3.5 mr-1.5" />Sankalpa</TabsTrigger>
           <TabsTrigger value="quote" data-testid="tab-tools-quote"><Calculator className="h-3.5 w-3.5 mr-1.5" />Quote</TabsTrigger>
           <TabsTrigger value="stages" data-testid="tab-tools-stages"><Flame className="h-3.5 w-3.5 mr-1.5" />Puja stages</TabsTrigger>

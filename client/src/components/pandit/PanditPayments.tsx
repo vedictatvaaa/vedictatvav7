@@ -11,6 +11,7 @@ import {
   IndianRupee, Plus, Loader2, Copy, ExternalLink, Check,
   XCircle, Clock, MessageCircle, Wallet,
 } from "lucide-react";
+import { PanditEmptyState, PanditErrorState, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 type PaymentRequest = {
   id: number;
@@ -38,6 +39,7 @@ export default function PanditPayments() {
   const { toast } = useToast();
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState<"all" | "pending" | "paid" | "cancelled">("all");
@@ -48,8 +50,9 @@ export default function PanditPayments() {
 
   async function load() {
     setLoading(true);
+    setError(null);
     try { setData(await panditApi("GET", "/api/pandit/payment-requests") as Resp); }
-    catch (e: any) { toast({ title: "Failed to load", description: e?.message, variant: "destructive" }); }
+    catch (e: any) { setError(e?.message || "Your payment requests could not be loaded."); toast({ title: "Failed to load", description: e?.message, variant: "destructive" }); }
     finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
@@ -125,13 +128,18 @@ export default function PanditPayments() {
     window.open(url, "_blank", "noopener");
   }
 
-  if (loading || !data) {
-    return <Card><CardContent className="p-10 flex items-center justify-center text-sm text-[#5a4a3a]/70"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading payment requests…</CardContent></Card>;
-  }
+  if (loading) return <PanditLoadingState label="Loading payment requests…" />;
+  if (error) return <div className="space-y-5"><PanditSectionHeader title="Payment requests" description="Create secure payment links and keep track of every request." /><PanditErrorState detail={error} onRetry={load} /></div>;
+  if (!data) return <div className="space-y-5"><PanditSectionHeader title="Payment requests" description="Create secure payment links and keep track of every request." /><PanditEmptyState icon={Wallet} title="Payment requests are not available yet" detail="Create a request when you need to collect dakshina or other practice payments." /></div>;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="space-y-5" data-testid="pandit-payments">
+      <PanditSectionHeader
+        title="Payment requests"
+        description="Create secure payment links and keep track of every request."
+        actions={<Button onClick={() => setOpen(true)} size="sm" className="bg-[#55252d] text-[#fff8e9] hover:bg-[#3e1b20]" data-testid="btn-new-payment-request"><Plus className="h-4 w-4 mr-1.5" />New payment request</Button>}
+      />
+      <PanditKpiGrid>
         {[
           { l: "Pending", v: data.summary.pendingCount, i: Clock, color: "#B8860B" },
           { l: "Pending value", v: inr(data.summary.pendingValue), i: IndianRupee, color: "#B8860B" },
@@ -139,21 +147,12 @@ export default function PanditPayments() {
           { l: "Paid value", v: inr(data.summary.paidValue), i: Wallet, color: "#1f7a4d" },
         ].map((k, i) => {
           const I = k.i;
-          return (
-            <Card key={i} data-testid={`pay-kpi-${i}`}>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 text-[10px] text-[#5a4a3a]/65 uppercase tracking-wide font-bold">
-                  <I className="h-3.5 w-3.5" style={{ color: k.color }} />{k.l}
-                </div>
-                <div className="text-xl font-bold text-[#4a1a22] mt-1 truncate">{k.v}</div>
-              </CardContent>
-            </Card>
-          );
+          return <PanditKpi key={i} label={k.l} value={k.v} icon={I} tone={k.color === "#1f7a4d" ? "green" : "gold"} testId={`pay-kpi-${i}`} />;
         })}
-      </div>
+      </PanditKpiGrid>
 
-      <div className="flex flex-wrap items-center gap-2 justify-between">
-        <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Filter payment requests">
           {(["all", "pending", "paid", "cancelled"] as const).map((s) => (
             <Button
               key={s}
@@ -167,19 +166,12 @@ export default function PanditPayments() {
             </Button>
           ))}
         </div>
-        <Button onClick={() => setOpen(true)} className="bg-[#6D2B35] hover:bg-[#6D2B35]" data-testid="btn-new-payment-request">
-          <Plus className="h-4 w-4 mr-1.5" />New payment request
-        </Button>
       </div>
 
-      <Card>
+      <Card className="border-[#d8c8ae]/75 bg-[#fffdf8]">
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="p-10 text-center text-sm text-[#5a4a3a]/65">
-              {filter === "all"
-                ? "No payment requests yet. Click \"New payment request\" to bill a yajamana."
-                : `No ${filter} requests.`}
-            </div>
+            <PanditEmptyState icon={filter === "pending" ? Clock : Wallet} title={filter === "all" ? "No payment requests yet" : `No ${filter} requests`} detail={filter === "all" ? "Create a secure request when you need to bill a yajamana." : "Try another filter or create a new payment request."} />
           ) : (
             <div className="divide-y divide-[#D4AF37]/15">
               {filtered.map((r) => (

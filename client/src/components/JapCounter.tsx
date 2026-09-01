@@ -562,6 +562,8 @@ export type JapCounterProps = {
   title?: string;
   /** Subtitle copy. */
   subtitle?: string;
+  /** Hide the internal title when a parent workspace supplies its own section header. */
+  embedded?: boolean;
   /** Display name of the signed-in devotee — used to personalise the
    *  Tathastu ashirvad popup. Omit or pass empty for guests. */
   devoteeName?: string;
@@ -603,7 +605,7 @@ function LedCaptionStrip({ mantra }: { mantra: Mantra }) {
   );
 }
 
-export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", subtitle, devoteeName, initialMantraId }: JapCounterProps) {
+export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", subtitle, embedded = false, devoteeName, initialMantraId }: JapCounterProps) {
   const { toast } = useToast();
 
   // Owner-scoped state. Re-hydrate from localStorage whenever ownerKey changes
@@ -1799,7 +1801,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           title block. The page H1 was promoted up here as the SEO heading,
           and Focus mode + the per-mantra quick actions were retired in
           favour of the orb being the sole hero. */}
-      <header className="text-center px-2 pt-1 pb-1">
+      {!embedded && <header className="text-center px-2 pt-1 pb-1">
         <h1
           className="text-2xl sm:text-3xl font-serif font-bold text-[#4a1a22] tracking-tight"
           data-testid="text-counter-h1"
@@ -1811,7 +1813,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             {subtitle}
           </p>
         )}
-      </header>
+      </header>}
 
       {/* Sankalpa — today's intention. One short line, persisted per day.
           Sits between the title and the orb so the devotee names what

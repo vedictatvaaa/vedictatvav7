@@ -13,6 +13,7 @@ import {
   Users, Search, Phone, Loader2, Repeat, Wallet, Calendar, CalendarHeart,
   Plus, Trash2, Bell, Cake, Flame, Gift, Sparkles, AlertCircle,
 } from "lucide-react";
+import { PanditEmptyState, PanditErrorState, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 type Customer = {
   key: string; userId: number | null; name: string; phone: string;
@@ -47,38 +48,42 @@ export default function PanditCustomers() {
   const { toast } = useToast();
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"list" | "upcoming">("list");
   const [drillKey, setDrillKey] = useState<string | null>(null);
   const [drillBookings, setDrillBookings] = useState<Booking[]>([]);
   const [drillMemories, setDrillMemories] = useState<Memory[]>([]);
   const [drillLoading, setDrillLoading] = useState(false);
+  const [drillError, setDrillError] = useState<string | null>(null);
   const [drillTab, setDrillTab] = useState<"bookings" | "memories">("bookings");
 
   // Upcoming-tithi tab payload
   const [upcoming, setUpcoming] = useState<UpcomingMemory[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [upcomingError, setUpcomingError] = useState<string | null>(null);
 
   // New-memory form
   const [memOpen, setMemOpen] = useState(false);
   const [memSubmitting, setMemSubmitting] = useState(false);
   const [memForm, setMemForm] = useState({ kind: "birthday", label: "", dateText: "", tithi: "", notifyDaysBefore: "3", notes: "" });
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try { setData(await panditApi("GET", "/api/pandit/customers") as Resp); }
-      catch (e: any) { toast({ title: "Failed to load customers", description: e?.message, variant: "destructive" }); }
-      finally { setLoading(false); }
-    })();
-  }, []);
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try { setData(await panditApi("GET", "/api/pandit/customers") as Resp); }
+    catch (e: any) { setError(e?.message || "Your customers could not be loaded."); toast({ title: "Failed to load customers", description: e?.message, variant: "destructive" }); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { void load(); }, []);
 
   async function loadUpcoming() {
     setUpcomingLoading(true);
+    setUpcomingError(null);
     try {
       const r = await panditApi("GET", "/api/pandit/memories/upcoming") as { upcoming: UpcomingMemory[] };
       setUpcoming(r.upcoming || []);
-    } catch (e: any) { toast({ title: "Failed", description: e?.message, variant: "destructive" }); }
+    } catch (e: any) { setUpcomingError(e?.message || "Upcoming dates could not be loaded."); toast({ title: "Failed", description: e?.message, variant: "destructive" }); }
     finally { setUpcomingLoading(false); }
   }
   useEffect(() => { if (tab === "upcoming") loadUpcoming(); }, [tab]);
@@ -94,6 +99,9 @@ export default function PanditCustomers() {
     setDrillKey(key);
     setDrillTab("bookings");
     setDrillLoading(true);
+    setDrillError(null);
+    setDrillBookings([]);
+    setDrillMemories([]);
     try {
       const [b, m] = await Promise.all([
         panditApi("GET", `/api/pandit/customers/${encodeURIComponent(key)}/bookings`) as Promise<{ bookings: Booking[] }>,
@@ -101,7 +109,7 @@ export default function PanditCustomers() {
       ]);
       setDrillBookings(b.bookings || []);
       setDrillMemories(m.memories || []);
-    } catch (e: any) { toast({ title: "Failed to load", description: e?.message, variant: "destructive" }); }
+    } catch (e: any) { setDrillError(e?.message || "This customer history could not be loaded."); toast({ title: "Failed to load", description: e?.message, variant: "destructive" }); }
     finally { setDrillLoading(false); }
   }
 
@@ -152,13 +160,14 @@ export default function PanditCustomers() {
 
   const drillCustomer = drillKey ? data?.customers.find((c) => c.key === drillKey) : null;
 
-  if (loading || !data) {
-    return <Card><CardContent className="p-10 flex items-center justify-center text-sm text-[#5a4a3a]/70"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading customers…</CardContent></Card>;
-  }
+  if (loading) return <PanditLoadingState label="Loading customers…" />;
+  if (error) return <div className="space-y-5"><PanditSectionHeader title="Customers" description="Know your yajamanas, their history, and the moments worth remembering." /><PanditErrorState detail={error} onRetry={load} /></div>;
+  if (!data) return <div className="space-y-5"><PanditSectionHeader title="Customers" description="Know your yajamanas, their history, and the moments worth remembering." /><PanditEmptyState icon={Users} title="Customers are not available yet" detail="Customer history will appear here after your first completed booking." /></div>;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+    <div className="space-y-5" data-testid="pandit-customers">
+      <PanditSectionHeader title="Customers" description="Know your yajamanas, their history, and the moments worth remembering." />
+      <PanditKpiGrid className="md:grid-cols-3">
         {[
           { l: "Total customers", v: data.summary.totalCustomers, i: Users },
           { l: "Repeat yajamanas", v: data.summary.repeatCustomers, i: Repeat },
@@ -166,18 +175,13 @@ export default function PanditCustomers() {
         ].map((k, i) => {
           const I = k.i;
           return (
-            <Card key={i} data-testid={`cust-kpi-${i}`}>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-2 text-[10px] text-[#5a4a3a]/65 uppercase tracking-wide font-bold"><I className="h-3.5 w-3.5 text-[#6D2B35]" />{k.l}</div>
-                <div className="text-xl font-bold text-[#4a1a22] mt-1">{k.v}</div>
-              </CardContent>
-            </Card>
+            <PanditKpi key={i} label={k.l} value={k.v} icon={I} testId={`cust-kpi-${i}`} />
           );
         })}
-      </div>
+      </PanditKpiGrid>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
+        <TabsList className="flex max-w-full overflow-x-auto justify-start">
           <TabsTrigger value="list" data-testid="tab-cust-list"><Users className="h-3.5 w-3.5 mr-1.5" />All yajamanas</TabsTrigger>
           <TabsTrigger value="upcoming" data-testid="tab-cust-upcoming"><Bell className="h-3.5 w-3.5 mr-1.5" />Upcoming tithis</TabsTrigger>
         </TabsList>
@@ -191,7 +195,7 @@ export default function PanditCustomers() {
           <Card>
             <CardContent className="p-0">
               {filtered.length === 0 ? (
-                <div className="p-10 text-center text-sm text-[#5a4a3a]/65">{q ? "No customers match your search." : "No customers yet. They'll appear here once you complete bookings."}</div>
+                <PanditEmptyState icon={q ? Search : Users} title={q ? "No customers match your search" : "No customers yet"} detail={q ? "Try a different name, phone number, or puja." : "They’ll appear here once you complete bookings."} />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
@@ -240,11 +244,10 @@ export default function PanditCustomers() {
         <TabsContent value="upcoming" className="space-y-3">
           {upcomingLoading ? (
             <Card><CardContent className="p-10 flex items-center justify-center"><Loader2 className="h-4 w-4 animate-spin" /></CardContent></Card>
+          ) : upcomingError ? (
+            <PanditErrorState title="Upcoming dates could not be loaded" detail={upcomingError} onRetry={loadUpcoming} />
           ) : upcoming.length === 0 ? (
-            <Card><CardContent className="p-10 text-center text-sm text-[#5a4a3a]/65">
-              <Bell className="h-6 w-6 mx-auto mb-2 text-[#5a4a3a]/40" />
-              No upcoming dates in the next 60 days. Add saved dates from a yajamana profile (View → Saved dates).
-            </CardContent></Card>
+            <PanditEmptyState icon={Bell} title="No upcoming dates" detail="There are no saved dates in the next 60 days. Add one from a yajamana profile." />
           ) : (
             <div className="space-y-2">
               {upcoming.map((u) => {
@@ -288,13 +291,15 @@ export default function PanditCustomers() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!drillKey} onOpenChange={(v) => { if (!v) { setDrillKey(null); setDrillBookings([]); setDrillMemories([]); } }}>
+      <Dialog open={!!drillKey} onOpenChange={(v) => { if (!v) { setDrillKey(null); setDrillBookings([]); setDrillMemories([]); setDrillError(null); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="text-[#4a1a22]">{drillCustomer?.name}</DialogTitle>
           </DialogHeader>
           {drillLoading ? (
             <div className="p-8 flex items-center justify-center"><Loader2 className="h-4 w-4 animate-spin" /></div>
+          ) : drillError ? (
+            <PanditErrorState title="Customer history could not be loaded" detail={drillError} onRetry={() => { if (drillKey) void openDrill(drillKey); }} />
           ) : (
             <Tabs value={drillTab} onValueChange={(v) => setDrillTab(v as any)}>
               <TabsList>

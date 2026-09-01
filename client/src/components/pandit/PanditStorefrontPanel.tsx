@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw } from "lucide-react";
+import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw, Wallet, CreditCard } from "lucide-react";
 import { getPanditToken } from "@/lib/panditAuth";
+import { PanditEmptyState, PanditErrorState, PanditInlineLoading, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 const headers = () => ({
   "Content-Type": "application/json",
@@ -77,7 +78,20 @@ type PanditServiceLite = {
   isActive: boolean;
 };
 
-const EMPTY_SERVICE_FORM = {
+type ServiceForm = {
+  masterServiceId: number;
+  price: number;
+  durationMinutes: number;
+  mode: PanditServiceLite["mode"];
+  description: string;
+  preparation: string;
+  inclusions: string;
+  serviceAreas: string;
+  availability: string;
+  displayOrder: number;
+};
+
+const EMPTY_SERVICE_FORM: ServiceForm = {
   masterServiceId: 0,
   price: 1100,
   durationMinutes: 60,
@@ -188,6 +202,8 @@ function PanditServicesEditor() {
       <CardContent className="space-y-5 p-5">
         {offerings.isLoading ? (
           <div className="py-4 text-center text-sm text-stone-500"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading services…</div>
+        ) : offerings.isError ? (
+          <PanditErrorState title="Services could not be loaded" onRetry={() => void offerings.refetch()} />
         ) : (offerings.data || []).length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {(offerings.data || []).map(service => (
@@ -275,10 +291,10 @@ function PanditServicesEditor() {
   );
 }
 
-export function PanditStorefrontEditor() {
+export function PanditStorefrontEditor({ focus = "storefront" }: { focus?: "storefront" | "services" }) {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery<SfData>({ queryKey: ["pandit-storefront"], queryFn: () => api("/api/pandit/storefront") });
+  const { data, isLoading, isError, refetch } = useQuery<SfData>({ queryKey: ["pandit-storefront"], queryFn: () => api("/api/pandit/storefront") });
   const allProducts = useQuery<ProductLite[]>({ queryKey: ["all-products"], queryFn: async () => (await fetch("/api/products")).json() });
 
   const [form, setForm] = useState<SfForm | null>(null);
@@ -321,19 +337,22 @@ export function PanditStorefrontEditor() {
     onError: (e: unknown) => toast({ title: "Status update failed", description: e instanceof Error ? e.message : "Please try again.", variant: "destructive" }),
   });
 
-  if (isLoading || !form || !data) {
-    return <div className="p-8 text-center text-stone-500"><Loader2 className="w-5 h-5 animate-spin inline" /> Loading…</div>;
-  }
+  if (isLoading) return <PanditLoadingState label="Loading storefront…" />;
+  if (isError) return <div className="space-y-5"><PanditSectionHeader title={focus === "services" ? "Services" : "My storefront"} description={focus === "services" ? "Set clear offerings, prices, preparation details, and availability." : "Shape the public profile yajamanas see before they book."} /><PanditErrorState detail="Your storefront details could not be loaded." onRetry={() => void refetch()} /></div>;
+  if (!form || !data) return <PanditLoadingState label="Preparing storefront…" />;
 
   const productOptions: ProductLite[] = (allProducts.data || []).filter((p) => !form.productIds.includes(p.id));
+  const sectionTitle = focus === "services" ? "Services" : "My storefront";
+  const sectionDescription = focus === "services" ? "Set clear offerings, prices, preparation details, and availability." : "Shape the public profile yajamanas see before they book.";
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="min-w-0 space-y-5" data-testid="pandit-storefront">
+      <PanditSectionHeader title={sectionTitle} description={sectionDescription} actions={<Button onClick={() => save.mutate(form)} disabled={save.isPending} size="sm" className="bg-[#55252d] text-[#fff8e9] hover:bg-[#3e1b20]" data-testid="btn-save-storefront">{save.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save storefront</Button>} />
+      <Card className="border-[#d8c8ae]/75 bg-[#fffdf8]">
         <CardContent className="p-5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xs uppercase tracking-wide text-stone-500">Public URL</div>
-            <a href={data.publicUrl} target="_blank" rel="noopener noreferrer" className="text-[#6D2B35] font-semibold inline-flex items-center gap-1 hover-elevate rounded-md px-1" data-testid="link-public-storefront">
+            <a href={data.publicUrl} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1 break-all rounded-md px-1 font-semibold text-[#6D2B35] hover-elevate" data-testid="link-public-storefront">
               {data.publicUrl} <ExternalLink className="w-4 h-4" />
             </a>
             <div className="text-xs text-stone-500 mt-1">{data.storefront.viewCount} views · Tier <span className="capitalize font-medium text-[#4a1a22]">{data.pandit.tier}</span> · Commission <span className="font-medium text-[#4a1a22]">{data.commissionPct}%</span> on referred shop sales</div>
@@ -444,9 +463,6 @@ export function PanditStorefrontEditor() {
       </Card>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => save.mutate(form)} disabled={save.isPending} className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]" data-testid="btn-save-storefront">
-          {save.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Save storefront
-        </Button>
         <a href="/api/pandit/storefront/qr.png" target="_blank" rel="noopener noreferrer">
           <Button variant="outline">View QR code</Button>
         </a>
@@ -536,6 +552,9 @@ export function PanditCardOrders() {
   const items = orders.data?.items || [];
   const hasIssuedCard = items.some((o) => ["paid", "printing", "shipped", "delivered"].includes(o.status));
 
+  if (orders.isLoading || me.isLoading) return <PanditLoadingState label="Loading Pandit card…" />;
+  if (orders.isError || me.isError) return <div className="space-y-5"><PanditSectionHeader title="Pandit card" description="Order and track the physical card that shares your verified practice." /><PanditErrorState detail="Your card details could not be loaded." onRetry={() => { void orders.refetch(); void me.refetch(); }} /></div>;
+
   const openCheckout = () => {
     const p = me.data?.pandit;
     setForm((f) => ({
@@ -611,8 +630,9 @@ export function PanditCardOrders() {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="min-w-0 space-y-5" data-testid="pandit-card">
+      <PanditSectionHeader title="Pandit card" description="Order and track the physical card that shares your verified practice." />
+      <Card className="border-[#d8c8ae]/75 bg-[#fffdf8]">
         <CardContent className="p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -635,10 +655,8 @@ export function PanditCardOrders() {
       <Card>
         <CardContent className="p-5">
           <h3 className="font-bold text-[#4a1a22] mb-3">Card order</h3>
-          {orders.isLoading ? (
-            <div className="text-sm text-stone-500"><Loader2 className="w-4 h-4 animate-spin inline" /> Loading…</div>
-          ) : items.length === 0 ? (
-            <div className="text-sm text-stone-500">No card ordered yet.</div>
+          {items.length === 0 ? (
+            <PanditEmptyState icon={CreditCard} title="No card ordered yet" detail="Choose a printed or NFC card when you’re ready to share your practice in person." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -677,7 +695,7 @@ export function PanditCardOrders() {
               <div><Label>Full name</Label><Input value={form.shippingName} onChange={(e) => setForm({ ...form, shippingName: e.target.value })} /></div>
               <div><Label>Phone</Label><Input value={form.shippingPhone} onChange={(e) => setForm({ ...form, shippingPhone: e.target.value })} /></div>
               <div><Label>Address</Label><Textarea rows={2} value={form.shippingAddress} onChange={(e) => setForm({ ...form, shippingAddress: e.target.value })} /></div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Input placeholder="City" value={form.shippingCity} onChange={(e) => setForm({ ...form, shippingCity: e.target.value })} />
                 <Input placeholder="State" value={form.shippingState} onChange={(e) => setForm({ ...form, shippingState: e.target.value })} />
                 <Input placeholder="Pincode" value={form.shippingPincode} onChange={(e) => setForm({ ...form, shippingPincode: e.target.value })} />
@@ -705,8 +723,8 @@ export function PanditCardOrders() {
   );
 }
 
-export function PanditReferralsPanel() {
-  const { data, isLoading } = useQuery<{ items: any[]; summary: { totalCommission: number; pending: number; approved: number; paid: number; count: number } }>({
+export function PanditReferralsPanel({ embedded = false }: { embedded?: boolean }) {
+  const { data, isLoading, isError, refetch } = useQuery<{ items: any[]; summary: { totalCommission: number; pending: number; approved: number; paid: number; count: number } }>({
     queryKey: ["pandit-referrals"],
     queryFn: () => api("/api/pandit/referrals"),
   });
@@ -714,24 +732,26 @@ export function PanditReferralsPanel() {
     queryKey: ["pandit-payouts"],
     queryFn: () => api("/api/pandit/payouts"),
   });
-  if (isLoading) return <div className="p-8 text-center text-stone-500"><Loader2 className="w-5 h-5 animate-spin inline" /> Loading…</div>;
+  if (isLoading) return <PanditLoadingState label="Loading referrals…" />;
+  if (isError) return <div className="space-y-5">{!embedded && <PanditSectionHeader title="Referrals" description="Track shop referrals and the commission your storefront has earned." />}<PanditErrorState detail="Referral activity could not be loaded." onRetry={() => void refetch()} /></div>;
   const items = data?.items || [];
   const s = data?.summary || { totalCommission: 0, pending: 0, approved: 0, paid: 0, count: 0 };
   const payoutItems = payouts.data?.items || [];
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Card><CardContent className="p-4"><div className="text-xs text-stone-500">Lifetime commission</div><div className="text-lg font-bold text-[#4a1a22]">₹{s.totalCommission.toLocaleString("en-IN")}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-stone-500">Pending review</div><div className="text-lg font-bold text-amber-700">₹{s.pending.toLocaleString("en-IN")}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-stone-500">Approved (awaiting payout)</div><div className="text-lg font-bold text-sky-700">₹{(s.approved || 0).toLocaleString("en-IN")}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-stone-500">Paid out</div><div className="text-lg font-bold text-emerald-700">₹{s.paid.toLocaleString("en-IN")}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-stone-500">Conversions</div><div className="text-lg font-bold text-[#4a1a22]">{s.count}</div></CardContent></Card>
-      </div>
+    <div className="min-w-0 space-y-5">
+      {!embedded && <PanditSectionHeader title="Referrals" description="Track shop referrals and the commission your storefront has earned." />}
+      <PanditKpiGrid className="sm:grid-cols-3 xl:grid-cols-5">
+        <PanditKpi label="Lifetime commission" value={`₹${s.totalCommission.toLocaleString("en-IN")}`} icon={Wallet} />
+        <PanditKpi label="Pending review" value={`₹${s.pending.toLocaleString("en-IN")}`} icon={Wallet} tone="gold" />
+        <PanditKpi label="Awaiting payout" value={`₹${(s.approved || 0).toLocaleString("en-IN")}`} icon={Wallet} />
+        <PanditKpi label="Paid out" value={`₹${s.paid.toLocaleString("en-IN")}`} icon={Wallet} tone="green" />
+        <PanditKpi label="Conversions" value={s.count} icon={ExternalLink} />
+      </PanditKpiGrid>
       <Card>
         <CardContent className="p-5">
           <h3 className="font-bold text-[#4a1a22] mb-3">Referral activity</h3>
           {items.length === 0 ? (
-            <div className="text-sm text-stone-500">No referrals yet. Share your storefront link or QR card to start earning.</div>
+            <PanditEmptyState icon={ExternalLink} title="No referrals yet" detail="Share your storefront link or QR card to start earning." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -757,9 +777,11 @@ export function PanditReferralsPanel() {
         <CardContent className="p-5">
           <h3 className="font-bold text-[#4a1a22] mb-3">Payout history</h3>
           {payouts.isLoading ? (
-            <div className="text-sm text-stone-500"><Loader2 className="w-4 h-4 animate-spin inline" /> Loading…</div>
+            <PanditInlineLoading label="Loading payout history…" />
+          ) : payouts.isError ? (
+            <PanditErrorState title="Payout history could not be loaded" onRetry={() => void payouts.refetch()} />
           ) : payoutItems.length === 0 ? (
-            <div className="text-sm text-stone-500">No payouts yet. Approved commissions are paid out in batches.</div>
+            <PanditEmptyState icon={Wallet} title="No payouts yet" detail="Approved commissions are paid out in batches." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

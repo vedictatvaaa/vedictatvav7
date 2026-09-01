@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, Check, MessageSquare, Star, IndianRupee, XCircle } from "lucide-react";
 import { panditApi } from "@/lib/panditAuth";
 import { useToast } from "@/hooks/use-toast";
+import { PanditEmptyState, PanditErrorState, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 interface Notif {
   id: number; kind: string; title: string; body: string | null; link: string | null;
@@ -23,13 +24,16 @@ export default function PanditNotifications() {
   const [items, setItems] = useState<Notif[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     try {
       setLoading(true);
+      setError(null);
       const r = await panditApi("GET", "/api/pandit/notifications");
       setItems(r.notifications || []); setUnread(Number(r.unread || 0));
     } catch (e: any) {
+      setError(e?.message || "Your notifications could not be loaded.");
       toast({ title: "Failed to load notifications", description: e?.message, variant: "destructive" });
     } finally { setLoading(false); }
   }
@@ -55,26 +59,17 @@ export default function PanditNotifications() {
   }
 
   return (
-    <div className="space-y-4" data-testid="pandit-notifications-tab">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-serif font-bold text-[#4a1a22]">Notifications</h2>
-          <p className="text-sm text-stone-600 mt-1">
-            New messages, reviews, payment confirmations, and booking changes from your yajamanas.
-          </p>
-        </div>
-        {unread > 0 && (
-          <Button size="sm" variant="outline" onClick={markAll} data-testid="button-mark-all-read">
-            <Check className="w-3 h-3 mr-1" />Mark all read ({unread})
-          </Button>
-        )}
-      </div>
+    <div className="space-y-5" data-testid="pandit-notifications-tab">
+      <PanditSectionHeader
+        title="Notifications"
+        description="Keep up with new messages, reviews, payment confirmations, and booking changes."
+        actions={unread > 0 ? <Button size="sm" variant="outline" onClick={markAll} data-testid="button-mark-all-read"><Check className="w-3 h-3 mr-1" />Mark all read ({unread})</Button> : <Button size="sm" variant="outline" onClick={load}>Refresh</Button>}
+      />
 
-      {loading && <div className="text-sm text-stone-500">Loading…</div>}
-      {!loading && items.length === 0 && (
-        <Card><CardContent className="p-8 text-center text-stone-500">
-          <Bell className="w-8 h-8 mx-auto mb-2 text-stone-400" />You're all caught up.
-        </CardContent></Card>
+      {loading && <PanditLoadingState label="Loading notifications…" />}
+      {error && <PanditErrorState detail={error} onRetry={load} />}
+      {!loading && !error && items.length === 0 && (
+        <PanditEmptyState icon={Bell} title="You’re all caught up" detail="New activity from your yajamanas will appear here." />
       )}
 
       <div className="space-y-2">

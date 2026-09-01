@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { panditApi } from "@/lib/panditAuth";
 import { Crown, Check, Loader2, Sparkles, ShieldCheck } from "lucide-react";
+import { PanditErrorState, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
 
 type TierId = "free" | "silver" | "gold" | "guru_elite";
 type Tier = {
@@ -41,15 +42,19 @@ export default function PanditMembership() {
   const { toast } = useToast();
   const [data, setData] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [buyingTier, setBuyingTier] = useState<TierId | null>(null);
 
   async function refresh() {
+    setLoading(true);
+    setError(null);
     try { setData(await panditApi("GET", "/api/pandit/membership") as Resp); }
-    catch (e: any) { toast({ title: "Failed to load membership", description: e?.message, variant: "destructive" }); }
+    catch (e: any) { setError(e?.message || "Your membership could not be loaded."); toast({ title: "Failed to load membership", description: e?.message, variant: "destructive" }); }
+    finally { setLoading(false); }
   }
 
   useEffect(() => {
-    (async () => { await refresh(); setLoading(false); })();
+    void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -101,16 +106,17 @@ export default function PanditMembership() {
     }
   }
 
-  if (loading || !data) {
-    return <Card><CardContent className="p-10 flex items-center justify-center text-sm text-[#5a4a3a]/70"><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading membership…</CardContent></Card>;
-  }
+  if (loading) return <PanditLoadingState label="Loading membership…" />;
+  if (error) return <div className="space-y-5"><PanditSectionHeader title="Membership" description="Choose the reach and support level that fits your practice." /><PanditErrorState detail={error} onRetry={refresh} /></div>;
+  if (!data) return <div className="space-y-5"><PanditSectionHeader title="Membership" description="Choose the reach and support level that fits your practice." /><PanditErrorState detail="Membership details are unavailable right now." onRetry={refresh} /></div>;
 
   const current = data.tiers[data.currentTier];
   const currentIdx = ORDER.indexOf(data.currentTier);
   const expiryStr = data.tierExpiresAt ? new Date(data.tierExpiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5" data-testid="pandit-membership">
+      <PanditSectionHeader title="Membership" description="Choose the reach and support level that fits your practice." actions={<Button size="sm" variant="outline" onClick={refresh}>Refresh</Button>} />
       {/* Current tier banner */}
       <Card className="border-[#D4AF37]/40 bg-gradient-to-br from-[#FFFAEC] to-[#F5E9D0]">
         <CardContent className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
