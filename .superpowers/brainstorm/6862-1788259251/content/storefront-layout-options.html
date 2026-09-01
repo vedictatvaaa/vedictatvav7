@@ -1,0 +1,39 @@
+<style>
+  .design-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:20px}
+  .design-card{background:#fffaf0;border:1px solid #e7d9c0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(73,35,28,.08)}
+  .design-card h3{margin:0;color:#4a1a22;font-size:18px}.design-card p{color:#6b5c50;line-height:1.45}
+  .browser{margin:14px;background:#f8efe1;border-radius:12px;overflow:hidden;border:1px solid #ead9c2}.browser-top{height:24px;background:#ead9c2;padding:0 10px;color:#9c765d;font-size:11px;display:flex;align-items:center;gap:5px}.dot{width:6px;height:6px;border-radius:50%;background:#b88c73}.browser-body{padding:14px;min-height:260px}.mini-nav{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#4a1a22;font-weight:700}.mini-pill{background:#4a1a22;color:#fffaf0;border-radius:999px;padding:6px 9px;font-size:9px}.mini-hero{margin-top:18px;display:flex;gap:12px;align-items:center}.portrait{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#d7b27b,#8b4a3f);border:3px solid #fff}.eyebrow{font-size:8px;color:#a66342;text-transform:uppercase;letter-spacing:.12em;font-weight:700}.mini-title{font-size:16px;color:#4a1a22;font-weight:800;margin-top:3px}.mini-copy{font-size:9px;color:#756558;margin-top:3px}.mini-actions{display:flex;gap:6px;margin-top:18px}.mini-btn{font-size:8px;padding:7px 9px;border-radius:7px;background:#b47745;color:#fff}.mini-btn.alt{background:#fff;border:1px solid #d9c7ae;color:#4a1a22}.mini-section{margin-top:18px;background:#fff;border:1px solid #eadfce;border-radius:10px;padding:10px}.mini-section strong{font-size:10px;color:#4a1a22}.mini-lines{height:6px;background:#eadfce;border-radius:5px;margin-top:8px;width:85%}.mini-lines.short{width:58%;margin-top:5px}
+  @media(max-width:900px){.design-grid{grid-template-columns:1fr}}
+</style>
+<h2>Choose the Pandit Store foundation layout</h2>
+<p class="subtitle">Three directions for the first storefront/catalog slice. Focus on how quickly a customer understands the Pandit, finds a service, and books.</p>
+<div class="design-grid">
+  <div class="design-card" data-choice="trust" onclick="toggleSelect(this)">
+    <div class="browser"><div class="browser-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:6px">vedic-tatva.com/p/pt-sanjay-pandey-varanasi</span></div><div class="browser-body">
+      <div class="mini-nav"><span>VEDIC TATVA</span><span class="mini-pill">BOOK NOW</span></div>
+      <div class="mini-hero"><div class="portrait"></div><div><div class="eyebrow">✓ verified vedic pandit</div><div class="mini-title">Pt. Sanjay Pandey</div><div class="mini-copy">Varanasi · 30 years experience</div></div></div>
+      <div class="mini-actions"><span class="mini-btn">Book a Puja</span><span class="mini-btn alt">View Services</span></div>
+      <div class="mini-section"><strong>Popular services</strong><div class="mini-lines"></div><div class="mini-lines short"></div></div>
+    </div></div>
+    <div class="card-body"><h3>A · Trust-first storefront</h3><p>Strong identity and verified proof above the fold. Best for new customers deciding whether to trust the Pandit.</p></div>
+  </div>
+  <div class="design-card" data-choice="catalog" onclick="toggleSelect(this)">
+    <div class="browser"><div class="browser-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:6px">vedic-tatva.com/p/pt-sanjay-pandey-varanasi</span></div><div class="browser-body">
+      <div class="mini-nav"><span>PT. SANJAY PANDEY</span><span class="mini-pill">SHARE</span></div>
+      <div class="mini-hero"><div><div class="eyebrow">services & packages</div><div class="mini-title">Find the right puja</div><div class="mini-copy">Clear prices, duration, mode, and preparation.</div></div></div>
+      <div class="mini-section"><strong>Griha Pravesh · ₹11,000</strong><div class="mini-lines"></div><div class="mini-lines short"></div><div class="mini-actions"><span class="mini-btn">Book package</span><span class="mini-btn alt">Ask Pandit</span></div></div>
+      <div class="mini-section"><strong>Rudrabhishek · ₹5,100</strong><div class="mini-lines"></div></div>
+    </div></div>
+    <div class="card-body"><h3>B · Catalogue-first storefront</h3><p>Leads with approved services and packages. Best when conversion depends on comparing offerings and prices.</p></div>
+  </div>
+  <div class="design-card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="browser"><div class="browser-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span style="margin-left:6px">vedic-tatva.com/p/pt-sanjay-pandey-varanasi</span></div><div class="browser-body">
+      <div class="mini-nav"><span>VEDIC TATVA</span><span class="mini-pill">BOOK NOW</span></div>
+      <div class="mini-hero"><div class="portrait"></div><div><div class="eyebrow">✓ verified · varanasi</div><div class="mini-title">Pt. Sanjay Pandey</div><div class="mini-copy">Rudrabhishek · Mahamrityunjay Jaap</div></div></div>
+      <div class="mini-actions"><span class="mini-btn">Book a Puja</span><span class="mini-btn alt">Ask a Question</span></div>
+      <div class="mini-section"><strong>Start with a service</strong><div class="mini-lines"></div><div class="mini-lines short"></div><div class="mini-lines"></div></div>
+    </div></div>
+    <div class="card-body"><h3>C · Hybrid conversion path</h3><p>Trust proof, primary actions, and the first service choice share the opening view. Best balance for the first release.</p></div>
+  </div>
+</div>
+<p class="subtitle" style="margin-top:20px">Click a direction to select it, then tell me whether you want that layout or a variation.</p>
