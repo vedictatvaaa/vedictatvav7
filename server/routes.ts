@@ -59,7 +59,6 @@ import {
 import { eq, and, gt, lt, like } from "drizzle-orm";
 import { panditApplications, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
-import { matchesCanonicalCityReach } from "./pandit-location-reach";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import { publicPanditReviewDto } from "./pandit-public-access";
 import { masterServiceWriteSchema } from "./catalog-validation";
@@ -1365,8 +1364,8 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ---- SEO: sitemap-people.xml — pandits + astrologers ----
   app.get("/sitemap-people.xml", async (req, res) => {
-    const [publicPandits, astrologers, seoPagesList] = await Promise.all([
-      publicEligibility().then(result => result.pandits).catch(() => []),
+    const [pandits, astrologers, seoPagesList] = await Promise.all([
+      storage.getPandits().catch(() => []),
       storage.getAstrologers().catch(() => []),
       storage.getSeoPages(),
     ]);
@@ -1376,7 +1375,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     const imageLicenseUrl = `${baseUrl}/terms-conditions`;
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
-    for (const p of publicPandits as any[]) {
+    for (const p of pandits as any[]) {
       // Prefer canonical /p/<slug> when the pandit has a published
       // storefront; falls back to legacy /pandit/:id otherwise so older
       // links still index.
@@ -1691,10 +1690,10 @@ Sitemap: ${baseUrl}/sitemap.xml
     res.json({ google: getGoogleQuotaState() });
   });
 
-  // ===================================================================
+  // -------------------------------------------------------------------
   // Content Distribution Hub — unified one-click push across every
   // search engine + AI-crawler discovery channel.
-  // ===================================================================
+  // -------------------------------------------------------------------
 
   // Channel configuration snapshot for the dashboard.
   app.get("/api/admin/distribution/status", adminAuthMiddleware, async (req, res) => {
@@ -2204,9 +2203,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const query = (req.query.q as string || "").trim();
       if (!query || query.length < 2) return res.json({ results: [], intent: null });
 
-      const [allProducts, publicPandits, allAstrologers] = await Promise.all([
+      const [allProducts, allPandits, allAstrologers] = await Promise.all([
         storage.getProducts(),
-        publicEligibility().then(result => result.pandits),
+        storage.getPandits(),
         storage.getAstrologers(),
       ]);
 
@@ -2272,9 +2271,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return { type: "product" as const, item: p, score: textScore };
       }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 8);
 
-      const panditResults = publicPandits.map(p => {
+      const panditResults = allPandits.filter(p => p.verified).map(p => {
         const textScore = scoreText(`${p.name} ${p.specialization} ${p.city} ${p.languages} ${p.bio || ""}`);
-        return { type: "pandit" as const, item: publicPanditDto(p, false), score: textScore };
+        return { type: "pandit" as const, item: p, score: textScore };
       }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, 4);
 
       const astrologerResults = allAstrologers.filter((a: any) => a.verified).map((a: any) => {
@@ -2882,7 +2881,6 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  const facetValues = (value: string | null | undefined) => (value || "").split(",").map(v => v.trim()).filter(Boolean);
   const validCoordinates = (lat: number | undefined, lng: number | undefined) =>
     Number.isFinite(lat) && Number.isFinite(lng) && (lat as number) >= -90 && (lat as number) <= 90 && (lng as number) >= -180 && (lng as number) <= 180;
   const distanceBetweenKm = (fromLat: number, fromLng: number, lat: number, lng: number) => {
@@ -2890,26 +2888,6 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const a = Math.sin((lat - fromLat) * radians / 2) ** 2 + Math.cos(fromLat * radians) * Math.cos(lat * radians) * Math.sin((lng - fromLng) * radians / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
-  const effectivePanditTier = (p: { tier?: string | null; tierExpiresAt?: Date | string | null }) => {
-    let tier = (p.tier || "free").toLowerCase();
-    if (tier === "platinum") tier = "guru_elite";
-    if (p.tierExpiresAt && new Date(p.tierExpiresAt).getTime() < Date.now()) tier = "free";
-    return tier;
-  };
-  function publicPanditDto(p: any, isOnline: boolean, distance?: number) {
-    if (!p) return p;
-    // Never expose contact, moderation, membership, commercial, provenance, or exact GPS fields.
-    const { phone, email, passwordHash, lastLoginAt, latitude, longitude, leaveNote, leaveStartedAt,
-      verified, onLeave, tier, tierExpiresAt, commissionPct, productCommissionPct, membershipNo,
-      cardIssued, cardIssuedAt, originalCity, originalState, locationReviewStatus, boostType,
-      boostStartDate, boostEndDate, boostActive, ...safe } = p;
-    return { ...safe, verified: true, isOnline, ...(distance === undefined ? {} : { distance }) };
-  }
-  function adminPanditDto(p: any, isOnline: boolean, distance?: number) {
-    if (!p) return p;
-    const { passwordHash, ...safe } = p;
-    return { ...safe, isOnline, ...(distance === undefined ? {} : { distance }) };
-  }
   async function publicEligibility() {
     const [all, states, cities] = await Promise.all([storage.getPandits(), db.select().from(indianStates).where(eq(indianStates.isActive, true)), db.select().from(indianCities).where(eq(indianCities.isActive, true))]);
     const stateIds = new Set(states.map(s => s.id));
@@ -3007,32 +2985,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.get("/api/pandit-discovery", async (req, res) => {
     try {
       const { states, cities, pandits: eligible } = await publicEligibility();
-      const service = typeof req.query.service === "string" ? req.query.service.trim().toLocaleLowerCase("en-IN") : "";
-      const visible = service
-        ? eligible.filter(p => facetValues(p.specialization).some(value => value.toLocaleLowerCase("en-IN").includes(service)))
-        : eligible;
-      const facets = { services: new Set<string>(), languages: new Set<string>(), traditions: new Set<string>() };
-      for (const p of eligible) {
-        facetValues(p.specialization).forEach(v => facets.services.add(v));
-        facetValues(p.languages).forEach(v => facets.languages.add(v));
-        facetValues(p.regionalOrigin).forEach(v => facets.traditions.add(v));
-      }
-      res.json({
-        states: states.map(state => {
-          const statePandits = visible.filter(p => p.stateId === state.id);
-          const stateCities = cities.filter(city => city.stateId === state.id && statePandits.some(p => p.cityId === city.id));
-          const stateWideCount = visible.filter(p => {
-            const tier = effectivePanditTier(p);
-            return tier === "guru_elite" || (tier === "gold" && p.stateId === state.id);
-          }).length;
-          return { id: state.id, name: state.name, code: state.code, slug: locationSlug(state.name), count: statePandits.length, stateWideCount, cityCount: stateCities.length, cities: stateCities.sort((a, b) => a.name.localeCompare(b.name, "en-IN")).map(city => ({ id: city.id, name: city.name, slug: city.slug, count: statePandits.filter(p => p.cityId === city.id).length })) };
-        }).filter(state => state.count > 0).sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
-        facets: {
-          services: Array.from(facets.services).sort(),
-          languages: Array.from(facets.languages).sort(),
-          traditions: Array.from(facets.traditions).sort(),
-        },
-      });
+      const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
+      res.json(buildPanditDiscoverySummary(eligible, states, cities, service));
     } catch { res.status(500).json({ message: "Failed to load pandit discovery" }); }
   });
 
@@ -3072,7 +3026,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
     if (showAll) {
       const token = (req.headers["x-admin-token"] as string | undefined) || (req as any).cookies?.vt_admin_token;
-      if (!token || !(await sharedValidateAdminSession(token))) return res.status(401).json({ message: "Admin authentication required for all Pandits" });
+      if (!(await canViewAllPandits(true, token, sharedValidateAdminSession))) return res.status(401).json({ message: "Admin authentication required for all Pandits" });
     }
     const { pandits: eligible } = await publicEligibility();
     const candidates = showAll ? await storage.getPandits() : eligible;
@@ -3083,14 +3037,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       return { p, distance };
     }).filter(({ p, distance }) => {
       if (nearMe && (distance === undefined || distance > requestedRadius)) return false;
-      if (!nearMe && selectedLocation && !matchesCanonicalCityReach(effectivePanditTier(p), p, { cityId: selectedLocation.city.id, stateId: selectedLocation.state.id })) return false;
-      if (!nearMe && !selectedLocation && selectedStateId) {
-        const tier = effectivePanditTier(p);
-        if (tier !== "guru_elite" && !(tier === "gold" && p.stateId === selectedStateId)) return false;
-      }
-      return (!serviceLc || facetValues(p.specialization).some(v => v.toLocaleLowerCase("en-IN").includes(serviceLc)))
-        && (!languageLc || facetValues(p.languages).some(v => v.toLocaleLowerCase("en-IN").includes(languageLc)))
-        && (!regionLc || facetValues(p.regionalOrigin).some(v => v.toLocaleLowerCase("en-IN").includes(regionLc)));
+      if (!nearMe && !matchesPanditDiscoveryReach(
+        p,
+        selectedLocation ? { cityId: selectedLocation.city.id, stateId: selectedLocation.state.id } : undefined,
+        selectedLocation ? undefined : selectedStateId,
+      )) return false;
+      return matchesPanditListingFilters(p, { service: serviceLc, language: languageLc, region: regionLc });
     }).sort((a, b) => nearMe ? a.distance! - b.distance! : 0)
       .map(({ p, distance }) => showAll
         ? adminPanditDto(p, isPanditOnline(p.id), distance)
@@ -3868,9 +3820,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json({ message: "Popup deleted" });
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Hero Slider — admin-managed homepage hero carousel.
-  // ============================================================
+  // ------------------------------------------------------------
   // Public: ordered list of enabled slides. 5 min cache so the homepage LCP
   // isn't gated on a DB roundtrip but admin edits still propagate quickly.
   app.get("/api/hero-slides", async (_req, res) => {
@@ -3921,12 +3873,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(rows);
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Homepage Sections — admin-managed order + visibility of the
   // movable blocks on /. Keys MUST stay in lock-step with the
   // sectionMap in client/src/pages/home.tsx. Adding a new section?
   // Append to HOMEPAGE_SECTION_DEFAULTS below AND wire it in home.tsx.
-  // ============================================================
+  // ------------------------------------------------------------
   const HOMEPAGE_SECTION_DEFAULTS = [
     { key: "snapshot",      label: "Today's Spiritual Snapshot" },
     { key: "tabbed-shop",   label: "Handpicked / Popular / Trending (Tabbed Shop)" },
@@ -5543,9 +5495,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     return user[0].id;
   }
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Newsletter subscribers - admin view/export
-  // ============================================================
+  // ------------------------------------------------------------
   app.get("/api/admin/newsletter/subscribers", adminAuthMiddleware, async (_req, res) => {
     try {
       const subs = await storage.getNewsletterSubscribers();
@@ -5574,10 +5526,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Shiprocket status webhook (public; secured by optional shared token)
   // Fires WA + SMS for "Out For Delivery" and "Delivered" milestones.
-  // ============================================================
+  // ------------------------------------------------------------
   app.post("/api/shiprocket/webhook", async (req, res) => {
     try {
       // Mandatory secret: webhook mutates order/dispatch state and dispatches
@@ -5708,9 +5660,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Notifications (MSG91 SMS + WhatsApp + SendGrid Email) - admin
-  // ============================================================
+  // ------------------------------------------------------------
   app.get("/api/admin/notifications/status", adminAuthMiddleware, async (_req, res) => {
     const has = (k: string) => !!(process.env[k] && String(process.env[k]).trim().length > 0);
     res.json({
@@ -6410,12 +6362,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         expiresAt: expiry,
       });
 
-      console.log(`\n========================================`);
+      console.log(`\n----------------------------------------`);
       console.log(`ADMIN PASSWORD RESET CODE`);
       console.log(`Email: ${email}`);
       console.log(`Reset Code: ${resetCode}`);
       console.log(`Expires: ${expiry.toISOString()}`);
-      console.log(`========================================\n`);
+      console.log(`----------------------------------------\n`);
 
       // Actually email the code to the admin. Fire-and-forget so the route stays fast.
       const subject = "Your Vedic Tatva admin password reset code";
@@ -9443,11 +9395,11 @@ Return JSON:
     }
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // PREMIUM PDF KUNDLI — paid Vedic birth-chart report (₹501)
   // Flow: create-order  →  Razorpay checkout  →  verify-payment
   //   (verify HMAC, mark paid, async generate PDF + email it).
-  // ============================================================
+  // ------------------------------------------------------------
   app.post("/api/kundli-pdf/create-order", async (req, res) => {
     try {
       const schema = insertPdfKundliOrderSchema.extend({
@@ -10533,9 +10485,9 @@ ${accumulatedWisdom}`
     }
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // SEO Pages Management
-  // ============================================================
+  // ------------------------------------------------------------
   app.get("/api/seo-pages", async (_req, res) => {
     try {
       const pages = await storage.getSeoPages();
@@ -12532,9 +12484,9 @@ Please create an optimized route that minimizes backtracking and maximizes the s
     }
   });
 
-  // ============================================================
+  // ------------------------------------------------------------
   // Admin-managed Jap Counter mantras + chant audio
-  // ============================================================
+  // ------------------------------------------------------------
   // Public list — every visitor sees the active admin-added mantras
   // merged into the JapCounter's built-in PRESET_MANTRAS list.
   app.get("/api/mantras", async (_req, res) => {
