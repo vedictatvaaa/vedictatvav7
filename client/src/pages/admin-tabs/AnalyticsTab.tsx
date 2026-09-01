@@ -33,15 +33,15 @@ function AnalyticsTab() {
   const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "#2563eb", "#059669", "#7c3aed", "#ea580c", "#0891b2", "#be185d"];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-w-0 space-y-6">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row">
         <div>
           <h1 className="text-3xl font-serif text-primary" data-testid="page-title-analytics">Analytics</h1>
           <p className="text-sm text-muted-foreground">Sales, revenue, and business insights</p>
         </div>
-        <div className="flex gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
           <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-[160px]" data-testid="select-analytics-range">
+            <SelectTrigger className="col-span-2 h-11 w-full sm:col-span-1 sm:w-[160px]" data-testid="select-analytics-range">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -51,19 +51,19 @@ function AnalyticsTab() {
               <SelectItem value="365">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={() => window.open("/api/admin/export/sales-csv")} data-testid="button-analytics-export-csv">
+          <Button variant="outline" size="sm" className="min-h-11" onClick={() => window.open("/api/admin/export/sales-csv")} data-testid="button-analytics-export-csv">
             <Download className="w-3 h-3 mr-1" /> CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => window.open("/api/admin/export/gst-report")} data-testid="button-analytics-export-gst">
+          <Button variant="outline" size="sm" className="min-h-11" onClick={() => window.open("/api/admin/export/gst-report")} data-testid="button-analytics-export-gst">
             <FileText className="w-3 h-3 mr-1" /> GST
           </Button>
-          <Button variant="outline" size="sm" onClick={() => window.open("/api/admin/export/customers")} data-testid="button-analytics-export-customers">
+          <Button variant="outline" size="sm" className="col-span-2 min-h-11 sm:col-span-1" onClick={() => window.open("/api/admin/export/customers")} data-testid="button-analytics-export-customers">
             <Users className="w-3 h-3 mr-1" /> Customers
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4">
         <Card className="bg-card border-border">
           <CardContent className="pt-4 pb-3">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Revenue</p>
@@ -90,10 +90,10 @@ function AnalyticsTab() {
         </Card>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="bg-card border-border">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 md:gap-6">
+        <Card className="min-w-0 overflow-hidden bg-card border-border">
           <CardHeader><CardTitle className="text-lg text-primary">Sales Trend</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             {salesData?.data?.length > 0 ? (
               <div className="h-64">
                 <SalesChart data={salesData.data} />

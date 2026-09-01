@@ -221,7 +221,7 @@ export function AdminAlertsBell({ adminToken, onJumpToTab }: AdminAlertsBellProp
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative h-11 w-11"
           aria-label="Admin alerts"
           data-testid="button-admin-alerts"
         >

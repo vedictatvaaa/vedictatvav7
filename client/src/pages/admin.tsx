@@ -4,7 +4,7 @@ import {
 } from "react";
 import { useQuery, useIsMutating } from "@tanstack/react-query";
 import {
-  ShoppingCart, RotateCcw, CalendarClock, XCircle, Menu, Sparkles, Search,
+  ShoppingCart, RotateCcw, CalendarClock, XCircle, X, Menu, Sparkles, Search,
   HelpCircle, PanelLeftClose, PanelLeft, AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -316,10 +316,60 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
     if (stored === "1") return true;
     return window.innerWidth >= 768;
   });
+  const [isMobileViewport, setIsMobileViewport] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false,
+  );
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const mobileDrawerOpen = sidebarOpen && isMobileViewport;
+  const closeMobileSidebar = () => {
+    setSidebarOpen(false);
+    if (typeof window !== "undefined" && isMobileViewport) {
+      window.requestAnimationFrame(() => mobileMenuTriggerRef.current?.focus());
+    }
+  };
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const syncViewport = (event: MediaQueryListEvent | MediaQueryList) => setIsMobileViewport(event.matches);
+    syncViewport(media);
+    media.addEventListener("change", syncViewport);
+    return () => media.removeEventListener("change", syncViewport);
+  }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(SIDEBAR_PREF_KEY, sidebarOpen ? "1" : "0");
   }, [sidebarOpen]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileSidebar();
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(sidebarRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) || []).filter((element) => !element.hasAttribute("hidden"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onEscape);
+    window.requestAnimationFrame(() => {
+      sidebarRef.current?.querySelector<HTMLElement>('[data-testid="close-admin-menu"]')?.focus();
+    });
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [mobileDrawerOpen]);
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -453,24 +503,31 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
       className="flex h-[calc(100vh-5.75rem)] md:h-[calc(100vh-6rem)] bg-gradient-to-br from-[hsl(var(--background))] via-[hsl(var(--background))] to-[hsl(var(--accent))]/40"
       data-testid="admin-panel"
     >
-      {sidebarOpen && (
+      {mobileDrawerOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeMobileSidebar}
           data-testid="sidebar-overlay"
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-card/95 backdrop-blur border-r border-border flex flex-col shrink-0 transition-all duration-200 top-[5.75rem] md:top-0 md:relative shadow-sm ${
+        ref={sidebarRef}
+        id="admin-navigation"
+        role={mobileDrawerOpen ? "dialog" : undefined}
+        aria-modal={mobileDrawerOpen ? true : undefined}
+        aria-hidden={isMobileViewport && !mobileDrawerOpen ? true : undefined}
+        inert={isMobileViewport && !mobileDrawerOpen ? true : undefined}
+        className={`fixed inset-y-0 left-0 z-50 bg-card/95 backdrop-blur border-r border-border flex flex-col shrink-0 transition-[transform,width] duration-300 ease-out motion-reduce:transition-none top-0 md:top-0 md:relative shadow-xl md:shadow-sm ${
           sidebarOpen
-            ? "translate-x-0 w-64"
-            : "-translate-x-full md:translate-x-0 md:w-16 w-64"
+            ? "translate-x-0 w-[min(86vw,376px)] md:w-64"
+            : "-translate-x-full md:translate-x-0 md:w-[72px] w-[min(86vw,376px)]"
         }`}
         data-testid="admin-sidebar"
+        aria-label="Admin navigation"
       >
         {/* Brand block */}
-        <div className="px-4 py-4 border-b border-border bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary))]/90 text-[hsl(var(--primary-foreground))]">
+        <div className="sticky top-0 z-10 px-4 py-4 border-b border-border bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary))]/90 text-[hsl(var(--primary-foreground))]">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-md bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] flex items-center justify-center shrink-0 shadow-sm">
               <Sparkles className="w-4 h-4" />
@@ -485,6 +542,15 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                 </div>
               </div>
             )}
+            <button
+              type="button"
+              onClick={closeMobileSidebar}
+              className="ml-auto md:hidden inline-flex h-11 w-11 items-center justify-center rounded-lg text-[hsl(var(--primary-foreground))] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--secondary))]"
+              aria-label="Close admin menu"
+              data-testid="close-admin-menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -512,13 +578,13 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                     key={item.id}
                     onClick={() => {
                       setActiveTab(item.id);
-                      if (window.innerWidth < 768) setSidebarOpen(false);
+                      if (window.innerWidth < 768) closeMobileSidebar();
                     }}
                     onMouseEnter={() => prefetchTab(item.id)}
                     onFocus={() => prefetchTab(item.id)}
                     title={!sidebarOpen ? `${item.label}${badge ? ` (${badge})` : ""}` : undefined}
                     aria-current={isActive ? "page" : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors relative hover-elevate ${
+                     className={`w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative hover-elevate active-elevate-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--secondary))] ${
                       isActive
                         ? "bg-[hsl(var(--accent))] text-[hsl(var(--primary))]"
                         : "text-foreground/80"
@@ -562,10 +628,10 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
         </nav>
 
         {/* Sidebar footer: collapse + logout */}
-        <div className="p-2 border-t border-border space-y-1">
+        <div className="sticky bottom-0 p-2 border-t border-border space-y-1 bg-card/95 backdrop-blur">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground hover-elevate"
+            className="hidden md:flex w-full min-h-11 items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover-elevate active-elevate-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--secondary))]"
             data-testid="toggle-sidebar"
           >
             {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
@@ -577,7 +643,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                 fetch("/api/admin/logout", { method: "POST", credentials: "include", headers: adminToken ? { "x-admin-token": adminToken } : {} });
                 onLogout();
               }}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-destructive hover-elevate"
+              className="w-full min-h-11 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-destructive hover-elevate active-elevate-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
               data-testid="btn-admin-logout"
             >
               <XCircle className="w-4 h-4 shrink-0" />
@@ -587,28 +653,25 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
         </div>
       </aside>
 
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed bottom-4 left-4 z-50 md:hidden w-12 h-12 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] shadow-lg flex items-center justify-center"
-          data-testid="mobile-menu-toggle"
-          aria-label="Open admin menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      )}
-
-      <div className="flex-1 flex flex-col min-w-0">
+      <div
+        data-testid="admin-content-shell"
+        className="flex-1 flex flex-col min-w-0"
+        aria-hidden={mobileDrawerOpen ? true : undefined}
+        inert={mobileDrawerOpen ? true : undefined}
+      >
         {/* Premium top bar: page title + global actions (search palette, alerts, help) */}
         <header
-          className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-3 border-b border-border bg-card/85 backdrop-blur-md"
+          className="sticky top-0 z-30 min-h-[68px] flex items-center justify-between gap-2 px-3 sm:px-6 lg:px-8 py-2.5 border-b border-border bg-card/85 backdrop-blur-md"
           data-testid="admin-topbar"
         >
           <div className="min-w-0 flex items-center gap-3">
             <button
+              ref={mobileMenuTriggerRef}
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-md hover-elevate"
+              className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover-elevate active-elevate-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--secondary))]"
               aria-label="Open menu"
+              aria-expanded={mobileDrawerOpen}
+              aria-controls="admin-navigation"
               data-testid="topbar-menu-mobile"
             >
               <Menu className="w-5 h-5" />
@@ -634,12 +697,14 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
                 Saving…
               </span>
             )}
-            <AdminTodayStats adminToken={adminToken} />
+            <div className="hidden md:block">
+              <AdminTodayStats adminToken={adminToken} />
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPaletteOpen(true)}
-              className="hidden sm:inline-flex gap-2 text-muted-foreground"
+              className="hidden sm:inline-flex min-h-11 gap-2 text-muted-foreground"
               data-testid="topbar-palette"
             >
               <Search className="w-4 h-4" />
@@ -649,7 +714,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="sm:hidden"
+              className="sm:hidden h-11 w-11"
               onClick={() => setPaletteOpen(true)}
               aria-label="Quick jump"
               data-testid="topbar-palette-mobile"
@@ -662,6 +727,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
             <Button
               variant="ghost"
               size="icon"
+              className="h-11 w-11"
               onClick={() => setShortcutsOpen(true)}
               aria-label="Keyboard shortcuts"
               data-testid="topbar-help"
@@ -672,8 +738,8 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
         </header>
 
         {/* Tab content */}
-        <div ref={contentScrollRef} className="flex-1 overflow-auto p-3 sm:p-6 lg:p-8" data-lenis-prevent>
-          <div key={activeTab} className="max-w-6xl animate-in fade-in duration-200">
+        <div ref={contentScrollRef} className="flex-1 min-w-0 overflow-auto p-3 sm:p-6 lg:p-8" data-lenis-prevent>
+          <div key={activeTab} className="w-full max-w-[1440px] animate-in fade-in duration-200">
             <TabErrorBoundary tabLabel={activeTabMeta?.label}>
             <Suspense fallback={fallback}>
               {activeTab === "dashboard" && <DashboardTab setActiveTab={setActiveTab} />}

@@ -259,13 +259,13 @@ function DashboardTab({ setActiveTab }: { setActiveTab: (tab: TabId) => void }) 
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-row items-start justify-between flex-wrap gap-4">
+    <div className="min-w-0 space-y-6 sm:space-y-8">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="text-3xl font-serif text-primary mb-1" data-testid="page-title-dashboard">Dashboard</h1>
           <p className="text-sm text-muted-foreground">Overview of your Vedic Tatva platform — {fromLabel}</p>
         </div>
-        <div className="w-44">
+        <div className="w-full sm:w-44">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger data-testid="select-dashboard-date-range">
               <SelectValue />
@@ -285,23 +285,23 @@ function DashboardTab({ setActiveTab }: { setActiveTab: (tab: TabId) => void }) 
       <IntegrationsHealthStrip setActiveTab={setActiveTab} fetcher={fetcher} />
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
           {statCards.map((stat, i) => (
-            <Card key={i} className={`bg-card border ${stat.border}`} data-testid={`stat-card-${i}`}>
-              <CardContent className="pt-5 pb-4 flex items-center gap-4">
-                <div className={`p-3 rounded-xl ${stat.color}`}>
-                  <stat.icon className="w-5 h-5" />
+            <Card key={i} className={`min-w-0 bg-card border shadow-sm ${stat.border}`} data-testid={`stat-card-${i}`}>
+              <CardContent className="flex min-h-[112px] items-start gap-3 p-3.5 sm:p-4">
+                <div className={`shrink-0 rounded-lg p-2.5 ${stat.color}`}>
+                  <stat.icon className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-secondary uppercase tracking-wide">{stat.label}</p>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  {stat.sub && <p className="text-xs text-muted-foreground mt-0.5">{stat.sub}</p>}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[.1em] text-secondary">{stat.label}</p>
+                  <p className="truncate font-serif text-xl font-bold text-foreground sm:text-2xl">{stat.value}</p>
+                  {stat.sub && <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{stat.sub}</p>}
                 </div>
               </CardContent>
             </Card>

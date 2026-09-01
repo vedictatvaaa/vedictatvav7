@@ -142,16 +142,16 @@ function VisitorsTab() {
   const desktopCount = devices.find(d => d.name === "desktop")?.count || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-serif text-primary" data-testid="page-title-visitors">Visitors</h1>
           <p className="text-sm text-muted-foreground">Real-time traffic analytics — device, location, source & behaviour</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_44px] gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_44px_auto] sm:flex sm:w-auto sm:flex-wrap">
           <Select value={days} onValueChange={setDays}>
-            <SelectTrigger className="w-[150px]" data-testid="select-visitor-days">
+            <SelectTrigger className="h-11 w-full sm:w-[150px]" data-testid="select-visitor-days">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -161,13 +161,13 @@ function VisitorsTab() {
               <SelectItem value="365">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching} data-testid="btn-refresh-visitors">
+          <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => refetch()} disabled={isFetching} aria-label="Refresh visitor analytics" data-testid="btn-refresh-visitors">
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5"
+            className="col-span-2 min-h-11 gap-1.5 min-[390px]:col-span-1"
             onClick={() => downloadCsv(`visitors-${new Date().toISOString().slice(0,10)}.csv`,
               recent.map(r => ({ id: r.id, path: r.path, device: r.device, browser: r.browser, os: r.os, city: r.city, country: r.country, referrer: r.referrer || "", created_at: fmtDate(r.createdAt) }))
             )}
@@ -181,11 +181,11 @@ function VisitorsTab() {
 
       {/* Summary stat cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-5">
           {[
             { label: "Today",      value: summary.today,     icon: <Activity className="w-4 h-4" />,  color: "text-primary" },
             { label: "Yesterday",  value: summary.yesterday, icon: <Clock className="w-4 h-4" />,     color: "text-secondary" },
@@ -207,20 +207,20 @@ function VisitorsTab() {
       )}
 
       {/* Daily chart */}
-      <Card className="bg-card border-border">
+      <Card className="min-w-0 overflow-hidden bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg text-primary flex items-center gap-2">
             <TrendingUp className="w-4 h-4" /> Page Views — Last {days} Days
             <span className="ml-auto text-sm font-normal text-muted-foreground">{totalInRange.toLocaleString("en-IN")} total</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="min-w-0">
           {isLoading ? <Skeleton className="h-40 w-full" /> : <DailyChart data={daily} />}
         </CardContent>
       </Card>
 
       {/* Device + Browser + OS row */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid min-w-0 gap-4 md:grid-cols-3 md:gap-6">
         <Card className="bg-card border-border">
           <CardHeader><CardTitle className="text-base text-primary flex items-center gap-2"><Smartphone className="w-4 h-4" /> Devices</CardTitle></CardHeader>
           <CardContent className="space-y-4">

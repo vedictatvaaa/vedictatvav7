@@ -242,7 +242,7 @@ function PanditsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-serif text-primary" data-testid="page-title-pandits">Pandits</h1>
           <p className="text-sm text-muted-foreground">Manage profiles, publishing eligibility, locations and discovery health.</p>
@@ -253,7 +253,7 @@ function PanditsTab() {
             size="sm"
             disabled={bulkGeocoding}
             onClick={handleBulkSetLocations}
-            className="shrink-0 gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
+              className="w-full sm:w-auto min-h-11 shrink-0 gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
             data-testid="btn-bulk-set-locations"
           >
             <LocateFixed className={`w-4 h-4 ${bulkGeocoding ? "animate-spin" : ""}`} />
@@ -316,9 +316,10 @@ function PanditsTab() {
             const hasGps = pandit.latitude != null && pandit.longitude != null;
             const isGeocoding = geocodingId === pandit.id;
             return (
-              <Card key={pandit.id} className="bg-card border-border" data-testid={`card-pandit-${pandit.id}`}>
-                <CardContent className="py-4">
-                  <div className="flex items-center gap-4">
+              <Card key={pandit.id} className="overflow-hidden bg-card border-border shadow-sm" data-testid={`card-pandit-${pandit.id}`}>
+                <CardContent className="p-4 sm:p-5">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+                    <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-serif font-bold text-lg shrink-0">
                       {pandit.name.charAt(0)}
                     </div>
@@ -349,36 +350,40 @@ function PanditsTab() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{(pandit as any).state ? `${(pandit as any).state} · ` : ""}{pandit.city} · {pandit.specialization} · {(pandit as any).regionalOrigin || "Tradition not set"}</p>
-                      <p className="text-xs text-secondary">
-                        {pandit.experience} yrs exp · {pandit.languages} · ⭐ {pandit.rating} · {pandit.availability || "available"}
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{(pandit as any).state ? `${(pandit as any).state} · ` : ""}{pandit.city} · {pandit.specialization} · {(pandit as any).regionalOrigin || "Tradition not set"}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-secondary sm:flex sm:flex-wrap sm:gap-x-3">
+                        <span>{pandit.experience} yrs experience</span>
+                        <span>{pandit.languages}</span>
+                        <span aria-label={`Rating ${pandit.rating}`}>★ {pandit.rating}</span>
+                        <span className="capitalize">{pandit.availability || "available"}</span>
                         {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() && (
-                          <span className="ml-2 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full text-[10px] font-bold">BOOSTED ({pandit.boostType})</span>
+                          <span className="col-span-2 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full text-[10px] font-bold sm:col-auto">BOOSTED ({pandit.boostType})</span>
                         )}
-                      </p>
+                      </div>
+                    </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    <div className="grid w-full grid-cols-2 gap-2 border-t border-border/70 pt-4 sm:flex sm:flex-wrap sm:items-center sm:justify-start lg:w-auto lg:max-w-[660px] lg:justify-end lg:border-t-0 lg:pt-0">
                       {editingFeesId === pandit.id ? (
-                        <div className="flex items-center gap-2">
+                        <div className="col-span-2 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 sm:flex">
                           <Input
                             type="number"
                             value={editFees}
                             onChange={(e) => setEditFees(Number(e.target.value))}
-                            className="w-24 h-8 text-sm"
+                            className="h-11 w-full text-sm sm:h-9 sm:w-24"
                             data-testid={`input-edit-fees-${pandit.id}`}
                           />
-                          <Button size="sm" className="bg-emerald-600 text-white" onClick={() => updateFeesMutation.mutate({ id: pandit.id, fees: editFees })} data-testid={`btn-save-fees-${pandit.id}`}>
+                          <Button size="sm" className="min-h-11 bg-emerald-600 text-white sm:min-h-9" onClick={() => updateFeesMutation.mutate({ id: pandit.id, fees: editFees })} data-testid={`btn-save-fees-${pandit.id}`}>
                             Save
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setEditingFeesId(null)} data-testid={`btn-cancel-fees-${pandit.id}`}>
+                          <Button size="sm" variant="outline" className="min-h-11 sm:min-h-9" onClick={() => setEditingFeesId(null)} data-testid={`btn-cancel-fees-${pandit.id}`}>
                             Cancel
                           </Button>
                         </div>
                       ) : (
-                        <div className="text-right">
+                        <div className="col-span-2 flex min-h-11 items-center justify-between rounded-lg border border-border bg-muted/25 px-3 text-left sm:col-auto sm:block sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:text-right">
                           <p className="font-bold text-foreground">₹{pandit.fees.toLocaleString()}</p>
-                          <button onClick={() => { setEditingFeesId(pandit.id); setEditFees(pandit.fees); }} className="text-xs text-secondary hover:underline" data-testid={`btn-edit-fees-${pandit.id}`}>
+                          <button onClick={() => { setEditingFeesId(pandit.id); setEditFees(pandit.fees); }} className="min-h-11 text-xs font-medium text-secondary hover:underline sm:min-h-0" data-testid={`btn-edit-fees-${pandit.id}`}>
                             Edit Fees
                           </button>
                         </div>
@@ -388,7 +393,7 @@ function PanditsTab() {
                         value={pandit.tier || "free"}
                         onChange={e => upgradeTierMutation.mutate({ id: pandit.id, tier: e.target.value })}
                         disabled={upgradeTierMutation.isPending}
-                        className={`h-8 text-xs rounded-md border px-2 font-semibold cursor-pointer ${
+                        className={`h-11 w-full text-xs rounded-md border px-2 font-semibold cursor-pointer sm:h-9 sm:w-auto ${
                           (pandit.tier || "free") === "guru_elite" ? "border-purple-300 bg-purple-50 text-purple-700" :
                           (pandit.tier || "free") === "gold"       ? "border-yellow-300 bg-yellow-50 text-yellow-700" :
                           (pandit.tier || "free") === "silver"     ? "border-slate-300 bg-slate-50 text-slate-600" :
@@ -403,13 +408,13 @@ function PanditsTab() {
                       </select>
 
                       {pandit.boostActive && pandit.boostEndDate && new Date(pandit.boostEndDate) > new Date() ? (
-                        <Button size="sm" variant="outline" onClick={() => deactivateBoostMutation.mutate(pandit.id)} className="h-8 text-secondary border-secondary/30 text-xs gap-1" data-testid={`btn-deactivate-boost-${pandit.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => deactivateBoostMutation.mutate(pandit.id)} className="min-h-11 text-secondary border-secondary/30 text-xs gap-1 sm:min-h-9" data-testid={`btn-deactivate-boost-${pandit.id}`}>
                           Remove Boost
                         </Button>
                       ) : (
                         <select
                           onChange={e => { if (e.target.value) { boostMutation.mutate({ id: pandit.id, boostType: e.target.value as "monthly" | "yearly" }); e.target.value = ""; } }}
-                          className="h-8 text-xs rounded-md border border-secondary/30 bg-secondary/5 text-secondary px-2"
+                          className="h-11 w-full text-xs rounded-md border border-secondary/30 bg-secondary/5 text-secondary px-2 sm:h-9 sm:w-auto"
                           defaultValue=""
                           data-testid={`select-boost-${pandit.id}`}
                         >
@@ -424,7 +429,7 @@ function PanditsTab() {
                         variant="outline"
                         disabled={isGeocoding}
                         onClick={() => setLocationMutation.mutate(pandit.id)}
-                        className={`h-8 text-xs gap-1 ${hasGps ? "text-sky-600 border-sky-200" : "text-amber-600 border-amber-300"}`}
+                        className={`min-h-11 text-xs gap-1 sm:min-h-9 ${hasGps ? "text-sky-600 border-sky-200" : "text-amber-600 border-amber-300"}`}
                         title={hasGps ? `GPS: ${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)} — click to refresh` : "Auto-detect coordinates from city"}
                         data-testid={`btn-set-location-${pandit.id}`}
                       >
@@ -433,21 +438,21 @@ function PanditsTab() {
                       </Button>
 
                       {(pandit as any).locationReviewStatus === "needs_review" && <span className="text-xs font-medium text-amber-700">⚠ Location needs review</span>}
-                      <Button size="sm" variant="outline" onClick={() => setViewingPandit(pandit)} className="h-8 text-xs gap-1"><Eye className="w-3 h-3"/> View</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="h-8 text-primary border-primary/30 text-xs gap-1" data-testid={`btn-edit-pandit-${pandit.id}`}>
+                      <Button size="sm" variant="outline" onClick={() => setViewingPandit(pandit)} className="min-h-11 text-xs gap-1 sm:min-h-9"><Eye className="w-3 h-3"/> View</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="min-h-11 text-primary border-primary/30 text-xs gap-1 sm:min-h-9" data-testid={`btn-edit-pandit-${pandit.id}`}>
                           <Edit className="w-3 h-3" /> Edit
                         </Button>
 
                       {pandit.verified ? (
-                        <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="h-8 text-orange-600 border-orange-200 text-xs gap-1" data-testid={`btn-delist-pandit-${pandit.id}`}>
+                        <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="min-h-11 text-orange-600 border-orange-200 text-xs gap-1 sm:min-h-9" data-testid={`btn-delist-pandit-${pandit.id}`}>
                           Delist
                         </Button>
                       ) : (
-                        <Button size="sm" onClick={() => approveMutation.mutate(pandit.id)} className="bg-emerald-600 text-white h-8 gap-1 text-xs" data-testid={`btn-approve-pandit-${pandit.id}`}>
+                        <Button size="sm" onClick={() => approveMutation.mutate(pandit.id)} className="min-h-11 bg-emerald-600 text-white gap-1 text-xs sm:min-h-9" data-testid={`btn-approve-pandit-${pandit.id}`}>
                           <CheckCircle className="w-3 h-3" /> Approve
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pandit.id)} className="h-8 text-red-500" data-testid={`btn-delete-pandit-${pandit.id}`}>
+                      <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pandit.id)} className="min-h-11 text-red-500 sm:min-h-9" aria-label={`Delete ${pandit.name}`} data-testid={`btn-delete-pandit-${pandit.id}`}>
                         <XCircle className="w-4 h-4" />
                       </Button>
                     </div>
