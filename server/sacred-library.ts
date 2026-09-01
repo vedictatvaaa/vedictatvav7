@@ -11,6 +11,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { adminAuthMiddleware } from "./admin-auth";
 import { sanitizeRichHtml } from "./html-sanitizer";
 import { notifyPublish } from "./publish-notify";
+import { hasAnalyticsConsent } from "./consent";
 
 const TEXT_TYPES = ["chalisa", "mantra", "katha", "aarti", "stotra", "book"] as const;
 type TextType = typeof TEXT_TYPES[number];
@@ -288,7 +289,7 @@ export function registerSacredLibraryRoutes(app: Express) {
       }
       res.setHeader("Cache-Control", "public, max-age=600, stale-while-revalidate=86400");
       // Skip view counter on hover/touch prefetches — only count real reader loads.
-      if (req.query.prefetch !== "1") {
+      if (req.query.prefetch !== "1" && hasAnalyticsConsent(req)) {
         db.update(sacredTexts).set({ viewCount: sql`${sacredTexts.viewCount} + 1` })
           .where(eq(sacredTexts.id, row.id)).catch(() => {});
       }

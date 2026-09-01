@@ -16,11 +16,13 @@ import { optImg } from "@/lib/optImg";
 import PageSeo from "@/components/PageSeo";
 import { blogPosting, breadcrumbList, abs } from "@/lib/seo-schemas";
 import { sanitizeHtml } from "@/lib/sanitize-html";
+import { useConsentPreferences } from "@/lib/consent";
 
 export default function BlogPostPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const { toast } = useToast();
+  const consent = useConsentPreferences();
 
   const { data: post, isLoading } = useQuery<BlogPost>({
     queryKey: ["/api/blog-posts/slug", slug],
@@ -37,10 +39,10 @@ export default function BlogPostPage() {
   });
 
   useEffect(() => {
-    if (!post) return;
+    if (!post || !consent?.analytics) return;
     // Fire-and-forget view increment
     fetch(`/api/blog-posts/slug/${encodeURIComponent(post.slug)}/view`, { method: "POST" }).catch(() => {});
-  }, [post]);
+  }, [consent?.analytics, post]);
 
   // Pull related products by category derived from the relatedShopUrl (e.g. /shop/sambrani-cups)
   const shopCategory = post?.relatedShopUrl?.match(/\/puja-samagri-online\/([^/?#]+)/)?.[1];
@@ -69,6 +71,36 @@ export default function BlogPostPage() {
     }
   };
 
+  // Keep content-derived hooks unconditional so loading-to-loaded renders
+  // preserve React's hook order.
+  const { tocItems, bodyWithIds } = useMemo(() => {
+    const items: Array<{ id: string; text: string }> = [];
+    const used = new Set<string>();
+    const slugify = (s: string) =>
+      s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "section";
+    const html = (post?.body || "").replace(/<h2(\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (_m, attrs = "", inner) => {
+      const text = String(inner).replace(/<[^>]+>/g, "").trim();
+      const existing = String(attrs || "").match(/\sid=["']([^"']+)["']/i);
+      let id: string;
+      if (existing) {
+        id = existing[1];
+      } else {
+        id = slugify(text);
+        let n = 2;
+        while (used.has(id)) { id = `${slugify(text)}-${n++}`; }
+      }
+      used.add(id);
+      items.push({ id, text });
+      return `<h2${existing ? attrs : `${attrs || ""} id="${id}"`}>${inner}</h2>`;
+    });
+    return { tocItems: items, bodyWithIds: html };
+  }, [post?.body]);
+
+  const wordCount = useMemo(() => {
+    const text = (post?.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return text ? text.split(" ").length : undefined;
+  }, [post?.body]);
+
   if (isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20" data-testid="loading-blog-post">
@@ -93,38 +125,6 @@ export default function BlogPostPage() {
   }
 
   const relatedPosts = (related || []).filter(p => p.slug !== post.slug).slice(0, 3);
-
-  // Build TOC from H2 headings in the post body and inject stable ids onto each H2.
-  const { tocItems, bodyWithIds } = useMemo(() => {
-    const items: Array<{ id: string; text: string }> = [];
-    const used = new Set<string>();
-    const slugify = (s: string) =>
-      s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "section";
-    const html = (post.body || "").replace(/<h2(\s[^>]*)?>([\s\S]*?)<\/h2>/gi, (_m, attrs = "", inner) => {
-      const text = String(inner).replace(/<[^>]+>/g, "").trim();
-      // Reuse an existing id on the heading if present, so TOC anchors always resolve.
-      const existing = String(attrs || "").match(/\sid=["']([^"']+)["']/i);
-      let id: string;
-      if (existing) {
-        id = existing[1];
-      } else {
-        id = slugify(text);
-        let n = 2;
-        while (used.has(id)) { id = `${slugify(text)}-${n++}`; }
-      }
-      used.add(id);
-      items.push({ id, text });
-      return `<h2${existing ? attrs : `${attrs || ""} id="${id}"`}>${inner}</h2>`;
-    });
-    return { tocItems: items, bodyWithIds: html };
-  }, [post.body]);
-
-  // Word count from the rendered body (tags stripped) — a BlogPosting signal
-  // Google uses to gauge article depth.
-  const wordCount = useMemo(() => {
-    const text = (post.body || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    return text ? text.split(" ").length : undefined;
-  }, [post.body]);
 
   return (
     <article className="w-full pb-20 bg-[#FBF7EE]" data-testid={`page-blog-post-${post.slug}`}>

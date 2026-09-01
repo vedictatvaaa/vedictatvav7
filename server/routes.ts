@@ -38,6 +38,7 @@ import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
 import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { registerContentRoutes } from "./content-routes";
 import { registerSacredLibraryRoutes } from "./sacred-library";
+import { hasAnalyticsConsent } from "./consent";
 import { seedPujaLibrary, seedCommunityQa } from "./content-seeds";
 import { registerWave1Routes, startWave1Scheduler, awardPoints, ensureReferralCode } from "./wave1";
 import { registerPromoteProductRoutes } from "./promote-product";
@@ -1566,6 +1567,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ---- SEO: Core Web Vitals ingest endpoint ----
   app.post("/api/vitals", express.json(), (req, res) => {
+    if (!hasAnalyticsConsent(req)) return res.status(204).end();
     const { name, value, rating, delta, id } = req.body || {};
     if (!name) return res.status(400).json({ error: "missing name" });
     // Log for now — wire to analytics/DB later
@@ -10780,6 +10782,7 @@ ${accumulatedWisdom}`
   });
 
   app.post("/api/blog-posts/slug/:slug/view", async (req, res) => {
+    if (!hasAnalyticsConsent(req)) return res.status(204).end();
     try {
       await storage.incrementBlogPostView(req.params.slug);
       res.json({ success: true });
@@ -12840,6 +12843,7 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   // Track page view — public endpoint, rate-limited by global limiter.
   // Body: { path, referrer?, sessionId? }
   app.post("/api/track/pageview", async (req, res) => {
+    if (!hasAnalyticsConsent(req)) return res.status(204).end();
     try {
       const { path: pagePath, referrer, sessionId } = req.body || {};
       if (!pagePath || typeof pagePath !== "string") return res.status(400).json({ ok: false });

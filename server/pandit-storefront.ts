@@ -32,6 +32,7 @@ import {
   publicStorefrontPanditDto,
 } from "./pandit-public-access";
 import { panditServiceWriteSchema, panditPackageWriteSchema, panditGalleryWriteSchema, panditAvailabilityWriteSchema } from "./catalog-validation";
+import { hasAnalyticsConsent, hasMarketingConsent } from "./consent";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -45,7 +46,6 @@ type PaidTier = typeof PAID_TIERS[number];
 
 const REF_COOKIE = "vt_ref";
 const REF_COOKIE_DAYS = 30;
-const CONSENT_COOKIE = "vt_consent";
 
 // Slug-validation cache for refCookieMiddleware. Pandits change rarely, so
 // a 5-minute TTL keeps the per-request cost at ~zero while still picking up
@@ -211,14 +211,6 @@ declare module "express-serve-static-core" {
   interface Request {
     refSlug?: string;
   }
-}
-
-function hasMarketingConsent(req: Request): boolean {
-  return /^v1\.a[01]\.m1$/.test(String(req.cookies?.[CONSENT_COOKIE] || ""));
-}
-
-function hasAnalyticsConsent(req: Request): boolean {
-  return /^v1\.a1\.m[01]$/.test(String(req.cookies?.[CONSENT_COOKIE] || ""));
 }
 
 export function refCookieMiddleware(req: Request, res: Response, next: NextFunction) {

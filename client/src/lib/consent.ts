@@ -96,6 +96,17 @@ export function saveConsentPreferences(
   const value = `v1.a${preferences.analytics ? 1 : 0}.m${preferences.marketing ? 1 : 0}`;
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
   document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
+  if (!preferences.marketing) {
+    document.cookie = `vt_ref=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  }
+  if (!preferences.analytics) {
+    try {
+      localStorage.removeItem("vt_session_id");
+      localStorage.removeItem("vedic_tatva_interactions");
+    } catch {
+      // Storage may be disabled by browser policy.
+    }
+  }
   notify();
   applyGoogleConsent(currentPreferences);
   window.dispatchEvent(new Event(CONSENT_EVENT));

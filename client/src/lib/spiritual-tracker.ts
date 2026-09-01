@@ -1,3 +1,5 @@
+import { hasConsent } from "./consent";
+
 const TRACKER_KEY = "vedic_tatva_interactions";
 
 export interface UserInteraction {
@@ -21,6 +23,7 @@ export interface InteractionSummary {
 }
 
 function loadInteractions(): UserInteraction[] {
+  if (!hasConsent("analytics")) return [];
   try {
     const raw = localStorage.getItem(TRACKER_KEY);
     if (raw) return JSON.parse(raw);
@@ -29,11 +32,13 @@ function loadInteractions(): UserInteraction[] {
 }
 
 function saveInteractions(interactions: UserInteraction[]) {
+  if (!hasConsent("analytics")) return;
   const trimmed = interactions.slice(-500);
   localStorage.setItem(TRACKER_KEY, JSON.stringify(trimmed));
 }
 
 export function trackInteraction(interaction: Omit<UserInteraction, "timestamp">) {
+  if (!hasConsent("analytics")) return;
   const interactions = loadInteractions();
   interactions.push({ ...interaction, timestamp: Date.now() });
   saveInteractions(interactions);

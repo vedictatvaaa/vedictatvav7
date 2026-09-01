@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import PageSeo from "@/components/PageSeo";
+import { useConsentPreferences } from "@/lib/consent";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
@@ -93,11 +94,19 @@ export default function PanditStorefrontPage() {
   const [lightbox, setLightbox] = useState(-1);
   const [copied, setCopied] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const consent = useConsentPreferences();
   const { data, isLoading, isError, refetch } = useQuery<StorefrontDto>({
     queryKey: ["/api/storefront", slug], enabled: !!slug,
     queryFn: async () => { const response = await fetch(`/api/storefront/${encodeURIComponent(slug)}`); if (!response.ok) throw new Error("Storefront unavailable"); return response.json(); },
   });
-  useEffect(() => { if (slug) document.cookie = `vt_ref=${encodeURIComponent(slug)}; path=/; max-age=${30 * 24 * 60 * 60}; samesite=lax`; }, [slug]);
+  useEffect(() => {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    if (consent?.marketing && slug) {
+      document.cookie = `vt_ref=${encodeURIComponent(slug)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${secure}`;
+    } else {
+      document.cookie = `vt_ref=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+    }
+  }, [consent?.marketing, slug]);
   useEffect(() => {
     if (lightbox < 0) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(-1); };

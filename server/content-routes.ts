@@ -11,6 +11,7 @@ import { and, asc, desc, eq, isNull, or, sql, inArray } from "drizzle-orm";
 import { runDailyBlogGeneration, autoAnswerPendingQuestions, generateAiAnswerForQuestion } from "./blog-ai";
 import { regenerateMuhuratsForYear, regenerateForCurrentAndNextYear, computeMuhuratsForPuja } from "./muhurat-engine";
 import { sanitizeRichHtml } from "./html-sanitizer";
+import { hasAnalyticsConsent } from "./consent";
 
 const PUJA_HTML_FIELDS = ["whyPerformed", "storyMyth", "howCelebrated", "ethics", "benefits"] as const;
 function sanitizePujaPayload<T extends Record<string, any>>(body: T): T {
@@ -325,7 +326,9 @@ export function registerContentRoutes(app: Express) {
         .where(and(eq(qaAnswers.questionId, q.id), eq(qaAnswers.status, "approved")))
         .orderBy(desc(qaAnswers.isAccepted), desc(qaAnswers.upvotes), asc(qaAnswers.createdAt));
       // increment view count (best-effort)
-      db.update(qaQuestions).set({ viewCount: sql`${qaQuestions.viewCount} + 1` }).where(eq(qaQuestions.id, q.id)).catch(() => {});
+      if (hasAnalyticsConsent(req)) {
+        db.update(qaQuestions).set({ viewCount: sql`${qaQuestions.viewCount} + 1` }).where(eq(qaQuestions.id, q.id)).catch(() => {});
+      }
       res.json({ question: publicQuestion(q), answers: answers.map(publicAnswer) });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -552,7 +555,9 @@ export function registerContentRoutes(app: Express) {
         .where(and(eq(pujaMuhurats.pujaId, puja.id), or(eq(pujaMuhurats.year, year), eq(pujaMuhurats.year, year + 1))!))
         .orderBy(asc(pujaMuhurats.year));
       // increment view (best effort)
-      db.update(pujaTypes).set({ viewCount: sql`${pujaTypes.viewCount} + 1` }).where(eq(pujaTypes.id, puja.id)).catch(() => {});
+      if (hasAnalyticsConsent(req)) {
+        db.update(pujaTypes).set({ viewCount: sql`${pujaTypes.viewCount} + 1` }).where(eq(pujaTypes.id, puja.id)).catch(() => {});
+      }
       // related Q&A by pujaSlug
       const questions = await db.select().from(qaQuestions)
         .where(and(eq(qaQuestions.pujaSlug, puja.slug), eq(qaQuestions.status, "approved")))
