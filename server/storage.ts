@@ -1,10 +1,10 @@
-import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gt, gte, lte, lt, count, inArray, isNull, type SQL } from "drizzle-orm";
+import { eq, ilike, and, or, desc, asc, sql as dsql, sql, gt, gte, lte, lt, count, inArray, notInArray, isNull, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, products, orders, pandits, panditReviews, panditApplications, franchiseApplications, pujaBookings, astrologyBookings,
   socialProofSettings, boostEvents, salesPopups, siteSettings, productReviews, reviewHelpfulVotes, productQuestions, returnTickets, adminAuditLogs, heroSlides, homepageSections,
   coupons, subscriptions, donations, donationOrders, astrologers, seoPages, matrimonyProfiles,
-  invoices, dispatches, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
+  invoices, dispatches, orderStatusEvents, orderLookupOtps, abandonedCarts, newsletterSubscribers, pdfKundliOrders, blogPosts,
   emailSends, newsletterCampaigns, emailUnsubscribes,
   notificationLog, notificationSettings,
   familyMembers, userNotifications, panditPayouts, spiritualJourney,
@@ -21,7 +21,7 @@ import {
   type NotificationChannel, type NotificationKind, type NotificationStatus,
   type User, type InsertUser,
   type Product, type InsertProduct,
-  type Order, type InsertOrder,
+  type Order, type InsertOrder, type OrderStatusEvent,
   type Pandit, type InsertPandit,
   type PanditReview, type InsertPanditReview,
   type PanditApplication, type InsertPanditApplication,
@@ -93,10 +93,13 @@ export interface IStorage {
   deleteProduct(id: number): Promise<boolean>;
 
   getOrders(): Promise<Order[]>;
-  getOrdersPaginated(opts: { page: number; limit: number; status?: string; search?: string }): Promise<{ orders: Order[]; total: number }>;
+  getOrdersPaginated(opts: { page: number; limit: number; status?: string; search?: string; paymentMethod?: string; startDate?: Date; endDate?: Date; state?: string; city?: string; minAmount?: number; maxAmount?: number; view?: string }): Promise<{ orders: Order[]; total: number }>;
   getOrder(id: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrder(id: number, data: Partial<InsertOrder>): Promise<Order | undefined>;
+  getOrderStatusEvents(orderId: number): Promise<OrderStatusEvent[]>;
+  /** Atomically changes a status only when it still equals expectedStatus. */
+  transitionOrderStatus(input: { orderId: number; expectedStatus: string; nextStatus: string; actorType: string; actorLabel?: string | null; reason?: string | null }): Promise<{ order?: Order; changed: boolean }>;
 
   getPandits(): Promise<Pandit[]>;
   getPandit(id: number): Promise<Pandit | undefined>;
@@ -441,18 +444,43 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(orders);
   }
 
-  async getOrdersPaginated(opts: { page: number; limit: number; status?: string; search?: string }): Promise<{ orders: Order[]; total: number }> {
+  async getOrdersPaginated(opts: { page: number; limit: number; status?: string; search?: string; paymentMethod?: string; startDate?: Date; endDate?: Date; state?: string; city?: string; minAmount?: number; maxAmount?: number; view?: string }): Promise<{ orders: Order[]; total: number }> {
     const page = Math.max(1, opts.page);
     const limit = Math.min(200, Math.max(1, opts.limit));
     const offset = (page - 1) * limit;
     const conds: any[] = [];
-    if (opts.status && opts.status !== "all") conds.push(eq(orders.status, opts.status));
+    if (opts.status && opts.status !== "all") {
+      // Existing rows retain their legacy spelling; this makes canonical filter
+      // values compatible without rewriting historical data.
+      const status = opts.status.toLowerCase().replace(/[\s-]+/g, "_");
+      const legacyStatuses: Record<string, string[]> = {
+        placed: ["placed", "pending"], payment_pending: ["payment_pending", "unpaid"],
+        confirmed: ["confirmed", "processing"], dispatched: ["dispatched", "shipped"],
+      };
+      conds.push(inArray(orders.status, legacyStatuses[status] || [status]));
+    }
     if (opts.search) {
       const q = `%${opts.search}%`;
       conds.push(
-        dsql`(${orders.customerName} ILIKE ${q} OR ${orders.customerEmail} ILIKE ${q} OR CAST(${orders.id} AS TEXT) ILIKE ${q})`
+        dsql`(${orders.customerName} ILIKE ${q} OR ${orders.customerEmail} ILIKE ${q} OR ${orders.customerPhone} ILIKE ${q} OR ${orders.paymentId} ILIKE ${q} OR CAST(${orders.id} AS TEXT) ILIKE ${q} OR CAST(${orders.items} AS TEXT) ILIKE ${q} OR EXISTS (SELECT 1 FROM dispatches d WHERE d.order_id = ${orders.id} AND (d.tracking_number ILIKE ${q} OR d.waybill ILIKE ${q})))`
       );
     }
+    if (opts.paymentMethod && opts.paymentMethod !== "all") conds.push(eq(orders.paymentMethod, opts.paymentMethod));
+    if (opts.startDate) conds.push(gte(orders.createdAt, opts.startDate));
+    if (opts.endDate) conds.push(lte(orders.createdAt, opts.endDate));
+    if (opts.state) conds.push(ilike(orders.customerState, `%${opts.state}%`));
+    if (opts.city) conds.push(ilike(orders.shippingAddress, `%${opts.city}%`));
+    if (opts.minAmount !== undefined) conds.push(gte(orders.totalAmount, opts.minAmount));
+    if (opts.maxAmount !== undefined) conds.push(lte(orders.totalAmount, opts.maxAmount));
+    if (opts.view === "stale") {
+      // Must mirror isOperationallyStale: old terminal orders are historical,
+      // not work that needs operational attention.
+      conds.push(
+        lt(orders.createdAt, new Date(Date.now() - 24 * 60 * 60 * 1000)),
+        notInArray(orders.status, ["delivered", "cancelled", "canceled", "refunded", "returned", "failed"]),
+      );
+    }
+    if (opts.view === "ready-to-dispatch") conds.push(inArray(orders.status, ["packed", "ready_to_dispatch", "ready"]));
     const where = conds.length ? and(...conds) : undefined;
     const [list, totalRow] = await Promise.all([
       db.select().from(orders).where(where as any).orderBy(desc(orders.id)).limit(limit).offset(offset),
@@ -474,6 +502,31 @@ export class DatabaseStorage implements IStorage {
   async updateOrder(id: number, data: Partial<InsertOrder>): Promise<Order | undefined> {
     const [updated] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
     return updated;
+  }
+
+  async getOrderStatusEvents(orderId: number): Promise<OrderStatusEvent[]> {
+    return db.select().from(orderStatusEvents)
+      .where(eq(orderStatusEvents.orderId, orderId))
+      .orderBy(asc(orderStatusEvents.createdAt), asc(orderStatusEvents.id));
+  }
+
+  async transitionOrderStatus(input: { orderId: number; expectedStatus: string; nextStatus: string; actorType: string; actorLabel?: string | null; reason?: string | null }): Promise<{ order?: Order; changed: boolean }> {
+    return db.transaction(async (tx) => {
+      const [order] = await tx.update(orders)
+        .set({ status: input.nextStatus })
+        .where(and(eq(orders.id, input.orderId), eq(orders.status, input.expectedStatus)))
+        .returning();
+      if (!order) return { changed: false };
+      await tx.insert(orderStatusEvents).values({
+        orderId: input.orderId,
+        previousStatus: input.expectedStatus,
+        nextStatus: input.nextStatus,
+        actorType: input.actorType,
+        actorLabel: input.actorLabel ?? null,
+        reason: input.reason ?? null,
+      });
+      return { order, changed: true };
+    });
   }
 
   async getPandits(): Promise<Pandit[]> {

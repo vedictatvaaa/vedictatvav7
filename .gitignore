@@ -17,6 +17,7 @@ vite.config.ts.*
 # Database backups
 *.sql
 !migrations/0002_pandit_service_catalog.sql
+!migrations/0003_order_status_events.sql
 *.sql.gz
 backups/
 # Local-only directories (not in git, sync'd separately)

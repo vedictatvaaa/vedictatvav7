@@ -72,6 +72,7 @@ import {
 } from "./email-marketing";
 import { insertNewsletterCampaignSchema } from "@shared/schema";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { ageing, allowedTransitions, isOperationallyStale, itemCounts, nextAction, normalizeOrderStatus, paymentProjection, validateTransition, verifyInventory } from "./order-operations";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
 // Strips dangerous tags (script/style/iframe/object/embed/link/meta), all on*-event attributes,
@@ -3262,9 +3263,45 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const limit = parseInt(String(req.query.limit || "25"), 10) || 25;
       const status = req.query.status ? String(req.query.status) : undefined;
       const search = req.query.search ? String(req.query.search).trim() : undefined;
-      const result = await storage.getOrdersPaginated({ page, limit, status, search });
+      const date = (value: unknown, end = false) => {
+        if (!value || typeof value !== "string") return undefined;
+        const parsed = new Date(value);
+        if (!Number.isFinite(parsed.getTime())) return undefined;
+        if (end && /^\d{4}-\d{2}-\d{2}$/.test(value)) parsed.setHours(23, 59, 59, 999);
+        return parsed;
+      };
+      const amount = (value: unknown) => typeof value === "string" && /^\d+$/.test(value) ? Math.min(100_000_000, Number(value)) : undefined;
+      const result = await storage.getOrdersPaginated({
+        page, limit, status, search,
+        paymentMethod: req.query.paymentMethod ? String(req.query.paymentMethod).slice(0, 100) : undefined,
+        startDate: date(req.query.startDate), endDate: date(req.query.endDate, true),
+        state: req.query.state ? String(req.query.state).slice(0, 100) : undefined,
+        city: req.query.city ? String(req.query.city).slice(0, 100) : undefined,
+        minAmount: amount(req.query.minAmount), maxAmount: amount(req.query.maxAmount),
+        view: ["stale", "ready-to-dispatch"].includes(String(req.query.view)) ? String(req.query.view) : undefined,
+      });
+      const [allProducts, allDispatches] = await Promise.all([storage.getProducts(), storage.getDispatches()]);
+      const dispatchOrderIds = new Set(allDispatches.map(d => d.orderId));
+      const projected = result.orders.map(order => {
+        const inventory = verifyInventory(order.items, allProducts);
+        const inventoryReady = inventory.every(line => line.status === "ready");
+        return {
+          ...order,
+          operational: {
+            canonicalStatus: normalizeOrderStatus(order.status),
+            payment: paymentProjection(order),
+            counts: itemCounts(order.items),
+            ageing: ageing(order.createdAt),
+            inventory,
+            inventoryStatus: inventory.some(line => line.status === "shortage") ? "shortage" : inventory.some(line => line.status === "unable_to_verify") ? "unable_to_verify" : "ready",
+            allowedTransitions: allowedTransitions(order.status),
+            nextAction: nextAction(order.status, { inventoryReady, hasDispatch: dispatchOrderIds.has(order.id) }),
+            hasDispatch: dispatchOrderIds.has(order.id),
+          },
+        };
+      });
       res.json({
-        orders: result.orders,
+        orders: projected,
         total: result.total,
         page,
         limit,
@@ -3424,7 +3461,24 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.get("/api/orders/:id", adminAuthMiddleware, async (req, res) => {
     const order = await storage.getOrder(Number(req.params.id));
     if (!order) return res.status(404).json({ message: "Order not found" });
-    res.json(order);
+    const [products, dispatch, invoice, returns, statusEvents] = await Promise.all([
+      storage.getProducts(), storage.getDispatchByOrderId(order.id), storage.getInvoiceByOrderId(order.id),
+      storage.getReturnTicketsByOrderId(order.id), storage.getOrderStatusEvents(order.id),
+    ]);
+    const inventory = verifyInventory(order.items, products);
+    res.json({
+      ...order,
+      operational: {
+        canonicalStatus: normalizeOrderStatus(order.status),
+        payment: paymentProjection(order),
+        counts: itemCounts(order.items),
+        ageing: ageing(order.createdAt),
+        inventory,
+        allowedTransitions: allowedTransitions(order.status),
+        nextAction: nextAction(order.status, { inventoryReady: inventory.every(line => line.status === "ready"), hasDispatch: !!dispatch }),
+      },
+      related: { dispatch, invoice, returns, statusEvents },
+    });
   });
 
   // Customer-facing notification timeline. Read-only and scoped to the
@@ -3570,11 +3624,34 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.patch("/api/orders/:id", adminAuthMiddleware, async (req, res) => {
     const partial = insertOrderSchema.partial().safeParse(req.body);
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
-    // Capture prior status BEFORE update so we can detect transitions for emails
     const prior = await storage.getOrder(Number(req.params.id));
+    if (!prior) return res.status(404).json({ message: "Order not found" });
     const priorStatus = prior?.status;
-    const order = await storage.updateOrder(Number(req.params.id), partial.data);
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    let order;
+    if (partial.data.status !== undefined) {
+      const validation = validateTransition(prior.status, partial.data.status);
+      if (!validation.ok) return res.status(422).json({ message: validation.message, currentStatus: validation.current, allowedTransitions: validation.allowed });
+      if (validation.idempotent) {
+        order = prior;
+      } else {
+        const result = await storage.transitionOrderStatus({
+          orderId: prior.id, expectedStatus: prior.status, nextStatus: validation.target.toLowerCase(),
+          actorType: "admin", actorLabel: (req as any).admin?.email || (req as any).admin?.name || null,
+          reason: typeof req.body?.reason === "string" ? req.body.reason.slice(0, 1000) : null,
+        });
+        if (!result.order) {
+          const current = await storage.getOrder(prior.id);
+          return res.status(409).json({ message: "Order status changed by another session", currentStatus: normalizeOrderStatus(current?.status), allowedTransitions: allowedTransitions(current?.status) });
+        }
+        order = result.order;
+      }
+      // Do not separately update status below.
+      const { status: _status, ...nonStatus } = partial.data;
+      if (Object.keys(nonStatus).length) order = (await storage.updateOrder(prior.id, nonStatus)) || order;
+    } else {
+      order = await storage.updateOrder(Number(req.params.id), partial.data);
+      if (!order) return res.status(404).json({ message: "Order not found" });
+    }
 
     // In-app notification on actual status transitions (dedupe-safe centralized helper)
     if (partial.data.status && partial.data.status !== priorStatus) {
@@ -7188,7 +7265,7 @@ If you did not request this reset, you can ignore this email — your password w
   // filter pills without re-counting on every page change.
   let orderSummaryCache: { at: number; payload: any } | null = null;
   const ORDER_SUMMARY_CACHE_MS = 20_000;
-  app.get("/api/admin/orders/summary", adminAuthMiddleware, async (_req, res) => {
+  app.get("/api/admin/orders/summary", adminAuthMiddleware, async (req, res) => {
     try {
       if (orderSummaryCache && Date.now() - orderSummaryCache.at < ORDER_SUMMARY_CACHE_MS) {
         return res.json(orderSummaryCache.payload);
@@ -7198,12 +7275,15 @@ If you did not request this reset, you can ignore this email — your password w
         storage.getDispatches().catch(() => [] as any[]),
       ]);
       const dispatchedOrderIds = new Set((dispatches as any[]).map((d) => d.orderId));
-      const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+       const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
       const counts: Record<string, number> = { all: orders.length };
       let todayCount = 0;
       let todayRevenue = 0;
       let awaitingDispatch = 0;
       let stalePending = 0;
+       let todayUnits = 0, awaitingConfirmation = 0, awaitingPicking = 0, awaitingPacking = 0;
+       let readyToDispatch = 0, dispatchedToday = 0, codOrders = 0, prepaidOrders = 0;
+       let returnsRefunds = 0;
       const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
       for (const o of orders) {
         const s = (o.status || "").toLowerCase();
@@ -7212,7 +7292,15 @@ If you did not request this reset, you can ignore this email — your password w
         if (t >= startOfToday.getTime()) {
           todayCount++;
           todayRevenue += Number(o.totalAmount) || 0;
+           todayUnits += itemCounts(o.items).unitCount;
         }
+         const canonical = normalizeOrderStatus(o.status);
+         if (canonical === "PAID") awaitingConfirmation++;
+         if (canonical === "CONFIRMED") awaitingPicking++;
+         if (canonical === "PICKING") awaitingPacking++;
+         if (canonical === "PACKED" || canonical === "READY_TO_DISPATCH") readyToDispatch++;
+         if ((o.paymentMethod || "").toLowerCase().includes("cod")) codOrders++; else if (o.paymentMethod) prepaidOrders++;
+         if (canonical && ["RETURN_REQUESTED", "RETURNED", "REFUND_PENDING", "REFUNDED"].includes(canonical)) returnsRefunds++;
         if (["paid", "confirmed", "packed"].includes(s) && !dispatchedOrderIds.has(o.id)) {
           awaitingDispatch++;
         }
@@ -7220,12 +7308,39 @@ If you did not request this reset, you can ignore this email — your password w
           stalePending++;
         }
       }
+       // Dispatch time is the actual fulfilment milestone; order creation time
+       // must never be used to call a shipment "dispatched today".
+       const dispatchedTodayOrderIds = new Set<number>();
+       for (const dispatch of dispatches as any[]) {
+         const dispatchedAt = dispatch.dispatchDate ? new Date(dispatch.dispatchDate).getTime() : NaN;
+         if (Number.isFinite(dispatchedAt) && dispatchedAt >= startOfToday.getTime()) dispatchedTodayOrderIds.add(dispatch.orderId);
+       }
+       dispatchedToday = dispatchedTodayOrderIds.size;
+       const staleOrders = orders.filter(o => isOperationallyStale(o.status, o.createdAt)).length;
       const payload = {
         counts,
         todayCount,
         todayRevenue,
         awaitingDispatch,
         stalePending,
+         operational: {
+           todayOrders: todayCount, todayRevenue, todayUnits, awaitingConfirmation,
+           awaitingPicking, awaitingPacking, readyToDispatch, dispatchedToday,
+           staleOrders,
+           codOrders, prepaidOrders, returnsRefunds,
+           // Snapshot JSON cannot be safely joined to current products in a
+           // portable paginated SQL query. Do not expose a misleading KPI or
+           // non-reproducible action filter until an indexed snapshot ID model
+           // exists; list/detail still expose per-order verification.
+           stockWarningUnavailableReason: "Stock-warning queue is unavailable because historical item snapshots cannot be safely queried against current inventory server-side.",
+           actionRequired: [
+             { key: "awaiting-confirmation", label: "Paid orders awaiting confirmation", count: awaitingConfirmation, filter: { status: "paid" } },
+             { key: "awaiting-picking", label: "Confirmed orders awaiting picking", count: awaitingPicking, filter: { status: "confirmed" } },
+             { key: "awaiting-packing", label: "Picked orders awaiting packing", count: awaitingPacking, filter: { status: "picking" } },
+             { key: "ready-to-dispatch", label: "Packed orders awaiting dispatch", count: readyToDispatch, filter: { view: "ready-to-dispatch" } },
+             { key: "stale", label: "Orders beyond operational ageing threshold", count: staleOrders, filter: { view: "stale" } },
+           ],
+         },
         generatedAt: Date.now(),
       };
       orderSummaryCache = { at: Date.now(), payload };

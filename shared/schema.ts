@@ -164,6 +164,21 @@ export const orders = pgTable("orders", {
   createdAtIdx: index("orders_created_at_idx").on(t.createdAt),
 }));
 
+// Append-only audit trail for operational status changes. Historical orders are
+// intentionally not backfilled: their existing createdAt remains authoritative.
+export const orderStatusEvents = pgTable("order_status_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  previousStatus: text("previous_status").notNull(),
+  nextStatus: text("next_status").notNull(),
+  actorType: text("actor_type").notNull().default("admin"),
+  actorLabel: text("actor_label"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  orderCreatedIdx: index("order_status_events_order_created_idx").on(t.orderId, t.createdAt),
+}));
+
 export const invoices = pgTable("invoices", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   orderId: integer("order_id").notNull(),
@@ -1239,6 +1254,7 @@ export const insertProductQuestionSchema = createInsertSchema(productQuestions).
 export type InsertProductQuestion = z.infer<typeof insertProductQuestionSchema>;
 export type ProductQuestion = typeof productQuestions.$inferSelect;
 export const insertOrderSchema = createInsertSchema(orders);
+export const insertOrderStatusEventSchema = createInsertSchema(orderStatusEvents).omit({ id: true, createdAt: true });
 export const insertPanditSchema = createInsertSchema(pandits);
 export const insertPanditReviewSchema = createInsertSchema(panditReviews);
 export const insertPanditApplicationSchema = createInsertSchema(panditApplications).omit({ id: true, status: true, adminNote: true, reviewedAt: true, createdAt: true });
@@ -1310,6 +1326,8 @@ export type InsertProductReview = z.infer<typeof insertProductReviewSchema>;
 export type ProductReview = typeof productReviews.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
+export type OrderStatusEvent = typeof orderStatusEvents.$inferSelect;
+export type InsertOrderStatusEvent = z.infer<typeof insertOrderStatusEventSchema>;
 export type InsertPandit = z.infer<typeof insertPanditSchema>;
 export type Pandit = typeof pandits.$inferSelect;
 export type InsertPanditReview = z.infer<typeof insertPanditReviewSchema>;

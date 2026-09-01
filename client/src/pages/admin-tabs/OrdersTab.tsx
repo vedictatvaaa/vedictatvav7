@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, CheckCircle, Type, Tag, RefreshCw, FileText, Download, Truck, Printer, MapPin, Send, Ban, AlertCircle, Clock, IndianRupee, Package, ChevronDown } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -17,6 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { Order } from "@shared/schema";
 
 import { createFetcher, STATUS_COLORS } from "../admin-shared";
+import { OrderKpiGrid, type OperationalSummary } from "@/components/admin/orders/OrderKpiGrid";
+import { ActionRequired, type RequiredAction } from "@/components/admin/orders/ActionRequired";
+import { OrderStatusBadge } from "@/components/admin/orders/OrderStatusBadge";
+import { OrderWorkspace } from "@/components/admin/orders/OrderWorkspace";
 
 // Relative-time helper. Used for "2h ago" / "3d ago" badges.
 function relTime(d: Date | string | null | undefined): string {
@@ -39,7 +43,9 @@ interface OrderSummary {
   awaitingDispatch: number;
   stalePending: number;
   generatedAt: number;
+  operational?: OperationalSummary & { actionRequired?: RequiredAction[] };
 }
+type OperationalOrder = Order & { operational?: any };
 
 const STATUS_PILLS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
@@ -61,10 +67,11 @@ function OrdersTab() {
   const fetcher = createFetcher(adminToken);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const initialParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const [statusFilter, setStatusFilter] = useState(() => initialParams.get("status") || "all");
+  const [searchInput, setSearchInput] = useState(() => initialParams.get("search") || "");
+  const [searchQuery, setSearchQuery] = useState(() => initialParams.get("search") || "");
+  const [page, setPage] = useState(() => Math.max(1, Number(initialParams.get("page")) || 1));
   const [limit] = useState(25);
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [dispatchOpen, setDispatchOpen] = useState<number | null>(null);
@@ -73,13 +80,34 @@ function OrdersTab() {
   const [waybill, setWaybill] = useState("");
   const [bulkCourier, setBulkCourier] = useState("");
   const [bulkPrefix, setBulkPrefix] = useState("");
+  const [operationalView, setOperationalView] = useState(() => initialParams.get("view") || "");
+  const [paymentMethod, setPaymentMethod] = useState(() => initialParams.get("paymentMethod") || "");
+  const [startDate, setStartDate] = useState(() => initialParams.get("startDate") || "");
+  const [endDate, setEndDate] = useState(() => initialParams.get("endDate") || "");
+  const hasMountedFilters = useRef(false);
+  const [workspaceOrderId, setWorkspaceOrderId] = useState<number | null>(null);
 
-  useEffect(() => { setPage(1); setSelectedOrders([]); }, [statusFilter, searchQuery]);
+  useEffect(() => {
+    if (!hasMountedFilters.current) { hasMountedFilters.current = true; return; }
+    setPage(1);
+    setSelectedOrders([]);
+  }, [statusFilter, searchQuery, operationalView, paymentMethod, startDate, endDate]);
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (operationalView) params.set("view", operationalView);
+    if (paymentMethod) params.set("paymentMethod", paymentMethod);
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (searchQuery) params.set("search", searchQuery);
+    if (page > 1) params.set("page", String(page));
+    window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+  }, [statusFilter, operationalView, paymentMethod, startDate, endDate, searchQuery, page]);
 
-  const ordersUrl = `/api/admin/orders?page=${page}&limit=${limit}${statusFilter !== "all" ? `&status=${encodeURIComponent(statusFilter)}` : ""}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}`;
+  const ordersUrl = `/api/admin/orders?page=${page}&limit=${limit}${statusFilter !== "all" ? `&status=${encodeURIComponent(statusFilter)}` : ""}${searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : ""}${operationalView ? `&view=${encodeURIComponent(operationalView)}` : ""}${paymentMethod ? `&paymentMethod=${encodeURIComponent(paymentMethod)}` : ""}${startDate ? `&startDate=${encodeURIComponent(startDate)}` : ""}${endDate ? `&endDate=${encodeURIComponent(endDate)}` : ""}`;
 
-  const { data: ordersData, isLoading } = useQuery<{ orders: Order[]; total: number; page: number; limit: number; totalPages: number }>({
-    queryKey: ["/api/admin/orders", { page, limit, status: statusFilter, search: searchQuery }],
+  const { data: ordersData, isLoading } = useQuery<{ orders: OperationalOrder[]; total: number; page: number; limit: number; totalPages: number }>({
+    queryKey: ["/api/admin/orders", { page, limit, status: statusFilter, search: searchQuery, view: operationalView, paymentMethod, startDate, endDate }],
     queryFn: () => fetcher(ordersUrl),
   });
 
@@ -108,20 +136,26 @@ function OrdersTab() {
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       const res = await fetch(`/api/orders/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(adminToken ? { "x-admin-token": adminToken } : {}) },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Update failed");
-      return res.json();
+      const json = await res.json();
+      if (!res.ok) throw Object.assign(new Error(json?.message || "Update failed"), { detail: json });
+      return json;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders/summary"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       toast({ title: "Order Updated", description: "Order status updated. Invoice auto-generated if applicable." });
     },
-    onError: () => toast({ title: "Error", description: "Failed to update order.", variant: "destructive" }),
+    onError: (error: any) => {
+      const detail = error?.detail;
+      const allowed = detail?.allowedTransitions?.length ? ` Allowed next states: ${detail.allowedTransitions.join(", ")}.` : "";
+      toast({ title: "Status change unavailable", description: `${error?.message || "Failed to update order."}${allowed}`, variant: "destructive" });
+    },
   });
 
   const createDispatchMutation = useMutation({
@@ -384,69 +418,16 @@ function OrdersTab() {
         </div>
       </div>
 
-      {/* Quick stat strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-card border-border" data-testid="stat-orders-today">
-          <CardContent className="py-4 px-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Today</p>
-                <p className="text-2xl font-serif text-primary mt-1">{summary?.todayCount ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">orders</p>
-              </div>
-              <Package className="w-5 h-5 text-secondary opacity-60" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border" data-testid="stat-revenue-today">
-          <CardContent className="py-4 px-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Revenue</p>
-                <p className="text-2xl font-serif text-primary mt-1">
-                  ₹{summary ? Math.round(summary.todayRevenue).toLocaleString() : "—"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">today</p>
-              </div>
-              <IndianRupee className="w-5 h-5 text-secondary opacity-60" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`border-border cursor-pointer hover-elevate ${(summary?.awaitingDispatch ?? 0) > 0 ? "bg-amber-50" : "bg-card"}`}
-          onClick={() => setStatusFilter("paid")}
-          data-testid="stat-awaiting-dispatch"
-        >
-          <CardContent className="py-4 px-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Awaiting</p>
-                <p className="text-2xl font-serif text-primary mt-1">{summary?.awaitingDispatch ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">dispatch</p>
-              </div>
-              <Truck className="w-5 h-5 text-secondary opacity-60" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`border-border cursor-pointer hover-elevate ${(summary?.stalePending ?? 0) > 0 ? "bg-red-50" : "bg-card"}`}
-          onClick={() => setStatusFilter("pending")}
-          data-testid="stat-stale-pending"
-        >
-          <CardContent className="py-4 px-4">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">Stale</p>
-                <p className={`text-2xl font-serif mt-1 ${(summary?.stalePending ?? 0) > 0 ? "text-red-700" : "text-primary"}`}>
-                  {summary?.stalePending ?? "—"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">pending &gt;24h</p>
-              </div>
-              <AlertCircle className={`w-5 h-5 opacity-60 ${(summary?.stalePending ?? 0) > 0 ? "text-red-600" : "text-secondary"}`} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <OrderKpiGrid operational={summary?.operational} />
+      <ActionRequired actions={summary?.operational?.actionRequired} onSelect={(filter) => {
+        setStatusFilter(filter.status || "all");
+        setOperationalView(filter.view || "");
+        setPaymentMethod("");
+        setStartDate("");
+        setEndDate("");
+        setSearchInput("");
+        setSearchQuery("");
+      }} />
 
       {/* Status pills */}
       <div className="flex flex-wrap gap-2">
@@ -478,13 +459,13 @@ function OrdersTab() {
       <div className="flex flex-wrap gap-3 items-center">
         <form
           onSubmit={(e) => { e.preventDefault(); setSearchQuery(searchInput.trim()); }}
-          className="flex gap-2 items-center"
+            className="flex w-full flex-wrap gap-2 items-center sm:w-auto"
         >
           <Input
             placeholder="Search by name, email, or order #"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-64"
+            className="w-full sm:w-64"
             data-testid="input-orders-search"
           />
           <Button type="submit" size="sm" variant="outline" data-testid="button-orders-search">Search</Button>
@@ -492,6 +473,20 @@ function OrdersTab() {
             <Button type="button" size="sm" variant="ghost" onClick={() => { setSearchInput(""); setSearchQuery(""); }} data-testid="button-orders-search-clear">Clear</Button>
           )}
         </form>
+        <Input
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value)}
+          placeholder="Payment method (e.g. COD)"
+          className="w-full sm:w-48"
+          aria-label="Filter by payment method"
+        />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Label className="text-xs text-muted-foreground">Placed</Label>
+          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-[145px]" aria-label="Orders placed from date" />
+          <span className="text-xs text-muted-foreground">to</span>
+          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-[145px]" aria-label="Orders placed to date" />
+          {(paymentMethod || startDate || endDate || operationalView) ? <Button size="sm" variant="ghost" onClick={() => { setPaymentMethod(""); setStartDate(""); setEndDate(""); setOperationalView(""); }}>Reset filters</Button> : null}
+        </div>
 
         <span className="text-xs text-muted-foreground ml-2" data-testid="text-orders-total">
           {totalOrders} order{totalOrders === 1 ? "" : "s"}
@@ -538,21 +533,22 @@ function OrdersTab() {
         <div className="space-y-3">
           {filtered.map((order) => {
             const dispatch = getDispatchForOrder(order.id);
-            const ageMs = order.createdAt ? Date.now() - new Date(order.createdAt as any).getTime() : 0;
-            const isStalePending = order.status === "pending" && ageMs > 86_400_000;
+            const isStalePending = order.operational?.ageing?.stale && !["DELIVERED", "CANCELLED", "REFUNDED", "RETURNED", "FAILED"].includes(order.operational?.canonicalStatus);
+            const counts = order.operational?.counts;
+            const nextAction = order.operational?.nextAction;
             return (
-              <Card key={order.id} className={`border-border ${isStalePending ? "bg-red-50/40" : "bg-card"}`} data-testid={`card-order-${order.id}`}>
+              <Card key={order.id} role="button" tabIndex={0} onClick={(e) => { if (!(e.target as HTMLElement).closest("button,input,[role=menuitem]")) setWorkspaceOrderId(order.id); }} onKeyDown={(e) => { if (e.key === "Enter") setWorkspaceOrderId(order.id); }} className={`cursor-pointer border-[#d4af37]/25 transition-colors hover:border-[#b38a24] ${isStalePending ? "bg-red-50/40" : "bg-[#fffdf8]"}`} data-testid={`card-order-${order.id}`}>
                 <CardContent className="py-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <input type="checkbox" checked={selectedOrders.includes(order.id)} onChange={() => toggleSelectOrder(order.id)} className="accent-primary mt-3" data-testid={`checkbox-order-${order.id}`} />
+                  <div className="flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-start">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <input type="checkbox" onClick={(e) => e.stopPropagation()} checked={selectedOrders.includes(order.id)} onChange={() => toggleSelectOrder(order.id)} className="accent-primary mt-3" data-testid={`checkbox-order-${order.id}`} />
                       <div className="relative w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
                         #{order.id}
                         {isStalePending && (
                           <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-background animate-pulse" title="Pending over 24h" />
                         )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-foreground">{order.customerName || "Guest Customer"}</p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           {order.customerEmail && <span>{order.customerEmail}</span>}
@@ -565,6 +561,12 @@ function OrdersTab() {
                             <span className="opacity-50">· {new Date(order.createdAt).toLocaleDateString()}</span>
                           </p>
                         )}
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                          <span className="rounded bg-[#f4ead3] px-1.5 py-0.5 text-[#6d2b35]">{counts?.itemCount ?? 0} lines · {counts?.unitCount ?? 0} units</span>
+                          <span className="rounded bg-[#f4ead3] px-1.5 py-0.5 capitalize text-[#6d2b35]">{order.operational?.payment?.method || "Payment not recorded"} · {order.operational?.payment?.status || "Payment state unknown"}</span>
+                          <span className={`rounded px-1.5 py-0.5 capitalize ${order.operational?.inventoryStatus === "shortage" ? "bg-red-100 text-red-800" : "bg-[#edf3e6] text-[#496238]"}`}>Inventory: {order.operational?.inventoryStatus?.replaceAll("_", " ") || "unable to verify"}</span>
+                          {isStalePending && <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-800">Ageing {Math.floor(order.operational?.ageing?.ageHours || 0)}h</span>}
+                        </div>
                         {dispatch && (
                           <div className="mt-2 flex items-center gap-2 text-xs bg-indigo-50 px-2 py-1 rounded">
                             <Truck className="w-3 h-3 text-indigo-600" />
@@ -574,29 +576,22 @@ function OrdersTab() {
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 flex-col items-start gap-2 sm:items-end">
+                      <div className="flex flex-wrap items-center gap-3">
                         <p className="font-bold text-lg text-foreground">₹{order.totalAmount.toLocaleString()}</p>
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[order.status] || "bg-muted text-foreground"}`} data-testid={`status-order-${order.id}`}>
-                          {order.status}
-                        </span>
+                        <OrderStatusBadge status={order.status} />
                       </div>
-                      <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
+                      <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end">
                         <Select value={order.status} onValueChange={(val) => updateStatusMutation.mutate({ id: order.id, status: val })}>
                           <SelectTrigger className="w-[130px] h-8 text-xs" data-testid={`select-order-status-${order.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="packed">Packed</SelectItem>
-                            <SelectItem value="dispatched">Dispatched</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
+                            <SelectItem value={order.status}>{order.status}</SelectItem>
+                            {(order.operational?.allowedTransitions || []).map((status: string) => <SelectItem key={status} value={status.toLowerCase()}>{status.replaceAll("_", " ")}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                        {nextAction?.available && <Button size="sm" onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: order.id, status: nextAction.targetStatus }); }} className="bg-[#6d2b35] text-xs text-[#f7d66d] hover:bg-[#541f28]">{nextAction.action}</Button>}
 
                         {/* Documents dropdown — collapses Invoice / Label / Slip into one trigger */}
                         <DropdownMenu>
@@ -719,6 +714,13 @@ function OrdersTab() {
           </div>
         </div>
       )}
+      <OrderWorkspace
+        orderId={workspaceOrderId}
+        open={workspaceOrderId !== null}
+        onOpenChange={(open) => { if (!open) setWorkspaceOrderId(null); }}
+        fetcher={fetcher}
+        onTransition={(id, status) => updateStatusMutation.mutate({ id, status })}
+      />
     </div>
   );
 }
