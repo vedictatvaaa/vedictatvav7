@@ -159,7 +159,7 @@ export default function PanditCanonicalLocation() {
     [canonical, city, service],
   );
 
-  if (cityQuery.isLoading || (pujaSlug && serviceQuery.isLoading) || disabled) {
+  if (cityQuery.isLoading || (pujaSlug && serviceQuery.isLoading)) {
     return <main aria-busy="true" className="min-h-[70vh] bg-[#F8F2E5] px-5 py-16">
       <span className="sr-only">Loading Pandits</span>
       <Skeleton className="mx-auto h-80 max-w-6xl bg-[#E9DEC9]" />
