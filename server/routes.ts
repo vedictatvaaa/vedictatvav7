@@ -76,9 +76,12 @@ import { publicRouteIntegrityMiddleware } from "./seo-route-integrity";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
 import {
+  isPanditSeoNetworkEnabled,
   registerPanditSeoNetworkInvalidation,
   registerPanditSeoNetworkRoutes,
 } from "./pandit-seo-network/public-api";
+import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
+import { indexableProfileSlugs } from "./pandit-seo-network/sitemap";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
@@ -1388,11 +1391,15 @@ Sitemap: ${baseUrl}/sitemap.xml
 
   // ---- SEO: sitemap-people.xml — pandits + astrologers ----
   app.get("/sitemap-people.xml", async (req, res) => {
-    const [pandits, astrologers, seoPagesList] = await Promise.all([
+    const settings = await storage.getSiteSettings();
+    const networkEnabled = isPanditSeoNetworkEnabled(settings);
+    const [pandits, astrologers, seoPagesList, networkProjection] = await Promise.all([
       getPubliclyEligiblePandits().catch(() => []),
       storage.getAstrologers().catch(() => []),
       storage.getSeoPages(),
+      networkEnabled ? getPanditSeoNetworkProjection() : Promise.resolve(null),
     ]);
+    const approvedProfileSlugs = networkProjection ? indexableProfileSlugs(networkProjection) : null;
     const seoMap = new Map(seoPagesList.filter(s => s.isActive).map(s => [s.pagePath, s]));
     const today = new Date().toISOString().split("T")[0];
     const baseUrl = sitemapBase(req);
@@ -1402,6 +1409,7 @@ Sitemap: ${baseUrl}/sitemap.xml
     for (const p of pandits as any[]) {
       const sf = p.slug ? await storage.getPanditStorefrontByPanditId(p.id).catch(() => null) : null;
       if (!isPanditStorefrontPublished(sf) || !p.slug) continue;
+      if (approvedProfileSlugs && !approvedProfileSlugs.has(p.slug)) continue;
       const pPath = `/pandit/${encodeURIComponent(p.slug)}`;
       const seo = seoMap.get(pPath);
       if (seo && !seo.robotsIndex) continue;

@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
 import { trackPanditSeoEvent } from "@/lib/analytics";
+import { bookingContextParams, pujaTypeForService } from "@/lib/puja-service-map";
 
 type Service = {
   id: number; name: string; slug: string; category?: string; description?: string;
@@ -46,14 +47,24 @@ const money = (n?: number) => typeof n === "number" ? `₹${n.toLocaleString("en
 const listify = (value?: string[] | string) => Array.isArray(value) ? value : value ? value.split(",").map(x => x.trim()).filter(Boolean) : [];
 
 function bookingHref(panditId: number, service?: Service, packageId?: number) {
-  const params = new URLSearchParams({ pandit: String(panditId), source: "storefront" });
+  const source = typeof window !== "undefined" ? window.location.search : "";
+  const params = bookingContextParams(source, panditId);
+  params.set("source", "storefront");
   if (service) {
+    params.delete("packageId");
     params.set("serviceId", String(service.id));
     params.set("service", service.slug || String(service.id));
-    params.set("pujaType", service.name);
+    const mappedType = pujaTypeForService(service.name) || pujaTypeForService(service.slug);
+    if (mappedType) params.set("pujaType", mappedType);
+    else params.delete("pujaType");
     params.set("mode", service.mode === "online" ? "online" : "offline");
   }
-  if (packageId) params.set("packageId", String(packageId));
+  if (packageId) {
+    params.delete("serviceId");
+    params.delete("service");
+    params.delete("pujaType");
+    params.set("packageId", String(packageId));
+  }
   return `/online-puja-booking?${params.toString()}`;
 }
 

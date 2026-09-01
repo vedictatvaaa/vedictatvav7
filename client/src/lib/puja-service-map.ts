@@ -35,9 +35,20 @@ export function discoveryServiceForPujaSlug(slug?: string | null) {
 }
 
 export function bookingContextParams(source: string, panditId: number) {
-  const params = new URLSearchParams(source);
+  const incoming = new URLSearchParams(source);
+  const params = new URLSearchParams();
+  const city = incoming.get("city");
+  const service = incoming.get("service");
+  const mode = incoming.get("mode");
+  const contextSource = incoming.get("source");
+  if (city && /^[a-z][a-z0-9-]{0,79}$/.test(city)) params.set("city", city);
+  if (service && pujaTypeForService(service)) params.set("service", service);
+  if (mode === "online" || mode === "offline" || mode === "hybrid") params.set("mode", mode);
+  if (["city", "puja_city", "profile", "directory", "storefront"].includes(contextSource || "")) {
+    params.set("source", contextSource!);
+  }
   params.set("pandit", String(panditId));
-  const mappedType = pujaTypeForService(params.get("service"));
+  const mappedType = pujaTypeForService(service);
   if (mappedType) params.set("pujaType", mappedType);
   return params;
 }
