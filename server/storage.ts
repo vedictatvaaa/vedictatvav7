@@ -414,6 +414,25 @@ type PanditSeoEditorialWrite = {
   status: "draft" | "reviewed" | "published";
 };
 
+export function panditSeoEditorialLifecycle(
+  status: PanditSeoEditorialWrite["status"],
+  actor: string,
+  at: Date,
+  previous?: Pick<PanditSeoEditorial, "status" | "reviewedBy" | "reviewedAt">,
+) {
+  const retainReview = (status === "reviewed" || status === "published")
+    && (previous?.status === "reviewed" || previous?.status === "published")
+    && previous.reviewedAt != null;
+  const reviewed = status === "reviewed" || status === "published";
+  const published = status === "published";
+  return {
+    reviewedBy: reviewed ? (retainReview ? previous?.reviewedBy || null : actor) : null,
+    reviewedAt: reviewed ? (retainReview ? previous!.reviewedAt : at) : null,
+    publishedBy: published ? actor : null,
+    publishedAt: published ? at : null,
+  };
+}
+
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -812,17 +831,14 @@ export class DatabaseStorage implements IStorage {
     actor: string,
   ): Promise<PanditSeoEditorial> {
     const now = new Date();
-    const isReviewed = editorial.status === "reviewed" || editorial.status === "published";
-    const isPublished = editorial.status === "published";
+    const previous = await this.getPanditSeoEditorial(editorial.entityType, editorial.entityKey);
+    const lifecycle = panditSeoEditorialLifecycle(editorial.status, actor, now, previous);
     const [row] = await db.insert(panditSeoEditorials).values({
       ...editorial,
       createdBy: actor,
       updatedBy: actor,
       updatedAt: now,
-      reviewedBy: isReviewed ? actor : null,
-      reviewedAt: isReviewed ? now : null,
-      publishedBy: isPublished ? actor : null,
-      publishedAt: isPublished ? now : null,
+      ...lifecycle,
     }).onConflictDoUpdate({
       target: [panditSeoEditorials.entityType, panditSeoEditorials.entityKey],
       set: {
@@ -832,10 +848,7 @@ export class DatabaseStorage implements IStorage {
         revision: sql`${panditSeoEditorials.revision} + 1`,
         updatedBy: actor,
         updatedAt: now,
-        reviewedBy: isReviewed ? actor : null,
-        reviewedAt: isReviewed ? now : null,
-        publishedBy: isPublished ? actor : null,
-        publishedAt: isPublished ? now : null,
+        ...lifecycle,
       },
     }).returning();
     return row;

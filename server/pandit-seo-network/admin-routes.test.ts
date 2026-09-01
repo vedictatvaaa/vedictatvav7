@@ -3,21 +3,24 @@ import test from "node:test";
 import {
   canTransitionEditorialStatus,
   editorialBodySchema,
+  actorFor,
   projectPanditSeoCoverage,
+  registerPanditSeoNetworkAdminRoutes,
 } from "./admin-routes";
 import { isPanditSeoNetworkEnabled } from "./public-api";
+import { panditSeoEditorialLifecycle } from "../storage";
 
 test("editorial validation permits bounded plain text and rejects HTML/too many FAQs", () => {
   const valid = editorialBodySchema.safeParse({
-    entityType: "city", entityKey: "city:1", introduction: "Useful local guidance.",
+    introduction: "Useful local guidance.",
     faqs: [{ question: "How does booking work?", answer: "Choose an available Pandit." }],
   });
   assert.equal(valid.success, true);
   assert.equal(editorialBodySchema.safeParse({
-    entityType: "city", entityKey: "city:1", introduction: "<b>unsafe</b>", faqs: [],
+    introduction: "<b>unsafe</b>", faqs: [],
   }).success, false);
   assert.equal(editorialBodySchema.safeParse({
-    entityType: "city", entityKey: "city:1", introduction: "", faqs: Array.from({ length: 13 }, () => ({ question: "Q", answer: "A" })),
+    introduction: "", faqs: Array.from({ length: 13 }, () => ({ question: "Q", answer: "A" })),
   }).success, false);
 });
 
@@ -29,10 +32,58 @@ test("editorial publication requires review and supports deliberate unpublish", 
   assert.equal(canTransitionEditorialStatus("published", "draft"), false);
 });
 
+test("admin governance routes use the canonical API contract", () => {
+  const routes: string[] = [];
+  const app = {
+    get: (path: string) => routes.push(`GET ${path}`),
+    put: (path: string) => routes.push(`PUT ${path}`),
+    patch: (path: string) => routes.push(`PATCH ${path}`),
+  };
+  registerPanditSeoNetworkAdminRoutes(app as any, () => undefined);
+  assert.deepEqual(routes, [
+    "GET /api/admin/pandit-seo-network",
+    "GET /api/admin/pandit-seo-editorial",
+    "PUT /api/admin/pandit-seo-editorial/:entityType/:entityKey",
+    "PATCH /api/admin/pandit-seo-editorial/:entityType/:entityKey/status",
+    "PATCH /api/admin/pandit-seo-network/rollout",
+  ]);
+});
+
+test("audit actors use the authenticated Admin identity and never credentials", () => {
+  const token = "super-secret-admin-session-token";
+  const actor = actorFor({
+    adminUserId: 42,
+    headers: { "x-admin-token": token },
+  } as any);
+  assert.equal(actor, "admin-user:42");
+  assert.equal(actor.includes(token), false);
+  assert.equal(actor.includes(token.slice(-6)), false);
+  assert.throws(() => actorFor({ headers: { "x-admin-token": token } } as any), /identity is required/);
+});
+
 test("rollout gate is opt-in", () => {
   assert.equal(isPanditSeoNetworkEnabled(undefined), false);
   assert.equal(isPanditSeoNetworkEnabled({ panditSeoNetworkEnabled: false }), false);
   assert.equal(isPanditSeoNetworkEnabled({ panditSeoNetworkEnabled: true }), true);
+});
+
+test("draft and reviewed lifecycle states clear stale approval metadata", () => {
+  const at = new Date("2026-09-01T00:00:00Z");
+  const reviewedAt = new Date("2026-08-31T00:00:00Z");
+  assert.deepEqual(panditSeoEditorialLifecycle("draft", "admin:test", at), {
+    reviewedBy: null, reviewedAt: null, publishedBy: null, publishedAt: null,
+  });
+  assert.deepEqual(panditSeoEditorialLifecycle("reviewed", "admin:test", at), {
+    reviewedBy: "admin:test", reviewedAt: at, publishedBy: null, publishedAt: null,
+  });
+  assert.deepEqual(panditSeoEditorialLifecycle("published", "admin:test", at), {
+    reviewedBy: "admin:test", reviewedAt: at, publishedBy: "admin:test", publishedAt: at,
+  });
+  assert.deepEqual(panditSeoEditorialLifecycle("reviewed", "admin:rollback", at, {
+    status: "published", reviewedBy: "admin:reviewer", reviewedAt,
+  }), {
+    reviewedBy: "admin:reviewer", reviewedAt, publishedBy: null, publishedAt: null,
+  });
 });
 
 test("coverage keeps not-found profiles opaque and marks pending canonical URLs", () => {
@@ -51,10 +102,11 @@ test("coverage keeps not-found profiles opaque and marks pending canonical URLs"
       }],
     }],
   } as any);
-  const privateProfile = coverage.rows[0] as Record<string, unknown>;
-  assert.equal("entityKey" in privateProfile, false);
-  assert.equal((coverage.rows[1] as any).canonicalUrlPending, true);
-  assert.equal((coverage.rows[2] as any).canonicalUrlPending, true);
-  assert.equal(coverage.counts.byStatus.not_found, 1);
-  assert.equal(coverage.counts.byReason.canonical_url_pending, 2);
+  const privateProfile = coverage.profiles[0] as Record<string, unknown>;
+  assert.equal(privateProfile.entityKey, null);
+  assert.equal(privateProfile.label, "Private profile");
+  assert.equal(coverage.cities[0].indexability.reasons.includes("canonical_url_pending"), true);
+  assert.equal(coverage.cityServices[0].indexability.reasons.includes("canonical_url_pending"), true);
+  assert.equal(coverage.summary.notFound, 1);
+  assert.equal(coverage.reasonCounts.canonical_url_pending, 2);
 });

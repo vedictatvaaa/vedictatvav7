@@ -98,7 +98,8 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
       if (!selected?.entityKey) throw new Error("Select an eligible coverage row before saving editorial content");
       const url = `/api/admin/pandit-seo-editorial/${encodeURIComponent(selected.entityType)}/${encodeURIComponent(selected.entityKey)}`;
       await request(url, "PUT", {
-        introduction, faqs: faqs.filter(faq => faq.question.trim() || faq.answer.trim()), status,
+        introduction,
+        faqs: faqs.filter(faq => faq.question.trim() || faq.answer.trim()),
       });
       if (action === "reviewed" || action === "published") {
         await request(`${url}/status`, "PATCH", { status: "reviewed" });

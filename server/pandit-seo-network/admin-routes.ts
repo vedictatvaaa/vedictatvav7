@@ -18,8 +18,6 @@ const requiredSafeText = (max: number) => z.string().trim().min(1).max(max).refi
 );
 
 export const editorialBodySchema = z.object({
-  entityType: panditSeoEditorialEntityTypeSchema,
-  entityKey: z.string().trim().min(1).max(200),
   introduction: safeText(8000),
   faqs: z.array(z.object({
     question: requiredSafeText(240),
@@ -30,6 +28,8 @@ export const editorialBodySchema = z.object({
 const statusBodySchema = z.object({
   status: panditSeoEditorialStatusSchema,
 }).strict();
+const rolloutBodySchema = z.object({ enabled: z.boolean() }).strict();
+const entityKeySchema = z.string().trim().min(1).max(200);
 
 export type EditorialStatus = z.infer<typeof panditSeoEditorialStatusSchema>;
 
@@ -41,77 +41,105 @@ export function canTransitionEditorialStatus(from: EditorialStatus, to: Editoria
     || (from === "published" && to === "reviewed");
 }
 
-function actorFor(req: Request) {
-  const token = (req.headers["x-admin-token"] as string) || "";
-  return token ? `admin:${token.slice(-6)}` : "unknown";
+type AuthenticatedAdminRequest = Request & { adminUserId?: number };
+
+export function actorFor(req: AuthenticatedAdminRequest) {
+  if (!Number.isInteger(req.adminUserId) || req.adminUserId! <= 0) {
+    throw new Error("Authenticated Admin identity is required for audit writes");
+  }
+  return `admin-user:${req.adminUserId}`;
 }
 
 function auditDetails(req: Request) {
   return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.ip || null;
 }
 
-function countCoverage(rows: Array<{ indexability: { status: string; reasons: string[] } }>) {
-  const byStatus: Record<string, number> = {};
+function countReasons(rows: Array<{ indexability: { reasons: string[] } }>) {
   const byReason: Record<string, number> = {};
   rows.forEach((row) => {
-    byStatus[row.indexability.status] = (byStatus[row.indexability.status] || 0) + 1;
     row.indexability.reasons.forEach((reason) => {
       byReason[reason] = (byReason[reason] || 0) + 1;
     });
   });
-  return { total: rows.length, byStatus, byReason };
+  return byReason;
 }
 
-export function projectPanditSeoCoverage(projection: Awaited<ReturnType<typeof getPanditSeoNetworkProjection>>) {
+type EditorialSummary = { entityType: string; entityKey: string; status: string };
+
+export function projectPanditSeoCoverage(
+  projection: Awaited<ReturnType<typeof getPanditSeoNetworkProjection>>,
+  editorials: EditorialSummary[] = [],
+) {
+  const statuses = new Map(editorials.map((item) => [`${item.entityType}:${item.entityKey}`, item.status]));
+  const editorialStatus = (type: string, key: string | null) => key ? statuses.get(`${type}:${key}`) || null : null;
   const profiles = projection.profiles.map((profile) => ({
     entityType: "profile",
-    // not_found profiles are deliberately opaque: no ID, URL, or public DTO.
-    ...(profile.indexability.status === "not_found" ? {} : {
-      entityKey: profile.entityId,
-      canonicalUrl: profile.canonicalUrl,
-    }),
+    // Opaque entries reveal neither identity nor marketplace/private fields.
+    entityKey: profile.indexability.status === "not_found" ? null : profile.entityId,
+    label: profile.indexability.status === "not_found"
+      ? "Private profile"
+      : String(profile.pandit?.name || "Public Pandit profile"),
+    canonicalUrl: profile.indexability.status === "not_found" ? null : profile.canonicalUrl,
     indexability: profile.indexability,
+    editorialStatus: editorialStatus("profile", profile.indexability.status === "not_found" ? null : profile.entityId),
   }));
   const cities = projection.cities.map((city) => ({
     entityType: "city",
     entityKey: city.entityId,
+    label: `${city.city.name}, ${city.state.name}`,
     canonicalUrl: city.canonicalUrl,
-    canonicalUrlPending: city.canonicalUrl === null,
     indexability: city.canonicalUrl === null
       ? { ...city.indexability, reasons: [...city.indexability.reasons, "canonical_url_pending"] }
       : city.indexability,
+    editorialStatus: editorialStatus("city", city.entityId),
   }));
-  const services = projection.cities.flatMap((city) => city.services.map((service) => ({
+  const cityServices = projection.cities.flatMap((city) => city.services.map((service) => ({
     entityType: "city_service",
     entityKey: service.entityId,
+    label: `${service.service.name} in ${city.city.name}`,
     canonicalUrl: service.canonicalUrl,
-    canonicalUrlPending: service.canonicalUrl === null,
     indexability: service.canonicalUrl === null
       ? { ...service.indexability, reasons: [...service.indexability.reasons, "canonical_url_pending"] }
       : service.indexability,
+    editorialStatus: editorialStatus("city_service", service.entityId),
   })));
-  const rows = [...profiles, ...cities, ...services];
-  return { rows, counts: countCoverage(rows) };
+  const rows = [...profiles, ...cities, ...cityServices];
+  return {
+    profiles,
+    cities,
+    cityServices,
+    summary: {
+      profiles: profiles.length,
+      cities: cities.length,
+      cityServices: cityServices.length,
+      indexable: rows.filter((row) => row.indexability.status === "indexable").length,
+      noindex: rows.filter((row) => row.indexability.status.startsWith("noindex")).length,
+      notFound: rows.filter((row) => row.indexability.status === "not_found").length,
+    },
+    reasonCounts: countReasons(rows),
+  };
 }
 
 export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddleware: any) {
-  app.get("/api/admin/pandit-seo-network/coverage", adminAuthMiddleware, async (_req, res, next) => {
+  app.get("/api/admin/pandit-seo-network", adminAuthMiddleware, async (_req, res, next) => {
     try {
-      const [projection, settings] = await Promise.all([
+      const [projection, settings, editorials] = await Promise.all([
         getPanditSeoNetworkProjection(),
         storage.getSiteSettings(),
+        storage.listPanditSeoEditorials(),
       ]);
       res.json({
         evaluatedAt: new Date().toISOString(),
         enabled: settings?.panditSeoNetworkEnabled === true,
-        ...projectPanditSeoCoverage(projection),
+        ...projectPanditSeoCoverage(projection, editorials),
+        editorials,
       });
     } catch (error) {
       next(error);
     }
   });
 
-  app.get("/api/admin/pandit-seo-network/editorials", adminAuthMiddleware, async (_req, res, next) => {
+  app.get("/api/admin/pandit-seo-editorial", adminAuthMiddleware, async (_req, res, next) => {
     try {
       res.json(await storage.listPanditSeoEditorials());
     } catch (error) {
@@ -119,13 +147,19 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
     }
   });
 
-  app.put("/api/admin/pandit-seo-network/editorials", adminAuthMiddleware, async (req: Request, res: Response, next) => {
+  app.put("/api/admin/pandit-seo-editorial/:entityType/:entityKey", adminAuthMiddleware, async (req: Request, res: Response, next) => {
     try {
+      const type = panditSeoEditorialEntityTypeSchema.safeParse(req.params.entityType);
+      const key = entityKeySchema.safeParse(req.params.entityKey);
       const parsed = editorialBodySchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map((i) => i.message).join(", ") });
-      const existing = await storage.getPanditSeoEditorial(parsed.data.entityType, parsed.data.entityKey);
+      if (!type.success || !key.success || !parsed.success) {
+        return res.status(400).json({ message: "Invalid editorial content request" });
+      }
+      const existing = await storage.getPanditSeoEditorial(type.data, key.data);
       // Editing approved copy puts it back in draft; an editor must review it again.
       const editorial = await storage.upsertPanditSeoEditorial({
+        entityType: type.data,
+        entityKey: key.data,
         ...parsed.data,
         status: "draft",
       }, actorFor(req));
@@ -133,7 +167,7 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
       await storage.logAdminAction({
         actor: actorFor(req),
         action: "pandit-seo-editorial.save",
-        target: `${parsed.data.entityType}:${parsed.data.entityKey}`,
+        target: `${type.data}:${key.data}`,
         details: { revision: editorial.revision, previousStatus: existing?.status || null },
         ipAddress: auditDetails(req),
       });
@@ -143,10 +177,10 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
     }
   });
 
-  app.patch("/api/admin/pandit-seo-network/editorials/:entityType/:entityKey/status", adminAuthMiddleware, async (req, res, next) => {
+  app.patch("/api/admin/pandit-seo-editorial/:entityType/:entityKey/status", adminAuthMiddleware, async (req, res, next) => {
     try {
       const type = panditSeoEditorialEntityTypeSchema.safeParse(req.params.entityType);
-      const key = z.string().trim().min(1).max(200).safeParse(req.params.entityKey);
+      const key = entityKeySchema.safeParse(req.params.entityKey);
       const body = statusBodySchema.safeParse(req.body);
       if (!type.success || !key.success || !body.success) return res.status(400).json({ message: "Invalid editorial status request" });
       const existing = await storage.getPanditSeoEditorial(type.data, key.data);
@@ -154,6 +188,7 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
       if (!canTransitionEditorialStatus(existing.status as EditorialStatus, body.data.status)) {
         return res.status(409).json({ message: `Cannot transition ${existing.status} to ${body.data.status}` });
       }
+      if (existing.status === body.data.status) return res.json(existing);
       const editorial = await storage.upsertPanditSeoEditorial({
         entityType: existing.entityType as z.infer<typeof panditSeoEditorialEntityTypeSchema>,
         entityKey: existing.entityKey,
@@ -169,6 +204,25 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
         ipAddress: auditDetails(req),
       });
       return res.json(editorial);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.patch("/api/admin/pandit-seo-network/rollout", adminAuthMiddleware, async (req, res, next) => {
+    try {
+      const body = rolloutBodySchema.safeParse(req.body);
+      if (!body.success) return res.status(400).json({ message: "Invalid rollout request" });
+      const settings = await storage.upsertSiteSettings({ panditSeoNetworkEnabled: body.data.enabled });
+      invalidatePanditSeoNetworkCache();
+      await storage.logAdminAction({
+        actor: actorFor(req),
+        action: "pandit-seo-network.rollout",
+        target: "siteSettings",
+        details: { enabled: body.data.enabled },
+        ipAddress: auditDetails(req),
+      });
+      return res.json({ enabled: settings.panditSeoNetworkEnabled });
     } catch (error) {
       return next(error);
     }
