@@ -103,6 +103,21 @@ export function selectCityService(
   ) || null;
 }
 
+export async function resolvePublicPanditLocation(
+  input: { citySlug: string; serviceSlug?: string },
+  dependencies: PublicProfileResolverDependencies = publicProfileResolverDependencies,
+): Promise<{ enabled: boolean; location: CityHubProjection | CityServiceProjection | null }> {
+  const enabled = isPanditSeoNetworkEnabled(await dependencies.getSettings());
+  if (!enabled) return { enabled: false, location: null };
+  const projection = await dependencies.getProjection();
+  return {
+    enabled: true,
+    location: input.serviceSlug
+      ? selectCityService(projection, input.citySlug, input.serviceSlug)
+      : selectCityHub(projection, input.citySlug),
+  };
+}
+
 function cachePublicProjection(res: Response) {
   res.setHeader("Cache-Control", "no-store");
 }
@@ -179,8 +194,14 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
         routeParam(req.params.citySlug),
       );
       if (!city) return res.status(404).json({ message: "City not found" });
+      const editorial = await storage.getPanditSeoEditorial("city", city.entityId);
       cachePublicProjection(res);
-      return res.json(city);
+      return res.json({
+        ...city,
+        editorial: editorial?.status === "published"
+          ? { introduction: editorial.introduction, faqs: editorial.faqs }
+          : null,
+      });
     } catch (error) {
       return next(error);
     }
@@ -198,8 +219,14 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
         routeParam(req.params.serviceSlug),
       );
       if (!service) return res.status(404).json({ message: "City service not found" });
+      const editorial = await storage.getPanditSeoEditorial("city_service", service.entityId);
       cachePublicProjection(res);
-      return res.json(service);
+      return res.json({
+        ...service,
+        editorial: editorial?.status === "published"
+          ? { introduction: editorial.introduction, faqs: editorial.faqs }
+          : null,
+      });
     } catch (error) {
       return next(error);
     }

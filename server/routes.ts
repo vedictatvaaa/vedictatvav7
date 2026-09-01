@@ -81,9 +81,10 @@ import {
   registerPanditSeoNetworkInvalidation,
   registerPanditSeoNetworkRoutes,
   resolvePublicPanditProfile,
+  selectCityService,
 } from "./pandit-seo-network/public-api";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
-import { indexableProfileSlugs } from "./pandit-seo-network/sitemap";
+import { indexablePanditLocationPaths, indexableProfileSlugs } from "./pandit-seo-network/sitemap";
 import { canonicalPanditRedirectTarget, panditRedirectTarget } from "./pandit-route-context";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
@@ -321,6 +322,23 @@ export async function registerRoutes(
   });
   app.get(/^\/pandits\/([^/]+)$/, (req, res) => {
     res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}`, req.query));
+  });
+  // Projection-known /puja/:service/:city pages are legacy aliases of the
+  // canonical city-service network. Leave every route untouched while the
+  // rollout is disabled.
+  app.get(/^\/puja\/([^/]+)\/([^/]+)$/, async (req, res, next) => {
+    try {
+      if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return next();
+      const service = selectCityService(
+        await getPanditSeoNetworkProjection(),
+        req.params[1],
+        req.params[0],
+      );
+      if (!service?.canonicalUrl) return next();
+      return res.redirect(301, panditRedirectTarget(service.canonicalUrl, req.query));
+    } catch (error) {
+      return next(error);
+    }
   });
   // Once the projection-backed network is enabled, numeric profile URLs are
   // aliases only. Resolve against the public projection so private identities
@@ -1055,6 +1073,14 @@ Sitemap: ${baseUrl}/sitemap.xml
     const seoMap = new Map(seoPagesList.filter(s => s.isActive).map(s => [s.pagePath, s]));
     const today = new Date().toISOString().split("T")[0];
     const baseUrl = sitemapBase(req);
+    const panditNetworkEnabled = isPanditSeoNetworkEnabled(await storage.getSiteSettings());
+    const projectedPanditLocations = panditNetworkEnabled
+      ? Array.from(indexablePanditLocationPaths(await getPanditSeoNetworkProjection())).map((loc) => ({
+          loc,
+          priority: loc.split("/").length > 3 ? "0.75" : "0.9",
+          changefreq: "weekly",
+        }))
+      : null;
 
     const staticPages = [
       { loc: "/", priority: "1.0", changefreq: "daily" },
@@ -1064,7 +1090,7 @@ Sitemap: ${baseUrl}/sitemap.xml
       // Per-city pandit landings + per-(city, puja) long-tail landings.
       // Generated from server/pandit-cities-map.ts so the sitemap stays
       // in sync with the actual route table.
-      ...(() => {
+      ...(projectedPanditLocations || (() => {
         const out: Array<{ loc: string; priority: string; changefreq: string }> = [];
         for (const c of PANDIT_CITY_SUMMARIES) {
           out.push({
@@ -1081,7 +1107,7 @@ Sitemap: ${baseUrl}/sitemap.xml
           }
         }
         return out;
-      })(),
+      })()),
       { loc: "/online-puja-booking", priority: "0.9", changefreq: "weekly" },
       { loc: "/online-pind-daan", priority: "0.9", changefreq: "weekly" },
       // City landing pages use the hyphenated route convention
@@ -1214,6 +1240,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       if (!seo.isActive || !seo.robotsIndex) continue;
       const path = seo.pagePath;
       if (emittedPaths.has(path)) continue;
+      if (panditNetworkEnabled && /^\/book-pandit-online\/[^/]+(?:\/[^/]+)?\/?$/.test(path)) {
+        continue;
+      }
       // Skip paths that belong to a dedicated sub-sitemap to avoid duplicates.
       if (
         path.startsWith("/product/") ||

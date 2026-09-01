@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { indexableProfileSlugs } from "./sitemap";
+import { indexablePanditLocationPaths, indexableProfileSlugs } from "./sitemap";
 
 test("people sitemap includes only projection-approved profile slugs", () => {
   const slugs = indexableProfileSlugs({
@@ -12,4 +12,29 @@ test("people sitemap includes only projection-approved profile slugs", () => {
     cities: [],
   } as any);
   assert.deepEqual([...slugs], ["indexable-pandit"]);
+});
+
+test("location sitemap uses central city and service indexability decisions", () => {
+  const paths = indexablePanditLocationPaths({
+    profiles: [],
+    cities: [
+      {
+        canonicalUrl: "/book-pandit-online/varanasi",
+        indexability: { indexable: true },
+        services: [
+          { canonicalUrl: "/book-pandit-online/varanasi/rudrabhishek-puja", indexability: { indexable: true } },
+          { canonicalUrl: "/book-pandit-online/varanasi/rare-puja", indexability: { indexable: false } },
+        ],
+      },
+      {
+        canonicalUrl: "/book-pandit-online/gaya",
+        indexability: { indexable: false },
+        services: [],
+      },
+    ],
+  } as any);
+  assert.deepEqual([...paths], [
+    "/book-pandit-online/varanasi",
+    "/book-pandit-online/varanasi/rudrabhishek-puja",
+  ]);
 });

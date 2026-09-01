@@ -221,7 +221,9 @@ export function buildPanditSeoNetworkProjection(input: {
           },
           providers: [] as PanditProfileProjection[],
         };
-        existing.providers.push(provider);
+        if (!existing.providers.some((item) => item.entityId === provider.entityId)) {
+          existing.providers.push(provider);
+        }
         servicesById.set(service.masterServiceId, existing);
       });
     });
@@ -229,9 +231,7 @@ export function buildPanditSeoNetworkProjection(input: {
     const services = Array.from(servicesById.values())
       .map(({ service, providers: serviceProviders }): CityServiceProjection => ({
         entityId: `city-service:${city.id}:${service.id}`,
-        // The current route redirects into query-based discovery and does not
-        // yet own projection-backed SSR or canonical booking context.
-        canonicalUrl: null,
+        canonicalUrl: `/book-pandit-online/${encodeURIComponent(city.slug)}/${encodeURIComponent(service.slug)}`,
         service,
         providers: serviceProviders,
         indexability: evaluateSupplyIndexability(
@@ -243,7 +243,7 @@ export function buildPanditSeoNetworkProjection(input: {
 
     return [{
       entityId: `city:${city.id}`,
-      canonicalUrl: null,
+      canonicalUrl: `/book-pandit-online/${encodeURIComponent(city.slug)}`,
       city,
       state,
       providers,

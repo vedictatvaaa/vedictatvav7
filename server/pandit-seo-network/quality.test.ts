@@ -188,8 +188,8 @@ test("network projection scopes providers by canonical city and service identity
   assert.equal(prayagraj?.providers.length, 1);
   assert.equal(prayagraj?.indexability.status, "noindex_insufficient_supply");
   assert.equal(prayagraj?.services[0]?.indexability.status, "noindex_insufficient_supply");
-  assert.equal(varanasi?.canonicalUrl, null);
-  assert.equal(varanasi?.services[0]?.canonicalUrl, null);
+  assert.equal(varanasi?.canonicalUrl, "/book-pandit-online/varanasi");
+  assert.equal(varanasi?.services[0]?.canonicalUrl, "/book-pandit-online/varanasi/rudrabhishek-puja");
 });
 
 test("inactive and free-text services never satisfy canonical supply", () => {
@@ -207,6 +207,26 @@ test("inactive and free-text services never satisfy canonical supply", () => {
   });
 
   assert.equal(projection.cities[0]?.providers.length, 1);
+  assert.equal(projection.cities[0]?.services[0]?.providers.length, 1);
+  assert.equal(projection.cities[0]?.services[0]?.indexability.indexable, false);
+});
+
+test("multiple modes from one Pandit count as one exact-service provider", () => {
+  const first = candidate(1);
+  const projection = buildPanditSeoNetworkProjection({
+    candidates: [{
+      ...first,
+      services: [
+        first.services[0],
+        {
+          service: { ...first.services[0].service, id: 999, mode: "online" },
+          master: first.services[0].master,
+        },
+      ],
+    }],
+    states: [{ id: 1, name: "Uttar Pradesh", code: "UP" }],
+    cities: [{ id: 10, stateId: 1, name: "Varanasi", slug: "varanasi" }],
+  });
   assert.equal(projection.cities[0]?.services[0]?.providers.length, 1);
   assert.equal(projection.cities[0]?.services[0]?.indexability.indexable, false);
 });

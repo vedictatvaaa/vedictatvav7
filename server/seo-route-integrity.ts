@@ -3,7 +3,12 @@ import { REGISTERED_SPA_ROUTE_PATTERNS } from "@shared/spa-route-patterns";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
 import { storage } from "./storage";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
-import { isPanditSeoNetworkEnabled, selectPublicProfile } from "./pandit-seo-network/public-api";
+import {
+  isPanditSeoNetworkEnabled,
+  selectCityHub,
+  selectCityService,
+  selectPublicProfile,
+} from "./pandit-seo-network/public-api";
 
 type PublicEntityDependencies = {
   getProductBySlug: (slug: string) => Promise<unknown | undefined>;
@@ -106,6 +111,20 @@ export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDepende
     if (req.path.includes(".") && !req.path.endsWith(".html") && !req.path.endsWith("/")) return next();
 
     try {
+      const locationMatch = req.path.match(/^\/book-pandit-online\/([^/]+)(?:\/([^/]+))?\/?$/);
+      if (locationMatch) {
+        const settings = await storage.getSiteSettings();
+        if (!isPanditSeoNetworkEnabled(settings)) return next();
+        const projection = await getPanditSeoNetworkProjection();
+        const location = locationMatch[2]
+          ? selectCityService(projection, locationMatch[1], locationMatch[2])
+          : selectCityHub(projection, locationMatch[1]);
+        if (location) return next();
+        res.locals.seoNotFound = true;
+        res.status(404);
+        res.setHeader("X-Robots-Tag", "noindex, follow");
+        return next();
+      }
       const decision = await resolvePublicRouteDecision(req.path, dependencies);
       if (decision.kind === "registered" || (decision.kind === "entity" && decision.found)) {
         return next();

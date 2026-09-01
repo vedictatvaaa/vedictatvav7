@@ -31,8 +31,14 @@ import { CATEGORY_HEAD, resolveCategorySlug } from "./seo-category-head";
 import { resolveExplicitOgCard } from "./og-meta";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
-import { isPanditSeoNetworkEnabled, selectPublicProfile } from "./pandit-seo-network/public-api";
+import {
+  isPanditSeoNetworkEnabled,
+  selectCityHub,
+  selectCityService,
+  selectPublicProfile,
+} from "./pandit-seo-network/public-api";
 import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
+import { buildPanditCitySeoHead } from "./pandit-seo-network/city-seo";
 import {
   resolveSeoMetadata,
   type ResolvedSeoMetadata,
@@ -238,6 +244,32 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
     },
   };
   if (staticHeads[reqPath]) return staticHeads[reqPath];
+
+  const panditLocationMatch = reqPath.match(/^\/book-pandit-online\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
+  if (panditLocationMatch) {
+    try {
+      if (isPanditSeoNetworkEnabled(await storage.getSiteSettings())) {
+        const projection = await getPanditSeoNetworkProjection();
+        const city = selectCityHub(projection, panditLocationMatch[1]);
+        const service = panditLocationMatch[2]
+          ? selectCityService(projection, panditLocationMatch[1], panditLocationMatch[2])
+          : undefined;
+        if (!city || (panditLocationMatch[2] && !service)) {
+          return {
+            title: `Pandit Location Not Found | ${SITE_NAME}`,
+            description: "This Pandit location is unavailable.",
+            canonical: reqPath,
+            robotsIndex: false,
+            robotsFollow: true,
+            jsonLd: [],
+          };
+        }
+        return buildPanditCitySeoHead(city, baseUrl, service || undefined);
+      }
+    } catch (error) {
+      throw new PanditSeoSsrResolutionError(error);
+    }
+  }
 
   // 0) Bespoke WhatsApp/social share cards (server/og-meta.ts).
   // These are hand-curated for the highest-intent routes (homepage,

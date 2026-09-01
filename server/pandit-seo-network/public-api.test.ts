@@ -11,6 +11,7 @@ import {
   selectPublicProfile,
   selectPublicProfileByPanditId,
   resolvePublicPanditProfile,
+  resolvePublicPanditLocation,
   filterBySelectablePublicPandits,
   shouldInvalidatePanditSeoNetwork,
 } from "./public-api";
@@ -162,6 +163,39 @@ test("shared public profile resolver is opaque, skips projection while disabled,
     }),
     /projection unavailable/,
   );
+});
+
+test("location resolver preserves rollout-off behavior and propagates projection failures", async () => {
+  let reads = 0;
+  const disabled = await resolvePublicPanditLocation({ citySlug: "varanasi" }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: false }),
+    getProjection: async () => { reads += 1; return { profiles: [], cities: [] }; },
+  });
+  assert.deepEqual(disabled, { enabled: false, location: null });
+  assert.equal(reads, 0);
+
+  const projection = {
+    profiles: [],
+    cities: [{
+      city: { slug: "varanasi" },
+      services: [{ service: { slug: "rudrabhishek-puja" } }],
+    }],
+  } as any;
+  assert.ok((await resolvePublicPanditLocation({
+    citySlug: "varanasi",
+    serviceSlug: "rudrabhishek-puja",
+  }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+    getProjection: async () => projection,
+  })).location);
+  assert.equal((await resolvePublicPanditLocation({ citySlug: "unknown" }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+    getProjection: async () => projection,
+  })).location, null);
+  await assert.rejects(resolvePublicPanditLocation({ citySlug: "varanasi" }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+    getProjection: async () => { throw new Error("projection unavailable"); },
+  }), /projection unavailable/);
 });
 
 test("profile-adjacent public endpoints share the authoritative resolver boundary", () => {
