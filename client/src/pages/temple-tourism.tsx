@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import PageSeo from "@/components/PageSeo";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, X, Navigation, Star, Clock, Calendar, ChevronDown, ChevronUp, Filter, Search, Compass, Mountain, Waves, Flame, Crown, Heart, Sun, Sparkles, ArrowRight, Building, Train, Plane, Car, Bus, Info, BookOpen, Route, Globe, Map as MapIcon, Users, Eye, Share2, ChevronRight, Footprints, Trophy, Target, CheckCircle2, Instagram, Twitter, Facebook, Link2, Download, Award, Zap, TrendingUp } from "lucide-react";
@@ -17,6 +18,7 @@ import yatraPilgrimsImg from "@/assets/images/yatra-pilgrims.jpg";
 import southTempleImg from "@/assets/images/south-temple.jpg";
 import shaktiPeethaImg from "@/assets/images/shakti-peetha.jpg";
 import { pilgrimageSites, type PilgrimageSite } from "@shared/temple-tourism-data";
+import { mergeCompatibility, type CompatibilityItem } from "@/lib/destination-compat";
 export { pilgrimageSites } from "@shared/temple-tourism-data";
 export type { PilgrimageSite } from "@shared/temple-tourism-data";
 
@@ -196,6 +198,15 @@ function LeafletMap({ sites, selectedSite, onSelectSite }: {
 }
 
 export default function TempleTourism() {
+  const { data: canonicalTemples } = useQuery<{ items: CompatibilityItem[] }>({ queryKey: ["/api/destination-compatibility/temple"] });
+  const { data: canonicalTirths } = useQuery<{ items: CompatibilityItem[] }>({ queryKey: ["/api/destination-compatibility/tirth"] });
+  // Static source is immediate/failure fallback. Only server-published,
+  // explicitly source-keyed records can alter scalar display fields.
+  const displayedSites = useMemo(() => mergeCompatibility(
+    pilgrimageSites,
+    [...(canonicalTemples?.items || []), ...(canonicalTirths?.items || [])],
+    (site) => `temple-tourism:${site.id}`,
+  ), [canonicalTemples, canonicalTirths]);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedSite, setSelectedSite] = useState<PilgrimageSite | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -238,7 +249,7 @@ export default function TempleTourism() {
   }, [visitedSites]);
 
   const filteredSites = useMemo(() => {
-    return pilgrimageSites.filter(site => {
+    return displayedSites.filter(site => {
       const matchesCategory = selectedCategory === "all" || site.category === selectedCategory;
       const matchesSearch = !searchQuery ||
         site.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -248,7 +259,7 @@ export default function TempleTourism() {
         site.famousFor.some(f => f.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, displayedSites]);
 
   return (
     <>

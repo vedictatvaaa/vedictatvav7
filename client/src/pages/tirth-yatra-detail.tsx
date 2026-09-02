@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
 import PageSeo from "@/components/PageSeo";
 import { faqPage, breadcrumbList, abs } from "@/lib/seo-schemas";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import NotFound from "@/pages/not-found";
 import { TIRTH_YATRAS, TIRTH_YATRAS_BY_SLUG } from "@/lib/tirth-yatras-data";
+import { mergeCompatibility, type CompatibilityItem } from "@/lib/destination-compat";
 import {
   ChevronRight, ArrowLeft, MapPin, Calendar, Users, Mountain,
   Plane, Train, Bus, Sparkles, Heart, BookOpen, Clock,
@@ -29,7 +30,9 @@ const MAROON = "#6D2B35";
 export default function TirthYatraDetailPage() {
   const [, params] = useRoute("/tirth-yatra/:slug");
   const slug = params?.slug || "";
-  const yatra = TIRTH_YATRAS_BY_SLUG[slug];
+  const { data: canonicalTirths } = useQuery<{ items: CompatibilityItem[] }>({ queryKey: ["/api/destination-compatibility/tirth"] });
+  const yatras = useMemo(() => mergeCompatibility(TIRTH_YATRAS, canonicalTirths?.items, (row) => `tirth-guide:${row.slug}`), [canonicalTirths]);
+  const yatra = yatras.find((row) => row.slug === slug) || TIRTH_YATRAS_BY_SLUG[slug];
   const { toast } = useToast();
   const [activeDay, setActiveDay] = useState(0);
   const [form, setForm] = useState({
@@ -84,7 +87,7 @@ export default function TirthYatraDetailPage() {
     });
   };
 
-  const related = TIRTH_YATRAS.filter(
+  const related = yatras.filter(
     (y) => y.slug !== yatra.slug && (y.category === yatra.category || y.state === yatra.state)
   ).slice(0, 4);
 

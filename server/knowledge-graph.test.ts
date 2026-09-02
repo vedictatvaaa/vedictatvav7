@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import {
-  ENTITY_TYPES, RELATIONSHIP_TYPES, UnsupportedEntitySourceError,
+  ENTITY_TYPES, RELATIONSHIP_TYPES,
   createEntityAdapters, isEntityType, isRelationshipType,
   isValidRelationshipCombination, boundedSearch, pagination, positiveEntityId,
   rejectDuplicateInput, safeMetadata, validateEntityRef,
@@ -89,9 +89,10 @@ test("adapters return normalized Admin-safe DTOs and never leak source privacy f
   assert.equal("passwordHash" in (dto as object), false);
 });
 
-test("missing source types are explicit and database failures propagate", async () => {
+test("canonical destination adapters are supported and database failures propagate", async () => {
   const adapters = createEntityAdapters(fakeDatabase([]));
-  await assert.rejects(() => adapters.get("TIRTH")!.search({ term: "", limit: 10, offset: 0 }), UnsupportedEntitySourceError);
+  assert.deepEqual(await adapters.get("TIRTH")!.search({ term: "", limit: 10, offset: 0 }), []);
+  assert.deepEqual(await adapters.get("TEMPLE")!.search({ term: "", limit: 10, offset: 0 }), []);
   assert.equal(await adapters.get("PRODUCT")!.get({ type: "PRODUCT", id: 10 }), null);
 
   const failure = new Error("database unavailable");

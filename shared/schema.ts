@@ -1466,6 +1466,8 @@ export const tirthYatraInquiries = pgTable("tirth_yatra_inquiries", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   tourId: integer("tour_id"),
   tourSlug: text("tour_slug"),
+  canonicalDestinationType: text("canonical_destination_type"),
+  canonicalDestinationId: integer("canonical_destination_id"),
   name: text("name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
@@ -1475,8 +1477,10 @@ export const tirthYatraInquiries = pgTable("tirth_yatra_inquiries", {
   message: text("message"),
   status: text("status").notNull().default("new"),
   createdAt: timestamp("created_at").defaultNow(),
-});
-export const insertTirthYatraInquirySchema = createInsertSchema(tirthYatraInquiries).omit({ id: true, status: true, createdAt: true });
+}, (t) => ({
+  canonicalDestinationCheck: check("tirth_yatra_inquiries_canonical_destination_check", sql`(${t.canonicalDestinationType} IS NULL AND ${t.canonicalDestinationId} IS NULL) OR (${t.canonicalDestinationType} IS NOT NULL AND ${t.canonicalDestinationId} IS NOT NULL AND ${t.canonicalDestinationType} IN ('TIRTH','TEMPLE') AND ${t.canonicalDestinationId} > 0)`),
+}));
+export const insertTirthYatraInquirySchema = createInsertSchema(tirthYatraInquiries).omit({ id: true, status: true, createdAt: true, canonicalDestinationType: true, canonicalDestinationId: true });
 export type TirthYatraInquiry = typeof tirthYatraInquiries.$inferSelect;
 export type InsertTirthYatraInquiry = z.infer<typeof insertTirthYatraInquirySchema>;
 

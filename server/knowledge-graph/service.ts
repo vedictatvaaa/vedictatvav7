@@ -4,7 +4,7 @@ import { displayOrder, pagination, positiveEntityId, safeMetadata, validateEntit
 import { KnowledgeGraphRepository } from "./repository";
 import type { GraphAudit } from "./repository";
 
-const supported: EntityType[] = ENTITY_TYPES.filter((type) => type !== "TIRTH" && type !== "TEMPLE");
+const supported: EntityType[] = [...ENTITY_TYPES];
 const refOf = (row: any, side: "source" | "target"): EntityRef => ({
   type: row[`${side}EntityType`], id: row[`${side}EntityId`], discriminator: row[`${side}Discriminator`] || undefined,
 });
@@ -78,7 +78,7 @@ export class KnowledgeGraphService {
   }
   async search(input: { type?: unknown; term?: unknown; page?: unknown; limit?: unknown; discriminator?: unknown; status?: unknown }) {
     const { page, limit, offset } = pagination(input);
-    const types = input.type === undefined ? supported : [this.checkedType(input.type)];
+    const types = input.type === undefined ? this.availableTypes() : [this.checkedType(input.type)];
     const discriminator = input.discriminator === "CITY" || input.discriminator === "STATE" ? input.discriminator : undefined;
     if (input.discriminator !== undefined && !discriminator) throw new KnowledgeGraphValidationError("Invalid location discriminator");
     if (discriminator && types.some((type) => type !== "LOCATION")) throw new KnowledgeGraphValidationError("Only LOCATION accepts a discriminator");
@@ -108,7 +108,7 @@ export class KnowledgeGraphService {
   }
   async summary() {
     const edges = await this.repository.allRelationships();
-    const entities = (await Promise.all(supported.map(async (type) => this.allFromAdapter(type, "")))).flat();
+    const entities = (await Promise.all(this.availableTypes().map(async (type) => this.allFromAdapter(type, "")))).flat();
     const liveEntityKeys = new Set(entities.map((entity) => key(entity)));
     const activeKeys = new Set(
       edges
@@ -137,7 +137,7 @@ export class KnowledgeGraphService {
   async health(input: any = {}) {
     const type = input.type === undefined ? undefined : this.checkedType(input.type);
     const { page, limit } = pagination(input);
-    const allEntities = (await Promise.all(supported.map((t) => this.allFromAdapter(t, "")))).flat();
+    const allEntities = (await Promise.all(this.availableTypes().map((t) => this.allFromAdapter(t, "")))).flat();
     const entities = type ? allEntities.filter((entity) => entity.type === type) : allEntities;
     const [edges, rules] = await Promise.all([this.repository.allRelationships(), this.repository.listRules()]);
     // The complete source enumeration above is also an existence index.  This
@@ -193,6 +193,10 @@ export class KnowledgeGraphService {
     if (!isEntityType(value)) throw new KnowledgeGraphValidationError("Unknown entity type");
     if (!supported.includes(value)) throw new UnsupportedEntitySourceError(value);
     return value;
+  }
+  /** Tests and future partial deployments may register only a bounded subset. */
+  private availableTypes(): EntityType[] {
+    return supported.filter((type) => this.adapters.has(type));
   }
   private async allFromAdapter(type: EntityType, term: string, discriminator?: unknown): Promise<AdminEntityDto[]> {
     const safeDiscriminator = discriminator === "CITY" || discriminator === "STATE" ? discriminator : undefined;

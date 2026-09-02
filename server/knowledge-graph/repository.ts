@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { adminAuditLogs, blogPosts, indianCities, indianStates, knowledgeGraphQualityRules, knowledgeGraphRelationships, masterServices, pandits, productReviews, products, pujaTypes, tirthYatraTours } from "@shared/schema";
+import { adminAuditLogs, blogPosts, indianCities, indianStates, knowledgeGraphQualityRules, knowledgeGraphRelationships, masterServices, pandits, productReviews, products, pujaTypes, temples, tirths, tirthYatraTours } from "@shared/schema";
 import { adminEntityDto, locationDto } from "./entity-adapters";
 import type { AdminEntityDto, EntityType, LocationKind } from "./types";
 
@@ -55,6 +55,8 @@ export class KnowledgeGraphRepository {
       case "SERVICE": return query(masterServices, { id: masterServices.id, name: masterServices.name, slug: masterServices.slug, category: masterServices.category, serviceType: masterServices.serviceType, isActive: masterServices.isActive, updatedAt: masterServices.updatedAt }, masterServices.id, masterServices.name, [masterServices.name, masterServices.slug], (r) => adminEntityDto("SERVICE", r));
       case "REVIEW": return query(productReviews, { id: productReviews.id, title: productReviews.title, rating: productReviews.rating, status: productReviews.status, productId: productReviews.productId, createdAt: productReviews.createdAt }, productReviews.id, productReviews.title, [productReviews.title], (r) => adminEntityDto("REVIEW", r));
       case "YATRA": return query(tirthYatraTours, { id: tirthYatraTours.id, name: tirthYatraTours.name, slug: tirthYatraTours.slug, route: tirthYatraTours.route, durationDays: tirthYatraTours.durationDays, isActive: tirthYatraTours.isActive, createdAt: tirthYatraTours.createdAt }, tirthYatraTours.id, tirthYatraTours.name, [tirthYatraTours.name, tirthYatraTours.slug, tirthYatraTours.route], (r) => adminEntityDto("YATRA", r));
+      case "TIRTH": return query(tirths, { id: tirths.id, name: tirths.name, slug: tirths.slug, status: tirths.status, state: tirths.state, provenance: tirths.provenance, updatedAt: tirths.updatedAt }, tirths.id, tirths.name, [tirths.name, tirths.slug, tirths.state], (r) => adminEntityDto("TIRTH", r));
+      case "TEMPLE": return query(temples, { id: temples.id, name: temples.name, slug: temples.slug, status: temples.status, state: temples.state, provenance: temples.provenance, updatedAt: temples.updatedAt }, temples.id, temples.name, [temples.name, temples.slug, temples.state], (r) => adminEntityDto("TEMPLE", r));
       case "LOCATION": {
         if (!discriminator) {
           // A merged LOCATION window needs only offset + limit rows from each

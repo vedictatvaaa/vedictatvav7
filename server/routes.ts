@@ -32,6 +32,7 @@ import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
 import { registerPanditSeoNetworkAdminRoutes } from "./pandit-seo-network/admin-routes";
 import { registerKnowledgeGraphAdminRoutes } from "./knowledge-graph/admin-routes";
+import { registerDestinationAdminRoutes, registerDestinationPublicRoutes } from "./knowledge-graph/destination-routes";
 import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
@@ -219,6 +220,10 @@ export async function registerRoutes(
   const adminAuthMiddleware = sharedAdminAuth;
   registerPanditSeoNetworkAdminRoutes(app, adminAuthMiddleware);
   registerKnowledgeGraphAdminRoutes(app, adminAuthMiddleware);
+  registerDestinationAdminRoutes(app, adminAuthMiddleware);
+  // These are destination compatibility reads, not the knowledge-graph public
+  // projection. Existing static Temple Tourism/Tirth rendering remains intact.
+  registerDestinationPublicRoutes(app);
   const customerSessionCookie = "vt_customer_session";
   const customerSessionTtlMs = 30 * 24 * 60 * 60 * 1000;
   const sessionSecret = () => {

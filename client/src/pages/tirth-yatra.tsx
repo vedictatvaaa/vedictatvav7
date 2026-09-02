@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { TirthYatraTour } from "@shared/schema";
 import { TIRTH_YATRAS, TIRTH_YATRA_CATEGORIES } from "@/lib/tirth-yatras-data";
+import { mergeCompatibility, type CompatibilityItem } from "@/lib/destination-compat";
 
 export default function TirthYatraPage() {
   const { toast } = useToast();
@@ -28,6 +29,11 @@ export default function TirthYatraPage() {
   const [freeForm, setFreeForm] = useState({ name: "", phone: "", email: "", city: "", preferredYatra: "", message: "" });
 
   const { data: tours = [], isLoading } = useQuery<TirthYatraTour[]>({ queryKey: ["/api/yatra/tours"] });
+  const { data: canonicalTirths } = useQuery<{ items: CompatibilityItem[] }>({ queryKey: ["/api/destination-compatibility/tirth"] });
+  const displayedYatras = useMemo(
+    () => mergeCompatibility(TIRTH_YATRAS, canonicalTirths?.items, (y) => `tirth-guide:${y.slug}`),
+    [canonicalTirths],
+  );
 
   const inquireMut = useMutation({
     mutationFn: async (payload: any) => {
@@ -89,9 +95,9 @@ export default function TirthYatraPage() {
   };
 
   const filteredYatras = useMemo(() => {
-    if (activeCategory === "all") return TIRTH_YATRAS;
-    return TIRTH_YATRAS.filter((y) => y.category === activeCategory);
-  }, [activeCategory]);
+    if (activeCategory === "all") return displayedYatras;
+    return displayedYatras.filter((y) => y.category === activeCategory);
+  }, [activeCategory, displayedYatras]);
 
   const TY_TITLE = "Free Tirth Yatra & All Hindu Pilgrimages | Char Dham, 12 Jyotirlingas, Vaishno Devi, Amarnath, Tirupati - Vedic Tatva";
   const TY_DESC = "The most comprehensive Hindu Tirth Yatra hub - complete planning guides for Char Dham, Kedarnath, Badrinath, Kashi Vishwanath, Ayodhya, Mathura-Vrindavan, Vaishno Devi, Amarnath, Tirupati, Jagannath Puri, Dwarka, Rameshwaram, Kamakhya, Somnath, Mahakaleshwar, Shirdi, Haridwar-Rishikesh & Kailash Mansarovar. NGO annual lucky draw for one free yatra every year.";

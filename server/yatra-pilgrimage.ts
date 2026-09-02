@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { db } from "./db";
 import {
   tirthYatraTours,
+  tirths,
+  temples,
+  destinationSlugAliases,
   tirthYatraInquiries,
   luckyDrawEntries,
   pilgrimageCardApplications,
@@ -9,8 +12,13 @@ import {
   insertLuckyDrawEntrySchema,
   insertPilgrimageCardApplicationSchema,
 } from "@shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+
+export function publicInquiryResponse(row: any) {
+  const { canonicalDestinationType: _type, canonicalDestinationId: _id, ...legacy } = row;
+  return legacy;
+}
 
 const SEED_TOURS = [
   {
@@ -279,9 +287,26 @@ export function registerYatraPilgrimageRoutes(app: Express) {
 
   app.post("/api/yatra/inquire", async (req, res) => {
     try {
-      const data = insertTirthYatraInquirySchema.parse(req.body);
-      const [row] = await db.insert(tirthYatraInquiries).values(data).returning();
-      res.json({ ok: true, inquiry: row });
+      const parsed = insertTirthYatraInquirySchema.parse(req.body);
+      const data = parsed as Omit<typeof tirthYatraInquiries.$inferInsert, "canonicalDestinationType" | "canonicalDestinationId"> & { tourSlug?: string | null };
+      // Keep tourId/tourSlug exactly as submitted for old consumers, while
+      // attaching a canonical destination only when the familiar slug resolves.
+      let canonicalDestinationType: "TIRTH" | "TEMPLE" | null = null;
+      let canonicalDestinationId: number | null = null;
+      if (data.tourSlug) {
+        const slug = data.tourSlug.trim().toLowerCase();
+        for (const [type, table] of [["TIRTH", tirths], ["TEMPLE", temples]] as const) {
+          let [destination] = await db.select({ id: table.id }).from(table).where(and(eq(table.slug, slug), eq(table.status, "PUBLISHED"))).limit(1);
+          if (!destination) {
+            const [alias] = await db.select().from(destinationSlugAliases)
+              .where(and(eq(destinationSlugAliases.entityType, type), eq(destinationSlugAliases.aliasSlug, slug))).limit(1);
+            if (alias) [destination] = await db.select({ id: table.id }).from(table).where(and(eq(table.id, alias.entityId), eq(table.status, "PUBLISHED"))).limit(1);
+          }
+          if (destination) { canonicalDestinationType = type; canonicalDestinationId = destination.id; break; }
+        }
+      }
+      const [row] = await db.insert(tirthYatraInquiries).values({ ...data, canonicalDestinationType, canonicalDestinationId }).returning();
+      res.json({ ok: true, inquiry: publicInquiryResponse(row) });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Validation failed", issues: e.issues });
       res.status(500).json({ error: e?.message });
@@ -293,7 +318,7 @@ export function registerYatraPilgrimageRoutes(app: Express) {
       const data = insertLuckyDrawEntrySchema.parse({
         ...req.body,
         drawYear: req.body.drawYear ?? new Date().getFullYear() + 1,
-      });
+      }) as typeof luckyDrawEntries.$inferInsert & { productSerial: string; drawYear: number };
       const dup = await db
         .select()
         .from(luckyDrawEntries)
@@ -325,7 +350,7 @@ export function registerYatraPilgrimageRoutes(app: Express) {
 
   app.post("/api/pilgrimage-card/apply", async (req, res) => {
     try {
-      const data = insertPilgrimageCardApplicationSchema.parse(req.body);
+      const data = insertPilgrimageCardApplicationSchema.parse(req.body) as typeof pilgrimageCardApplications.$inferInsert;
       const [row] = await db.insert(pilgrimageCardApplications).values(data).returning();
       res.json({ ok: true, application: row });
     } catch (e: any) {

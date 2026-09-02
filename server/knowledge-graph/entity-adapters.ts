@@ -1,7 +1,7 @@
 import { asc, eq, ilike, or } from "drizzle-orm";
 import {
   blogPosts, indianCities, indianStates, masterServices, pandits, productReviews,
-  products, pujaTypes, tirthYatraTours,
+  products, pujaTypes, temples, tirths, tirthYatraTours,
 } from "@shared/schema";
 import type { AdminEntityDto, EntityAdapter, EntityRef, EntitySearch, EntityType, LocationKind } from "./types";
 import { UnsupportedEntitySourceError } from "./types";
@@ -15,7 +15,7 @@ export interface KnowledgeGraphDatabase {
 }
 
 type SourceConfig = {
-  type: Exclude<EntityType, "LOCATION" | "TIRTH" | "TEMPLE">;
+  type: Exclude<EntityType, "LOCATION">;
   table: any;
   selection: Record<string, unknown>;
   idColumn: any;
@@ -55,11 +55,6 @@ function iso(value: Date | string | null | undefined): string | null {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
-function unsupported(type: "TIRTH" | "TEMPLE"): EntityAdapter {
-  const fail = async (): Promise<never> => { throw new UnsupportedEntitySourceError(type); };
-  return { type, get: fail, exists: fail, search: fail };
-}
-
 export function locationDto(row: any, kind: LocationKind): AdminEntityDto {
   const stateName = kind === "CITY" ? row.stateName : undefined;
   return {
@@ -77,7 +72,7 @@ export function locationDto(row: any, kind: LocationKind): AdminEntityDto {
 }
 
 /** The only projection of source-table rows that may leave graph internals. */
-export function adminEntityDto(type: Exclude<EntityType, "LOCATION" | "TIRTH" | "TEMPLE">, r: any): AdminEntityDto {
+export function adminEntityDto(type: Exclude<EntityType, "LOCATION">, r: any): AdminEntityDto {
   switch (type) {
     case "PUJA": return { type, id: r.id, name: r.name, status: r.isPublished ? "PUBLISHED" : "DRAFT", url: `/puja/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { category: r.category } };
     case "PANDIT": return { type, id: r.id, name: r.name, status: r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"), url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } };
@@ -86,6 +81,8 @@ export function adminEntityDto(type: Exclude<EntityType, "LOCATION" | "TIRTH" | 
     case "SERVICE": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: null, updatedAt: iso(r.updatedAt), summary: { category: r.category, serviceType: r.serviceType } };
     case "REVIEW": return { type, id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: null, updatedAt: iso(r.createdAt), summary: { rating: r.rating, productId: r.productId } };
     case "YATRA": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: `/tirth-yatra/${r.slug}`, updatedAt: iso(r.createdAt), summary: { route: r.route, durationDays: r.durationDays } };
+    case "TIRTH": return { type, id: r.id, name: r.name, status: r.status, url: `/tirth/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { slug: r.slug, state: r.state || null, provenance: r.provenance } };
+    case "TEMPLE": return { type, id: r.id, name: r.name, status: r.status, url: `/temple/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { slug: r.slug, state: r.state || null, provenance: r.provenance } };
   }
 }
 
@@ -162,8 +159,18 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
       toDto: (r) => adminEntityDto("PANDIT", r),
     }),
     locationAdapter(database),
-    unsupported("TIRTH"),
-    unsupported("TEMPLE"),
+    tableAdapter(database, {
+      type: "TIRTH", table: tirths, idColumn: tirths.id,
+      selection: { id: tirths.id, name: tirths.name, slug: tirths.slug, status: tirths.status, state: tirths.state, provenance: tirths.provenance, updatedAt: tirths.updatedAt },
+      searchColumns: [tirths.name, tirths.slug, tirths.state],
+      toDto: (r) => adminEntityDto("TIRTH", r),
+    }),
+    tableAdapter(database, {
+      type: "TEMPLE", table: temples, idColumn: temples.id,
+      selection: { id: temples.id, name: temples.name, slug: temples.slug, status: temples.status, state: temples.state, provenance: temples.provenance, updatedAt: temples.updatedAt },
+      searchColumns: [temples.name, temples.slug, temples.state],
+      toDto: (r) => adminEntityDto("TEMPLE", r),
+    }),
     tableAdapter(database, {
       type: "PRODUCT", table: products, idColumn: products.id,
       selection: { id: products.id, name: products.name, slug: products.slug, category: products.category, productType: products.productType, stock: products.stock },
