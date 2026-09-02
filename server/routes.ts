@@ -8704,7 +8704,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   app.post("/api/pandit-applications/upload-photo", upload.single("photo"), async (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "A valid profile photo is required" });
     const url = `/uploads/${req.file.filename}`;
-    if (!isValidStoredProfilePhoto(url, uploadsDir)) {
+    if (!(await isValidStoredProfilePhoto(url, uploadsDir))) {
       fs.rmSync(req.file.path, { force: true });
       return res.status(400).json({ message: "The uploaded profile photo is invalid" });
     }
@@ -8741,7 +8741,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const d = parsed.data;
-      if (!isValidStoredProfilePhoto(d.photo, uploadsDir)) {
+      if (!(await isValidStoredProfilePhoto(d.photo, uploadsDir))) {
         return res.status(400).json({ message: "A valid successfully uploaded profile photo is required" });
       }
       const [selectedState] = await db.select().from(indianStates)
@@ -8977,7 +8977,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         if (!pending.stateId || !pending.cityId || pending.locationReviewStatus !== "resolved") {
           return { kind: "location" as const };
         }
-        if (!isValidStoredProfilePhoto(pending.photo, uploadsDir)) return { kind: "photo" as const };
+        if (!(await isValidStoredProfilePhoto(pending.photo, uploadsDir))) return { kind: "photo" as const };
         const [location] = await tx.select({ state: indianStates, city: indianCities })
           .from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
           .where(and(

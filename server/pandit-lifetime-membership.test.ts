@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import sharp from "sharp";
 import test from "node:test";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 
@@ -70,24 +71,32 @@ test("application submission and approval both reject absent or invalid photos",
   assert.equal((routes.match(/isValidStoredProfilePhoto\(/g) || []).length >= 3, true);
   assert.match(routes, /A valid successfully uploaded profile photo is required before approval/);
   assert.match(routes, /expectedMime\[extension\] === file\.mimetype\.toLowerCase\(\)/);
-  assert.match(photoValidator, /profilePhotoKind\(header\) === kind/);
-  assert.match(photoValidator, /return profilePhotoKind\(bytes\) === match\[1\]/);
+  assert.match(photoValidator, /sharp\(bytes, \{ failOn: "error", limitInputPixels: MAX_PIXELS \}\)/);
+  assert.match(photoValidator, /await image\.rotate\(\)\.toBuffer\(\)/);
+  assert.match(photoValidator, /metadata\.width > MAX_DIMENSION/);
 });
 
-test("photo validation rejects spoofed stored files and mismatched data URL MIME", () => {
+test("photo validation decodes valid images and rejects spoofed, truncated, and junk data", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "pandit-photo-"));
-  const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0]);
+  const png = await sharp({
+    create: { width: 1, height: 1, channels: 3, background: { r: 1, g: 2, b: 3 } },
+  }).png().toBuffer();
   try {
     writeFileSync(path.join(directory, "valid.png"), png);
     writeFileSync(path.join(directory, "spoofed.jpg"), png);
     writeFileSync(path.join(directory, "text.jpg"), "not an image");
-    assert.equal(isValidStoredProfilePhoto("/uploads/valid.png", directory), true);
-    assert.equal(isValidStoredProfilePhoto("/uploads/spoofed.jpg", directory), false);
-    assert.equal(isValidStoredProfilePhoto("/uploads/text.jpg", directory), false);
+    writeFileSync(path.join(directory, "truncated.png"), png.subarray(0, -1));
+    writeFileSync(path.join(directory, "junk.png"), Buffer.concat([png, Buffer.from("junk")]));
+    assert.equal(await isValidStoredProfilePhoto("/uploads/valid.png", directory), true);
+    assert.equal(await isValidStoredProfilePhoto("/uploads/spoofed.jpg", directory), false);
+    assert.equal(await isValidStoredProfilePhoto("/uploads/text.jpg", directory), false);
+    assert.equal(await isValidStoredProfilePhoto("/uploads/truncated.png", directory), false);
+    assert.equal(await isValidStoredProfilePhoto("/uploads/junk.png", directory), false);
     const encoded = png.toString("base64");
-    assert.equal(isValidStoredProfilePhoto(`data:image/png;base64,${encoded}`, directory), true);
-    assert.equal(isValidStoredProfilePhoto(`data:image/jpeg;base64,${encoded}`, directory), false);
-    assert.equal(isValidStoredProfilePhoto("data:image/jpeg;base64,bm90IGFuIGltYWdl", directory), false);
+    assert.equal(await isValidStoredProfilePhoto(`data:image/png;base64,${encoded}`, directory), true);
+    assert.equal(await isValidStoredProfilePhoto(`data:image/jpeg;base64,${encoded}`, directory), false);
+    assert.equal(await isValidStoredProfilePhoto(`data:image/png;base64,${Buffer.concat([png, Buffer.from("junk")]).toString("base64")}`, directory), false);
+    assert.equal(await isValidStoredProfilePhoto("data:image/jpeg;base64,bm90IGFuIGltYWdl", directory), false);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
