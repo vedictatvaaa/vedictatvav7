@@ -15,6 +15,7 @@ This feature must extend existing systems rather than create duplicate Pandit, u
 - The permanent registration number is assigned only after Admin approval.
 - The registration number is also the lifetime membership number.
 - Number format is `VT-PAN-000001`, expanding beyond six digits when required.
+- A valid Pandit profile photograph is mandatory during registration and before approval.
 - The current 102 canonical cities remain in the selector.
 - Registration adds a governed “My city is not listed” request rather than importing thousands of unreviewed cities.
 - The full public-safe digital card is shown on the approved Pandit’s public profile.
@@ -79,7 +80,7 @@ The existing registration page remains the entry point and authentication flow. 
 - full name;
 - mobile number;
 - email;
-- profile photograph;
+- profile photograph (mandatory);
 - canonical state and city;
 - address/location details;
 - languages;
@@ -90,6 +91,8 @@ The existing registration page remains the entry point and authentication flow. 
 - other current Pandit profile fields.
 
 The form will be premium, clean, mobile-first, accessible, validated, responsive, and free of horizontal overflow. It must not duplicate fields already supported by the current application/profile architecture.
+
+The profile photograph field is required. Registration submission must fail explicit client-side and server-side validation when the photograph is absent, invalid, or not successfully uploaded. The application cannot be approved and no membership card can be generated until a valid profile photograph is attached.
 
 Successful submission creates or updates the existing application/profile flow. It does not assign lifetime membership before approval.
 
@@ -374,6 +377,7 @@ No path silently falls back to free-text public locations, raw database IDs, dup
 - Existing 102 cities remain selectable.
 - Cities are filtered by the selected active State/UT.
 - Invalid state/city pairs fail server validation.
+- Registration cannot be submitted without a valid uploaded profile photograph.
 - A Pandit can create a missing-city request.
 - Admin can map, add, or reject a requested city.
 - Approval is blocked until the request is resolved.
@@ -382,6 +386,7 @@ No path silently falls back to free-text public locations, raw database IDs, dup
 ### 17.2 Approval and membership
 
 - Concurrent/retried approval assigns exactly one registration number.
+- Approval fails when the application has no valid profile photograph.
 - The number follows the approved format and is unique.
 - Rejection assigns no number.
 - Ordinary updates cannot change or clear the number.
