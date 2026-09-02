@@ -65,6 +65,7 @@ import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
+import { panditVerificationDto } from "./pandit-verification";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
@@ -3150,6 +3151,23 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         ? adminPanditDto(p, isPanditOnline(p.id), distance)
         : publicPanditDto(p, isPanditOnline(p.id), distance));
     res.json(results);
+  });
+
+  app.get("/api/pandits/verify/:registrationNo", async (req, res, next) => {
+    try {
+      const registrationNo = typeof req.params.registrationNo === "string"
+        ? req.params.registrationNo : "";
+      if (!/^\d{10}$/.test(registrationNo)) {
+        return res.status(404).json({ message: "Pandit verification not found" });
+      }
+      const [pandit] = await db.select().from(pandits)
+        .where(eq(pandits.registrationNo, registrationNo))
+        .limit(1);
+      if (!pandit) return res.status(404).json({ message: "Pandit verification not found" });
+      return res.json(panditVerificationDto(pandit));
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.get("/api/pandits/:id", async (req, res, next) => {

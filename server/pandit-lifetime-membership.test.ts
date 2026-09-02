@@ -5,6 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import test from "node:test";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
+import { panditVerificationDto } from "./pandit-verification";
 
 const migration = readFileSync("migrations/0010_pandit_lifetime_registration.sql", "utf8");
 const successorMigration = readFileSync("migrations/0011_finalize_pandit_registration_numbers.sql", "utf8");
@@ -108,4 +109,60 @@ test("admin APIs are protected and expose registration and location review data"
   assert.match(routes, /"\/api\/admin\/pandit-city-requests", adminAuthMiddleware/);
   assert.match(routes, /cityRequest:/);
   assert.match(routes, /Invalid location request resolution/);
+});
+
+test("public verification endpoint enforces exact grammar and bounded exact lookup", () => {
+  assert.match(routes, /"\/api\/pandits\/verify\/:registrationNo"/);
+  assert.match(routes, /if \(!\/\^\\d\{10\}\$\/\.test\(registrationNo\)\)/);
+  assert.match(routes, /\.where\(eq\(pandits\.registrationNo, registrationNo\)\)[\s\S]+\.limit\(1\)/);
+  assert.equal((routes.match(/Pandit verification not found/g) || []).length, 2);
+});
+
+test("public verification DTO has an explicit safe allowlist", () => {
+  const source = {
+    id: 42,
+    verified: true,
+    registrationNo: "1001000156",
+    name: "Pandit Test",
+    image: "/uploads/pandit.png",
+    specialization: "Vedic Puja",
+    languages: "Hindi, Sanskrit",
+    experience: 12,
+    city: "Varanasi",
+    state: "Uttar Pradesh",
+    registrationAssignedAt: new Date("2026-09-02T00:00:00Z"),
+    slug: "pandit-test-varanasi",
+    phone: "9999999999",
+    email: "private@example.com",
+    bio: "private",
+    passwordHash: "private",
+  } as any;
+  const dto = panditVerificationDto(source);
+  assert.deepEqual(Object.keys(dto).sort(), [
+    "city", "experience", "image", "languages", "lifetimeMembership", "name",
+    "profilePath", "registrationAssignedAt", "registrationNo", "specialization",
+    "state", "status",
+  ].sort());
+  assert.equal(dto.status, "verified");
+  assert.equal(dto.profilePath, "/pandit/pandit-test-varanasi");
+  for (const sensitive of ["id", "phone", "email", "address", "documents", "passwordHash", "bio"]) {
+    assert.equal(sensitive in dto, false);
+  }
+});
+
+test("known but unverified registration returns inactive identity only", () => {
+  const dto = panditVerificationDto({
+    verified: false,
+    registrationNo: "1001000157",
+    name: "Private Name",
+    image: "/uploads/private.png",
+    specialization: "Private",
+    languages: "Private",
+    experience: 1,
+    city: "Private",
+    state: "Private",
+    registrationAssignedAt: new Date(),
+    slug: "private",
+  } as any);
+  assert.deepEqual(dto, { status: "inactive", registrationNo: "1001000157" });
 });
