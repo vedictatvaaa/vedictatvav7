@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, or, sql } from "drizzle-orm";
 import { adminAuditLogs, blogPosts, indianCities, indianStates, knowledgeGraphQualityRules, knowledgeGraphRelationships, masterServices, pandits, productReviews, products, pujaTypes, temples, tirths, tirthYatraTours } from "@shared/schema";
 import { adminEntityDto, locationDto } from "./entity-adapters";
 import type { AdminEntityDto, EntityType, LocationKind } from "./types";
@@ -7,7 +7,7 @@ export type GraphAudit = { actor: string; action: string; details: object; ipAdd
 
 /** Persistence boundary for graph rows.  It intentionally has no source-table writes. */
 export class KnowledgeGraphRepository {
-  constructor(private readonly database: any) {}
+  constructor(readonly database: any) {}
 
   async relationshipsFor(ref: { type: string; id: number; discriminator?: string }) {
     const source = and(eq(knowledgeGraphRelationships.sourceEntityType, ref.type), eq(knowledgeGraphRelationships.sourceEntityId, ref.id),
@@ -17,6 +17,12 @@ export class KnowledgeGraphRepository {
     return this.database.select().from(knowledgeGraphRelationships).where(or(source, target)).orderBy(knowledgeGraphRelationships.displayOrder);
   }
   async allRelationships() { return this.database.select().from(knowledgeGraphRelationships).orderBy(desc(knowledgeGraphRelationships.updatedAt)); }
+  /** Bounded, deterministic cursor export; never materializes the graph. */
+  async exportRelationships(afterId: number, limit: number) {
+    return this.database.select().from(knowledgeGraphRelationships)
+      .where(gt(knowledgeGraphRelationships.id, afterId))
+      .orderBy(asc(knowledgeGraphRelationships.id)).limit(limit + 1);
+  }
   /**
    * Counts and fetches orphan candidates in the database.  In particular, this
    * must not be implemented by loading relationship rows into the service:
@@ -129,6 +135,29 @@ export class KnowledgeGraphRepository {
       const [row] = await tx.insert(knowledgeGraphRelationships).values(input).returning();
       await this.writeAudit(tx, audit, `relationship:${row.id}`); return row;
     });
+  }
+  /** Bulk CSV path deliberately touches only graph rows and its single audit row. */
+  async applyCsvRelationships(rows: readonly { action: "create" | "update"; relationshipId?: number; input: any }[], audit: GraphAudit,
+    revalidate: (tx: any, repository: KnowledgeGraphRepository) => Promise<void>) {
+    const execute = async (tx: any) => {
+      await revalidate(tx, new KnowledgeGraphRepository(tx));
+      let created = 0, updated = 0;
+      for (const row of rows) {
+        if (row.action === "create") {
+          await tx.insert(knowledgeGraphRelationships).values(row.input); created++;
+        } else {
+          const [changed] = await tx.update(knowledgeGraphRelationships).set({ ...row.input, updatedAt: new Date() })
+            .where(eq(knowledgeGraphRelationships.id, row.relationshipId!)).returning({ id: knowledgeGraphRelationships.id });
+          if (!changed) throw new Error("CSV update relationship no longer exists");
+          updated++;
+        }
+      }
+      await this.writeAudit(tx, audit, "knowledge-graph:relationship-csv");
+      return { created, updated };
+    };
+    // Drizzle postgres accepts this option; JavaScript test doubles safely
+    // ignore the additional argument while preserving a single callback run.
+    return this.database.transaction(execute, { isolationLevel: "serializable" });
   }
   async patchRelationshipWithAudit(id: number, patch: any, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {

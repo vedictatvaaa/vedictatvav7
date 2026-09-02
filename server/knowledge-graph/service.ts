@@ -3,6 +3,8 @@ import { isEntityType, isRelationshipType, isValidRelationshipCombination, RELAT
 import { displayOrder, pagination, positiveEntityId, safeMetadata, validateEntityRef, validateRelationship } from "./validation";
 import { KnowledgeGraphRepository } from "./repository";
 import type { GraphAudit } from "./repository";
+import crypto from "crypto";
+import type { CsvRow } from "./relationship-csv";
 
 const supported: EntityType[] = [...ENTITY_TYPES];
 const refOf = (row: any, side: "source" | "target"): EntityRef => ({
@@ -76,6 +78,39 @@ export class KnowledgeGraphService {
     return { id: row.id, relationshipType: row.relationshipType, status: row.status, displayOrder: row.displayOrder, metadata: row.metadata,
       createdAt: row.createdAt, updatedAt: row.updatedAt, stale: Boolean(row.stale), entity: row.entity || null };
   }
+  /** Validation shared by CSV preview and apply. It never writes source entities. */
+  async validateCsvRows(rows: readonly CsvRow[]) {
+    const edges = await this.repository.allRelationships();
+    const identity = (r: any) => `${r.source.type}:${r.source.id}:${r.source.discriminator || ""}|${r.relationshipType}|${r.target.type}:${r.target.id}:${r.target.discriminator || ""}`;
+    const edgeIdentity = (e: any) => `${e.sourceEntityType}:${e.sourceEntityId}:${e.sourceDiscriminator || ""}|${e.relationshipType}|${e.targetEntityType}:${e.targetEntityId}:${e.targetDiscriminator || ""}`;
+    const existing = new Map(edges.map((edge: any) => [edgeIdentity(edge), edge]));
+    const seen = new Set<string>(), endpointState = new Map<string, unknown>(), results: { line: number; action: string; errors: string[]; warnings: string[] }[] = [];
+    for (const row of rows) {
+      const errors: string[] = [], warnings: string[] = []; const edgeKey = identity(row);
+      if (row.action !== "skip") { if (seen.has(edgeKey)) errors.push("Duplicate relationship in CSV"); seen.add(edgeKey); }
+      const current = row.relationshipId ? edges.find((edge: any) => edge.id === row.relationshipId) : undefined;
+      if (row.action === "update" && !current) errors.push("Relationship to update does not exist");
+      if (row.action === "update" && current && edgeIdentity(current) !== edgeKey) errors.push("Update cannot change relationship identity");
+      if (row.action === "create" && existing.has(edgeKey)) errors.push("Relationship already exists");
+      if (row.action !== "skip") {
+        try { await validateRelationship(row, this.adapters); } catch (error: any) { errors.push(error.message); }
+        for (const endpoint of [row.source, row.target]) {
+          const entity = await this.adapter(endpoint.type).get(endpoint);
+          endpointState.set(key(endpoint), entity ? { type: endpoint.type, id: endpoint.id, discriminator: endpoint.discriminator || "", status: entity.status, updatedAt: entity.updatedAt } : { type: endpoint.type, id: endpoint.id, discriminator: endpoint.discriminator || "", missing: true });
+          if (entity && entity.status && !["PUBLISHED", "ACTIVE", "VERIFIED"].includes(entity.status)) warnings.push(`${endpoint.type} endpoint is not publicly eligible`);
+        }
+      }
+      results.push({ line: row.line, action: errors.length ? "invalid" : row.action, errors, warnings });
+    }
+    // Endpoint snapshots are part of the preview state: a source disappearing
+    // or changing eligibility between preview and apply is a state drift.
+    const fingerprint = crypto.createHash("sha256").update(JSON.stringify({
+      edges: edges.map((e: any) => [e.id, edgeIdentity(e), e.status, String(e.updatedAt)]).sort(),
+      endpoints: Array.from(endpointState.values()).sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+    })).digest("hex");
+    return { rows: results, fingerprint, counts: { create: results.filter(r => r.action === "create").length, update: results.filter(r => r.action === "update").length, skip: results.filter(r => r.action === "skip").length, invalid: results.filter(r => r.action === "invalid").length } };
+  }
+  async csvFingerprint(rows: readonly CsvRow[] = []) { return (await this.validateCsvRows(rows)).fingerprint; }
   async search(input: { type?: unknown; term?: unknown; page?: unknown; limit?: unknown; discriminator?: unknown; status?: unknown }) {
     const { page, limit, offset } = pagination(input);
     const types = input.type === undefined ? this.availableTypes() : [this.checkedType(input.type)];
