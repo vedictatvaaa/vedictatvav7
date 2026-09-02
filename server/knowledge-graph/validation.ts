@@ -1,5 +1,5 @@
 import type { EntityAdapter, EntityRef } from "./types";
-import { KnowledgeGraphValidationError } from "./types";
+import { KnowledgeGraphConflictError, KnowledgeGraphValidationError } from "./types";
 import { isValidRelationshipCombination, type RelationshipType } from "./registry";
 
 export const MAX_ENTITY_ID = 2_147_483_647;
@@ -8,6 +8,7 @@ export const MAX_SEARCH_LENGTH = 120;
 export const MAX_METADATA_KEYS = 32;
 export const MAX_METADATA_BYTES = 8_192;
 export const MAX_DISPLAY_ORDER = 10_000;
+export const MAX_PAGINATION_WINDOW = 10_000;
 
 export function positiveEntityId(value: unknown): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > MAX_ENTITY_ID) {
@@ -19,7 +20,9 @@ export function positiveEntityId(value: unknown): number {
 export function pagination(input: { page?: unknown; limit?: unknown }) {
   const page = input.page === undefined ? 1 : positiveBoundedInteger(input.page, 1, 1_000_000, "page");
   const limit = input.limit === undefined ? 25 : positiveBoundedInteger(input.limit, 1, MAX_PAGE_SIZE, "limit");
-  return { page, limit, offset: (page - 1) * limit };
+  const offset = (page - 1) * limit;
+  if (offset + limit > MAX_PAGINATION_WINDOW) throw new KnowledgeGraphValidationError(`page and limit may not exceed a ${MAX_PAGINATION_WINDOW} item window`);
+  return { page, limit, offset };
 }
 
 export function boundedSearchTerm(value: unknown): string {
@@ -125,7 +128,7 @@ export async function validateRelationship(input: {
   if (!sourceAdapter || !targetAdapter) throw new KnowledgeGraphValidationError("Entity source is unsupported");
   if (!(await sourceAdapter.exists(input.source))) throw new KnowledgeGraphValidationError("Source entity does not exist");
   if (!(await targetAdapter.exists(input.target))) throw new KnowledgeGraphValidationError("Target entity does not exist");
-  if (duplicateExists && await duplicateExists()) throw new KnowledgeGraphValidationError("Relationship already exists");
+  if (duplicateExists && await duplicateExists()) throw new KnowledgeGraphConflictError("Relationship already exists");
   return { ...input, metadata: safeMetadata(input.metadata), displayOrder: displayOrder(input.displayOrder) };
 }
 

@@ -60,7 +60,7 @@ function unsupported(type: "TIRTH" | "TEMPLE"): EntityAdapter {
   return { type, get: fail, exists: fail, search: fail };
 }
 
-function locationDto(row: any, kind: LocationKind): AdminEntityDto {
+export function locationDto(row: any, kind: LocationKind): AdminEntityDto {
   const stateName = kind === "CITY" ? row.stateName : undefined;
   return {
     type: "LOCATION",
@@ -74,6 +74,19 @@ function locationDto(row: any, kind: LocationKind): AdminEntityDto {
       ? { kind, state: stateName, slug: row.slug }
       : { kind, code: row.code, unionTerritory: row.isUnionTerritory },
   };
+}
+
+/** The only projection of source-table rows that may leave graph internals. */
+export function adminEntityDto(type: Exclude<EntityType, "LOCATION" | "TIRTH" | "TEMPLE">, r: any): AdminEntityDto {
+  switch (type) {
+    case "PUJA": return { type, id: r.id, name: r.name, status: r.isPublished ? "PUBLISHED" : "DRAFT", url: `/puja/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { category: r.category } };
+    case "PANDIT": return { type, id: r.id, name: r.name, status: r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"), url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } };
+    case "PRODUCT": return { type, id: r.id, name: r.name, status: r.stock > 0 ? "ACTIVE" : "OUT_OF_STOCK", url: r.slug ? `/product/${r.slug}` : null, updatedAt: null, summary: { category: r.category, productType: r.productType, inStock: r.stock > 0 } };
+    case "ARTICLE": return { type, id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: `/blog/${r.slug}`, updatedAt: iso(r.publishedAt || r.createdAt), summary: { category: r.category } };
+    case "SERVICE": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: null, updatedAt: iso(r.updatedAt), summary: { category: r.category, serviceType: r.serviceType } };
+    case "REVIEW": return { type, id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: null, updatedAt: iso(r.createdAt), summary: { rating: r.rating, productId: r.productId } };
+    case "YATRA": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: `/tirth-yatra/${r.slug}`, updatedAt: iso(r.createdAt), summary: { route: r.route, durationDays: r.durationDays } };
+  }
 }
 
 function locationAdapter(database: KnowledgeGraphDatabase): EntityAdapter {
@@ -105,7 +118,10 @@ function locationAdapter(database: KnowledgeGraphDatabase): EntityAdapter {
     async search(input) {
       const { term, limit, offset } = boundedSearch(input);
       const kinds: LocationKind[] = input.discriminator ? [input.discriminator] : ["STATE", "CITY"];
-      const fetchLimit = Math.min(100, limit + offset);
+      // Both source streams are independently ordered.  Fetching the bounded
+      // requested window from each before merging prevents CITY/STATE pages
+      // after 100 from being silently empty.
+      const fetchLimit = limit + offset;
       const groups = await Promise.all(kinds.map(async (kind) => {
         if (kind === "STATE") {
           const rows = await database.select({
@@ -137,13 +153,13 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
       type: "PUJA", table: pujaTypes, idColumn: pujaTypes.id,
       selection: { id: pujaTypes.id, name: pujaTypes.name, slug: pujaTypes.slug, category: pujaTypes.category, isPublished: pujaTypes.isPublished, updatedAt: pujaTypes.updatedAt },
       searchColumns: [pujaTypes.name, pujaTypes.slug],
-      toDto: (r) => ({ type: "PUJA", id: r.id, name: r.name, status: r.isPublished ? "PUBLISHED" : "DRAFT", url: `/puja/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { category: r.category } }),
+      toDto: (r) => adminEntityDto("PUJA", r),
     }),
     tableAdapter(database, {
       type: "PANDIT", table: pandits, idColumn: pandits.id,
       selection: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt },
       searchColumns: [pandits.name, pandits.slug, pandits.city],
-      toDto: (r) => ({ type: "PANDIT", id: r.id, name: r.name, status: r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"), url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } }),
+      toDto: (r) => adminEntityDto("PANDIT", r),
     }),
     locationAdapter(database),
     unsupported("TIRTH"),
@@ -152,31 +168,31 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
       type: "PRODUCT", table: products, idColumn: products.id,
       selection: { id: products.id, name: products.name, slug: products.slug, category: products.category, productType: products.productType, stock: products.stock },
       searchColumns: [products.name, products.slug],
-      toDto: (r) => ({ type: "PRODUCT", id: r.id, name: r.name, status: r.stock > 0 ? "ACTIVE" : "OUT_OF_STOCK", url: r.slug ? `/product/${r.slug}` : null, updatedAt: null, summary: { category: r.category, productType: r.productType, inStock: r.stock > 0 } }),
+      toDto: (r) => adminEntityDto("PRODUCT", r),
     }),
     tableAdapter(database, {
       type: "ARTICLE", table: blogPosts, idColumn: blogPosts.id,
       selection: { id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, category: blogPosts.category, status: blogPosts.status, createdAt: blogPosts.createdAt, publishedAt: blogPosts.publishedAt },
       searchColumns: [blogPosts.title, blogPosts.slug],
-      toDto: (r) => ({ type: "ARTICLE", id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: `/blog/${r.slug}`, updatedAt: iso(r.publishedAt || r.createdAt), summary: { category: r.category } }),
+      toDto: (r) => adminEntityDto("ARTICLE", r),
     }),
     tableAdapter(database, {
       type: "SERVICE", table: masterServices, idColumn: masterServices.id,
       selection: { id: masterServices.id, name: masterServices.name, slug: masterServices.slug, category: masterServices.category, serviceType: masterServices.serviceType, isActive: masterServices.isActive, updatedAt: masterServices.updatedAt },
       searchColumns: [masterServices.name, masterServices.slug],
-      toDto: (r) => ({ type: "SERVICE", id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: null, updatedAt: iso(r.updatedAt), summary: { category: r.category, serviceType: r.serviceType } }),
+      toDto: (r) => adminEntityDto("SERVICE", r),
     }),
     tableAdapter(database, {
       type: "REVIEW", table: productReviews, idColumn: productReviews.id,
       selection: { id: productReviews.id, title: productReviews.title, rating: productReviews.rating, status: productReviews.status, productId: productReviews.productId, createdAt: productReviews.createdAt },
       searchColumns: [productReviews.title],
-      toDto: (r) => ({ type: "REVIEW", id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: null, updatedAt: iso(r.createdAt), summary: { rating: r.rating, productId: r.productId } }),
+      toDto: (r) => adminEntityDto("REVIEW", r),
     }),
     tableAdapter(database, {
       type: "YATRA", table: tirthYatraTours, idColumn: tirthYatraTours.id,
       selection: { id: tirthYatraTours.id, name: tirthYatraTours.name, slug: tirthYatraTours.slug, route: tirthYatraTours.route, durationDays: tirthYatraTours.durationDays, isActive: tirthYatraTours.isActive, createdAt: tirthYatraTours.createdAt },
       searchColumns: [tirthYatraTours.name, tirthYatraTours.slug, tirthYatraTours.route],
-      toDto: (r) => ({ type: "YATRA", id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: `/tirth-yatra/${r.slug}`, updatedAt: iso(r.createdAt), summary: { route: r.route, durationDays: r.durationDays } }),
+      toDto: (r) => adminEntityDto("YATRA", r),
     }),
   ];
   return new Map(adapters.map((adapter) => [adapter.type, adapter]));

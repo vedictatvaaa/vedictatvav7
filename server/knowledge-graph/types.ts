@@ -25,6 +25,8 @@ export interface EntitySearch {
   limit: number;
   offset: number;
   discriminator?: LocationKind;
+  /** Normalized Admin status; adapters may push this down when representable. */
+  status?: string;
 }
 
 export interface EntityAdapter {
@@ -45,5 +47,13 @@ export class KnowledgeGraphValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "KnowledgeGraphValidationError";
+  }
+}
+
+/** A stable public error for both optimistic and database-enforced duplicates. */
+export class KnowledgeGraphConflictError extends Error {
+  constructor(message = "Relationship or quality rule already exists") {
+    super(message);
+    this.name = "KnowledgeGraphConflictError";
   }
 }
