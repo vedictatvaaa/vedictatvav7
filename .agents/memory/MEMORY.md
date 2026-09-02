@@ -9,3 +9,4 @@
 - [SEO network launch gates](seo-network-launch-gates.md) — default-off public SEO networks are not launched until admin enablement and standard-suite HTTP contract coverage both work.
 - [PostgreSQL nullable CHECKs](postgres-nullable-checks.md) — CHECK expressions using IN do not reject NULL unless nullability is tested explicitly.
 - [Knowledge Graph semantic revisions](knowledge-graph-semantic-revisions.md) — revisions track public projection semantics only; operational writes must not stale edges or bump generation.
+- [GitHub OAuth tree sync](github-oauth-tree-sync.md) — for multi-file Git Data writes, use the connection SDK client; proxy/durable payload crossings can fail before ref updates.
