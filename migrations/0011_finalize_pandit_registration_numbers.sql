@@ -2,6 +2,8 @@
 -- VT-PAN values stay in the append-only ledger and legacy_registration_no.
 -- This is deliberately a successor migration: do not rewrite applied 0010.
 
+BEGIN;
+
 ALTER TABLE pandits ADD COLUMN IF NOT EXISTS legacy_registration_no text;
 
 -- Remove the old one-Pandit/one-ledger-row restriction: a converted Pandit has
@@ -132,3 +134,5 @@ SELECT setval(
     WHERE registration_no ~ '^[0-9]{10}$' AND registration_no::bigint >= 1001000156
   )
 );
+
+COMMIT;

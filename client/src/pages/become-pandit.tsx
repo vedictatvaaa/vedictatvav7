@@ -140,6 +140,7 @@ export default function BecomePandit() {
     city: "",
     stateId: "",
     cityId: "",
+    proposedCityName: "",
     experience: "",
     specializations: "",
     education: "",
@@ -150,6 +151,9 @@ export default function BecomePandit() {
     agreeTerms: false,
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
+  const [missingCityMode, setMissingCityMode] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -159,6 +163,15 @@ export default function BecomePandit() {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setPhotoError("Choose a JPG, PNG, or WebP image up to 5 MB.");
+      e.target.value = "";
+      return;
+    }
+    setPhotoError("");
+    setPhotoFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setPhotoPreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -166,15 +179,21 @@ export default function BecomePandit() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const { city: _city, stateId, cityId, ...rest } = form;
+      if (!photoFile) throw new Error("A profile photo is required.");
+      const uploadData = new FormData();
+      uploadData.append("photo", photoFile);
+      const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
+      const uploadBody = await upload.json().catch(() => ({}));
+      if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
+      const { city: _city, stateId, cityId, proposedCityName, ...rest } = form;
       const res = await fetch("/api/pandit-applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...rest,
           stateId: Number(stateId),
-          cityId: Number(cityId),
-          photo: photoPreview,
+          ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
+          photo: uploadBody.url,
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Failed to submit application");
@@ -185,8 +204,10 @@ export default function BecomePandit() {
         title: "Application Submitted",
         description: "We'll review your details and reach out within 48 hours.",
       });
-      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false });
+      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false });
       setPhotoPreview(null);
+      setPhotoFile(null);
+      setMissingCityMode(false);
     },
     onError: (error: Error) => {
       toast({
@@ -199,8 +220,14 @@ export default function BecomePandit() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName || !form.phone || !form.email || !form.stateId || !form.cityId || !form.experience) {
+    if (submitMutation.isPending) return;
+    if (!form.fullName || !form.phone || !form.email || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.experience) {
       toast({ title: "Missing Fields", description: "Please fill all required fields.", variant: "destructive" });
+      return;
+    }
+    if (!photoFile) {
+      setPhotoError("A profile photo is required.");
+      toast({ title: "Photo Required", description: "Please add a profile photo before submitting.", variant: "destructive" });
       return;
     }
     if (!form.agreeTerms) {
@@ -265,6 +292,10 @@ export default function BecomePandit() {
         photoPreview={photoPreview}
         onChange={handleChange}
         onPhotoChange={handlePhotoChange}
+        onPhotoRemove={() => { setPhotoFile(null); setPhotoPreview(null); setPhotoError(""); }}
+        photoError={photoError}
+        missingCityMode={missingCityMode}
+        setMissingCityMode={setMissingCityMode}
         onSubmit={handleSubmit}
         setForm={setForm}
         isPending={submitMutation.isPending}
@@ -1255,28 +1286,32 @@ function DemoSection() {
 // ══════════════════════════════════════════════════════════════════════
 type FormState = {
   fullName: string; phone: string; email: string; city: string; experience: string;
-  stateId: string; cityId: string;
+  stateId: string; cityId: string; proposedCityName: string;
   specializations: string; education: string; languages: string; bio: string;
   regionalOrigin: string; membership: string; agreeTerms: boolean;
 };
 
 function RegistrationSection({
-  form, photoPreview, onChange, onPhotoChange, onSubmit, setForm, isPending,
+  form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
 }: {
   form: FormState;
   photoPreview: string | null;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPhotoRemove: () => void;
+  photoError: string;
+  missingCityMode: boolean;
+  setMissingCityMode: React.Dispatch<React.SetStateAction<boolean>>;
   onSubmit: (e: React.FormEvent) => void;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   isPending: boolean;
 }) {
-  const { data: locations = [] } = useQuery<Array<{ id: number; name: string; isActive: boolean; cities: Array<{ id: number; name: string; isActive: boolean }> }>>({
+  const { data: locations = [], isLoading: locationsLoading, isError: locationsError } = useQuery<Array<{ id: number; name: string; isActive: boolean; cities: Array<{ id: number; name: string; isActive: boolean }> }>>({
     queryKey: ["/api/locations"],
     queryFn: () => fetch("/api/locations").then(r => { if (!r.ok) throw new Error("Unable to load locations"); return r.json(); }),
   });
   const activeStates = locations.filter(s => s.isActive);
-  const cities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
+  const activeCities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
   return (
     <section
       id="apply"
@@ -1321,14 +1356,21 @@ function RegistrationSection({
                       <Input id="email" name="email" type="email" value={form.email} onChange={onChange} placeholder="pandit@example.com" required data-testid="input-email" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
                     <Field label="State *" id="stateId">
-                      <select id="stateId" value={form.stateId} required onChange={e => setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "" }))} className="w-full h-10 rounded-md px-3 text-sm bg-white" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
+                      <select id="stateId" value={form.stateId} required disabled={locationsLoading || locationsError} onChange={e => setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "", proposedCityName: "" }))} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
                         <option value="">Select state</option>{activeStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
+                      {locationsError && <p className="text-xs text-destructive" role="alert">Locations could not be loaded. Please try again.</p>}
                     </Field>
-                    <Field label="City *" id="cityId">
-                      <select id="cityId" value={form.cityId} required disabled={!form.stateId} onChange={e => { const city = cities.find(c => String(c.id) === e.target.value); setForm(p => ({ ...p, cityId: e.target.value, city: city?.name || "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-city">
-                        <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    <Field label={missingCityMode ? "Proposed City *" : "City *"} id={missingCityMode ? "proposedCityName" : "cityId"}>
+                      {missingCityMode ? (
+                        <Input id="proposedCityName" name="proposedCityName" value={form.proposedCityName} onChange={onChange} placeholder="Enter your city" required data-testid="input-proposed-city" style={{ borderColor: `${C.maroon}25` }} />
+                      ) : <select id="cityId" value={form.cityId} required disabled={!form.stateId} onChange={e => { const city = activeCities.find(c => String(c.id) === e.target.value); setForm(p => ({ ...p, cityId: e.target.value, city: city?.name || "", proposedCityName: "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-city">
+                        <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>{activeCities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
+                      }
+                      <button type="button" disabled={!form.stateId} onClick={() => { setMissingCityMode(mode => !mode); setForm(p => missingCityMode ? ({ ...p, proposedCityName: "" }) : ({ ...p, cityId: "", city: "", proposedCityName: "" })); }} className="mt-2 text-xs font-medium underline disabled:opacity-50" style={{ color: C.maroon }} data-testid="btn-toggle-missing-city">
+                        {missingCityMode ? "Choose a listed city instead" : "My city is not listed"}
+                      </button>
                     </Field>
                   </div>
                 </FieldGroup>
@@ -1398,17 +1440,20 @@ function RegistrationSection({
 
                 <FieldGroup index={4} title="About You">
                   <div className="space-y-4">
-                    <Field label="Profile Photo" id="photo">
+                    <Field label="Profile Photo *" id="photo">
                       <div className="flex items-center gap-4">
                         <label className="flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer hover:bg-[#F5F0E6] transition-colors" style={{ borderColor: `${C.maroon}40`, color: C.brown }} data-testid="input-photo">
                           <Upload className="w-4 h-4" />
                           <span className="text-sm">{photoPreview ? "Change photo" : "Choose file"}</span>
-                          <input type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+                          <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} className="hidden" />
                         </label>
                         {photoPreview && (
                           <img src={photoPreview} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: C.gold }} data-testid="img-photo-preview" />
                         )}
+                        {photoPreview && <Button type="button" variant="ghost" size="sm" onClick={onPhotoRemove}>Remove</Button>}
                       </div>
+                      <p className="text-xs" style={{ color: C.brownSoft }}>JPG, PNG, or WebP; maximum 5 MB. Your photo uploads securely when you submit.</p>
+                      {photoError && <p className="text-xs text-destructive" role="alert">{photoError}</p>}
                     </Field>
                     <Field label="Brief Bio" id="bio">
                       <Textarea id="bio" name="bio" value={form.bio} onChange={onChange} placeholder="Tell devotees about your sampradaya and approach..." className="min-h-[90px]" maxLength={500} data-testid="input-bio" style={{ borderColor: `${C.maroon}25` }} />

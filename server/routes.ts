@@ -4665,16 +4665,32 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           console.error("[razorpay-verify] RAZORPAY_KEY_SECRET missing in production — refusing to confirm order");
           return res.status(500).json({ success: false, message: "Payment verification unavailable" });
         }
-        const mockItems = await Promise.all(
+        const resolvedMockItems = await Promise.all(
           ((orderData?.items || []) as any[]).map(async (item: any) => {
             const product = item.productId ? await storage.getProduct(item.productId) : null;
+            return { item, product };
+          })
+        );
+        const hasMembershipCard = resolvedMockItems.some(({ product }) =>
+          product?.productType === "pandit_membership_card");
+        let mockItems: any[];
+        if (!hasMembershipCard) {
+          // Preserve the legacy dev-mock contract exactly for ordinary carts.
+          mockItems = resolvedMockItems.map(({ item, product }) => ({
+            ...item,
+            hsnCode: product?.hsnCode || "",
+            gstPercent: product?.gstPercent || 18,
+          }));
+        } else {
+          // Card-bearing carts require authoritative products and prices.
+          mockItems = resolvedMockItems.map(({ item, product }) => {
             if (!product) return { ...item, _untrusted: true, price: 0, hsnCode: "", gstPercent: 18 };
             const price = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
             return { ...item, price, productType: product.productType, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 };
-          })
-        );
-        if (mockItems.some((item: any) => item._untrusted)) {
-          return res.status(400).json({ success: false, message: "Cart contains invalid items" });
+          });
+          if (mockItems.some((item: any) => item._untrusted)) {
+            return res.status(400).json({ success: false, message: "Cart contains invalid items" });
+          }
         }
         const mockCardItems = await stampPanditMembershipCardItems(req, mockItems);
         if (!mockCardItems.items) return res.status(403).json({ success: false, message: mockCardItems.message });
@@ -4685,7 +4701,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           shippingAddress: orderData?.shippingAddress || "",
           billingAddress: orderData?.billingAddress || orderData?.shippingAddress || "",
           customerState: orderData?.customerState || "",
-          totalAmount: mockCardItems.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0),
+          totalAmount: hasMembershipCard
+            ? mockCardItems.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
+            : orderData?.totalAmount || 0,
           items: mockCardItems.items,
           paymentMethod: orderData?.paymentMethod || "prepaid",
           couponCode: orderData?.couponCode || null,

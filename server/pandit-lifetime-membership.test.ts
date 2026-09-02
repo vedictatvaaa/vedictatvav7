@@ -10,6 +10,17 @@ import { panditVerificationDto } from "./pandit-verification";
 const migration = readFileSync("migrations/0010_pandit_lifetime_registration.sql", "utf8");
 const successorMigration = readFileSync("migrations/0011_finalize_pandit_registration_numbers.sql", "utf8");
 const commerceMigration = readFileSync("migrations/0012_seed_pandit_membership_card_products.sql", "utf8");
+
+function assertSelfTransactionalMigration(sql: string) {
+  assert.match(sql, /^\s*--[\s\S]*?\bBEGIN;/);
+  assert.match(sql, /\bCOMMIT;\s*$/);
+}
+
+test("Pandit migrations are self-transactional for the Coolify psql runner", () => {
+  for (const sql of [migration, successorMigration, commerceMigration]) {
+    assertSelfTransactionalMigration(sql);
+  }
+});
 const schema = readFileSync("shared/schema.ts", "utf8");
 const routes = readFileSync("server/routes.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
@@ -168,13 +179,24 @@ test("known but unverified registration returns inactive identity only", () => {
   assert.deepEqual(dto, { status: "inactive", registrationNo: "1001000157" });
 });
 
-test("0012 seeds normal-commerce Plastic and Metal card siblings idempotently", () => {
+test("0012 safely seeds normal-commerce Plastic and Metal card siblings", () => {
   assert.match(commerceMigration, /'pandit-membership-card-plastic', 'pandit-membership-card', 'Plastic'/);
   assert.match(commerceMigration, /'pandit-membership-card-metal', 'pandit-membership-card', 'Metal'/);
   assert.match(commerceMigration, /500, 500/);
   assert.match(commerceMigration, /1000, 1000/);
   assert.match(commerceMigration, /'pandit_membership_card'/);
-  assert.match(commerceMigration, /ON CONFLICT \(slug\) DO UPDATE/);
+  assert.doesNotMatch(commerceMigration, /ON CONFLICT/);
+  assert.match(commerceMigration, /LOCK TABLE products IN SHARE ROW EXCLUSIVE MODE/);
+  assert.match(commerceMigration, /IF target_count > 1 THEN/);
+  assert.match(commerceMigration, /RAISE EXCEPTION 'Cannot seed Pandit membership card: duplicate target slug %'/);
+  assert.equal((commerceMigration.match(/IF NOT FOUND THEN/g) || []).length, 2);
+  assert.equal((commerceMigration.match(/UPDATE products SET/g) || []).length, 2);
+  const updates = commerceMigration.match(/UPDATE products SET[\s\S]*?WHERE slug = '[^']+';/g) || [];
+  assert.equal(updates.length, 2);
+  for (const update of updates) {
+    assert.doesNotMatch(update, /\bprice\s*=/);
+    assert.doesNotMatch(update, /\bstock\s*=/);
+  }
   assert.match(commerceMigration, /\/og\/og-pandit-registration\.jpg/);
 });
 
@@ -187,6 +209,16 @@ test("normal checkout and both Razorpay paths gate and stamp authoritative card 
   assert.match(routes, /panditRegistrationNo: pandit\.registrationNo/);
   assert.match(routes, /productType: product\.productType/);
   assert.match(routes, /trustedPrice = \(product\.salePrice && product\.salePrice > 0\) \? product\.salePrice : product\.price/);
+});
+
+test("non-card Razorpay mock preserves its prior client economics", () => {
+  assert.match(routes, /if \(!hasMembershipCard\) \{[\s\S]*Preserve the legacy dev-mock contract exactly/);
+  assert.match(routes, /totalAmount: hasMembershipCard[\s\S]*: orderData\?\.totalAmount \|\| 0/);
+  assert.match(routes, /couponDiscount: orderData\?\.couponDiscount \|\| 0/);
+  assert.match(routes, /prepaidDiscount: orderData\?\.prepaidDiscount \|\| 0/);
+  assert.match(routes, /shippingCharges: orderData\?\.shippingCharges \|\| 0/);
+  assert.match(routes, /codCharges: orderData\?\.codCharges \|\| 0/);
+  assert.match(routes, /paymentMethod: orderData\?\.paymentMethod \|\| "prepaid"/);
 });
 
 test("card product discovery is protected and exposes no checkout ownership input", () => {

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -109,6 +110,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const [adminNote, setAdminNote] = useState("");
   const [resolutionStateId, setResolutionStateId] = useState("");
   const [resolutionCityId, setResolutionCityId] = useState("");
+  const [cityRequestReason, setCityRequestReason] = useState("");
   const [sortKey, setSortKey] = useState<"createdAt" | "fullName" | "city" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -164,6 +166,26 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     },
     onError: (error: Error) => toast({ title: "Location update failed", description: error.message, variant: "destructive" }),
   });
+  const cityRequestMutation = useMutation({
+    mutationFn: async ({ id, body }: { id: number; body: { action: "map"; cityId: number } | { action: "create"; name: string } | { action: "reject"; reason: string } }) => {
+      const res = await fetch(`/api/admin/pandit-city-requests/${id}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+        body: JSON.stringify(body),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.message || "Could not resolve location request");
+      return result;
+    },
+    onSuccess: (_result, variables) => {
+      ["/api/admin/pandit-applications", "/api/admin/pandit-city-requests", "/api/admin/locations", "/api/locations", "/api/book-pandit-online"].forEach((key) => {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      });
+      setCityRequestReason("");
+      toast({ title: "City request resolved", description: variables.body.action === "reject" ? "The location request was rejected." : "The application now has a canonical city." });
+    },
+    onError: (error: Error) => toast({ title: "City request failed", description: error.message, variant: "destructive" }),
+  });
 
   const decisionMutation = useMutation({
     mutationFn: async ({ id, action, note }: { id: number; action: "approve" | "reject"; note: string }) => {
@@ -179,7 +201,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
         err.body = body;
         throw err;
       }
-      return { ...body, action } as { success: boolean; action: "approve" | "reject"; message?: string };
+      return { ...body, action } as { success: boolean; action: "approve" | "reject"; message?: string; registrationNo?: string };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-applications"] });
@@ -187,7 +209,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: data.action === "approve" ? "Application Approved" : "Application Rejected",
-        description: data.action === "approve" ? "A public pandit profile has been created." : "Application marked as rejected.",
+        description: data.action === "approve" ? `A public pandit profile has been created${data.registrationNo ? ` (registration no. ${data.registrationNo})` : ""}.` : "Application marked as rejected.",
       });
       setSelectedId(null);
     },
@@ -222,6 +244,15 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     approved: (apps || []).filter(a => a.status === "approved").length,
     rejected: (apps || []).filter(a => a.status === "rejected").length,
   };
+  const approvalBlockReason = selected
+    ? ((selected as any).cityRequest?.status === "pending"
+      ? "Resolve the pending missing-city request before approval."
+      : (!selected.stateId || !selected.cityId || selected.locationReviewStatus !== "resolved")
+        ? "A resolved active State and City are required before approval."
+        : (!selected.photo || (selected as any).photoValid === false || (selected as any).photoStatus === "invalid")
+          ? "A valid uploaded profile photo is required before approval."
+          : null)
+    : null;
 
   return (
     <div className="space-y-6" data-testid="pandit-apps-tab">
@@ -373,8 +404,53 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                   <DetailField label="Education" value={selected.education} />
                   <DetailField label="Certificates" value={selected.certificates} />
                 </div>
+                {selected.status === "approved" && (selected as any).registrationNo && (
+                  <DetailField label="Registration Number" value={(selected as any).registrationNo} />
+                )}
 
-                {(selected.locationReviewStatus !== "resolved" || !selected.stateId || !selected.cityId) && selected.status === "pending" && (
+                {(selected as any).cityRequest?.status === "pending" && selected.status === "pending" && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="city-request-resolution-panel">
+                    <div className="flex items-start gap-2 text-amber-900">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium">Missing-city request: {(selected as any).cityRequest.proposedCityName}</p>
+                        <p className="text-xs">Resolve this request before approval. The requested State is preserved and the server validates every resolution.</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="city-request-state" className="text-xs">Requested State</Label>
+                        <Select value={resolutionStateId} disabled onValueChange={(value) => { setResolutionStateId(value); setResolutionCityId(""); }}>
+                          <SelectTrigger id="city-request-state"><SelectValue placeholder="Select State" /></SelectTrigger>
+                          <SelectContent>{locations.filter((state) => state.isActive).map((state) => <SelectItem key={state.id} value={String(state.id)}>{state.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="city-request-city" className="text-xs">Map to existing city</Label>
+                        <Select value={resolutionCityId} disabled={!resolutionStateId} onValueChange={setResolutionCityId}>
+                          <SelectTrigger id="city-request-city"><SelectValue placeholder="Select a canonical city" /></SelectTrigger>
+                          <SelectContent>{locations.find((state) => String(state.id) === resolutionStateId)?.cities.filter((city) => city.isActive).map((city) => <SelectItem key={city.id} value={String(city.id)}>{city.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" disabled={!resolutionCityId || cityRequestMutation.isPending} onClick={() => cityRequestMutation.mutate({ id: (selected as any).cityRequest.id, body: { action: "map", cityId: Number(resolutionCityId) } })} data-testid="btn-map-city-request">
+                        {cityRequestMutation.isPending ? "Resolving…" : "Map existing city"}
+                      </Button>
+                      <Button type="button" variant="outline" disabled={cityRequestMutation.isPending} onClick={() => cityRequestMutation.mutate({ id: (selected as any).cityRequest.id, body: { action: "create", name: (selected as any).cityRequest.proposedCityName } })} data-testid="btn-create-city-request">
+                        Create “{(selected as any).cityRequest.proposedCityName}”
+                      </Button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input aria-label="Reason for rejecting city request" value={cityRequestReason} onChange={(e) => setCityRequestReason(e.target.value)} placeholder="Reason for rejecting this city request (required)" />
+                      <Button type="button" variant="outline" className="border-red-200 text-red-700" disabled={!cityRequestReason.trim() || cityRequestMutation.isPending} onClick={() => cityRequestMutation.mutate({ id: (selected as any).cityRequest.id, body: { action: "reject", reason: cityRequestReason.trim() } })} data-testid="btn-reject-city-request">
+                        Reject request
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!(selected as any).cityRequest && (selected.locationReviewStatus !== "resolved" || !selected.stateId || !selected.cityId) && selected.status === "pending" && (
                   <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3" data-testid="location-resolution-panel">
                     <div className="flex items-start gap-2 text-amber-900">
                       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -510,12 +586,13 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                           </Button>
                           <Button
                             onClick={() => decisionMutation.mutate({ id: selected.id, action: "approve", note: adminNote })}
-                             disabled={decisionMutation.isPending || selected.locationReviewStatus !== "resolved" || !selected.stateId || !selected.cityId}
+                             disabled={decisionMutation.isPending || !!approvalBlockReason}
                             data-testid="btn-approve"
                             className="bg-primary text-white"
                           >
                             <CheckCircle className="w-4 h-4 mr-1.5" /> Approve & Publish
                           </Button>
+                          {approvalBlockReason && <p className="basis-full text-xs text-amber-700" role="status">{approvalBlockReason}</p>}
                         </>
                       ) : (
                         <div className="text-sm text-muted-foreground">

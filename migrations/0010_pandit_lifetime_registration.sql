@@ -1,6 +1,8 @@
 -- Additive lifetime registration identity and governed missing-city workflow.
 -- This migration intentionally leaves legacy membership_no and pandit_card_orders untouched.
 
+BEGIN;
+
 CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq AS bigint
   MINVALUE 1001000156 MAXVALUE 9999999999 START WITH 1001000156 NO CYCLE;
 
@@ -149,3 +151,5 @@ CREATE TABLE IF NOT EXISTS pandit_city_requests (
 );
 CREATE INDEX IF NOT EXISTS pandit_city_requests_status_idx ON pandit_city_requests (status, created_at);
 CREATE INDEX IF NOT EXISTS pandit_city_requests_state_idx ON pandit_city_requests (state_id);
+
+COMMIT;
