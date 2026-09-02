@@ -2668,6 +2668,12 @@ export const knowledgeGraphPublicState = pgTable("knowledge_graph_public_state",
   singletonCheck: check("knowledge_graph_public_state_singleton_check", sql`${t.id} = 1`),
   generationCheck: check("knowledge_graph_public_state_generation_check", sql`${t.generation} >= 0`),
 }));
+export const knowledgeGraphEntityRevisions = pgTable("knowledge_graph_entity_revisions", {
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  discriminator: text("discriminator").notNull().default(""),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ identity: uniqueIndex("knowledge_graph_entity_revisions_identity").on(t.entityType, t.entityId, t.discriminator) }));
 
 export type KnowledgeGraphRelationship = typeof knowledgeGraphRelationships.$inferSelect;
 export type KnowledgeGraphQualityRule = typeof knowledgeGraphQualityRules.$inferSelect;
@@ -2675,6 +2681,7 @@ export type Tirth = typeof tirths.$inferSelect;
 export type Temple = typeof temples.$inferSelect;
 export type DestinationSlugAlias = typeof destinationSlugAliases.$inferSelect;
 export type KnowledgeGraphPublicState = typeof knowledgeGraphPublicState.$inferSelect;
+export type KnowledgeGraphEntityRevision = typeof knowledgeGraphEntityRevisions.$inferSelect;
 export const insertKnowledgeGraphRelationshipSchema = createInsertSchema(knowledgeGraphRelationships).omit({
   id: true, createdAt: true, updatedAt: true,
 });

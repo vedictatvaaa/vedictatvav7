@@ -33,7 +33,7 @@ test("all graph endpoints are guarded and relationship/rule audit actors come on
     deleteRule: async (_id: any, audit: any) => { audits.push(audit); return ({ id: 4 }); },
   };
   registerKnowledgeGraphAdminRoutes(app as any, auth, { service });
-  assert.equal(app.routes.length, 19);
+  assert.equal(app.routes.length, 23);
   assert.ok(app.routes.every((route) => route.auth === auth));
   const csvRoutes = [
     "/api/admin/knowledge-graph/relationships/csv/template",
@@ -95,4 +95,53 @@ test("route contract maps invalid, missing, duplicate, and dependency failures c
   const summary = app.routes.find((r) => r.path.endsWith("/summary"))!;
   const result = await call(summary, {});
   assert.equal(result.passed?.message, "database unavailable");
+});
+
+test("public gate validates input before transaction and blocked enable is 409 with bounded report", async () => {
+  const app = fakeApp(); const auth = () => undefined; let transactions = 0;
+  const tx: any = {
+    select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ isPublicEnabled: false, generation: 1 }] }) }) }),
+  };
+  const service: any = { repository: { database: { transaction: async (run: any) => { transactions++; return run(tx); } } }, adapters: new Map() };
+  const blocked = { canEnable: false, blockerCount: 1, findings: [{ code: "STALE_ACTIVE_EDGE" }], findingsTruncated: false, contractVersion: "kg-public-v1" };
+  registerKnowledgeGraphAdminRoutes(app as any, auth, {
+    service,
+    projector: { state: async () => ({}), enablementReport: async () => blocked, project: async () => ({ groups: [] }) } as any,
+    projectorFactory: () => ({ enablementReport: async () => blocked } as any),
+  });
+  const gate = app.routes.find(r => r.method === "PATCH" && r.path.endsWith("/public-state"))!;
+  assert.equal((await call(gate, { adminUserId: 4, body: { enabled: "yes" } })).res.statusCode, 400);
+  assert.equal(transactions, 0);
+  const result = await call(gate, { adminUserId: 4, body: { enabled: true } });
+  assert.equal(result.res.statusCode, 409);
+  assert.deepEqual(result.res.body.report, blocked);
+  assert.equal(transactions, 1);
+});
+
+test("gate disable is allowed, no-op is inert, and actual mutation orders CAS, generation, then audit", async () => {
+  const make = (enabled: boolean) => {
+    const log: string[] = [];
+    const tx: any = {
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ isPublicEnabled: enabled, generation: 3 }] }) }) }),
+      update: () => ({ set(values: any) {
+        const generation = !("isPublicEnabled" in values); log.push(generation ? "generation" : "cas");
+        return { where: () => ({ returning: async () => generation ? [{ generation: 4 }] : [{ isPublicEnabled: false, generation: 3 }] }) };
+      } }),
+      insert: () => ({ values: async () => { log.push("audit"); } }),
+    };
+    const database = { transaction: async (run: any, options: any) => {
+      assert.equal(options.isolationLevel, "serializable"); return run(tx);
+    } };
+    return { log, database };
+  };
+  for (const [enabled, expected] of [[false, []], [true, ["cas", "generation", "audit"]]] as const) {
+    const app = fakeApp(), f = make(enabled);
+    const service: any = { repository: { database: f.database }, adapters: new Map() };
+    const projector: any = { state: async () => ({}), enablementReport: async () => ({ canEnable: true }), project: async () => ({ groups: [] }) };
+    registerKnowledgeGraphAdminRoutes(app as any, () => undefined, { service, projector });
+    const gate = app.routes.find(r => r.method === "PATCH" && r.path.endsWith("/public-state"))!;
+    const result = await call(gate, { adminUserId: 9, body: { enabled: false } });
+    assert.equal(result.res.statusCode, 200);
+    assert.deepEqual(f.log, expected);
+  }
 });

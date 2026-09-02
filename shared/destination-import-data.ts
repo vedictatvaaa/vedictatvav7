@@ -103,6 +103,12 @@ export const CANONICAL_DESTINATION_IMPORT_ROWS: readonly CanonicalDestinationImp
   }),
 ];
 
+export const CANONICAL_DESTINATION_COUNTS = {
+  tirth: CANONICAL_DESTINATION_IMPORT_ROWS.filter((row) => row.classification === "TIRTH").length,
+  temple: CANONICAL_DESTINATION_IMPORT_ROWS.filter((row) => row.classification === "TEMPLE").length,
+  alias: CANONICAL_DESTINATION_IMPORT_ROWS.reduce((total, row) => total + row.aliases.length, 0),
+} as const;
+
 /** Resolve a reviewed raw Tirth source key to its one canonical source key. */
 export function canonicalTirthSourceKey(rawSourceKey: string): string {
   const consolidated = TIRTH_SOURCE_CONSOLIDATION_MANIFEST[rawSourceKey as keyof typeof TIRTH_SOURCE_CONSOLIDATION_MANIFEST];

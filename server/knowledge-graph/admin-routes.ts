@@ -4,9 +4,16 @@ import { createEntityAdapters } from "./entity-adapters";
 import { KnowledgeGraphRepository } from "./repository";
 import { KnowledgeGraphService } from "./service";
 import { KnowledgeGraphConflictError, KnowledgeGraphValidationError, UnsupportedEntitySourceError } from "./types";
+import { KnowledgeGraphGateBlockedError } from "./types";
 import { positiveEntityId } from "./validation";
 import multer from "multer";
 import { CsvApplyConflictError, CsvPreviewStore, parseRelationshipCsv, RELATIONSHIP_CSV_HEADERS, RELATIONSHIP_CSV_VERSION, serializeRelationshipCsv } from "./relationship-csv";
+import { KnowledgeGraphPublicProjector } from "./public-projection";
+import { advanceKnowledgeGraphGeneration } from "./public-state";
+import { adminAuditLogs, knowledgeGraphPublicState } from "@shared/schema";
+import { and, eq } from "drizzle-orm";
+import { isEntityType } from "./registry";
+import { validateEntityRef } from "./validation";
 
 type AdminRequest = Request & { adminUserId?: number };
 const actor = (req: AdminRequest) => {
@@ -19,13 +26,18 @@ const id = (value: unknown) => positiveEntityId(Number(value));
 export function registerKnowledgeGraphAdminRoutes(app: Express, adminAuthMiddleware: any, dependencies?: {
   service?: KnowledgeGraphService;
   previewStore?: CsvPreviewStore;
+  projector?: KnowledgeGraphPublicProjector;
+  projectorFactory?: (repository: KnowledgeGraphRepository, adapters: ReturnType<typeof createEntityAdapters>) => KnowledgeGraphPublicProjector;
 }) {
   const service = dependencies?.service || new KnowledgeGraphService(new KnowledgeGraphRepository(db), createEntityAdapters(db));
+  const projectorFactory = dependencies?.projectorFactory || ((repository, adapters) => new KnowledgeGraphPublicProjector(repository, adapters));
+  const projector = dependencies?.projector || projectorFactory(service.repository, service.adapters as any);
   const previews = dependencies?.previewStore || new CsvPreviewStore();
   const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 4 } });
   const guarded = (handler: (req: AdminRequest, res: any) => Promise<any>) => async (req: AdminRequest, res: any, next: any) => {
     try { await handler(req, res); } catch (error: any) {
-       if (error instanceof KnowledgeGraphConflictError || error instanceof CsvApplyConflictError || error?.code === "23505" || error?.code === "40001") return res.status(409).json({ message: "Relationship or CSV preview state conflicts with current data" });
+      if (error instanceof KnowledgeGraphGateBlockedError) return res.status(409).json({ message: error.message, report: error.report });
+      if (error instanceof KnowledgeGraphConflictError || error instanceof CsvApplyConflictError || error?.code === "23505" || error?.code === "40001") return res.status(409).json({ message: "Relationship or CSV preview state conflicts with current data" });
       if (error instanceof KnowledgeGraphValidationError) return res.status(400).json({ message: error.message });
       if (error instanceof UnsupportedEntitySourceError) return res.status(422).json({ message: error.message, entityType: error.entityType });
       return next(error);
@@ -60,6 +72,49 @@ export function registerKnowledgeGraphAdminRoutes(app: Express, adminAuthMiddlew
   }));
   app.get("/api/admin/knowledge-graph/orphans", adminAuthMiddleware, guarded(async (req, res) => res.json(await service.orphans(req.query))));
   app.get("/api/admin/knowledge-graph/health", adminAuthMiddleware, guarded(async (req, res) => res.json(await service.health(req.query))));
+  app.get("/api/admin/knowledge-graph/public-state", adminAuthMiddleware, guarded(async (_req, res) => {
+    res.json(await projector.state());
+  }));
+  app.get("/api/admin/knowledge-graph/public-state/enablement", adminAuthMiddleware, guarded(async (_req, res) => {
+    res.json(await projector.enablementReport());
+  }));
+  app.get("/api/admin/knowledge-graph/preview/:type/:id", adminAuthMiddleware, guarded(async (req, res) => {
+    if (!isEntityType(req.params.type)) throw new KnowledgeGraphValidationError("Unknown entity type");
+    const ref = validateEntityRef({ type: req.params.type, id: id(req.params.id), discriminator: req.query.discriminator as any });
+    res.json(await projector.project(ref, { bypassGate: true }));
+  }));
+  app.patch("/api/admin/knowledge-graph/public-state", adminAuthMiddleware, guarded(async (req, res) => {
+    const actorId = actor(req);
+    if (typeof req.body?.enabled !== "boolean" || Object.keys(req.body).some(key => key !== "enabled")) {
+      throw new KnowledgeGraphValidationError("enabled must be a boolean");
+    }
+    const result = await service.repository.database.transaction(async (tx: any) => {
+      const txRepository = new KnowledgeGraphRepository(tx);
+      const [current] = await tx.select().from(knowledgeGraphPublicState)
+        .where(eq(knowledgeGraphPublicState.id, 1)).limit(1);
+      if (!current) throw new Error("Knowledge Graph public state singleton is missing");
+      let report;
+      if (req.body.enabled) {
+        report = await projectorFactory(txRepository, createEntityAdapters(tx)).enablementReport();
+        if (!report.canEnable) throw new KnowledgeGraphGateBlockedError(report);
+      }
+      if (current.isPublicEnabled === req.body.enabled) return { state: current, report };
+      const [state] = await tx.update(knowledgeGraphPublicState).set({
+        isPublicEnabled: req.body.enabled, updatedAt: new Date(),
+      }).where(and(eq(knowledgeGraphPublicState.id, 1),
+        eq(knowledgeGraphPublicState.isPublicEnabled, current.isPublicEnabled))).returning();
+      if (!state) throw new KnowledgeGraphConflictError("Public gate changed concurrently");
+      const generation = await advanceKnowledgeGraphGeneration(tx);
+      await tx.insert(adminAuditLogs).values({
+        actor: `admin-user:${actorId}`, action: req.body.enabled
+          ? "knowledge-graph.public.enable" : "knowledge-graph.public.disable",
+        target: "knowledge-graph:public-state", details: { enabled: req.body.enabled, generation },
+        ipAddress: ip(req),
+      });
+      return { state: { ...state, generation }, report };
+    }, { isolationLevel: "serializable" });
+    res.json(result);
+  }));
   app.get("/api/admin/knowledge-graph/relationships/csv/template", adminAuthMiddleware, guarded(async (_req, res) => {
     download(res, "knowledge-graph-relationships-template.csv", serializeRelationshipCsv([{
       schema_version: RELATIONSHIP_CSV_VERSION, action: "create", relationship_id: "", source_type: "PUJA", source_id: "", source_discriminator: "",

@@ -20,7 +20,7 @@ test("CSV repository revalidates before serializable transactional writes and au
   const log: string[] = []; const repository = new KnowledgeGraphRepository(database(log));
   const result = await repository.applyCsvRelationships(rows, audit, async () => { log.push("revalidate"); });
   assert.deepEqual(result, { created: 1, updated: 1 });
-  assert.deepEqual(log, ["transaction:serializable", "revalidate", "insert", "update", "insert"]);
+  assert.deepEqual(log, ["transaction:serializable", "revalidate", "insert", "update", "insert", "update"]);
 });
 test("CSV repository failures do not audit before rows are successful", async () => {
   for (const failure of ["revalidate", "update"] as const) {

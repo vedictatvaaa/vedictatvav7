@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, gt, ilike, or, sql } from "drizzle-orm";
-import { adminAuditLogs, blogPosts, indianCities, indianStates, knowledgeGraphQualityRules, knowledgeGraphRelationships, masterServices, pandits, productReviews, products, pujaTypes, temples, tirths, tirthYatraTours } from "@shared/schema";
-import { adminEntityDto, locationDto } from "./entity-adapters";
+import { adminAuditLogs, blogPosts, indianCities, indianStates, knowledgeGraphEntityRevisions, knowledgeGraphPublicState, knowledgeGraphQualityRules, knowledgeGraphRelationships, masterServices, pandits, productReviews, products, pujaTypes, temples, tirths, tirthYatraTours } from "@shared/schema";
+import { adminEntityDto, locationDto, panditPublicEligibleSelection } from "./entity-adapters";
 import type { AdminEntityDto, EntityType, LocationKind } from "./types";
+import { advanceKnowledgeGraphGeneration } from "./public-state";
 
 export type GraphAudit = { actor: string; action: string; details: object; ipAddress: string | null };
 
@@ -15,6 +16,26 @@ export class KnowledgeGraphRepository {
     const target = and(eq(knowledgeGraphRelationships.targetEntityType, ref.type), eq(knowledgeGraphRelationships.targetEntityId, ref.id),
       ref.discriminator ? eq(knowledgeGraphRelationships.targetDiscriminator, ref.discriminator) : sql`${knowledgeGraphRelationships.targetDiscriminator} IS NULL`);
     return this.database.select().from(knowledgeGraphRelationships).where(or(source, target)).orderBy(knowledgeGraphRelationships.displayOrder);
+  }
+  /** Public projector never enumerates unrelated/incoming rows. The +1 detects a safe scan cap. */
+  async activeOutgoingRelationships(ref: { type: string; id: number; discriminator?: string }, limit = 500) {
+    const source = and(eq(knowledgeGraphRelationships.sourceEntityType, ref.type), eq(knowledgeGraphRelationships.sourceEntityId, ref.id),
+      eq(knowledgeGraphRelationships.status, "ACTIVE"),
+      ref.discriminator ? eq(knowledgeGraphRelationships.sourceDiscriminator, ref.discriminator) : sql`${knowledgeGraphRelationships.sourceDiscriminator} IS NULL`);
+    return this.database.select().from(knowledgeGraphRelationships).where(source)
+      .orderBy(asc(knowledgeGraphRelationships.displayOrder), asc(knowledgeGraphRelationships.relationshipType), asc(knowledgeGraphRelationships.id))
+      .limit(limit + 1);
+  }
+  async activeRelationships(limit = 5000) {
+    return this.database.select().from(knowledgeGraphRelationships).where(eq(knowledgeGraphRelationships.status, "ACTIVE"))
+      .orderBy(asc(knowledgeGraphRelationships.id)).limit(limit + 1);
+  }
+  async revisionsFor(refs: readonly { type: string; id: number; discriminator?: string }[]) {
+    if (!refs.length) return [];
+    const clauses = refs.slice(0, 501).map(ref => and(eq(knowledgeGraphEntityRevisions.entityType, ref.type),
+      eq(knowledgeGraphEntityRevisions.entityId, ref.id),
+      eq(knowledgeGraphEntityRevisions.discriminator, ref.discriminator || "")));
+    return this.database.select().from(knowledgeGraphEntityRevisions).where(or(...clauses));
   }
   async allRelationships() { return this.database.select().from(knowledgeGraphRelationships).orderBy(desc(knowledgeGraphRelationships.updatedAt)); }
   /** Bounded, deterministic cursor export; never materializes the graph. */
@@ -55,9 +76,9 @@ export class KnowledgeGraphRepository {
     };
     switch (type) {
       case "PUJA": return query(pujaTypes, { id: pujaTypes.id, name: pujaTypes.name, slug: pujaTypes.slug, category: pujaTypes.category, isPublished: pujaTypes.isPublished, updatedAt: pujaTypes.updatedAt }, pujaTypes.id, pujaTypes.name, [pujaTypes.name, pujaTypes.slug], (r) => adminEntityDto("PUJA", r));
-      case "PANDIT": return query(pandits, { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt }, pandits.id, pandits.name, [pandits.name, pandits.slug, pandits.city], (r) => adminEntityDto("PANDIT", r));
+      case "PANDIT": return query(pandits, { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt, publicEligible: panditPublicEligibleSelection }, pandits.id, pandits.name, [pandits.name, pandits.slug, pandits.city], (r) => adminEntityDto("PANDIT", r));
       case "PRODUCT": return query(products, { id: products.id, name: products.name, slug: products.slug, category: products.category, productType: products.productType, stock: products.stock }, products.id, products.name, [products.name, products.slug], (r) => adminEntityDto("PRODUCT", r));
-      case "ARTICLE": return query(blogPosts, { id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, category: blogPosts.category, status: blogPosts.status, createdAt: blogPosts.createdAt, publishedAt: blogPosts.publishedAt }, blogPosts.id, blogPosts.title, [blogPosts.title, blogPosts.slug], (r) => adminEntityDto("ARTICLE", r));
+      case "ARTICLE": return query(blogPosts, { id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, category: blogPosts.category, status: blogPosts.status, isPublished: blogPosts.isPublished, createdAt: blogPosts.createdAt, publishedAt: blogPosts.publishedAt }, blogPosts.id, blogPosts.title, [blogPosts.title, blogPosts.slug], (r) => adminEntityDto("ARTICLE", r));
       case "SERVICE": return query(masterServices, { id: masterServices.id, name: masterServices.name, slug: masterServices.slug, category: masterServices.category, serviceType: masterServices.serviceType, isActive: masterServices.isActive, updatedAt: masterServices.updatedAt }, masterServices.id, masterServices.name, [masterServices.name, masterServices.slug], (r) => adminEntityDto("SERVICE", r));
       case "REVIEW": return query(productReviews, { id: productReviews.id, title: productReviews.title, rating: productReviews.rating, status: productReviews.status, productId: productReviews.productId, createdAt: productReviews.createdAt }, productReviews.id, productReviews.title, [productReviews.title], (r) => adminEntityDto("REVIEW", r));
       case "YATRA": return query(tirthYatraTours, { id: tirthYatraTours.id, name: tirthYatraTours.name, slug: tirthYatraTours.slug, route: tirthYatraTours.route, durationDays: tirthYatraTours.durationDays, isActive: tirthYatraTours.isActive, createdAt: tirthYatraTours.createdAt }, tirthYatraTours.id, tirthYatraTours.name, [tirthYatraTours.name, tirthYatraTours.slug, tirthYatraTours.route], (r) => adminEntityDto("YATRA", r));
@@ -80,7 +101,7 @@ export class KnowledgeGraphRepository {
           };
         }
         if (discriminator === "STATE") return query(indianStates, { id: indianStates.id, name: indianStates.name, code: indianStates.code, isUnionTerritory: indianStates.isUnionTerritory, isActive: indianStates.isActive, updatedAt: indianStates.updatedAt }, indianStates.id, indianStates.name, [indianStates.name, indianStates.code], (r) => locationDto(r, "STATE"), "STATE");
-        return query(indianCities, { id: indianCities.id, name: indianCities.name, slug: indianCities.slug, isActive: indianCities.isActive, updatedAt: indianCities.updatedAt, stateName: indianStates.name }, indianCities.id, indianCities.name, [indianCities.name, indianCities.slug, indianStates.name], (r) => locationDto(r, "CITY"), "CITY", (q) => q.innerJoin(indianStates, eq(indianCities.stateId, indianStates.id)));
+         return query(indianCities, { id: indianCities.id, name: indianCities.name, slug: indianCities.slug, isActive: sql<boolean>`${indianCities.isActive} AND ${indianStates.isActive}`, updatedAt: indianCities.updatedAt, stateName: indianStates.name }, indianCities.id, indianCities.name, [indianCities.name, indianCities.slug, indianStates.name], (r) => locationDto(r, "CITY"), "CITY", (q) => q.innerJoin(indianStates, eq(indianCities.stateId, indianStates.id)));
       }
       default: throw new Error("Entity source is unsupported");
     }
@@ -133,7 +154,8 @@ export class KnowledgeGraphRepository {
   async createRelationshipWithAudit(input: any, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {
       const [row] = await tx.insert(knowledgeGraphRelationships).values(input).returning();
-      await this.writeAudit(tx, audit, `relationship:${row.id}`); return row;
+      await this.writeAudit(tx, audit, `relationship:${row.id}`);
+      await advanceKnowledgeGraphGeneration(tx); return row;
     });
   }
   /** Bulk CSV path deliberately touches only graph rows and its single audit row. */
@@ -153,6 +175,7 @@ export class KnowledgeGraphRepository {
         }
       }
       await this.writeAudit(tx, audit, "knowledge-graph:relationship-csv");
+      if (created || updated) await advanceKnowledgeGraphGeneration(tx);
       return { created, updated };
     };
     // Drizzle postgres accepts this option; JavaScript test doubles safely
@@ -163,34 +186,46 @@ export class KnowledgeGraphRepository {
     return this.database.transaction(async (tx: any) => {
       const [row] = await tx.update(knowledgeGraphRelationships).set({ ...patch, updatedAt: new Date() }).where(eq(knowledgeGraphRelationships.id, id)).returning();
       if (!row) return null;
-      await this.writeAudit(tx, audit, `relationship:${row.id}`); return row;
+      await this.writeAudit(tx, audit, `relationship:${row.id}`);
+      await advanceKnowledgeGraphGeneration(tx); return row;
     });
   }
   async deleteRelationshipWithAudit(id: number, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {
       const rows = await tx.delete(knowledgeGraphRelationships).where(eq(knowledgeGraphRelationships.id, id)).returning();
       if (!rows[0]) return null;
-      await this.writeAudit(tx, audit, `relationship:${rows[0].id}`); return rows[0];
+      await this.writeAudit(tx, audit, `relationship:${rows[0].id}`);
+      await advanceKnowledgeGraphGeneration(tx); return rows[0];
     });
   }
   async createRuleWithAudit(input: any, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {
       const [row] = await tx.insert(knowledgeGraphQualityRules).values(input).returning();
-      await this.writeAudit(tx, audit, `quality-rule:${row.id}`); return row;
+      await this.writeAudit(tx, audit, `quality-rule:${row.id}`);
+      await advanceKnowledgeGraphGeneration(tx); return row;
     });
   }
   async patchRuleWithAudit(id: number, patch: any, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {
       const [row] = await tx.update(knowledgeGraphQualityRules).set({ ...patch, updatedAt: new Date() }).where(eq(knowledgeGraphQualityRules.id, id)).returning();
       if (!row) return null;
-      await this.writeAudit(tx, audit, `quality-rule:${row.id}`); return row;
+      await this.writeAudit(tx, audit, `quality-rule:${row.id}`);
+      await advanceKnowledgeGraphGeneration(tx); return row;
     });
   }
   async deleteRuleWithAudit(id: number, audit: GraphAudit) {
     return this.database.transaction(async (tx: any) => {
       const rows = await tx.delete(knowledgeGraphQualityRules).where(eq(knowledgeGraphQualityRules.id, id)).returning();
       if (!rows[0]) return null;
-      await this.writeAudit(tx, audit, `quality-rule:${rows[0].id}`); return rows[0];
+      await this.writeAudit(tx, audit, `quality-rule:${rows[0].id}`);
+      await advanceKnowledgeGraphGeneration(tx); return rows[0];
     });
+  }
+
+  async publicState() {
+    const [row] = await this.database.select().from(knowledgeGraphPublicState)
+      .where(eq(knowledgeGraphPublicState.id, 1)).limit(1);
+    if (!row) throw new Error("Knowledge Graph public state singleton is missing");
+    return row;
   }
 }

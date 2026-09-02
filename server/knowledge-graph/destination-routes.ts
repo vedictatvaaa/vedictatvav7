@@ -6,6 +6,7 @@ import { db } from "../db";
 import { KnowledgeGraphConflictError, KnowledgeGraphValidationError } from "./types";
 import { safeMetadata } from "./validation";
 import { TIRTH_SOURCE_CONSOLIDATION_MANIFEST } from "@shared/destination-consolidation-manifest";
+import { advanceKnowledgeGraphGeneration } from "./public-state";
 
 type DestinationType = "TIRTH" | "TEMPLE";
 type AdminRequest = Request & { adminUserId?: number };
@@ -172,6 +173,7 @@ export function registerDestinationAdminRoutes(app: Express, adminAuthMiddleware
         if (canonicalOwner) throw new KnowledgeGraphConflictError("Alias is already a canonical slug");
         await tx.insert(destinationSlugAliases).values({ entityType: type, entityId: id, aliasSlug, canonicalSlug: row.slug });
         await tx.insert(adminAuditLogs).values({ actor: `admin-user:${actor(req)}`, action: `destination.${type.toLowerCase()}.alias.create`, target: `${type.toLowerCase()}:${id}`, details: { aliasSlug }, ipAddress: ip(req) });
+        await advanceKnowledgeGraphGeneration(tx);
       });
       res.status(201).json({ aliasSlug });
     }));

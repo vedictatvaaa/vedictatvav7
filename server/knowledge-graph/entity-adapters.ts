@@ -1,4 +1,4 @@
-import { asc, eq, ilike, or } from "drizzle-orm";
+import { asc, eq, ilike, or, sql } from "drizzle-orm";
 import {
   blogPosts, indianCities, indianStates, masterServices, pandits, productReviews,
   products, pujaTypes, temples, tirths, tirthYatraTours,
@@ -22,6 +22,21 @@ type SourceConfig = {
   searchColumns: any[];
   toDto: (row: any) => AdminEntityDto;
 };
+
+/** Database equivalent of the shared public pandit eligibility policy. */
+export const panditPublicEligibleSelection = sql<boolean>`
+  ${pandits.verified} = true
+  AND ${pandits.onLeave} = false
+  AND ${pandits.availability} <> 'unavailable'
+  AND ${pandits.locationReviewStatus} = 'resolved'
+  AND EXISTS (
+    SELECT 1 FROM ${indianCities} public_city
+    JOIN ${indianStates} public_state ON public_state.id = public_city.state_id
+    WHERE public_city.id = ${pandits.cityId}
+      AND public_state.id = ${pandits.stateId}
+      AND public_city.is_active = true
+      AND public_state.is_active = true
+  )`;
 
 function tableAdapter(database: KnowledgeGraphDatabase, config: SourceConfig): EntityAdapter {
   const base = () => database.select(config.selection).from(config.table);
@@ -75,9 +90,14 @@ export function locationDto(row: any, kind: LocationKind): AdminEntityDto {
 export function adminEntityDto(type: Exclude<EntityType, "LOCATION">, r: any): AdminEntityDto {
   switch (type) {
     case "PUJA": return { type, id: r.id, name: r.name, status: r.isPublished ? "PUBLISHED" : "DRAFT", url: `/puja/${r.slug}`, updatedAt: iso(r.updatedAt), summary: { category: r.category } };
-    case "PANDIT": return { type, id: r.id, name: r.name, status: r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"), url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } };
+    case "PANDIT": return { type, id: r.id, name: r.name, status: r.publicEligible === undefined
+      ? (r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"))
+      : (r.publicEligible ? "VERIFIED" : "INACTIVE"),
+      url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } };
     case "PRODUCT": return { type, id: r.id, name: r.name, status: r.stock > 0 ? "ACTIVE" : "OUT_OF_STOCK", url: r.slug ? `/product/${r.slug}` : null, updatedAt: null, summary: { category: r.category, productType: r.productType, inStock: r.stock > 0 } };
-    case "ARTICLE": return { type, id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: `/blog/${r.slug}`, updatedAt: iso(r.publishedAt || r.createdAt), summary: { category: r.category } };
+    case "ARTICLE": return { type, id: r.id, name: r.title, status: r.isPublished === false
+      ? "DRAFT" : String(r.status).toUpperCase(), url: `/blog/${r.slug}`,
+      updatedAt: iso(r.publishedAt || r.createdAt), summary: { category: r.category } };
     case "SERVICE": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: null, updatedAt: iso(r.updatedAt), summary: { category: r.category, serviceType: r.serviceType } };
     case "REVIEW": return { type, id: r.id, name: r.title, status: String(r.status).toUpperCase(), url: null, updatedAt: iso(r.createdAt), summary: { rating: r.rating, productId: r.productId } };
     case "YATRA": return { type, id: r.id, name: r.name, status: r.isActive ? "ACTIVE" : "INACTIVE", url: `/tirth-yatra/${r.slug}`, updatedAt: iso(r.createdAt), summary: { route: r.route, durationDays: r.durationDays } };
@@ -98,7 +118,7 @@ function locationAdapter(database: KnowledgeGraphDatabase): EntityAdapter {
     }
     const [row] = await database.select({
       id: indianCities.id, name: indianCities.name, slug: indianCities.slug,
-      isActive: indianCities.isActive, updatedAt: indianCities.updatedAt,
+       isActive: sql<boolean>`${indianCities.isActive} AND ${indianStates.isActive}`, updatedAt: indianCities.updatedAt,
       stateName: indianStates.name,
     }).from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
       .where(eq(indianCities.id, id)).limit(1);
@@ -132,7 +152,7 @@ function locationAdapter(database: KnowledgeGraphDatabase): EntityAdapter {
         }
         const rows = await database.select({
           id: indianCities.id, name: indianCities.name, slug: indianCities.slug,
-          isActive: indianCities.isActive, updatedAt: indianCities.updatedAt,
+           isActive: sql<boolean>`${indianCities.isActive} AND ${indianStates.isActive}`, updatedAt: indianCities.updatedAt,
           stateName: indianStates.name,
         }).from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
           .where(term ? or(ilike(indianCities.name, `%${term}%`), ilike(indianCities.slug, `%${term}%`), ilike(indianStates.name, `%${term}%`)) : undefined)
@@ -154,7 +174,7 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
     }),
     tableAdapter(database, {
       type: "PANDIT", table: pandits, idColumn: pandits.id,
-      selection: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt },
+      selection: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt, publicEligible: panditPublicEligibleSelection },
       searchColumns: [pandits.name, pandits.slug, pandits.city],
       toDto: (r) => adminEntityDto("PANDIT", r),
     }),
@@ -179,7 +199,7 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
     }),
     tableAdapter(database, {
       type: "ARTICLE", table: blogPosts, idColumn: blogPosts.id,
-      selection: { id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, category: blogPosts.category, status: blogPosts.status, createdAt: blogPosts.createdAt, publishedAt: blogPosts.publishedAt },
+      selection: { id: blogPosts.id, title: blogPosts.title, slug: blogPosts.slug, category: blogPosts.category, status: blogPosts.status, isPublished: blogPosts.isPublished, createdAt: blogPosts.createdAt, publishedAt: blogPosts.publishedAt },
       searchColumns: [blogPosts.title, blogPosts.slug],
       toDto: (r) => adminEntityDto("ARTICLE", r),
     }),

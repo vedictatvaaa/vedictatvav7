@@ -57,3 +57,10 @@ export class KnowledgeGraphConflictError extends Error {
     this.name = "KnowledgeGraphConflictError";
   }
 }
+
+export class KnowledgeGraphGateBlockedError extends Error {
+  constructor(public readonly report: unknown) {
+    super("Knowledge Graph public enablement checks failed");
+    this.name = "KnowledgeGraphGateBlockedError";
+  }
+}

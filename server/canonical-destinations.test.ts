@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { CANONICAL_DESTINATION_IMPORT_ROWS, canonicalSlug } from "@shared/destination-import-data";
+import { CANONICAL_DESTINATION_COUNTS, CANONICAL_DESTINATION_IMPORT_ROWS, canonicalSlug } from "@shared/destination-import-data";
 import { TEMPLE_TOURISM_SOURCE_ROWS } from "@shared/pilgrimage-source-contract";
 import { TEMPLE_TOURISM_CLASSIFICATION_MANIFEST, YATRA_TO_TIRTH_MAPPING_MANIFEST } from "./knowledge-graph/destination-source-manifests";
 import { TEMPLE_TOURISM_SERIALIZABLE_SOURCE_DATA, TIRTH_GUIDE_SERIALIZABLE_SOURCE_DATA } from "@shared/canonical-destination-source-data";
@@ -11,6 +11,7 @@ test("canonical destination manifests are complete, deterministic, and keep tour
   assert.equal(Object.keys(TEMPLE_TOURISM_CLASSIFICATION_MANIFEST).length, TEMPLE_TOURISM_SOURCE_ROWS.length);
   assert.equal(CANONICAL_DESTINATION_IMPORT_ROWS.filter((row) => row.classification === "TIRTH").length, 23);
   assert.equal(CANONICAL_DESTINATION_IMPORT_ROWS.filter((row) => row.classification === "TEMPLE").length, 26);
+  assert.deepEqual(CANONICAL_DESTINATION_COUNTS, { tirth: 23, temple: 26, alias: 5 });
   assert.equal(new Set(CANONICAL_DESTINATION_IMPORT_ROWS.map((row) => row.sourceKey)).size, CANONICAL_DESTINATION_IMPORT_ROWS.length);
   for (const row of CANONICAL_DESTINATION_IMPORT_ROWS) assert.equal(row.preferredSlug, canonicalSlug(row.preferredSlug));
   assert.deepEqual(YATRA_TO_TIRTH_MAPPING_MANIFEST, [{ yatraSourceKey: "delhi-haridwar-yatra", tirthSourceKey: "haridwar" }]);
