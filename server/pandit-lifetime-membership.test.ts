@@ -34,6 +34,13 @@ test("0010 is additive and preserves legacy membership and card-order systems", 
   assert.match(schema, /export const panditCardOrders = pgTable\("pandit_card_orders"/);
 });
 
+test("0010 leaves ambiguous legacy application matches for Admin review", () => {
+  assert.doesNotMatch(migration, /Approved Pandit application cannot be linked uniquely/);
+  assert.match(migration, /HAVING count\(p\.id\) = 1/);
+  assert.match(migration, /HAVING count\(application_id\) = 1/);
+  assert.match(migration, /remain unlinked[\s\S]*Admin review/);
+});
+
 test("registration allocation is formatted, unique, immutable, retry-safe, and never reused", () => {
   assert.match(migration, /CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq/);
   assert.match(migration, /MINVALUE 1001000156 MAXVALUE 9999999999 START WITH 1001000156 NO CYCLE/);

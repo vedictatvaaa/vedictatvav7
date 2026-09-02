@@ -45,35 +45,26 @@ SET registration_no = (existing.max_no + eligible.ordinal)::text,
 FROM eligible, existing
 WHERE p.id = eligible.id;
 
--- Link legacy approved applications only where the old approval copy can be
--- identified uniquely by both normalized email and phone. Ambiguity or a
--- missing promoted Pandit aborts rather than silently linking the wrong person.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM pandit_applications a
-    LEFT JOIN pandits p
-      ON lower(btrim(p.email)) = lower(btrim(a.email))
-     AND btrim(p.phone) = btrim(a.phone)
-    WHERE a.status = 'approved' AND a.pandit_id IS NULL
-    GROUP BY a.id
-    HAVING count(p.id) <> 1
-  ) THEN
-    RAISE EXCEPTION 'Approved Pandit application cannot be linked uniquely; aborting 0010';
-  END IF;
-END $$;
-
+-- Link legacy approved applications only for an unambiguous one-to-one match
+-- in both directions. Missing or duplicate historical records remain unlinked
+-- for Admin review rather than blocking startup or linking the wrong identity.
 UPDATE pandit_applications a
 SET pandit_id = candidate.pandit_id
 FROM (
-  SELECT a2.id AS application_id, min(p.id) AS pandit_id
-  FROM pandit_applications a2
-  JOIN pandits p
-    ON lower(btrim(p.email)) = lower(btrim(a2.email))
-   AND btrim(p.phone) = btrim(a2.phone)
-  WHERE a2.status = 'approved' AND a2.pandit_id IS NULL
-  GROUP BY a2.id
+  WITH application_matches AS (
+    SELECT a2.id AS application_id, min(p.id) AS pandit_id
+    FROM pandit_applications a2
+    JOIN pandits p
+      ON lower(btrim(p.email)) = lower(btrim(a2.email))
+     AND btrim(p.phone) = btrim(a2.phone)
+    WHERE a2.status = 'approved' AND a2.pandit_id IS NULL
+    GROUP BY a2.id
+    HAVING count(p.id) = 1
+  )
+  SELECT min(application_id) AS application_id, pandit_id
+  FROM application_matches
+  GROUP BY pandit_id
+  HAVING count(application_id) = 1
 ) candidate
 WHERE a.id = candidate.application_id;
 
