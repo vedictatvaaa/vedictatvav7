@@ -104,9 +104,14 @@ The existing database Yatra tours are not copied into the Tirth table. Where a r
 
 ### Temple migration
 
-The current Temple Tourism dataset is imported into canonical Temple records using its established string IDs as migration keys and preferred canonical slugs.
+The current Temple Tourism dataset first passes through a reviewed source-classification manifest because the array contains shrines, sacred cities, rivers, and broader yatra destinations.
 
-The migration preserves the content, coordinates, categories, and route behavior used by the current experience.
+- Actual individual shrines are imported as canonical Temple records.
+- Sacred destinations or regions that match the approved Tirth definition are imported as canonical Tirth records.
+- Records that cannot be classified confidently remain legacy-only and continue using the current rendering path.
+- Classification is explicit and reviewed; migration code never performs fuzzy or automatic semantic classification.
+
+Imported records use their established string IDs as migration keys and preferred canonical slugs. The migration preserves their content, coordinates, categories, and route behavior.
 
 ### Idempotency and conflicts
 
@@ -531,6 +536,7 @@ Phase 2 does not include:
 
 - AI-generated relationships;
 - automatically inferred semantic links;
+- automatic source classification;
 - fuzzy automatic Yatra-to-Tirth mapping;
 - public graph exploration;
 - graph-generated landing pages;
@@ -546,7 +552,7 @@ Phase 2 does not include:
 
 Phase 2 is complete when:
 
-1. canonical Tirth and Temple records replace static authority without breaking established public routes;
+1. reviewed Tirth and Temple records replace static authority for classified source entries without breaking established public routes, while unclassified entries remain safely legacy-only;
 2. Yatra tours remain distinct and connect only through reviewed relationships;
 3. Admins can export, preview, and atomically apply a versioned relationship CSV;
 4. row errors, duplicates, conflicts, and stale previews are explicit and safe;
