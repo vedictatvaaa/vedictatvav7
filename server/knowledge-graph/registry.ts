@@ -28,6 +28,7 @@ export const RELATIONSHIP_DEFINITIONS: readonly RelationshipDefinition[] = [
   { relationshipType: "related_article", sourceTypes: content, targetTypes: ["ARTICLE"] },
   { relationshipType: "related_product", sourceTypes: content, targetTypes: ["PRODUCT"] },
   { relationshipType: "associated_with", sourceTypes: ["REVIEW"], targetTypes: ["PUJA", "PANDIT", "PRODUCT", "SERVICE"] },
+  { relationshipType: "associated_with", sourceTypes: ["YATRA"], targetTypes: ["TIRTH"] },
   { relationshipType: "contains", sourceTypes: ["TIRTH"], targetTypes: ["TEMPLE"] },
   { relationshipType: "available_puja", sourceTypes: ["TIRTH", "TEMPLE"], targetTypes: ["PUJA"] },
   { relationshipType: "related_service", sourceTypes: content, targetTypes: ["SERVICE"] },
