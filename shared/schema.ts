@@ -302,7 +302,7 @@ export const pandits = pgTable("pandits", {
   // Lifelong member id stamped automatically on account creation. Format
   // VT-PND-<id padded to 5 digits>. Immutable once set.
   membershipNo: text("membership_no").unique(),
-  // Permanent lifetime identity, allocated only by the transactional approval flow.
+  // Permanent 10-digit lifetime identity, allocated only by transactional approval.
   registrationNo: text("registration_no"),
   registrationAssignedAt: timestamp("registration_assigned_at"),
   // Admin-controlled flag. When true, the pandit can download/share their

@@ -17,7 +17,11 @@ test("0010 is additive and preserves legacy membership and card-order systems", 
 
 test("registration allocation is formatted, unique, immutable, retry-safe, and never reused", () => {
   assert.match(migration, /CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq/);
-  assert.match(migration, /\^VT-PAN-\[0-9\]\{6,\}\$/);
+  assert.match(migration, /MINVALUE 1001000156 MAXVALUE 9999999999 START WITH 1001000156 NO CYCLE/);
+  assert.match(migration, /\^\[0-9\]\{10\}\$/);
+  assert.match(migration, /COALESCE\(MAX\(registration_no::bigint\), 1001000155\)/);
+  assert.match(migration, /\(existing\.max_no \+ eligible\.ordinal\)::text/);
+  assert.doesNotMatch(migration, /VT-PAN/);
   assert.match(migration, /pandits_registration_no_unique/);
   assert.match(migration, /Pandit registration number is immutable/);
   assert.match(migration, /pandit_registration_numbers[\s\S]+registration_no text PRIMARY KEY/);
@@ -25,7 +29,8 @@ test("registration allocation is formatted, unique, immutable, retry-safe, and n
   assert.match(migration, /ORDER BY created_at NULLS LAST, id/);
   assert.match(routes, /\.for\("update"\)/);
   assert.match(routes, /pending\.status === "approved" && pending\.panditId/);
-  assert.match(routes, /nextval\('pandit_registration_no_seq'\)/);
+  assert.match(routes, /registrationNo: sql`nextval\('pandit_registration_no_seq'\)::text`/);
+  assert.doesNotMatch(routes, /VT-PAN/);
 });
 
 test("missing-city lifecycle remains governed by canonical State and City IDs", () => {
@@ -46,7 +51,7 @@ test("application submission and approval both reject absent or invalid photos",
 
 test("admin APIs are protected and expose registration and location review data", () => {
   assert.match(routes, /"\/api\/admin\/pandits", adminAuthMiddleware/);
-  assert.match(routes, /ilike\(pandits\.registrationNo/);
+  assert.match(routes, /\/\^\\d\{10\}\$\/\.test\(search\) \? eq\(pandits\.registrationNo, search\)/);
   assert.match(routes, /"\/api\/admin\/pandit-city-requests", adminAuthMiddleware/);
   assert.match(routes, /cityRequest:/);
   assert.match(routes, /Invalid location request resolution/);

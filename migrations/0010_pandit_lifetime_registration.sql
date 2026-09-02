@@ -1,7 +1,8 @@
 -- Additive lifetime registration identity and governed missing-city workflow.
 -- This migration intentionally leaves legacy membership_no and pandit_card_orders untouched.
 
-CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq AS bigint START WITH 1 NO CYCLE;
+CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq AS bigint
+  MINVALUE 1001000156 MAXVALUE 9999999999 START WITH 1001000156 NO CYCLE;
 
 ALTER TABLE pandits ADD COLUMN IF NOT EXISTS registration_no text;
 ALTER TABLE pandits ADD COLUMN IF NOT EXISTS registration_assigned_at timestamp;
@@ -13,7 +14,10 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM pandits
     WHERE registration_no IS NOT NULL
-      AND registration_no !~ '^VT-PAN-[0-9]{6,}$'
+      AND (
+        registration_no !~ '^[0-9]{10}$'
+        OR (registration_no ~ '^[0-9]{10}$' AND registration_no::bigint < 1001000156)
+      )
   ) THEN
     RAISE EXCEPTION 'Invalid existing Pandit registration number; aborting 0010';
   END IF;
@@ -26,7 +30,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS pandits_registration_no_unique
 -- Only already verified Pandits are eligible. Re-running assigns only missing rows.
 LOCK TABLE pandits IN SHARE ROW EXCLUSIVE MODE;
 WITH existing AS (
-  SELECT COALESCE(MAX(substring(registration_no FROM 8)::bigint), 0) AS max_no
+  SELECT COALESCE(MAX(registration_no::bigint), 1001000155) AS max_no
   FROM pandits WHERE registration_no IS NOT NULL
 ), eligible AS (
   SELECT id, row_number() OVER (ORDER BY created_at NULLS LAST, id) AS ordinal
@@ -34,7 +38,7 @@ WITH existing AS (
   WHERE verified = true AND registration_no IS NULL
 )
 UPDATE pandits p
-SET registration_no = 'VT-PAN-' || lpad((existing.max_no + eligible.ordinal)::text, 6, '0'),
+SET registration_no = (existing.max_no + eligible.ordinal)::text,
     registration_assigned_at = COALESCE(p.registration_assigned_at, now())
 FROM eligible, existing
 WHERE p.id = eligible.id;
@@ -76,13 +80,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS pandit_applications_pandit_id_unique
 
 SELECT setval(
   'pandit_registration_no_seq',
-  GREATEST(COALESCE((SELECT MAX(substring(registration_no FROM 8)::bigint) FROM pandits), 0), 1),
-  COALESCE((SELECT MAX(substring(registration_no FROM 8)::bigint) FROM pandits), 0) > 0
+  GREATEST(COALESCE((SELECT MAX(registration_no::bigint) FROM pandits), 1001000156), 1001000156),
+  COALESCE((SELECT MAX(registration_no::bigint) FROM pandits), 0) >= 1001000156
 );
 
 ALTER TABLE pandits DROP CONSTRAINT IF EXISTS pandits_registration_no_format_check;
 ALTER TABLE pandits ADD CONSTRAINT pandits_registration_no_format_check
-  CHECK (registration_no IS NULL OR registration_no ~ '^VT-PAN-[0-9]{6,}$');
+  CHECK (registration_no IS NULL OR (
+    registration_no ~ '^[0-9]{10}$' AND registration_no::bigint >= 1001000156
+  ));
 ALTER TABLE pandits DROP CONSTRAINT IF EXISTS pandits_verified_registration_check;
 ALTER TABLE pandits ADD CONSTRAINT pandits_verified_registration_check
   CHECK (verified = false OR registration_no IS NOT NULL);
@@ -93,7 +99,7 @@ CREATE TABLE IF NOT EXISTS pandit_registration_numbers (
   pandit_id integer NOT NULL UNIQUE,
   assigned_at timestamp NOT NULL DEFAULT now(),
   CONSTRAINT pandit_registration_numbers_format_check
-    CHECK (registration_no ~ '^VT-PAN-[0-9]{6,}$')
+    CHECK (registration_no ~ '^[0-9]{10}$' AND registration_no::bigint >= 1001000156)
 );
 INSERT INTO pandit_registration_numbers (registration_no, pandit_id, assigned_at)
 SELECT registration_no, id, COALESCE(registration_assigned_at, now())

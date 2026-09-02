@@ -3282,7 +3282,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const rows = search
       ? await db.select().from(pandits).where(or(
           ilike(pandits.name, `%${search}%`),
-          ilike(pandits.registrationNo, `%${search}%`),
+          /^\d{10}$/.test(search) ? eq(pandits.registrationNo, search) : sql`false`,
           ilike(pandits.phone, `%${search}%`),
           ilike(pandits.email, `%${search}%`),
         ))
@@ -9043,7 +9043,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           regionalOrigin: pending.regionalOrigin,
           serviceArea: pending.serviceArea,
           slug,
-          registrationNo: sql`'VT-PAN-' || lpad(nextval('pandit_registration_no_seq')::text, 6, '0')`,
+          registrationNo: sql`nextval('pandit_registration_no_seq')::text`,
           registrationAssignedAt: new Date(),
         } as any).returning();
         // Preserve the pre-existing membership_no contract alongside the new
