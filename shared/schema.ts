@@ -304,6 +304,9 @@ export const pandits = pgTable("pandits", {
   membershipNo: text("membership_no").unique(),
   // Permanent 10-digit lifetime identity, allocated only by transactional approval.
   registrationNo: text("registration_no"),
+  // Legacy registration value retained only when 0011 converts a historical
+  // prefixed identity. It is audit data, not a public membership identifier.
+  legacyRegistrationNo: text("legacy_registration_no"),
   registrationAssignedAt: timestamp("registration_assigned_at"),
   // Admin-controlled flag. When true, the pandit can download/share their
   // dual-sided business card from the dashboard. Defaults to true so any
@@ -324,6 +327,8 @@ export const pandits = pgTable("pandits", {
   cityIdIdx: index("pandits_city_id_idx").on(t.cityId),
   registrationNoUnique: uniqueIndex("pandits_registration_no_unique").on(t.registrationNo)
     .where(sql`${t.registrationNo} is not null`),
+  legacyRegistrationNoUnique: uniqueIndex("pandits_legacy_registration_no_unique").on(t.legacyRegistrationNo)
+    .where(sql`${t.legacyRegistrationNo} is not null`),
   verifiedIdx: index("pandits_verified_idx").on(t.verified),
   boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
 }));
@@ -1313,6 +1318,7 @@ export const insertOrderSchema = createInsertSchema(orders);
 export const insertOrderStatusEventSchema = createInsertSchema(orderStatusEvents).omit({ id: true, createdAt: true });
 export const insertPanditSchema = createInsertSchema(pandits).omit({
   registrationNo: true,
+  legacyRegistrationNo: true,
   registrationAssignedAt: true,
 });
 export const insertPanditReviewSchema = createInsertSchema(panditReviews);

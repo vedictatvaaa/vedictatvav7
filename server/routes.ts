@@ -64,6 +64,7 @@ import {
 import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
+import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
@@ -137,46 +138,18 @@ const upload = multer({
   storage: uploadStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype.split("/")[1])) {
+    const expectedMime: Record<string, string> = {
+      ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+      ".gif": "image/gif", ".webp": "image/webp",
+    };
+    const extension = path.extname(file.originalname).toLowerCase();
+    if (expectedMime[extension] === file.mimetype.toLowerCase()) {
       cb(null, true);
     } else {
       cb(new Error("Only image files (JPG, PNG, GIF, WebP) are allowed. SVG is not permitted."));
     }
   },
 });
-
-function isValidStoredProfilePhoto(value: unknown): value is string {
-  if (typeof value !== "string" || value.trim() !== value || !value) return false;
-  if (value.startsWith("/uploads/")) {
-    const relative = value.slice("/uploads/".length);
-    if (!relative || relative.includes("..") || path.isAbsolute(relative)) return false;
-    const filePath = path.resolve(uploadsDir, relative);
-    if (!filePath.startsWith(path.resolve(uploadsDir) + path.sep)) return false;
-    try {
-      const stat = fs.statSync(filePath);
-      return stat.isFile() && stat.size > 0 && stat.size <= 10 * 1024 * 1024
-        && /\.(?:jpe?g|png|gif|webp)$/i.test(filePath);
-    } catch {
-      return false;
-    }
-  }
-  const match = /^data:image\/(jpeg|png|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
-  if (!match || value.length > 10 * 1024 * 1024) return false;
-  try {
-    const bytes = Buffer.from(match[2], "base64");
-    if (!bytes.length || bytes.toString("base64").replace(/=+$/, "") !== match[2].replace(/=+$/, "")) return false;
-    const signatures: Record<string, boolean> = {
-      jpeg: bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
-      png: bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
-      gif: bytes.subarray(0, 3).toString("ascii") === "GIF",
-      webp: bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP",
-    };
-    return signatures[match[1]];
-  } catch {
-    return false;
-  }
-}
 
 // Audio uploads for admin-managed Jap mantras. Lives under
 // uploads/mantra-audio/ so it's served by the existing /uploads
@@ -8731,7 +8704,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   app.post("/api/pandit-applications/upload-photo", upload.single("photo"), async (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "A valid profile photo is required" });
     const url = `/uploads/${req.file.filename}`;
-    if (!isValidStoredProfilePhoto(url)) {
+    if (!isValidStoredProfilePhoto(url, uploadsDir)) {
       fs.rmSync(req.file.path, { force: true });
       return res.status(400).json({ message: "The uploaded profile photo is invalid" });
     }
@@ -8768,7 +8741,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const d = parsed.data;
-      if (!isValidStoredProfilePhoto(d.photo)) {
+      if (!isValidStoredProfilePhoto(d.photo, uploadsDir)) {
         return res.status(400).json({ message: "A valid successfully uploaded profile photo is required" });
       }
       const [selectedState] = await db.select().from(indianStates)
@@ -9004,7 +8977,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         if (!pending.stateId || !pending.cityId || pending.locationReviewStatus !== "resolved") {
           return { kind: "location" as const };
         }
-        if (!isValidStoredProfilePhoto(pending.photo)) return { kind: "photo" as const };
+        if (!isValidStoredProfilePhoto(pending.photo, uploadsDir)) return { kind: "photo" as const };
         const [location] = await tx.select({ state: indianStates, city: indianCities })
           .from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
           .where(and(
