@@ -17,6 +17,7 @@ import PageSeo from "@/components/PageSeo";
 import { blogPosting, breadcrumbList, abs } from "@/lib/seo-schemas";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { useConsentPreferences } from "@/lib/consent";
+import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
 
 export default function BlogPostPage() {
   const params = useParams<{ slug: string }>();
@@ -288,6 +289,7 @@ export default function BlogPostPage() {
             </div>
           </div>
         )}
+        <KnowledgeGraphRelatedContent type="ARTICLE" id={post.id} />
         <BlogCommentsSection postSlug={post.slug} />
         <BlogQuestionWidget postId={post.id} postSlug={post.slug} />
       </div>

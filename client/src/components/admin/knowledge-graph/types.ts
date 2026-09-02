@@ -7,3 +7,7 @@ export type Detail = { entity: Entity; connectionCount: number; incoming: Record
 export type Definition = { relationshipType: string; sourceTypes: EntityType[]; targetTypes: EntityType[] };
 export type Page<T> = { page: number; limit: number; total: number; items: T[] };
 export type Rule = { id: number; sourceEntityType: EntityType; relationshipType: string; allowedTargetEntityTypes: EntityType[]; minimumRequiredCount: number; isActive: boolean };
+export type PublicState = { id: number; isPublicEnabled: boolean; generation: number; updatedAt: string };
+export type EnablementReport = { canEnable: boolean; blockerCount: number; findings: { code: string; entityType?: EntityType }[]; findingsTruncated: boolean; contractVersion: string };
+export type PublicProjection = { groups: { relationshipType: string; label: string; items: { type: EntityType; name: string; url: string; summary: Record<string, string | number | boolean | null>; relationshipLabel: string }[] }[] };
+export type CsvPreview = { previewToken: string | null; expiresInSeconds: number; rows: { line: number; action: string; errors: string[]; warnings: string[] }[]; errors?: { line: number; message: string }[]; warnings?: { line: number; message: string }[]; counts: { create: number; update: number; skip: number; invalid: number } };

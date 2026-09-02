@@ -26,6 +26,7 @@ import { ReviewSubmitForm } from "@/components/ReviewSubmitForm";
 import { Label } from "@/components/ui/label";
 import { ProductRelatedServices } from "@/components/RelatedServices";
 import RelatedBlogPosts from "@/components/RelatedBlogPosts";
+import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
 import PincodeChecker from "@/components/PincodeChecker";
 import DeliveryEtaInline from "@/components/DeliveryEtaInline";
 import { sanitizeHtml } from "@/lib/sanitize-html";
@@ -1901,6 +1902,7 @@ export default function ProductDetail() {
         <ProductRelatedServices category={product.category} />
 
         <RelatedBlogPosts category={product.category} productName={product.name} limit={3} />
+        <KnowledgeGraphRelatedContent type="PRODUCT" id={product.id} />
       </div>
 
       {/* Sticky mobile Buy Bar — sits above the global mobile bottom nav (58px) */}
