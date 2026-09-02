@@ -14,7 +14,7 @@ This feature must extend existing systems rather than create duplicate Pandit, u
 
 - The permanent registration number is assigned only after Admin approval.
 - The registration number is also the lifetime membership number.
-- Number format is `VT-PAN-000001`, expanding beyond six digits when required.
+- Number format is a plain 10-digit number. Allocation begins at `1001000156` and increments sequentially.
 - A valid Pandit profile photograph is mandatory during registration and before approval.
 - The current 102 canonical cities remain in the selector.
 - Registration adds a governed “My city is not listed” request rather than importing thousands of unreviewed cities.
@@ -102,9 +102,9 @@ Successful submission creates or updates the existing application/profile flow. 
 
 Each approved Pandit receives one registration number in the format:
 
-`VT-PAN-000001`
+`1001000156`
 
-The sequence expands naturally beyond six digits. The number is:
+The number is exactly 10 numeric digits. Allocation starts at `1001000156`, increments sequentially, and fails closed if the 10-digit range is ever exhausted. The number is:
 
 - globally unique;
 - generated server-side;
@@ -144,7 +144,9 @@ This reuses existing approval, verification, active, and suspension semantics ra
 
 ## 8. Digital Card Design
 
-The card uses the existing Vedic Tatva visual language: warm cream, deep maroon, restrained antique gold, premium typography, subtle sacred geometry, excellent spacing, and strong contrast. Decoration remains refined rather than excessive.
+The card closely follows the user-approved front and back reference images: a deep maroon and antique-gold curved header/footer surrounding a warm cream body, prominent Vedic Tatva lotus branding, a framed Pandit portrait, temple line art, verification shield, restrained sacred geometry, and strong information hierarchy. It includes a tasteful tricolor India-map mark with an Ashoka Chakra motif; it must not use the restricted official State Emblem/Lion Capital.
+
+The same approved format applies to the digital card and Plastic physical card. Metal production adapts the same content hierarchy and visual identity to its material without changing the approved information order.
 
 The same responsive component renders the dashboard, public profile, share/download, and print views.
 
@@ -196,7 +198,7 @@ Public visitors may view the public-safe card but cannot access Pandit-only orde
 
 The QR code contains only the canonical verification path:
 
-`/verify-pandit/VT-PAN-000001`
+`/verify-pandit/1001000156`
 
 It does not contain phone numbers, email addresses, private addresses, documents, internal IDs, signed credentials, or other sensitive information.
 
