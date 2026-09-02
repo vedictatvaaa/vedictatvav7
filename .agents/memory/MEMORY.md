@@ -7,3 +7,4 @@
 - [Swiss Ephemeris install override](swisseph-install.md) — keep its node-gyp override on Node 20; the package's declared v10 path pulls firewall-blocked tar 6.2.1.
 - [Coolify restart discipline](coolify-restarts.md) — preserve the expensive dependency layer and use committed migrations; never run drizzle push automatically on every container restart.
 - [SEO network launch gates](seo-network-launch-gates.md) — default-off public SEO networks are not launched until admin enablement and standard-suite HTTP contract coverage both work.
+- [PostgreSQL nullable CHECKs](postgres-nullable-checks.md) — CHECK expressions using IN do not reject NULL unless nullability is tested explicitly.
