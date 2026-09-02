@@ -121,11 +121,20 @@ export function publicPanditDto(
   const {
     phone, email, passwordHash, lastLoginAt, latitude, longitude, leaveNote, leaveStartedAt,
     verified, onLeave, tier, tierExpiresAt, commissionPct, productCommissionPct, membershipNo,
+    legacyRegistrationNo, registrationNo,
+    documents, application, applicationId,
     cardIssued, cardIssuedAt, originalCity, originalState, locationReviewStatus, boostType,
     boostStartDate, boostEndDate, boostActive,
     ...safe
   } = pandit;
-  return { ...safe, verified: true, onLeave: false, isOnline, ...(distance === undefined ? {} : { distance }) };
+  return {
+    ...safe,
+    registrationNo,
+    verified: true,
+    onLeave: false,
+    isOnline,
+    ...(distance === undefined ? {} : { distance }),
+  };
 }
 
 export function adminPanditDto(

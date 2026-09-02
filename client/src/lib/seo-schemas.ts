@@ -397,7 +397,11 @@ export function person(args: {
   url?: string;
   worksFor?: string;
   knowsLanguage?: string[];
+  registrationNo?: string;
 }): Schema {
+  const registrationNo = typeof args.registrationNo === "string" && /^[0-9]{10}$/.test(args.registrationNo)
+    ? args.registrationNo
+    : undefined;
   const payload: Record<string, any> = {
     "@context": CTX,
     "@type": "Person",
@@ -408,6 +412,15 @@ export function person(args: {
     url: args.url ? abs(args.url) : undefined,
     knowsLanguage: args.knowsLanguage,
     worksFor: args.worksFor ? { "@type": "Organization", name: args.worksFor } : undefined,
+    ...(registrationNo ? {
+      identifier: registrationNo,
+      hasCredential: {
+        "@type": "EducationalOccupationalCredential",
+        "@id": `${abs(args.url || "/")}#credential`,
+        credentialCategory: "Pandit Registration",
+        recognizedBy: { "@id": `${SEO_CANONICAL_ORIGIN}/#organization` },
+      },
+    } : {}),
   };
   Object.keys(payload).forEach((k) => payload[k] === undefined && delete payload[k]);
   return { id: "person", payload };

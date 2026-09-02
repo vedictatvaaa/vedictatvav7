@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown } from "lucide-react";
 
@@ -47,6 +47,8 @@ function PanditsTab() {
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
   const [viewingPandit, setViewingPandit] = useState<Pandit | null>(null);
   const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all"); const [activeFilter, setActiveFilter] = useState("all"); const [qualityFilter, setQualityFilter] = useState("all");
+  const [registrationLookup, setRegistrationLookup] = useState("");
+  const [submittedRegistrationNo, setSubmittedRegistrationNo] = useState("");
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
   const [bulkGeocoding, setBulkGeocoding] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
@@ -58,8 +60,32 @@ function PanditsTab() {
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>fetcher("/api/admin/locations") });
   type DiscoveryHealth = { total:number; verified:number; active:number; publiclyDiscoverable:number; missingState:number; missingCity:number; locationIssues:number; missingProfileData:number; issuePanditIds:number[] };
   const { data: health } = useQuery<DiscoveryHealth>({ queryKey:["/api/admin/pandit-discovery/health"], queryFn:()=>fetcher("/api/admin/pandit-discovery/health") });
+  const normalizedRegistrationNo = registrationLookup.trim();
+  const hasRegistrationLookup = registrationLookup.length > 0;
+  const registrationLookupError = hasRegistrationLookup && !/^[0-9]{10}$/.test(normalizedRegistrationNo)
+    ? "Enter exactly 10 ASCII digits. Spaces at the beginning or end are ignored."
+    : "";
+  const registrationLookupQuery = useQuery<Pandit[]>({
+    queryKey: ["/api/admin/pandits", "registrationNo", submittedRegistrationNo],
+    enabled: !!submittedRegistrationNo,
+    retry: false,
+    queryFn: () => fetcher(`/api/admin/pandits?registrationNo=${encodeURIComponent(submittedRegistrationNo)}`),
+  });
   const issueIds = new Set(health?.issuePanditIds || []);
   const visiblePandits = (pandits || []).filter((p:any) => (!search || `${p.name} ${p.city} ${p.specialization}`.toLowerCase().includes(search.toLowerCase())) && (!stateFilter || stateFilter === "all" || String(p.stateId) === stateFilter) && (!cityFilter || cityFilter === "all" || String(p.cityId) === cityFilter) && (verificationFilter === "all" || String(!!p.verified) === verificationFilter) && (availabilityFilter === "all" || p.availability === availabilityFilter) && (activeFilter === "all" || String(!p.onLeave) === activeFilter) && (qualityFilter === "all" || (qualityFilter === "issues" ? issueIds.has(p.id) : !issueIds.has(p.id))));
+  const displayedPandits = hasRegistrationLookup ? registrationLookupQuery.data || [] : visiblePandits;
+  const isPanditListLoading = hasRegistrationLookup ? registrationLookupQuery.isLoading : isLoading;
+
+  const clearRegistrationLookup = () => {
+    setRegistrationLookup("");
+    setSubmittedRegistrationNo("");
+  };
+
+  const submitRegistrationLookup = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (registrationLookupError) return;
+    setSubmittedRegistrationNo(normalizedRegistrationNo);
+  };
 
   const approveMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -278,6 +304,36 @@ function PanditsTab() {
           ].map(([label, value]) => <div key={String(label)} className="rounded-lg border bg-muted/20 p-3"><div className="text-xl font-semibold text-primary">{value}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}
         </div>
       </CardContent></Card>}
+      <form onSubmit={submitRegistrationLookup} className="rounded-lg border bg-muted/20 p-3 sm:p-4" aria-label="Registration number lookup">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <Label htmlFor="pandit-registration-lookup" className="text-sm font-medium">Registration number lookup</Label>
+            <Input
+              id="pandit-registration-lookup"
+              value={registrationLookup}
+              onChange={(event) => {
+                setRegistrationLookup(event.target.value);
+                setSubmittedRegistrationNo("");
+              }}
+              placeholder="10-digit registration number"
+              inputMode="numeric"
+              autoComplete="off"
+              aria-describedby="pandit-registration-lookup-help pandit-registration-lookup-error"
+              aria-invalid={!!registrationLookupError}
+              className="mt-1"
+              data-testid="input-pandit-registration-lookup"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={!hasRegistrationLookup || !!registrationLookupError} data-testid="btn-pandit-registration-lookup">
+              Look up
+            </Button>
+            {hasRegistrationLookup && <Button type="button" variant="outline" onClick={clearRegistrationLookup} data-testid="btn-clear-pandit-registration-lookup">Clear</Button>}
+          </div>
+        </div>
+        <p id="pandit-registration-lookup-help" className="mt-2 text-xs text-muted-foreground">Looks up one exact registration number; this is separate from the name, city, and specialization search below.</p>
+        {registrationLookupError && <p id="pandit-registration-lookup-error" role="alert" className="mt-1 text-xs text-destructive">{registrationLookupError}</p>}
+      </form>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
         <Input placeholder="Search pandits…" value={search} onChange={e=>setSearch(e.target.value)} />
         <Select value={stateFilter} onValueChange={v=>{setStateFilter(v);setCityFilter("");}}><SelectTrigger><SelectValue placeholder="All states"/></SelectTrigger><SelectContent><SelectItem value="all">All states</SelectItem>{locations.map(s=><SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent></Select>
@@ -306,13 +362,40 @@ function PanditsTab() {
         </div>
       )}
 
-      {isLoading ? (
+      {hasRegistrationLookup && !registrationLookupError && submittedRegistrationNo && registrationLookupQuery.data?.[0] && (
+        <Card className="border-primary/25 bg-primary/[0.03]" data-testid="pandit-registration-lookup-result">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="font-medium text-primary">Exact registration match</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Canonical registration number <span className="font-mono font-semibold text-foreground">{registrationLookupQuery.data[0].registrationNo}</span></p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span className={`rounded-full px-2 py-1 font-medium ${registrationLookupQuery.data[0].verified ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`}>{registrationLookupQuery.data[0].verified ? "Verified" : "Not verified"}</span>
+                  <span className={`rounded-full px-2 py-1 font-medium ${!registrationLookupQuery.data[0].onLeave ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>{!registrationLookupQuery.data[0].onLeave ? "Active" : "On leave"}</span>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Credential reissues retain this registration number.</p>
+              </div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <a href={`/verify-pandit/${registrationLookupQuery.data[0].registrationNo}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2">Verification record</a>
+                {registrationLookupQuery.data[0].slug && <a href={`/pandit/${registrationLookupQuery.data[0].slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2">Profile</a>}
+                {registrationLookupQuery.data[0].slug && <a href={`/store/${registrationLookupQuery.data[0].slug}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline underline-offset-2">Storefront</a>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isPanditListLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
+      ) : hasRegistrationLookup && registrationLookupError ? null : hasRegistrationLookup && !submittedRegistrationNo ? (
+        <p className="text-center text-muted-foreground py-8">Enter a valid registration number and select Look up.</p>
+      ) : registrationLookupQuery.isError ? (
+        <p role="alert" className="text-center text-destructive py-8">The registration lookup could not be completed. Please try again.</p>
       ) : (
         <div className="space-y-3">
-          {visiblePandits.map((pandit) => {
+          {displayedPandits.map((pandit) => {
             const hasGps = pandit.latitude != null && pandit.longitude != null;
             const isGeocoding = geocodingId === pandit.id;
             return (
@@ -461,8 +544,8 @@ function PanditsTab() {
               </Card>
             );
           })}
-          {visiblePandits.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">{(pandits || []).length ? "No pandits match these filters." : "No pandits registered."}</p>
+          {displayedPandits.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">{hasRegistrationLookup ? `No Pandit matches registration number ${submittedRegistrationNo}.` : (pandits || []).length ? "No pandits match these filters." : "No pandits registered."}</p>
           )}
         </div>
       )}

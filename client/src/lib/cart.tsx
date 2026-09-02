@@ -49,8 +49,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totalAmount = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   function addToCart(product: Product, quantity: number = 1, variationLabel?: string) {
-    trackAddToCart(product, quantity, variationLabel);
+    const requestedQuantity = Math.max(1, Math.floor(quantity));
     setItems((prev) => {
+      const isMembershipCard = product.productType === "pandit_membership_card";
+      const cardQuantity = isMembershipCard
+        ? prev.reduce((sum, item) => sum + (item.product.productType === "pandit_membership_card" ? item.quantity : 0), 0)
+        : 0;
+      const existingProductQuantity = prev.reduce((sum, item) =>
+        sum + (item.product.id === product.id ? item.quantity : 0), 0);
+      const allowedQuantity = isMembershipCard
+        ? Math.max(0, Math.min(requestedQuantity, 10 - cardQuantity, product.stock - existingProductQuantity))
+        : requestedQuantity;
+      if (allowedQuantity <= 0) return prev;
+      trackAddToCart(product, allowedQuantity, variationLabel);
       const cartKey = variationLabel ? `${product.id}-${variationLabel}` : `${product.id}`;
       const existing = prev.find((item) => {
         const itemKey = item.variationLabel ? `${item.product.id}-${item.variationLabel}` : `${item.product.id}`;
@@ -60,11 +71,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return prev.map((item) => {
           const itemKey = item.variationLabel ? `${item.product.id}-${item.variationLabel}` : `${item.product.id}`;
           return itemKey === cartKey
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + allowedQuantity }
             : item;
         });
       }
-      return [...prev, { product, quantity, variationLabel }];
+      return [...prev, { product, quantity: allowedQuantity, variationLabel }];
     });
   }
 
@@ -85,11 +96,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
-    setItems((prev) =>
-      prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
-    );
+    setItems((prev) => {
+      const otherMembershipCards = prev.reduce((sum, item) =>
+        sum + (item.product.productType === "pandit_membership_card" && item.product.id !== productId ? item.quantity : 0), 0);
+      const matchingMembershipCardRows = prev.filter(item =>
+        item.product.id === productId && item.product.productType === "pandit_membership_card").length;
+      return prev.map((item) => {
+        if (item.product.id !== productId) return item;
+        if (item.product.productType !== "pandit_membership_card") return { ...item, quantity };
+        return {
+          ...item,
+          quantity: Math.max(1, Math.min(
+            quantity,
+            item.product.stock,
+            Math.floor((10 - otherMembershipCards) / matchingMembershipCardRows),
+          )),
+        };
+      });
+    });
   }
 
   function clearCart() {

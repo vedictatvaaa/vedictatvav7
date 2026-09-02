@@ -6,10 +6,14 @@ import sharp from "sharp";
 import test from "node:test";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { panditVerificationDto } from "./pandit-verification";
+import { publicStorefrontPanditDto } from "./pandit-public-access";
+import { publicPanditDto } from "./pandit-discovery-policy";
+import { buildPanditSeoNetworkProjection } from "./pandit-seo-network/project";
 
 const migration = readFileSync("migrations/0010_pandit_lifetime_registration.sql", "utf8");
 const successorMigration = readFileSync("migrations/0011_finalize_pandit_registration_numbers.sql", "utf8");
 const commerceMigration = readFileSync("migrations/0012_seed_pandit_membership_card_products.sql", "utf8");
+const checkoutMigration = readFileSync("migrations/0013_checkout_payment_intents_inventory.sql", "utf8");
 
 function assertSelfTransactionalMigration(sql: string) {
   assert.match(sql, /^\s*--[\s\S]*?\bBEGIN;/);
@@ -17,12 +21,13 @@ function assertSelfTransactionalMigration(sql: string) {
 }
 
 test("Pandit migrations are self-transactional for the Coolify psql runner", () => {
-  for (const sql of [migration, successorMigration, commerceMigration]) {
+  for (const sql of [migration, successorMigration, commerceMigration, checkoutMigration]) {
     assertSelfTransactionalMigration(sql);
   }
 });
 const schema = readFileSync("shared/schema.ts", "utf8");
 const routes = readFileSync("server/routes.ts", "utf8");
+const seed = readFileSync("server/seed.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
 
 test("0010 is additive and preserves legacy membership and card-order systems", () => {
@@ -130,6 +135,16 @@ test("admin APIs are protected and expose registration and location review data"
   assert.match(routes, /Invalid location request resolution/);
 });
 
+test("admin registrationNo query is authenticated, exact, bounded, and never falls back to private search", () => {
+  assert.match(routes, /app\.get\("\/api\/admin\/pandits", adminAuthMiddleware/);
+  assert.match(routes, /const requestedRegistrationNo = req\.query\.registrationNo/);
+  assert.match(routes, /typeof requestedRegistrationNo !== "string" \|\| !\/\^\[0-9\]\{10\}\$\/\.test\(requestedRegistrationNo\)/);
+  assert.match(routes, /status\(400\)\.json\(\{ message: "registrationNo must be exactly 10 digits" \}\)/);
+  assert.match(routes, /typeof requestedRegistrationNo === "string"[\s\S]*?\.where\(eq\(pandits\.registrationNo, requestedRegistrationNo\)\)[\s\S]*?\.limit\(1\)/);
+  const explicitBranch = routes.match(/const rows = typeof requestedRegistrationNo === "string"[\s\S]*?: search/)?.[0] || "";
+  assert.doesNotMatch(explicitBranch, /ilike\(pandits\.(?:name|phone|email)/);
+});
+
 test("public verification endpoint enforces exact grammar and bounded exact lookup", () => {
   assert.match(routes, /"\/api\/pandits\/verify\/:registrationNo"/);
   assert.match(routes, /if \(!\/\^\\d\{10\}\$\/\.test\(registrationNo\)\)/);
@@ -186,6 +201,56 @@ test("known but unverified registration returns inactive identity only", () => {
   assert.deepEqual(dto, { status: "inactive", registrationNo: "1001000157" });
 });
 
+test("all public storefront and profile projections include only canonical registration identity", () => {
+  const source = {
+    id: 42,
+    name: "Pandit Test",
+    slug: "pandit-test",
+    city: "Varanasi",
+    state: "Uttar Pradesh",
+    cityId: 2,
+    stateId: 1,
+    image: "/uploads/pandit.png",
+    bio: "A sufficiently detailed public profile biography for visitors.",
+    languages: "Hindi, Sanskrit",
+    specialization: "Vedic Puja",
+    verified: true,
+    onLeave: false,
+    locationReviewStatus: "resolved",
+    registrationNo: "1001000156",
+    legacyRegistrationNo: "VT-PAN-000001",
+    membershipNo: "legacy-membership",
+    phone: "9999999999",
+    email: "private@example.com",
+    passwordHash: "private",
+    documents: ["private"],
+  };
+  const storefront = publicStorefrontPanditDto(source);
+  const profile = publicPanditDto(source, false);
+  assert.equal(storefront.registrationNo, "1001000156");
+  assert.equal(profile.registrationNo, "1001000156");
+  for (const dto of [storefront, profile]) {
+    for (const privateField of ["legacyRegistrationNo", "membershipNo", "phone", "email", "passwordHash", "documents"]) {
+      assert.equal(privateField in dto, false, `${privateField} must not be public`);
+    }
+  }
+
+  const projection = buildPanditSeoNetworkProjection({
+    candidates: [{
+      pandit: source,
+      storefront: { isPublished: true, status: "published", bio: source.bio },
+      services: [{
+        service: { id: 1, masterServiceId: 1, isActive: true, mode: "in_person" },
+        master: { id: 1, name: "Puja", slug: "puja", isActive: true, supportedModes: ["in_person"] },
+      }],
+    }],
+    states: [{ id: 1, name: "Uttar Pradesh", code: "UP", isActive: true }],
+    cities: [{ id: 2, stateId: 1, name: "Varanasi", slug: "varanasi", isActive: true }],
+  });
+  assert.equal(projection.profiles[0].pandit?.registrationNo, "1001000156");
+  assert.equal("legacyRegistrationNo" in (projection.profiles[0].pandit || {}), false);
+});
+
 test("0012 safely seeds normal-commerce Plastic and Metal card siblings", () => {
   assert.match(commerceMigration, /'pandit-membership-card-plastic', 'pandit-membership-card', 'Plastic'/);
   assert.match(commerceMigration, /'pandit-membership-card-metal', 'pandit-membership-card', 'Metal'/);
@@ -205,17 +270,70 @@ test("0012 safely seeds normal-commerce Plastic and Metal card siblings", () => 
     assert.doesNotMatch(update, /\bstock\s*=/);
   }
   assert.match(commerceMigration, /\/og\/og-pandit-registration\.jpg/);
+  assert.match(seed, /p\.productType !== "pandit_membership_card"/);
+  assert.match(seed, /"pandit-membership-card-plastic"/);
+  assert.match(seed, /"pandit-membership-card-metal"/);
 });
 
-test("normal checkout and both Razorpay paths gate and stamp authoritative card items", () => {
-  assert.equal((routes.match(/stampPanditMembershipCardItems\(req,/g) || []).length, 3);
+test("all four card-aware checkout paths gate authoritative card items", () => {
+  assert.equal((routes.match(/stampPanditMembershipCardItems\(req,/g) || []).length, 4);
   assert.match(routes, /item\.productType === "pandit_membership_card"/);
   assert.match(routes, /validatePanditSession\(token\)/);
-  assert.match(routes, /!pandit\?\.verified \|\| !pandit\.registrationNo/);
+  assert.match(routes, /isPanditEligibleForMembershipCardOrder\(pandit\)/);
   assert.match(routes, /quantity < 1 \|\| quantity > 10/);
   assert.match(routes, /panditRegistrationNo: pandit\.registrationNo/);
   assert.match(routes, /productType: product\.productType/);
   assert.match(routes, /trustedPrice = \(product\.salePrice && product\.salePrice > 0\) \? product\.salePrice : product\.price/);
+});
+
+test("all card order paths reject stale client inventory using authoritative stock", () => {
+  assert.equal((routes.match(/stampPanditMembershipCardItems\(req,/g) || []).length, 4);
+  assert.match(routes, /const product = await storage\.getProduct\(productId\)/);
+  assert.match(routes, /product\.stock <= 0 \|\| quantity > product\.stock/);
+  assert.match(routes, /status: 409, message: "Requested membership card quantity is unavailable"/);
+  assert.match(routes, /status\(mockCardItems\.status \|\| 403\)/);
+  assert.match(routes, /status\(paymentCardItems\.status \|\| 403\)/);
+  assert.match(routes, /status\(checkoutCardItems\.status \|\| 403\)/);
+  assert.match(routes, /quantitiesByProduct\.set\(productId, \(quantitiesByProduct\.get\(productId\) \|\| 0\) \+ quantity\)/);
+});
+
+test("card checkout bypasses are rejected while ordinary checkout falls through", () => {
+  assert.match(routes, /Membership cards require a checkoutIntentId/);
+  assert.match(routes, /Membership card prepaid orders must use Razorpay checkout/);
+  assert.match(routes, /Membership cards must be purchased through authenticated checkout/);
+  assert.match(routes, /if \(!await requestHasMembershipCard\(req\.body\?\.items\)\) return next\(\)/);
+  assert.match(routes, /Loyalty redemption is not available for membership card orders/);
+  assert.match(routes, /hasMembershipCard && \(Number\(input\.loyaltyPointsRedeem \|\| 0\) > 0 \|\| input\.loyaltyUserId != null\)/);
+  assert.match(routes, /const canonical = await canonicalizeCheckout\(req, req\.body\.orderData, "prepaid"\)/);
+});
+
+test("0013 defines idempotent intent and allocation persistence without historical rewrites", () => {
+  assert.match(checkoutMigration, /CREATE TABLE IF NOT EXISTS checkout_payment_intents/);
+  assert.match(checkoutMigration, /CREATE TABLE IF NOT EXISTS order_inventory_allocations/);
+  assert.match(checkoutMigration, /canonical_payload jsonb NOT NULL/);
+  assert.match(checkoutMigration, /UNIQUE\(order_id, product_id\)/);
+  assert.doesNotMatch(checkoutMigration, /UPDATE orders|DELETE FROM orders|TRUNCATE/);
+});
+
+test("intent finalization is locked, exact, rollback-safe, and retry-idempotent", () => {
+  const operations = readFileSync("server/order-operations.ts", "utf8");
+  assert.match(routes, /checkout_payment_intents WHERE id=\$1 FOR UPDATE/);
+  assert.match(routes, /intent\.status === "consumed"[\s\S]*existingOrderId: intent\.consumed_order_id/);
+  assert.match(routes, /gateway\.currency !== "INR" \|\| Number\(gateway\.amount_paid \?\? gateway\.amount\) !== Number\(intent\.amount_paise\)/);
+  assert.match(routes, /UPDATE products SET stock=stock-\$1[\s\S]*stock >= \$1 RETURNING id/);
+  assert.match(routes, /decrementMembershipCardInventory\(canonical\.allocations/);
+  assert.match(operations, /if \(!await decrementIfAvailable\(allocation\)\)[\s\S]*status: 409/);
+  assert.match(routes, /catch \(error\) \{ await client\.query\("ROLLBACK"\)/);
+  assert.match(routes, /status='expired'[\s\S]*Checkout intent has expired/);
+});
+
+test("cancellation releases each allocation once and never release-on-refund", () => {
+  const storage = readFileSync("server/storage.ts", "utf8");
+  assert.match(storage, /input\.nextStatus === "cancelled"/);
+  assert.match(storage, /released_at IS NULL/);
+  assert.match(storage, /SET released_at = now\(\), updated_at = now\(\)/);
+  assert.match(storage, /SET stock = stock \+ \$\{Number\(allocation\.quantity\)\}/);
+  assert.doesNotMatch(storage, /input\.nextStatus === "refunded"[\s\S]*released_at/);
 });
 
 test("non-card Razorpay mock preserves its prior client economics", () => {
@@ -231,6 +349,10 @@ test("non-card Razorpay mock preserves its prior client economics", () => {
 test("card product discovery is protected and exposes no checkout ownership input", () => {
   assert.match(routes, /"\/api\/pandit\/membership-card-products"/);
   assert.match(routes, /Pandit authentication required/);
+  assert.match(routes, /const pandit = await storage\.getPandit\(panditId\)/);
+  assert.match(routes, /if \(!isPanditEligibleForMembershipCardOrder\(pandit\)\)/);
+  assert.match(routes, /status\(403\)\.json\(\{ message: "An approved Pandit membership is required to view membership cards"/);
+  assert.match(routes, /pandit\?\.verified === true[\s\S]*\^\\d\{10\}\$/);
   assert.match(routes, /eq\(products\.productType, "pandit_membership_card"\)/);
   assert.match(routes, /variationGroupId === "pandit-membership-card"/);
   assert.match(routes, /available: product\.stock > 0/);

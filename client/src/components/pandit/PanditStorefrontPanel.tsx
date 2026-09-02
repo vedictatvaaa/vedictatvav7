@@ -1,6 +1,6 @@
-// Pandit-portal: Storefront editor + Card orders + Referrals.
-// Three thin panels backed by /api/pandit/storefront, /api/pandit/card-order,
-// /api/pandit/referrals. All edits are auto-saved on submit (no debounce noise).
+// Pandit-portal: Storefront editor + membership-card history + Referrals.
+// Panels are backed by their respective authenticated Pandit APIs. Storefront
+// edits are auto-saved on submit (no debounce noise).
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw, Wallet, CreditCard, Package, Image, CalendarDays, Trash2 } from "lucide-react";
 import { getPanditToken } from "@/lib/panditAuth";
+import { useCart } from "@/lib/cart";
+import type { Product } from "@shared/schema";
 import { PanditEmptyState, PanditErrorState, PanditInlineLoading, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
+import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 
 const headers = () => ({
   "Content-Type": "application/json",
@@ -35,7 +38,7 @@ interface SfData {
     themeColor: string | null; bannerImage: string | null;
     productIds: number[]; featuredPujas: string[]; status: "draft" | "pending_review" | "published" | "suspended"; isPublished: boolean; viewCount: number;
   };
-  pandit: { id: number; name: string; slug: string; tier: string; productCommissionPct: number; membershipNo?: string | null; cardIssued?: boolean; cardIssuedAt?: string | null };
+  pandit: { id: number; name: string; slug: string; tier: string; productCommissionPct: number; registrationNo?: string | null; membershipNo?: string | null; cardIssued?: boolean; cardIssuedAt?: string | null };
   products: ProductLite[];
   commissionPct: number;
   publicUrl: string;
@@ -525,27 +528,133 @@ export function PanditStorefrontEditor({ focus = "storefront" }: { focus?: "stor
   );
 }
 
-// One ₹999 physical card per membership. Razorpay checkout, then admin
-// prints and ships from the affiliate panel.
-declare global {
-  interface Window { Razorpay: any }
-}
+type MembershipCardProduct = {
+  id: number;
+  slug: string | null;
+  name: string;
+  description: string;
+  image: string;
+  category: string;
+  productType: "pandit_membership_card";
+  price: number;
+  stock: number;
+  available: boolean;
+  variationGroupId: string;
+  variationLabel: string | null;
+};
 
-function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (document.getElementById("razorpay-script")) { resolve(true); return; }
-    const s = document.createElement("script");
-    s.id = "razorpay-script";
-    s.src = "https://checkout.razorpay.com/v1/checkout.js";
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.body.appendChild(s);
+function PanditMembershipCardStore() {
+  const { items, addToCart } = useCart();
+  const { toast } = useToast();
+  const products = useQuery<{ variationGroupId: string; products: MembershipCardProduct[] }>({
+    queryKey: ["pandit-membership-card-products"],
+    queryFn: () => api("/api/pandit/membership-card-products"),
   });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const cardQuantityInCart = items.reduce((sum, item) =>
+    sum + (item.product.productType === "pandit_membership_card" ? item.quantity : 0), 0);
+  const selected = (products.data?.products || []).find(product => product.id === selectedId)
+    || (products.data?.products || []).find(product => product.available) || null;
+  const selectedExistingQuantity = selected
+    ? items.filter(item => item.product.id === selected.id).reduce((sum, item) => sum + item.quantity, 0)
+    : 0;
+  const quantityLimit = selected
+    ? Math.max(0, Math.min(10 - cardQuantityInCart, selected.stock - selectedExistingQuantity))
+    : 0;
+  const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    if (selectedId === null && selected) setSelectedId(selected.id);
+  }, [selected, selectedId]);
+  useEffect(() => {
+    setQuantity(current => Math.max(1, Math.min(current, Math.max(1, quantityLimit))));
+  }, [quantityLimit]);
+
+  const addSelectedToCart = () => {
+    if (!selected || !selected.available || quantityLimit < 1) return;
+    // The membership-card endpoint is the source of the live price, stock and
+    // variation; no Pandit ownership data is placed in the client cart.
+    addToCart(selected as unknown as Product, Math.min(quantity, quantityLimit), selected.variationLabel || undefined);
+    toast({ title: "Membership card added", description: "Your physical card is ready in the cart." });
+  };
+
+  const errorMessage = products.error instanceof Error ? products.error.message : "";
+  const accessDenied = /authentication|required|approved Pandit membership/i.test(errorMessage);
+
+  return (
+    <Card className="border-[#D4AF37]/40 bg-gradient-to-br from-[#FFFAEC] to-white" data-testid="pandit-membership-card-store">
+      <CardContent className="space-y-4 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-[#4a1a22]">Physical membership card</h3>
+            <p className="mt-1 text-sm text-stone-600">Choose your Plastic or Metal membership card. It is added to your regular cart for checkout and delivery.</p>
+          </div>
+          <Button asChild variant="outline" className="border-[#6D2B35]/30 text-[#6D2B35]">
+            <a href="/cart">View cart</a>
+          </Button>
+        </div>
+
+        {products.isLoading ? (
+          <PanditInlineLoading label="Loading membership card options…" />
+        ) : products.isError ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <p className="font-semibold">{accessDenied ? "Membership card access is unavailable" : "Membership card options could not be loaded"}</p>
+            <p className="mt-1">{accessDenied ? "Please sign in with an approved Pandit membership to order a physical card." : errorMessage || "Please try again."}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void products.refetch()}>Try again</Button>
+          </div>
+        ) : !products.data?.products.length ? (
+          <div className="rounded-md border border-dashed border-[#D4AF37]/50 p-4 text-sm text-stone-600">Membership cards are not available to order right now. Please check back later.</div>
+        ) : (
+          <>
+            <fieldset>
+              <legend className="text-sm font-semibold text-[#4a1a22]">Card material</legend>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {products.data.products.map(product => {
+                  const outOfStock = product.stock <= 0;
+                  const unavailable = !product.available && !outOfStock;
+                  const selectedOption = selected?.id === product.id;
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      disabled={unavailable || outOfStock}
+                      aria-pressed={selectedOption}
+                      onClick={() => setSelectedId(product.id)}
+                      className={`rounded-lg border p-4 text-left transition-colors ${selectedOption ? "border-[#6D2B35] bg-[#FFFAEC] ring-1 ring-[#D4AF37]" : "border-stone-200 bg-white"} ${unavailable || outOfStock ? "cursor-not-allowed opacity-60" : "hover:border-[#D4AF37]"}`}
+                    >
+                      <div className="flex gap-3">
+                        <img src={product.image} alt="" className="h-14 w-14 rounded object-cover" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[#4a1a22]">{product.variationLabel || product.name}</p>
+                          <p className="mt-0.5 text-sm font-bold text-[#6D2B35]">₹{product.price.toLocaleString("en-IN")}</p>
+                          <p className="mt-1 text-xs text-stone-500">{outOfStock ? "Out of stock" : unavailable ? "Unavailable" : `${product.stock} available`}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            {selected && (
+              <div className="flex flex-wrap items-end justify-between gap-3 border-t border-[#D4AF37]/25 pt-4">
+                <div>
+                  <Label htmlFor="membership-card-quantity">Quantity</Label>
+                  <Input id="membership-card-quantity" className="mt-1 w-24" type="number" min={1} max={Math.max(1, quantityLimit)} value={quantity} disabled={!selected.available || quantityLimit < 1} onChange={event => setQuantity(Math.max(1, Math.min(Math.max(1, quantityLimit), Number(event.target.value) || 1)))} />
+                  <p className="mt-1 text-xs text-stone-500">{quantityLimit > 0 ? `${quantityLimit} more can be added (maximum 10 membership cards per order).` : "You already have the maximum of 10 membership cards in your cart."}</p>
+                </div>
+                <Button onClick={addSelectedToCart} disabled={!selected.available || quantityLimit < 1} className="bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29]" data-testid="btn-add-membership-card">
+                  Add to cart · ₹{(selected.price * Math.min(quantity, quantityLimit || quantity)).toLocaleString("en-IN")}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
-const CARD_PRICE_INR = 999;
-
-type PanditMe = { pandit: { name?: string; phone?: string; city?: string; state?: string } };
+type PanditMe = { pandit: { name?: string; phone?: string; city?: string; state?: string; registrationNo?: string | null; membershipNo?: string | null; specialization?: string | string[] | null; image?: string | null; slug?: string | null } };
 
 type CardOrderRow = {
   id: number;
@@ -558,150 +667,26 @@ type CardOrderRow = {
   createdAt: string;
 };
 
-type CreateCardOrderResponse = {
-  orderId: number;
-  razorpayOrderId: string;
-  amount: number;
-  currency: string;
-  key: string;
-  unitPrice: number;
-  totalAmount: number;
-  mock?: boolean;
-};
-
-type CardOrderForm = {
-  cardType: "printed" | "nfc";
-  shippingName: string;
-  shippingPhone: string;
-  shippingAddress: string;
-  shippingCity: string;
-  shippingState: string;
-  shippingPincode: string;
-  notes: string;
-};
-
 export function PanditCardOrders() {
-  const { toast } = useToast();
-  const qc = useQueryClient();
   const orders = useQuery<{ items: CardOrderRow[] }>({ queryKey: ["pandit-card-orders"], queryFn: () => api("/api/pandit/card-orders") });
   const me = useQuery<PanditMe>({ queryKey: ["pandit-me"], queryFn: () => api("/api/pandit/me") });
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<CardOrderForm>({
-    cardType: "printed",
-    shippingName: "", shippingPhone: "", shippingAddress: "",
-    shippingCity: "", shippingState: "", shippingPincode: "",
-    notes: "",
-  });
-  const [busy, setBusy] = useState(false);
 
   const items = orders.data?.items || [];
-  const hasIssuedCard = items.some((o) => ["paid", "printing", "shipped", "delivered"].includes(o.status));
 
   if (orders.isLoading || me.isLoading) return <PanditLoadingState label="Loading Pandit card…" />;
-  if (orders.isError || me.isError) return <div className="space-y-5"><PanditSectionHeader title="Pandit card" description="Order and track the physical card that shares your verified practice." /><PanditErrorState detail="Your card details could not be loaded." onRetry={() => { void orders.refetch(); void me.refetch(); }} /></div>;
-
-  const openCheckout = () => {
-    const p = me.data?.pandit;
-    setForm((f) => ({
-      ...f,
-      shippingName: f.shippingName || p?.name || "",
-      shippingPhone: f.shippingPhone || p?.phone || "",
-      shippingCity: f.shippingCity || p?.city || "",
-      shippingState: f.shippingState || p?.state || "",
-    }));
-    setOpen(true);
-  };
-
-  const checkoutAndPay = async () => {
-    try {
-      setBusy(true);
-      const scriptOk = await loadRazorpayScript();
-      if (!scriptOk) {
-        toast({ title: "Payment gateway error", description: "Could not load the payment gateway. Please try again.", variant: "destructive" });
-        setBusy(false);
-        return;
-      }
-      const created = await api<CreateCardOrderResponse>("/api/pandit/card-order", {
-        method: "POST",
-        body: JSON.stringify(form),
-      });
-
-      const options = {
-        key: created.key,
-        amount: created.amount,
-        currency: created.currency,
-        name: "Vedic Tatva",
-        description: "Pandit Card (printed + shipped to your address)",
-        order_id: created.razorpayOrderId,
-        prefill: { name: form.shippingName, contact: form.shippingPhone },
-        theme: { color: "#6D2B35" },
-        handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
-          try {
-            const verify = await api<{ success: boolean; idempotent?: boolean; message?: string }>("/api/pandit/card-order/verify", {
-              method: "POST",
-              body: JSON.stringify({
-                orderId: created.orderId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }),
-            });
-            if (verify.success) {
-              toast({ title: "Payment successful", description: "Admin will print and ship your card within 5-7 working days." });
-              setOpen(false);
-              qc.invalidateQueries({ queryKey: ["pandit-card-orders"] });
-            } else {
-              toast({ title: "Payment verification failed", description: verify.message || "Please contact support.", variant: "destructive" });
-            }
-          } catch (verr) {
-            const msg = verr instanceof Error ? verr.message : "Please contact support.";
-            toast({ title: "Verification error", description: msg, variant: "destructive" });
-          } finally { setBusy(false); }
-        },
-        modal: { ondismiss: () => setBusy(false) },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", (resp: { error?: { description?: string } }) => {
-        toast({ title: "Payment failed", description: resp.error?.description || "Please try again.", variant: "destructive" });
-        setBusy(false);
-      });
-      rzp.open();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Please try again.";
-      toast({ title: "Could not start checkout", description: msg, variant: "destructive" });
-      setBusy(false);
-    }
-  };
+  if (orders.isError || me.isError) return <div className="space-y-5"><PanditSectionHeader title="Pandit card" description="Order physical membership cards through your cart and review previous card orders." /><PanditErrorState detail="Your card details could not be loaded." onRetry={() => { void orders.refetch(); void me.refetch(); }} /></div>;
 
   return (
     <div className="min-w-0 space-y-5" data-testid="pandit-card">
-      <PanditSectionHeader title="Pandit card" description="Order and track the physical card that shares your verified practice." />
-      <Card className="border-[#d8c8ae]/75 bg-[#fffdf8]">
-        <CardContent className="p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-bold text-[#4a1a22]">Order your physical Pandit card</h3>
-              <p className="text-sm text-stone-600 mt-1">Premium printed or NFC card with your membership number, QR code and contact details — shipped to your door.</p>
-              <div className="text-xs text-stone-500 mt-2">₹{CARD_PRICE_INR} · One card per membership · Ships within 5-7 working days after payment</div>
-            </div>
-            <Button
-              onClick={openCheckout}
-              disabled={hasIssuedCard}
-              className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]"
-              data-testid="btn-order-card"
-            >
-              {hasIssuedCard ? "Card already issued" : `Order card · ₹${CARD_PRICE_INR}`}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
+      <PanditSectionHeader title="Pandit card" description="Order physical membership cards through your cart and track earlier card orders." />
+      {me.data?.pandit?.registrationNo && /^\d{10}$/.test(me.data.pandit.registrationNo) ? <PanditMembershipCard credential={{ registrationNo: me.data.pandit.registrationNo, name: me.data.pandit.name, city: me.data.pandit.city, state: me.data.pandit.state, specialization: me.data.pandit.specialization, image: me.data.pandit.image, status: "verified", profilePath: me.data.pandit.slug ? `/pandit/${me.data.pandit.slug}` : null }} /> : null}
+      <PanditMembershipCardStore />
       <Card>
         <CardContent className="p-5">
-          <h3 className="font-bold text-[#4a1a22] mb-3">Card order</h3>
+          <h3 className="font-bold text-[#4a1a22] mb-1">Previous Printed/NFC card orders</h3>
+          <p className="mb-3 text-sm text-stone-600">This read-only history is retained for tracking earlier card purchases. New cards are ordered above through your regular cart.</p>
           {items.length === 0 ? (
-            <PanditEmptyState icon={CreditCard} title="No card ordered yet" detail="Choose a printed or NFC card when you’re ready to share your practice in person." />
+            <PanditEmptyState icon={CreditCard} title="No previous Printed/NFC card orders" detail="New Plastic or Metal membership cards can be ordered through your regular cart above." />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -725,45 +710,6 @@ export function PanditCardOrders() {
         </CardContent>
       </Card>
 
-      {open && (
-        <div className="fixed inset-0 bg-black/40 z-50 grid place-items-center p-4" onClick={() => !busy && setOpen(false)}>
-          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="p-5 space-y-3">
-              <div>
-                <h3 className="font-bold text-[#4a1a22]">Order Pandit card</h3>
-                <p className="text-xs text-stone-500 mt-1">One card per membership. ₹{CARD_PRICE_INR} including printing and shipping.</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setForm({ ...form, cardType: "printed" })} className={`p-3 rounded-md border text-left text-sm ${form.cardType === "printed" ? "border-[#6D2B35] bg-[#FFFAEC]" : "border-stone-200"}`} data-testid="opt-printed"><div className="font-semibold">Printed</div><div className="text-xs text-stone-500">Premium card stock</div></button>
-                <button onClick={() => setForm({ ...form, cardType: "nfc" })} className={`p-3 rounded-md border text-left text-sm ${form.cardType === "nfc" ? "border-[#6D2B35] bg-[#FFFAEC]" : "border-stone-200"}`} data-testid="opt-nfc"><div className="font-semibold">NFC</div><div className="text-xs text-stone-500">Tap-to-share</div></button>
-              </div>
-              <div><Label>Full name</Label><Input value={form.shippingName} onChange={(e) => setForm({ ...form, shippingName: e.target.value })} /></div>
-              <div><Label>Phone</Label><Input value={form.shippingPhone} onChange={(e) => setForm({ ...form, shippingPhone: e.target.value })} /></div>
-              <div><Label>Address</Label><Textarea rows={2} value={form.shippingAddress} onChange={(e) => setForm({ ...form, shippingAddress: e.target.value })} /></div>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <Input placeholder="City" value={form.shippingCity} onChange={(e) => setForm({ ...form, shippingCity: e.target.value })} />
-                <Input placeholder="State" value={form.shippingState} onChange={(e) => setForm({ ...form, shippingState: e.target.value })} />
-                <Input placeholder="Pincode" value={form.shippingPincode} onChange={(e) => setForm({ ...form, shippingPincode: e.target.value })} />
-              </div>
-              <div><Label>Notes (optional)</Label><Textarea rows={2} maxLength={500} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Any special instructions?" /></div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="text-sm"><span className="text-stone-500">Total:</span> <span className="font-semibold text-[#4a1a22]">₹{CARD_PRICE_INR}</span></div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
-                  <Button
-                    onClick={checkoutAndPay}
-                    disabled={busy || !form.shippingName || !form.shippingPhone || !form.shippingAddress || !form.shippingCity || !form.shippingState || !form.shippingPincode}
-                    className="bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]"
-                    data-testid="btn-place-card-order"
-                  >
-                    {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Pay ₹{CARD_PRICE_INR}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

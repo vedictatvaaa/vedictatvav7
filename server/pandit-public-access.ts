@@ -60,6 +60,7 @@ export function publicStorefrontPanditDto(pandit: any) {
     rating: pandit.rating,
     reviewCount: pandit.reviewCount,
     verified: pandit.verified === true,
+    registrationNo: pandit.registrationNo,
     image: pandit.image,
     bio: pandit.bio,
   };

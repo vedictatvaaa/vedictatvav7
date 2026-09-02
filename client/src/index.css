@@ -613,3 +613,25 @@ html.lenis body {
     scroll-behavior: auto;
   }
 }
+
+/* Lifetime Pandit credential — deliberately self-contained so it prints as a
+   single ceremonial object rather than inheriting application chrome. */
+@keyframes vt-card-arrive { from { opacity: 0; transform: translateY(12px) rotateX(4deg); } to { opacity: 1; transform: translateY(0) rotateX(0); } }
+.vt-membership-card { animation: vt-card-arrive 620ms cubic-bezier(.22,1,.36,1) both; perspective: 1400px; }
+.vt-membership-card__face { position: relative; aspect-ratio: 1.586 / 1; overflow: hidden; border: 1px solid #c79839; border-radius: clamp(14px,2.6vw,27px); background: #f8edd8; box-shadow: 0 20px 42px rgba(64,19,22,.24), inset 0 0 0 4px rgba(255,231,169,.56); color: #351b1e; }
+.vt-membership-card__face::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.23; background-image: radial-gradient(rgba(94,54,26,.42) .45px, transparent .55px); background-size:5px 5px; mix-blend-mode:multiply; }
+.vt-card-maroon { background: linear-gradient(118deg,#3e0711,#741526 48%,#3b0710); color:#ffe9a1; }
+.vt-card-gold-line { background: linear-gradient(90deg,transparent,#e9c76d 16%,#fff1b2 50%,#e9c76d 84%,transparent); }
+.vt-card-temple { position:absolute; right:-2%; bottom:8%; width:40%; color:#84552d; opacity:.48; }
+.vt-card-mandala { position:absolute; right:4%; top:22%; width:30%; opacity:.15; color:#7e461e; }
+.vt-card-portrait { background:linear-gradient(145deg,#d7bc7d,#6b3223); border:3px solid #d2a64b; box-shadow:inset 0 0 0 3px #f8e7b7; }
+.vt-card-portrait img { width:100%; height:100%; object-fit:cover; }
+.vt-card-verified { border:1px solid rgba(234,199,109,.75); background:rgba(67,6,15,.78); color:#ffe3a1; }
+.vt-card-qr { background:#fff9eb; border:2px solid #4b111a; box-shadow:inset 0 0 0 4px #e8cc83; }
+.vt-card-map { background:linear-gradient(180deg,#df8335 0 33%,#fbf0d0 33% 66%,#34776c 66%); clip-path:polygon(35% 0,60% 7%,69% 19%,82% 29%,71% 42%,76% 57%,63% 71%,57% 93%,46% 81%,33% 76%,24% 58%,10% 46%,21% 31%,18% 15%); }
+.vt-card-flip { transform-style:preserve-3d; transition:transform .7s cubic-bezier(.2,.75,.2,1); }
+.vt-card-flip[data-back="true"] { transform:rotateY(180deg); }
+.vt-card-flip__side { backface-visibility:hidden; }
+.vt-card-flip__back { position:absolute; inset:0; transform:rotateY(180deg); }
+@media (prefers-reduced-motion: reduce) { .vt-membership-card,.vt-card-flip { animation:none; transition:none; } }
+@media print { body * { visibility:hidden !important; } [data-membership-print], [data-membership-print] * { visibility:visible !important; } [data-membership-print] { position:fixed; inset:0; width:100vw; display:grid; place-items:center; background:#fff !important; } .vt-membership-card { width:min(95vw,860px) !important; } }

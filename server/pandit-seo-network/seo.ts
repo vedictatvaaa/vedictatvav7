@@ -24,7 +24,8 @@ export function buildPanditProfileSeoHead(
   if (!profile.pandit?.slug) throw new Error("Public Pandit profile slug is required");
   const pandit = profile.pandit;
   const canonical = profile.canonicalUrl || `/pandit/${pandit.slug}`;
-  const canonicalUrl = `${baseUrl}${canonical}`;
+  const canonicalBaseUrl = baseUrl.replace(/\/+$/, "");
+  const canonicalUrl = `${canonicalBaseUrl}${canonical}`;
   const cityPart = pandit.city ? ` in ${pandit.city}` : "";
   const ratingPart = pandit.rating && pandit.reviewCount
     ? ` · ${Number(pandit.rating).toFixed(1)}★ (${pandit.reviewCount})`
@@ -60,6 +61,16 @@ export function buildPanditProfileSeoHead(
       reviewCount: Number(pandit.reviewCount),
       bestRating: 5,
       worstRating: 1,
+    };
+  }
+  if (pandit.verified === true && typeof pandit.registrationNo === "string"
+      && /^[0-9]{10}$/.test(pandit.registrationNo)) {
+    person.identifier = pandit.registrationNo;
+    person.hasCredential = {
+      "@type": "EducationalOccupationalCredential",
+      "@id": `${canonicalUrl}#credential`,
+      credentialCategory: "Pandit Registration",
+      recognizedBy: { "@id": `${canonicalBaseUrl}/#organization` },
     };
   }
   const offers = profile.services.map((service) => ({
@@ -98,8 +109,8 @@ export function buildPanditProfileSeoHead(
           "@type": "BreadcrumbList",
           "@id": `${canonicalUrl}#breadcrumb`,
           itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: `${baseUrl}/` },
-            { "@type": "ListItem", position: 2, name: "Pandits", item: `${baseUrl}/book-pandit-online` },
+            { "@type": "ListItem", position: 1, name: "Home", item: `${canonicalBaseUrl}/` },
+            { "@type": "ListItem", position: 2, name: "Pandits", item: `${canonicalBaseUrl}/book-pandit-online` },
             { "@type": "ListItem", position: 3, name: pandit.name, item: canonicalUrl },
           ],
         },

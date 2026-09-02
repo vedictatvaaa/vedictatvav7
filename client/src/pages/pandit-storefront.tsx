@@ -17,6 +17,7 @@ import { useCart } from "@/lib/cart";
 import { trackPanditSeoEvent } from "@/lib/analytics";
 import { bookingContextParams } from "@/lib/puja-service-map";
 import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
+import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 
 type Service = {
   id: number; masterServiceId: number; name: string; slug: string; category?: string; description?: string;
@@ -27,7 +28,7 @@ type StorefrontDto = {
   pandit: {
     id: number; cityId?: number; stateId?: number; name: string; slug?: string; title?: string; city?: string; state?: string;
     regionalOrigin?: string; specialization?: string[] | string; languages?: string[] | string;
-    experience?: number; fees?: number; rating?: number; reviewCount?: number; verified?: boolean;
+    experience?: number; fees?: number; rating?: number; reviewCount?: number; verified?: boolean; registrationNo?: string | null;
     image?: string; bio?: string; education?: string;
   };
   storefront?: {
@@ -191,6 +192,7 @@ export default function PanditStorefrontPage() {
       </section>
 
       <section className="border-b border-[#D5AE59]/30 bg-[#F7EBD1]"><div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-[#D5AE59]/35 sm:grid-cols-4">{[...(pandit.verified ? [{i:ShieldCheck,t:"Verified profile"}] : []),{i:CalendarDays,t:"Booking pathway"},{i:MessageCircle,t:"Share requirements"},{i:Globe2,t:"Published services"}].map(({i:Icon,t}) => <div key={t} className="flex items-center gap-3 px-5 py-5 text-xs font-semibold text-[#6D5A50]"><Icon className="h-5 w-5 text-[#A86C1B]" />{t}</div>)}</div></section>
+      {pandit.registrationNo && /^\d{10}$/.test(pandit.registrationNo) && <section className="bg-[#f1dfc0] px-5 py-16 sm:py-20"><div className="mx-auto max-w-4xl"><SectionHeading eyebrow="A permanent record of practice" title="Lifetime Vedic Tatva membership" copy="A public-safe credential linked to this approved Pandit profile."/><PanditMembershipCard credential={{ registrationNo: pandit.registrationNo, name: pandit.name, image: pandit.image, city: pandit.city, state: pandit.state, specialization: pandit.specialization, status: pandit.verified ? "verified" : "inactive", profilePath: canonicalPath }}/></div></section>}
 
       <section id="services" className="mx-auto max-w-6xl px-5 py-16 sm:py-24"><SectionHeading eyebrow="The ceremony catalogue" title="Choose what your family needs" copy="Each offering is described plainly so you can prepare with confidence. Final availability and price are confirmed by the booking service." /><div className="mb-8 flex flex-wrap gap-2" role="tablist" aria-label="Service categories">{categories.map(item => <button key={item} role="tab" aria-selected={category === item} onClick={() => setCategory(item)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${category === item ? "border-[#7C291F] bg-[#7C291F] text-[#FFF8E8]" : "border-[#D5AE59]/60 text-[#7C291F] hover:bg-[#F7EBD1]"}`}>{item}</button>)}</div>{filteredServices.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{filteredServices.map(service => <ServiceCard key={service.id} service={service} pandit={pandit} />)}</div> : <div className="border border-dashed border-[#D5AE59] p-10 text-center text-sm text-[#806E62]">Services will appear here when published.</div>}</section>
 

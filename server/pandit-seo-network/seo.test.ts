@@ -39,3 +39,33 @@ test("incomplete public profiles remain useful noindex follow pages", () => {
   assert.equal(head.robotsIndex, false);
   assert.equal(head.robotsFollow, true);
 });
+
+test("verified Pandit SEO includes only an exact canonical registration credential", () => {
+  const head = buildPanditProfileSeoHead({
+    ...profile,
+    pandit: { ...profile.pandit, registrationNo: "1001000156" },
+  }, "https://vedictatva.com/");
+  const person = head.jsonLd[0].payload;
+  assert.equal(person.identifier, "1001000156");
+  assert.deepEqual(person.hasCredential, {
+    "@type": "EducationalOccupationalCredential",
+    "@id": "https://vedictatva.com/pandit/acharya-test#credential",
+    credentialCategory: "Pandit Registration",
+    recognizedBy: { "@id": "https://vedictatva.com/#organization" },
+  });
+
+  for (const registrationNo of ["100100015", "１００１０００１５６", undefined]) {
+    const invalid = buildPanditProfileSeoHead({
+      ...profile,
+      pandit: { ...profile.pandit, registrationNo },
+    }, "https://vedictatva.com").jsonLd[0].payload;
+    assert.equal("identifier" in invalid, false);
+    assert.equal("hasCredential" in invalid, false);
+  }
+  const unverified = buildPanditProfileSeoHead({
+    ...profile,
+    pandit: { ...profile.pandit, verified: false, registrationNo: "1001000156" },
+  }, "https://vedictatva.com").jsonLd[0].payload;
+  assert.equal("identifier" in unverified, false);
+  assert.equal("hasCredential" in unverified, false);
+});

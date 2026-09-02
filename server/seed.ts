@@ -47,7 +47,15 @@ export async function seedDatabase() {
   }
 
   const existingProducts = await db.select().from(products);
-  const oldProducts = existingProducts.filter(p => !p.name.startsWith("Vedic Tatva"));
+  const governedProductSlugs = new Set([
+    "pandit-membership-card-plastic",
+    "pandit-membership-card-metal",
+  ]);
+  const oldProducts = existingProducts.filter(p =>
+    !p.name.startsWith("Vedic Tatva")
+    && p.productType !== "pandit_membership_card"
+    && !governedProductSlugs.has(p.slug || "")
+  );
   if (oldProducts.length > 0) {
     console.log(`Cleaning up ${oldProducts.length} old non-Vedic-Tatva products...`);
     for (const p of oldProducts) {

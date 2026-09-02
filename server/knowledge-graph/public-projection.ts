@@ -50,7 +50,7 @@ const PUBLIC_STATUSES: Readonly<Record<EntityType, readonly string[]>> = {
   REVIEW: ["APPROVED", "PUBLISHED"], YATRA: ["ACTIVE"],
 };
 const SUMMARY_KEYS: Readonly<Record<EntityType, readonly string[]>> = {
-  PUJA: ["category"], PANDIT: ["city", "specialization"], LOCATION: ["kind", "state"],
+  PUJA: ["category"], PANDIT: ["city", "specialization", "registrationNo"], LOCATION: ["kind", "state"],
   TIRTH: ["state"], TEMPLE: ["state"], PRODUCT: ["category", "productType"],
   ARTICLE: ["category"], SERVICE: ["category", "serviceType"], REVIEW: ["rating"],
   YATRA: ["route", "durationDays"],
@@ -83,6 +83,7 @@ function safeSummary(entity: AdminEntityDto) {
   const result: Record<string, string | number | boolean | null> = {};
   for (const field of SUMMARY_KEYS[entity.type]) {
     const value = entity.summary[field];
+    if (field === "registrationNo" && (typeof value !== "string" || !/^[0-9]{10}$/.test(value))) continue;
     if (value === null || ["string", "number", "boolean"].includes(typeof value)) result[field] = value as any;
   }
   return result;

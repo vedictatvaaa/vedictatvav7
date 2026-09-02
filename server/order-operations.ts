@@ -108,3 +108,39 @@ export function verifyInventory(items: unknown, products: Array<{ id: number; st
     return { status: availableQuantity >= requiredQuantity ? "ready" as const : "shortage" as const, requiredQuantity, availableQuantity, shortBy: Math.max(0, requiredQuantity - availableQuantity) };
   });
 }
+
+export type InventoryAllocation = { productId: number; quantity: number };
+
+/** JSON-safe, deterministic aggregation used by checkout intents and COD. */
+export function membershipCardAllocations(items: unknown): InventoryAllocation[] {
+  const totals = new Map<number, number>();
+  for (const item of Array.isArray(items) ? items : []) {
+    if (item?.productType !== "pandit_membership_card") continue;
+    const productId = Number(item.productId), quantity = Number(item.quantity);
+    if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) || quantity < 1) throw new Error("Invalid membership card allocation");
+    totals.set(productId, (totals.get(productId) || 0) + quantity);
+  }
+  return Array.from(totals, ([productId, quantity]) => ({ productId, quantity })).sort((a, b) => a.productId - b.productId);
+}
+
+/** Reject malformed/tampered persisted payloads rather than silently losing stock. */
+export function parseInventoryAllocations(value: unknown): InventoryAllocation[] {
+  if (!Array.isArray(value)) throw new Error("Invalid checkout inventory allocations");
+  const parsed = membershipCardAllocations(value.map((entry: any) => ({ ...entry, productType: "pandit_membership_card" })));
+  if (parsed.length !== value.length) throw new Error("Duplicate checkout inventory allocation");
+  return parsed;
+}
+
+/** Shared production seam: callers provide the transaction-bound conditional update. */
+export async function decrementMembershipCardInventory(
+  value: unknown,
+  decrementIfAvailable: (allocation: InventoryAllocation) => Promise<boolean>,
+): Promise<InventoryAllocation[]> {
+  const allocations = parseInventoryAllocations(value);
+  for (const allocation of allocations) {
+    if (!await decrementIfAvailable(allocation)) {
+      throw Object.assign(new Error("Requested membership card quantity is unavailable"), { status: 409 });
+    }
+  }
+  return allocations;
+}

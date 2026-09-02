@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { bookingContextParams } from "@/lib/puja-service-map";
 import type { Pandit, PanditReview, PanditChat } from "@shared/schema";
+import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 
 export default function PanditProfile() {
   const [, paramsId] = useRoute("/pandit-profile/:id");
@@ -179,6 +180,12 @@ export default function PanditProfile() {
             image: pandit.image || undefined,
             url: pandit?.slug ? `/pandit/${pandit.slug}` : "/book-pandit-online",
             worksFor: "Vedic Tatva",
+            registrationNo: pandit.verified
+              && !pandit.onLeave
+              && pandit.availability !== "unavailable"
+              && pandit.locationReviewStatus === "resolved"
+              ? pandit.registrationNo
+              : undefined,
           }),
         ]}
       />
@@ -327,6 +334,9 @@ export default function PanditProfile() {
                 </div>
               </CardContent>
             </Card>
+            {pandit.registrationNo && /^\d{10}$/.test(pandit.registrationNo) && (
+              <PanditMembershipCard credential={{ registrationNo: pandit.registrationNo, name: pandit.name, image: pandit.image, city: pandit.city, specialization: pandit.specialization, status: pandit.verified ? "verified" : "inactive", profilePath: pandit.slug ? `/pandit/${pandit.slug}` : null }} />
+            )}
 
             {(reviews || []).length > 0 && (
               <Card className="rounded-lg border border-[#D4AF37]/20 bg-white shadow-none">

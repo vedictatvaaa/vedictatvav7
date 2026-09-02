@@ -164,6 +164,38 @@ export const orders = pgTable("orders", {
   createdAtIdx: index("orders_created_at_idx").on(t.createdAt),
 }));
 
+// A checkout intent is deliberately a payment/order binding, not a place for
+// gateway credentials or signatures.  Its payload is the server-produced
+// snapshot that is used when payment is later confirmed.
+export const checkoutPaymentIntents = pgTable("checkout_payment_intents", {
+  id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
+  gatewayOrderId: text("gateway_order_id").notNull().unique(),
+  canonicalPayload: jsonb("canonical_payload").notNull(),
+  amountPaise: integer("amount_paise").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("INR"),
+  panditId: integer("pandit_id"),
+  status: text("status").notNull().default("pending"),
+  consumedOrderId: integer("consumed_order_id"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  consumedAt: timestamp("consumed_at"),
+}, (t) => ({
+  statusExpiryIdx: index("checkout_payment_intents_status_expiry_idx").on(t.status, t.expiresAt),
+}));
+
+export const orderInventoryAllocations = pgTable("order_inventory_allocations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  productId: integer("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").notNull(),
+  releasedAt: timestamp("released_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  orderProductUnique: uniqueIndex("order_inventory_allocations_order_product_uq").on(t.orderId, t.productId),
+  productReleasedIdx: index("order_inventory_allocations_product_released_idx").on(t.productId, t.releasedAt),
+}));
+
 // Append-only audit trail for operational status changes. Historical orders are
 // intentionally not backfilled: their existing createdAt remains authoritative.
 export const orderStatusEvents = pgTable("order_status_events", {

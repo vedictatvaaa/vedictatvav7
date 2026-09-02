@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { KnowledgeGraphPublicProjector } from "./public-projection";
+import { adminEntityDto, createEntityAdapters } from "./entity-adapters";
 import { destinationSlugAliases, knowledgeGraphQualityRules, temples, tirths } from "@shared/schema";
 import { CANONICAL_DESTINATION_COUNTS } from "@shared/destination-import-data";
 
@@ -56,6 +57,35 @@ const edge = (id: number, targetId: number, overrides: any = {}) => ({
   updatedAt: "2026-02-01T00:00:00.000Z", ...overrides,
 });
 
+test("Pandit adapter selects and safely summarizes only canonical registration numbers", async () => {
+  const selections: Array<Record<string, unknown>> = [];
+  const source = {
+    id: 10, name: "Pandit Test", slug: "pandit-test", city: "Varanasi",
+    specialization: "Vedic Puja", verified: true, availability: "available",
+    registrationNo: "1001000156", createdAt: null, publicEligible: true,
+    membershipNo: "private", legacyRegistrationNo: "private", phone: "9999999999",
+  };
+  const database: any = {
+    select: (selection: Record<string, unknown>) => {
+      selections.push(selection);
+      return { from: () => ({ where: () => ({ limit: async () => [source] }) }) };
+    },
+  };
+  const adapter = createEntityAdapters(database).get("PANDIT")!;
+  const dto = await adapter.get({ type: "PANDIT", id: 10 });
+  assert.equal("registrationNo" in selections[0], true);
+  for (const privateField of ["membershipNo", "legacyRegistrationNo", "phone", "email", "address", "documents", "auth", "application"]) {
+    assert.equal(privateField in selections[0], false);
+  }
+  assert.deepEqual(dto?.summary, {
+    city: "Varanasi", specialization: "Vedic Puja", verified: true, registrationNo: "1001000156",
+  });
+  for (const registrationNo of ["100100015", "１００１０００１５６", undefined]) {
+    const invalid = adminEntityDto("PANDIT", { ...source, registrationNo });
+    assert.equal("registrationNo" in invalid.summary, false);
+  }
+});
+
 test("public projection is empty while gate is off and preview bypasses only that gate", async () => {
   const f = fixture(); f.edges.push(edge(1, 2));
   const projector = new KnowledgeGraphPublicProjector(f.repository, f.adapters);
@@ -64,6 +94,37 @@ test("public projection is empty while gate is off and preview bypasses only tha
   assert.equal(preview.groups[0].items[0].url, "/temple/temple-2");
   f.state.isPublicEnabled = true;
   assert.deepEqual(await projector.project({ type: "PUJA", id: 1 }), preview);
+});
+
+test("preview projects only valid Pandit registration credentials while the public gate remains off", async () => {
+  const f = fixture();
+  const pandit = (registrationNo: unknown) => ({
+    type: "PANDIT", id: 10, name: "Pandit Test", status: "VERIFIED",
+    url: "/pandit/pandit-test", updatedAt: "2026-01-01T00:00:00.000Z",
+    summary: {
+      city: "Varanasi", specialization: "Vedic Puja", registrationNo,
+      membershipNo: "private", legacyRegistrationNo: "private", phone: "9999999999",
+    },
+  });
+  f.records.set("PANDIT:10:", pandit("1001000156"));
+  f.adapters.set("PANDIT", {
+    type: "PANDIT",
+    get: async (ref: any) => f.records.get(`${ref.type}:${ref.id}:${ref.discriminator || ""}`) || null,
+    exists: async () => true, search: async () => [],
+  });
+  f.edges.push(edge(1, 10, { relationshipType: "performed_by", targetEntityType: "PANDIT" }));
+  const projector = new KnowledgeGraphPublicProjector(f.repository, f.adapters);
+  assert.deepEqual(await projector.project({ type: "PUJA", id: 1 }), { groups: [] });
+  const item = (await projector.project({ type: "PUJA", id: 1 }, { bypassGate: true })).groups[0].items[0];
+  assert.deepEqual(item.summary, { city: "Varanasi", specialization: "Vedic Puja", registrationNo: "1001000156" });
+
+  for (const registrationNo of ["100100015", "１００１０００１５６", undefined]) {
+    f.records.set("PANDIT:10:", pandit(registrationNo));
+    const preview = await new KnowledgeGraphPublicProjector(f.repository, f.adapters)
+      .project({ type: "PUJA", id: 1 }, { bypassGate: true });
+    assert.deepEqual(preview.groups[0].items[0].summary, { city: "Varanasi", specialization: "Vedic Puja" });
+  }
+  assert.equal(f.state.isPublicEnabled, false);
 });
 
 test("projection applies eligibility, active, stale, registry, and URL rules", async () => {

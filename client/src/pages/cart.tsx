@@ -231,6 +231,10 @@ export default function CartPage() {
                           size="icon"
                           className="h-9 w-9 md:h-9 md:w-9 rounded-md touch-manipulation text-[#6D2B35]"
                           onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          disabled={item.product.productType === "pandit_membership_card" && (
+                            item.quantity >= item.product.stock ||
+                            items.reduce((sum, cartItem) => sum + (cartItem.product.productType === "pandit_membership_card" ? cartItem.quantity : 0), 0) >= 10
+                          )}
                           data-testid={`btn-increase-qty-${item.product.id}`}
                         >
                           <Plus className="h-3.5 w-3.5" />

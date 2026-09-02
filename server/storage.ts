@@ -569,6 +569,20 @@ export class DatabaseStorage implements IStorage {
         .where(and(eq(orders.id, input.orderId), eq(orders.status, input.expectedStatus)))
         .returning();
       if (!order) return { changed: false };
+      // Only allocations made by the card checkout flow participate.  Marking
+      // them released in the same transaction makes repeated cancellation a
+      // no-op and deliberately excludes refund/shipped/delivered transitions.
+      if (input.nextStatus === "cancelled" && !["shipped", "delivered"].includes(String(input.expectedStatus).toLowerCase())) {
+        const released: any = await tx.execute(dsql`
+          UPDATE order_inventory_allocations
+          SET released_at = now(), updated_at = now()
+          WHERE order_id = ${input.orderId} AND released_at IS NULL
+          RETURNING product_id, quantity
+        `);
+        for (const allocation of released.rows || []) {
+          await tx.execute(dsql`UPDATE products SET stock = stock + ${Number(allocation.quantity)} WHERE id = ${Number(allocation.product_id)}`);
+        }
+      }
       await tx.insert(orderStatusEvents).values({
         orderId: input.orderId,
         previousStatus: input.expectedStatus,

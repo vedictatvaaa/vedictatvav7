@@ -93,7 +93,11 @@ export function adminEntityDto(type: Exclude<EntityType, "LOCATION">, r: any): A
     case "PANDIT": return { type, id: r.id, name: r.name, status: r.publicEligible === undefined
       ? (r.availability === "unavailable" ? "INACTIVE" : (r.verified ? "VERIFIED" : "UNVERIFIED"))
       : (r.publicEligible ? "VERIFIED" : "INACTIVE"),
-      url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: { city: r.city, specialization: r.specialization, verified: r.verified } };
+      url: r.slug ? `/pandit/${r.slug}` : null, updatedAt: iso(r.createdAt), summary: {
+        city: r.city, specialization: r.specialization, verified: r.verified,
+        ...(typeof r.registrationNo === "string" && /^[0-9]{10}$/.test(r.registrationNo)
+          ? { registrationNo: r.registrationNo } : {}),
+      } };
     case "PRODUCT": return { type, id: r.id, name: r.name, status: r.stock > 0 ? "ACTIVE" : "OUT_OF_STOCK", url: r.slug ? `/product/${r.slug}` : null, updatedAt: null, summary: { category: r.category, productType: r.productType, inStock: r.stock > 0 } };
     case "ARTICLE": return { type, id: r.id, name: r.title, status: r.isPublished === false
       ? "DRAFT" : String(r.status).toUpperCase(), url: `/blog/${r.slug}`,
@@ -174,7 +178,7 @@ export function createEntityAdapters(database: KnowledgeGraphDatabase): Readonly
     }),
     tableAdapter(database, {
       type: "PANDIT", table: pandits, idColumn: pandits.id,
-      selection: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, createdAt: pandits.createdAt, publicEligible: panditPublicEligibleSelection },
+      selection: { id: pandits.id, name: pandits.name, slug: pandits.slug, city: pandits.city, specialization: pandits.specialization, verified: pandits.verified, availability: pandits.availability, registrationNo: pandits.registrationNo, createdAt: pandits.createdAt, publicEligible: panditPublicEligibleSelection },
       searchColumns: [pandits.name, pandits.slug, pandits.city],
       toDto: (r) => adminEntityDto("PANDIT", r),
     }),

@@ -101,7 +101,7 @@ import {
 } from "./email-marketing";
 import { insertNewsletterCampaignSchema } from "@shared/schema";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { ageing, allowedTransitions, isOperationallyStale, itemCounts, nextAction, normalizeOrderStatus, paymentProjection, validateTransition, verifyInventory } from "./order-operations";
+import { ageing, allowedTransitions, decrementMembershipCardInventory, isOperationallyStale, itemCounts, membershipCardAllocations, nextAction, normalizeOrderStatus, parseInventoryAllocations, paymentProjection, validateTransition, verifyInventory, type InventoryAllocation } from "./order-operations";
 import { validateCanonicalServiceBookingContext } from "./pandit-booking-context";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
@@ -153,15 +153,41 @@ const upload = multer({
   },
 });
 
-async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{ items?: any[]; message?: string }> {
+function isPanditEligibleForMembershipCardOrder(pandit: any): boolean {
+  return pandit?.verified === true
+    && typeof pandit.registrationNo === "string"
+    && /^\d{10}$/.test(pandit.registrationNo);
+}
+
+async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{ items?: any[]; message?: string; status?: number }> {
   const cardItems = items.filter((item) => item.productType === "pandit_membership_card");
   if (!cardItems.length) return { items };
   const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
   const panditId = await validatePanditSession(token);
   if (!panditId) return { message: "Pandit authentication is required to order membership cards" };
   const pandit = await storage.getPandit(panditId);
-  if (!pandit?.verified || !pandit.registrationNo) {
+  if (!isPanditEligibleForMembershipCardOrder(pandit)) {
     return { message: "An approved Pandit membership is required to order cards" };
+  }
+  const quantitiesByProduct = new Map<number, number>();
+  for (const item of cardItems) {
+    const productId = Number(item.productId);
+    const quantity = Number(item.quantity);
+    if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isInteger(quantity) || quantity < 1) {
+      return { status: 400, message: "Membership card quantity is invalid" };
+    }
+    quantitiesByProduct.set(productId, (quantitiesByProduct.get(productId) || 0) + quantity);
+  }
+  for (const [productId, quantity] of quantitiesByProduct) {
+    // Re-read inventory here rather than trusting the browser or a prior cart
+    // snapshot. This validates all checkout/Razorpay creation paths uniformly.
+    const product = await storage.getProduct(productId);
+    if (!product || product.productType !== "pandit_membership_card") {
+      return { status: 400, message: "Membership card product is unavailable" };
+    }
+    if (product.stock <= 0 || quantity > product.stock) {
+      return { status: 409, message: "Requested membership card quantity is unavailable" };
+    }
   }
   const quantity = cardItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
@@ -2906,6 +2932,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
     const panditId = await validatePanditSession(token);
     if (!panditId) return res.status(401).json({ message: "Pandit authentication required" });
+    const pandit = await storage.getPandit(panditId);
+    if (!isPanditEligibleForMembershipCardOrder(pandit)) {
+      return res.status(403).json({ message: "An approved Pandit membership is required to view membership cards" });
+    }
     const cardProducts = (await db.select().from(products)
       .where(eq(products.productType, "pandit_membership_card")))
       .filter(product => product.variationGroupId === "pandit-membership-card")
@@ -2915,6 +2945,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         name: product.name,
         description: product.description,
         image: product.image,
+        category: product.category,
+        productType: product.productType,
         price: (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price,
         stock: product.stock,
         available: product.stock > 0,
@@ -3313,14 +3345,25 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   app.get("/api/admin/pandits", adminAuthMiddleware, async (req, res) => {
     const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 120) : "";
-    const rows = search
-      ? await db.select().from(pandits).where(or(
-          ilike(pandits.name, `%${search}%`),
-          /^\d{10}$/.test(search) ? eq(pandits.registrationNo, search) : sql`false`,
-          ilike(pandits.phone, `%${search}%`),
-          ilike(pandits.email, `%${search}%`),
-        ))
-      : await db.select().from(pandits);
+    const requestedRegistrationNo = req.query.registrationNo;
+    if (requestedRegistrationNo !== undefined
+      && (typeof requestedRegistrationNo !== "string" || !/^[0-9]{10}$/.test(requestedRegistrationNo))) {
+      return res.status(400).json({ message: "registrationNo must be exactly 10 digits" });
+    }
+    // The explicit identity parameter is deliberately exact and takes
+    // precedence over the broad staff search, which includes private fields.
+    const rows = typeof requestedRegistrationNo === "string"
+      ? await db.select().from(pandits)
+        .where(eq(pandits.registrationNo, requestedRegistrationNo))
+        .limit(1)
+      : search
+        ? await db.select().from(pandits).where(or(
+            ilike(pandits.name, `%${search}%`),
+            /^\d{10}$/.test(search) ? eq(pandits.registrationNo, search) : sql`false`,
+            ilike(pandits.phone, `%${search}%`),
+            ilike(pandits.email, `%${search}%`),
+          ))
+        : await db.select().from(pandits);
     const applicationRows = rows.length
       ? await db.select().from(panditApplications)
       : [];
@@ -3875,6 +3918,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.post("/api/orders", async (req, res) => {
     const parsed = validate(insertOrderSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
+    for (const item of (parsed.data.items as any[]) || []) {
+      const product = item?.productId ? await storage.getProduct(Number(item.productId)) : null;
+      if (product?.productType === "pandit_membership_card") {
+        return res.status(403).json({ message: "Membership cards must be purchased through authenticated checkout" });
+      }
+    }
     const order = await storage.createOrder(parsed.data);
     if (order.customerEmail) {
       try { await storage.markAbandonedCartRecovered(order.customerEmail); } catch {}
@@ -4601,6 +4650,146 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Razorpay ----
+  type CanonicalCheckout = { order: any; amountPaise: number; panditId: number | null; allocations: InventoryAllocation[] };
+  const requestHasMembershipCard = async (items: unknown): Promise<boolean> => {
+    for (const item of Array.isArray(items) ? items : []) {
+      const product = item?.productId ? await storage.getProduct(Number(item.productId)) : null;
+      if (product?.productType === "pandit_membership_card") return true;
+    }
+    return false;
+  };
+  const canonicalizeCheckout = async (req: any, source: any, defaultMethod: "prepaid" | "cod"): Promise<CanonicalCheckout> => {
+    const input = source || {};
+    if (!Array.isArray(input.items) || !input.items.length) throw Object.assign(new Error("Cart is empty"), { status: 400 });
+    const items: any[] = [];
+    for (const line of input.items) {
+      const productId = Number(line?.productId);
+      const quantity = Number(line?.quantity);
+      if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) || quantity < 1) {
+        throw Object.assign(new Error("Cart contains an invalid product or quantity"), { status: 400 });
+      }
+      const product: any = await storage.getProduct(productId);
+      if (!product) throw Object.assign(new Error("Cart contains an unavailable product"), { status: 400 });
+      items.push({ productId, quantity, name: product.name, price: product.salePrice && product.salePrice > 0 ? product.salePrice : product.price,
+        productType: product.productType, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 });
+    }
+    const stamped = await stampPanditMembershipCardItems(req, items);
+    if (!stamped.items) throw Object.assign(new Error(stamped.message || "Membership card authorization failed"), { status: stamped.status || 403 });
+    const trusted = stamped.items;
+    const hasMembershipCard = trusted.some((item: any) => item.productType === "pandit_membership_card");
+    if (hasMembershipCard && (Number(input.loyaltyPointsRedeem || 0) > 0 || input.loyaltyUserId != null)) {
+      throw Object.assign(new Error("Loyalty redemption is not available for membership card orders"), { status: 400 });
+    }
+    const subtotal = trusted.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+    let couponDiscount = 0, couponCode: string | null = null;
+    if (typeof input.couponCode === "string" && input.couponCode.trim()) {
+      const coupon = await storage.getCouponByCode(input.couponCode.toUpperCase().trim());
+      if (coupon && couponIsCurrentlyValid(coupon, subtotal)) { couponDiscount = computeCouponDiscount(coupon, subtotal); couponCode = coupon.code; }
+    }
+    const bundle = new Set(trusted.map((item: any) => item.productId)).size >= 2 ? Math.round(subtotal * .08) : 0;
+    if (bundle > couponDiscount) { couponDiscount = bundle; couponCode = "BUNDLE8"; }
+    const paymentMethod = input.paymentMethod === "cod" ? "cod" : defaultMethod;
+    const prepaidDiscount = paymentMethod === "prepaid" ? Math.round(Math.max(0, subtotal - couponDiscount) * .05) : 0;
+    const shippingCharges = subtotal >= 500 ? 0 : 50;
+    const codCharges = paymentMethod === "cod" ? 40 : 0;
+    const totalAmount = Math.max(0, subtotal - couponDiscount - prepaidDiscount + shippingCharges + codCharges);
+    const allocations = membershipCardAllocations(trusted);
+    return { amountPaise: totalAmount * 100, panditId: allocations.length ? Number(trusted.find((i: any) => i.productType === "pandit_membership_card").panditId) : null, allocations,
+      order: { customerName: String(input.customerName || ""), customerEmail: String(input.customerEmail || ""), customerPhone: String(input.customerPhone || ""),
+        shippingAddress: String(input.shippingAddress || ""), billingAddress: String(input.billingAddress || input.shippingAddress || ""), customerState: String(input.customerState || ""),
+        totalAmount, items: trusted, paymentMethod, couponCode, couponDiscount, prepaidDiscount, shippingCharges, codCharges, status: paymentMethod === "cod" ? "pending" : "confirmed" } };
+  };
+
+  // Locks the intent before inventory.  The conditional updates make the
+  // last-unit race safe without affecting stock semantics for ordinary goods.
+  const consumeCanonicalCheckout = async (intentId: string | null, canonical: CanonicalCheckout, paymentId: string | null) => {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      let intent: any = null;
+      if (intentId) {
+        const r = await client.query("SELECT * FROM checkout_payment_intents WHERE id=$1 FOR UPDATE", [intentId]);
+        intent = r.rows[0];
+        if (!intent) throw Object.assign(new Error("Checkout intent not found"), { status: 404 });
+        if (intent.status === "consumed") {
+          const existing = await client.query("SELECT payment_id FROM orders WHERE id=$1", [intent.consumed_order_id]);
+          if (paymentId && existing.rows[0]?.payment_id !== paymentId) throw Object.assign(new Error("Payment has already been used"), { status: 409 });
+          await client.query("COMMIT"); return { existingOrderId: intent.consumed_order_id };
+        }
+        if (intent.status !== "pending" || new Date(intent.expires_at).getTime() <= Date.now()) {
+          await client.query("UPDATE checkout_payment_intents SET status='expired' WHERE id=$1 AND status='pending'", [intentId]);
+          await client.query("COMMIT");
+          throw Object.assign(new Error("Checkout intent has expired; please start checkout again"), { status: 409 });
+        }
+      }
+      if (paymentId) {
+        const used = await client.query("SELECT id FROM orders WHERE payment_id=$1 LIMIT 1 FOR UPDATE", [paymentId]);
+        if (used.rowCount) throw Object.assign(new Error("Payment has already been used"), { status: 409 });
+      }
+      const allocations = await decrementMembershipCardInventory(canonical.allocations, async ({ productId, quantity }) => {
+        const changed = await client.query("UPDATE products SET stock=stock-$1 WHERE id=$2 AND product_type='pandit_membership_card' AND stock >= $1 RETURNING id", [quantity, productId]);
+        return Boolean(changed.rowCount);
+      });
+      const o = canonical.order;
+      const inserted = await client.query(`INSERT INTO orders (customer_name,customer_email,customer_phone,shipping_address,billing_address,customer_state,total_amount,items,payment_method,coupon_code,coupon_discount,prepaid_discount,shipping_charges,cod_charges,status,payment_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+        [o.customerName, o.customerEmail, o.customerPhone, o.shippingAddress, o.billingAddress, o.customerState, o.totalAmount, JSON.stringify(o.items), o.paymentMethod, o.couponCode, o.couponDiscount, o.prepaidDiscount, o.shippingCharges, o.codCharges, o.status, paymentId]);
+      const orderId = inserted.rows[0].id;
+      for (const { productId, quantity } of allocations) await client.query("INSERT INTO order_inventory_allocations (order_id,product_id,quantity) VALUES ($1,$2,$3)", [orderId, productId, quantity]);
+      if (intentId) await client.query("UPDATE checkout_payment_intents SET status='consumed', consumed_order_id=$2, consumed_at=now() WHERE id=$1", [intentId, orderId]);
+      await client.query("COMMIT");
+      return { orderId };
+    } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
+  };
+
+  // Intent flow: the browser supplies a cart, never a payable amount.
+  app.post("/api/razorpay/create-order", async (req, res, next) => {
+    if (!req.body?.orderData) return next();
+    try {
+      const canonical = await canonicalizeCheckout(req, req.body.orderData, "prepaid");
+      if (canonical.order.paymentMethod === "cod") return res.status(400).json({ message: "COD must use checkout" });
+      const keyId = process.env.RAZORPAY_KEY_ID, keySecret = process.env.RAZORPAY_KEY_SECRET;
+      let gatewayOrderId: string, gatewayAmount = canonical.amountPaise;
+      if (!keyId || !keySecret) {
+        if (process.env.NODE_ENV === "production") return res.status(500).json({ message: "Payment gateway unavailable" });
+        gatewayOrderId = `order_mock_${crypto.randomUUID()}`;
+      } else {
+        const gateway: any = await new Razorpay({ key_id: keyId, key_secret: keySecret }).orders.create({ amount: canonical.amountPaise, currency: "INR", receipt: `checkout_${Date.now()}` });
+        gatewayOrderId = gateway.id; gatewayAmount = Number(gateway.amount);
+      }
+      const intent = await pool.query(`INSERT INTO checkout_payment_intents (gateway_order_id,canonical_payload,amount_paise,currency,pandit_id,status,expires_at)
+        VALUES ($1,$2::jsonb,$3,'INR',$4,'pending',now() + interval '20 minutes') RETURNING id`, [gatewayOrderId, JSON.stringify(canonical), gatewayAmount, canonical.panditId]);
+      res.json({ orderId: gatewayOrderId, amount: gatewayAmount, currency: "INR", key: keyId || "rzp_test_mock", checkoutIntentId: intent.rows[0].id });
+    } catch (error: any) { res.status(error.status || 500).json({ message: error.message || "Failed to create order" }); }
+  });
+
+  app.post("/api/razorpay/verify-payment", async (req, res, next) => {
+    if (!req.body?.checkoutIntentId) return next();
+    try {
+      const { checkoutIntentId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+      const lookup = await pool.query("SELECT * FROM checkout_payment_intents WHERE id=$1", [checkoutIntentId]);
+      const intent = lookup.rows[0];
+      if (!intent || intent.gateway_order_id !== razorpay_order_id) return res.status(400).json({ success: false, message: "Payment does not match checkout intent" });
+      if (intent.pandit_id) {
+        const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
+        if (await validatePanditSession(token) !== intent.pandit_id) return res.status(403).json({ success: false, message: "Pandit session no longer matches this checkout" });
+      }
+      const keyId = process.env.RAZORPAY_KEY_ID, keySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (keySecret) {
+        const expected = crypto.createHmac("sha256", keySecret).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
+        const supplied = String(razorpay_signature || "");
+        if (!/^[a-f0-9]{64}$/i.test(supplied) || !crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(supplied, "hex"))) return res.status(400).json({ success: false, message: "Payment verification failed" });
+        const gateway: any = await new Razorpay({ key_id: keyId!, key_secret: keySecret }).orders.fetch(razorpay_order_id);
+        if (gateway.currency !== "INR" || Number(gateway.amount_paid ?? gateway.amount) !== Number(intent.amount_paise)) return res.status(400).json({ success: false, message: "Order amount mismatch" });
+      } else if (process.env.NODE_ENV === "production") return res.status(500).json({ success: false, message: "Payment verification unavailable" });
+      const canonical = intent.canonical_payload as CanonicalCheckout;
+      canonical.allocations = parseInventoryAllocations(canonical.allocations);
+      const done = await consumeCanonicalCheckout(checkoutIntentId, canonical, String(razorpay_payment_id));
+      const order = await storage.getOrder(done.existingOrderId || done.orderId);
+      res.json({ success: true, order, orderId: order?.id });
+    } catch (error: any) { res.status(error.status || 500).json({ success: false, message: error.message || "Payment verification failed" }); }
+  });
+
   app.post("/api/razorpay/create-order", async (req, res) => {
     try {
       const { amount, currency = "INR", receipt, notes } = req.body;
@@ -4654,6 +4843,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return res.status(400).json({ message: "Missing payment verification fields" });
       }
+      // Amount-only orders have no server-bound cart.  They remain compatible
+      // for ordinary products, but can never be used to mint a card order.
+      if (await requestHasMembershipCard(orderData?.items)) {
+        return res.status(400).json({ success: false, message: "Membership cards require a checkoutIntentId" });
+      }
 
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
@@ -4693,7 +4887,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           }
         }
         const mockCardItems = await stampPanditMembershipCardItems(req, mockItems);
-        if (!mockCardItems.items) return res.status(403).json({ success: false, message: mockCardItems.message });
+        if (!mockCardItems.items) return res.status(mockCardItems.status || 403).json({ success: false, message: mockCardItems.message });
         const order = await storage.createOrder({
           customerName: orderData?.customerName || "Test Customer",
           customerEmail: orderData?.customerEmail || "",
@@ -4760,7 +4954,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return res.status(400).json({ success: false, message: "Cart contains invalid items" });
       }
       const paymentCardItems = await stampPanditMembershipCardItems(req, enrichedItems);
-      if (!paymentCardItems.items) return res.status(403).json({ success: false, message: paymentCardItems.message });
+      if (!paymentCardItems.items) return res.status(paymentCardItems.status || 403).json({ success: false, message: paymentCardItems.message });
       enrichedItems = paymentCardItems.items;
       const itemsSubtotal = enrichedItems.reduce((s, it: any) => s + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
       // Server-authoritative coupon revalidation (same as /api/checkout).
@@ -4859,6 +5053,27 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ---- Checkout ----
+  app.post("/api/checkout", async (req, res, next) => {
+    try {
+      // Preserve the existing route byte-for-byte for ordinary carts; only
+      // card-bearing carts enter the transactional inventory path.
+      if (!await requestHasMembershipCard(req.body?.items)) return next();
+      if (req.body?.paymentMethod === "prepaid") {
+        return res.status(400).json({ message: "Membership card prepaid orders must use Razorpay checkout" });
+      }
+      if (Number(req.body?.loyaltyPointsRedeem) > 0) {
+        return res.status(400).json({ message: "Loyalty redemption is not available for membership card orders" });
+      }
+      const canonical = await canonicalizeCheckout(req, req.body, "cod");
+      if (!canonical.order.customerName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(canonical.order.customerEmail)) {
+        return res.status(400).json({ message: "Invalid checkout data" });
+      }
+      const done = await consumeCanonicalCheckout(null, canonical, null);
+      const order = await storage.getOrder(done.orderId!);
+      res.status(201).json(order);
+    } catch (error: any) { res.status(error.status || 500).json({ message: error.message || "Checkout failed" }); }
+  });
+
   app.post("/api/checkout", async (req, res) => {
     try {
       const checkoutSchema = insertOrderSchema
@@ -4934,7 +5149,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         });
       }
       const checkoutCardItems = await stampPanditMembershipCardItems(req, enrichedItems);
-      if (!checkoutCardItems.items) return res.status(403).json({ message: checkoutCardItems.message });
+      if (!checkoutCardItems.items) return res.status(checkoutCardItems.status || 403).json({ message: checkoutCardItems.message });
       enrichedItems = checkoutCardItems.items;
 
       const itemsSubtotal = enrichedItems.reduce(

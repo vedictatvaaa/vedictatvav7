@@ -221,6 +221,7 @@ const PilgrimageCard = lazy(() => import("@/pages/pilgrimage-card"));
 const PanditLogin = lazy(() => import("@/pages/pandit-login"));
 const PanditPortal = lazy(() => import("@/pages/pandit-portal"));
 const PanditStorefront = lazy(() => import("@/pages/pandit-storefront"));
+const VerifyPandit = lazy(() => import("@/pages/verify-pandit"));
 const MyPujaBooking = lazy(() => import("@/pages/my-puja-booking"));
 const MyBookings = lazy(() => import("@/pages/my-bookings"));
 const DashboardPage = lazy(() => import("@/pages/dashboard"));
@@ -803,6 +804,7 @@ function Router() {
           <Route path="/pilgrimage-card" component={PilgrimageCard} />
           <Route path="/pandit/login" component={PanditLogin} />
           <Route path="/pandit/portal" component={PanditPortal} />
+          <Route path="/verify-pandit/:registrationNo" component={VerifyPandit} />
           <Route path="/store/:slug" component={PanditStorefront} />
           <Route path="/my-puja-booking/:id" component={MyPujaBooking} />
           <Route path="/my-bookings" component={MyBookings} />
