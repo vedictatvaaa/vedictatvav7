@@ -8,3 +8,4 @@
 - [Coolify restart discipline](coolify-restarts.md) — preserve the expensive dependency layer and use committed migrations; never run drizzle push automatically on every container restart.
 - [SEO network launch gates](seo-network-launch-gates.md) — default-off public SEO networks are not launched until admin enablement and standard-suite HTTP contract coverage both work.
 - [PostgreSQL nullable CHECKs](postgres-nullable-checks.md) — CHECK expressions using IN do not reject NULL unless nullability is tested explicitly.
+- [Knowledge Graph semantic revisions](knowledge-graph-semantic-revisions.md) — revisions track public projection semantics only; operational writes must not stale edges or bump generation.
