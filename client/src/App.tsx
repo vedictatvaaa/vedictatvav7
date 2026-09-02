@@ -232,7 +232,6 @@ const QaPage = lazy(() => import("@/pages/qa"));
 const PujaGuidePage = lazy(() => import("@/pages/puja-guide"));
 const SacredLibraryPage = lazy(() => import("@/pages/sacred-library"));
 const ServiceLanding = lazy(() => import("@/pages/service-landing"));
-const PujaCity = lazy(() => import("@/pages/puja-city"));
 const SeoLanding = lazy(() => import("@/pages/seo-landing"));
 import { AuthProvider } from "@/lib/auth";
 import { I18nProvider, useI18n } from "@/lib/i18n";
@@ -777,18 +776,17 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/book-pandit-online" component={PanditDirectory} />
-          <Route path="/book-pandit-online/:citySlug/:pujaSlug" component={PanditCanonicalLocation} />
+          <Route path="/book-pandit-online/:citySlug/:serviceSlug" component={PanditCanonicalLocation} />
           <Route path="/book-pandit-online/:citySlug" component={PanditCanonicalLocation} />
           {/* Legacy /pandits/* kept as inert fallbacks; server 301s redirect hard nav. */}
-          <Route path="/pandits/:citySlug/:pujaSlug" component={PanditCanonicalLocation} />
+          <Route path="/pandits/:citySlug/:serviceSlug" component={PanditCanonicalLocation} />
           <Route path="/pandits/:citySlug" component={PanditCanonicalLocation} />
-          <Route path="/online-pandit-booking" component={PanditDirectory} />
+          <Route path="/online-pandit-booking">{() => { window.location.replace(`/book-pandit-online${window.location.search}`); return null; }}</Route>
           {/* Canonical puja-booking URL is /online-puja-booking. Any
               client-side nav to legacy /puja is redirected; hard nav is
               caught by the server 301 in SEO_ALIAS_REDIRECTS. */}
           <Route path="/puja">{() => { window.location.replace("/online-puja-booking"); return null; }}</Route>
           <Route path="/online-puja-booking" component={PujaBooking} />
-          <Route path="/puja/:type/:city" component={PujaCity} />
           <Route path="/puja/:slug">{() => <ServiceLanding vertical="puja" pattern="/puja/:slug" />}</Route>
           <Route path="/tools/tithi-calculator" component={TithiCalculator} />
           <Route path="/pind-daan-booking" component={PindDaanHub} />

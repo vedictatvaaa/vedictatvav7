@@ -13,8 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 type Indexability = { status?: string; reasons?: string[] };
 type NetworkRow = {
   entityType: string;
-  entityKey: string | null;
-  label: string;
+  entityKey?: string | null;
+  label?: string;
   indexability?: Indexability;
   canonicalUrl?: string | null;
   editorialStatus?: string | null;
@@ -26,15 +26,22 @@ type Editorial = {
   faqs?: Array<{ question?: string; answer?: string }> | null;
   status?: string | null;
 };
-type Network = {
+type Coverage = {
   enabled: boolean;
   evaluatedAt?: string | null;
-  summary: { profiles: number; cities: number; cityServices: number; indexable: number; noindex: number; notFound: number };
-  reasonCounts?: Record<string, number>;
-  profiles?: NetworkRow[];
-  cities?: NetworkRow[];
-  cityServices?: NetworkRow[];
-  editorials?: Editorial[];
+  profiles: NetworkRow[];
+  cities: NetworkRow[];
+  cityServices: NetworkRow[];
+  summary: {
+    profiles: number;
+    cities: number;
+    cityServices: number;
+    indexable: number;
+    noindex: number;
+    notFound: number;
+  };
+  reasonCounts: Record<string, number>;
+  editorials: Editorial[];
 };
 
 const entityNames: Record<string, string> = {
@@ -57,11 +64,20 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
   const [introduction, setIntroduction] = useState("");
   const [faqs, setFaqs] = useState<Array<{ question: string; answer: string }>>([]);
 
-  const networkQuery = useQuery<Network>({ queryKey: ["/api/admin/pandit-seo-network"], queryFn: () => fetcher("/api/admin/pandit-seo-network") as Promise<Network> });
+  const networkQuery = useQuery<Coverage>({ queryKey: ["/api/admin/pandit-seo-network"], queryFn: () => fetcher("/api/admin/pandit-seo-network") as Promise<Coverage> });
   const editorialQuery = useQuery<Editorial[]>({ queryKey: ["/api/admin/pandit-seo-editorial"], queryFn: () => fetcher("/api/admin/pandit-seo-editorial") as Promise<Editorial[]> });
   const network = networkQuery.data;
   const editorials = editorialQuery.data || network?.editorials || [];
-  const rows = useMemo(() => [...(network?.profiles || []), ...(network?.cities || []), ...(network?.cityServices || [])], [network]);
+  const rows = useMemo(() => [
+    ...(network?.profiles || []),
+    ...(network?.cities || []),
+    ...(network?.cityServices || []),
+  ].map(row => ({
+    ...row,
+    label: row.entityKey || (row.entityType === "profile" ? "Unavailable profile" : entityNames[row.entityType] || row.entityType),
+    editorialStatus: editorials.find(item => item.entityType === row.entityType && item.entityKey === row.entityKey)?.status || null,
+  })), [network, editorials]);
+  const summary = network?.summary || { profiles: 0, cities: 0, cityServices: 0, indexable: 0, noindex: 0, notFound: 0 };
   const visibleRows = useMemo(() => rows.filter(row => {
     const haystack = `${row.label} ${row.entityKey} ${(row.indexability?.reasons || []).join(" ")}`.toLowerCase();
     return (entityFilter === "all" || row.entityType === entityFilter) && haystack.includes(search.toLowerCase());
@@ -76,7 +92,7 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
     setFaqs((editorial?.faqs || []).slice(0, 12).map(faq => ({ question: faq.question || "", answer: faq.answer || "" })));
   };
 
-  const request = async (url: string, method: "PUT" | "PATCH", body: unknown) => {
+  const request = async (url: string, method: "POST" | "PUT" | "PATCH", body: unknown) => {
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json", ...(adminToken ? { "x-admin-token": adminToken } : {}) },
@@ -96,16 +112,19 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
   const editorialMutation = useMutation({
     mutationFn: async (action: "draft" | "reviewed" | "published") => {
       if (!selected?.entityKey) throw new Error("Select an eligible coverage row before saving editorial content");
-      const url = `/api/admin/pandit-seo-editorial/${encodeURIComponent(selected.entityType)}/${encodeURIComponent(selected.entityKey)}`;
-      await request(url, "PUT", {
+      const incompleteFaq = faqs.find(faq => !faq.question.trim() || !faq.answer.trim());
+      if (incompleteFaq) throw new Error("Each FAQ must include both a question and an answer");
+      const baseUrl = `/api/admin/pandit-seo-editorial/${encodeURIComponent(selected.entityType)}/${encodeURIComponent(selected.entityKey)}`;
+      await request(baseUrl, "PUT", {
         introduction,
-        faqs: faqs.filter(faq => faq.question.trim() || faq.answer.trim()),
+        faqs: faqs.map(faq => ({ question: faq.question.trim(), answer: faq.answer.trim() })),
       });
+      const statusUrl = `${baseUrl}/status`;
       if (action === "reviewed" || action === "published") {
-        await request(`${url}/status`, "PATCH", { status: "reviewed" });
+        await request(statusUrl, "PATCH", { status: "reviewed" });
       }
       if (action === "published") {
-        await request(`${url}/status`, "PATCH", { status: "published" });
+        await request(statusUrl, "PATCH", { status: "published" });
       }
     },
     onSuccess: () => {
@@ -134,7 +153,7 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
     </Card>
 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-      {[["Profiles", network.summary.profiles], ["Cities", network.summary.cities], ["City services", network.summary.cityServices], ["Indexable", network.summary.indexable], ["Noindex", network.summary.noindex], ["Not found", network.summary.notFound]].map(([label, count]) =>
+      {[["Profiles", summary.profiles], ["Cities", summary.cities], ["City services", summary.cityServices], ["Indexable", summary.indexable], ["Noindex", summary.noindex], ["Not found", summary.notFound]].map(([label, count]) =>
         <Card key={String(label)}><CardContent className="p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{count}</p></CardContent></Card>)}
     </div>
 
@@ -157,7 +176,7 @@ export function PanditSeoNetwork({ adminToken, fetcher }: { adminToken: string; 
             {visibleRows.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No coverage records match these filters.</p>}
           </CardContent>
         </Card>
-        <Card><CardHeader className="pb-3"><CardTitle className="text-base">Blocker reasons</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{Object.entries(network.reasonCounts || {}).length ? Object.entries(network.reasonCounts || {}).map(([reason, count]) => <span key={reason} className="rounded-md bg-muted px-2.5 py-1.5 text-xs"><strong>{count}</strong> {reason}</span>) : <p className="text-sm text-muted-foreground">No blocker reasons reported.</p>}</CardContent></Card>
+        <Card><CardHeader className="pb-3"><CardTitle className="text-base">Blocker reasons</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{Object.entries(network.reasonCounts).length ? Object.entries(network.reasonCounts).map(([reason, count]) => <span key={reason} className="rounded-md bg-muted px-2.5 py-1.5 text-xs"><strong>{count}</strong> {reason}</span>) : <p className="text-sm text-muted-foreground">No blocker reasons reported.</p>}</CardContent></Card>
       </div>
 
       <Card className="h-fit xl:sticky xl:top-4">

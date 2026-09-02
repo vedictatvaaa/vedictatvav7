@@ -1,242 +1,227 @@
-import { useEffect, useMemo } from "react";
-import { Link, useLocation, useParams } from "wouter";
+import { useEffect } from "react";
+import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, MapPin, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, ChevronRight, MapPin, ShieldCheck } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
-import { trackPanditSeoEvent } from "@/lib/analytics";
-import {
-  appendPanditRouteContext,
-  bookingContextParams,
-  discoveryServiceForPujaSlug,
-  pujaTypeForService,
-} from "@/lib/puja-service-map";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { buildPanditCitySeo, panditCitySeoOrigin } from "@shared/pandit-city-seo";
 
-type Indexability = { status: string; indexable: boolean; reasons: string[] };
-type Service = {
-  id: number; masterServiceId: number; name: string; slug: string;
-  mode?: string; price?: number; durationMinutes?: number; description?: string;
+type Indexability = { indexable: boolean; status: string; reasons: string[] };
+type Editorial = {
+  introduction?: string | null;
+  faqs?: Array<{ question: string; answer: string }> | null;
 };
-type Provider = {
-  canonicalUrl: string;
+type ProjectedService = {
+  id: number;
+  masterServiceId: number;
+  name: string;
+  slug: string;
+  price?: number | null;
+  durationMinutes?: number | null;
+  mode: "online" | "in_person" | "hybrid";
+};
+type ProjectedProvider = {
+  canonicalUrl: string | null;
+  cityId: number;
+  stateId: number;
   pandit: {
-    id: number; name: string; slug: string; image?: string; bio?: string;
-    city?: string; state?: string; verified?: boolean; languages?: string[] | string;
+    id: number;
+    name: string;
+    slug: string;
+    image?: string | null;
+    experience?: number | null;
+    rating?: number | null;
+    reviewCount?: number | null;
+    languages?: string | null;
+    verified: boolean;
   };
-  services: Service[];
+  services: ProjectedService[];
 };
-type CityService = {
-  entityId: string; canonicalUrl: string;
+type ProjectedCityService = {
+  canonicalUrl: string;
   service: { id: number; name: string; slug: string };
-  providers: Provider[]; indexability: Indexability;
+  providers: ProjectedProvider[];
+  indexability: Indexability;
   editorial?: Editorial | null;
 };
-type Editorial = { introduction?: string; faqs?: Array<{ question: string; answer: string }> };
-type CityPage = {
-  entityId: string; canonicalUrl: string;
-  city: { id: number; name: string; slug: string };
+type ProjectedCity = {
+  canonicalUrl: string;
+  city: { id: number; stateId: number; name: string; slug: string };
   state: { id: number; name: string; code: string };
-  providers: Provider[]; services: CityService[]; indexability: Indexability;
+  providers: ProjectedProvider[];
+  services: ProjectedCityService[];
+  indexability: Indexability;
   editorial?: Editorial | null;
 };
 
-class LocationRequestError extends Error {
-  constructor(public status: number, public responseMessage: string) {
-    super(responseMessage);
-  }
-}
-
-const displayMode = (mode?: string) =>
-  mode === "in_person" ? "In person" : mode === "hybrid" ? "Hybrid" : mode === "online" ? "Online" : "Booking";
-const bookingMode = (mode?: string) =>
-  mode === "in_person" ? "offline" : mode === "hybrid" ? "hybrid" : mode === "online" ? "online" : undefined;
-
-async function fetchLocation(url: string) {
-  const response = await fetch(url);
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new LocationRequestError(response.status, body?.message || "Location unavailable");
-  return body;
-}
-
-function bookingHref(city: CityPage, provider: Provider, service?: Service) {
-  const mode = bookingMode(service?.mode);
-  const source = new URLSearchParams({ city: city.city.slug, source: service ? "puja_city" : "city" });
-  if (mode) source.set("mode", mode);
-  const params = bookingContextParams(source.toString(), provider.pandit.id);
-  params.delete("packageId");
-  if (service) {
-    params.set("service", service.slug);
-    params.set("serviceId", String(service.id));
-    const pujaType = pujaTypeForService(service.name) || pujaTypeForService(service.slug);
-    if (pujaType) params.set("pujaType", pujaType);
-  }
-  return `/online-puja-booking?${params.toString()}`;
-}
-
-function schemas(city: CityPage, service: CityService | undefined, canonical: string) {
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const providers = service?.providers || city.providers;
-  const crumbs = [
-    ["Home", "/"],
-    ["Pandits", "/book-pandit-online"],
-    [city.city.name, city.canonicalUrl],
-    ...(service ? [[service.service.name, canonical]] : []),
-  ];
-  const result: any[] = [{
-    id: "pandit-location-breadcrumb",
-    payload: {
-      "@context": "https://schema.org", "@type": "BreadcrumbList", "@id": `${origin}${canonical}#breadcrumb`,
-      itemListElement: crumbs.map(([name, item], index) => ({
-        "@type": "ListItem", position: index + 1, name, item: `${origin}${item}`,
-      })),
-    },
-  }, {
-    id: "pandit-location-list",
-    payload: {
-      "@context": "https://schema.org", "@type": "ItemList", "@id": `${origin}${canonical}#pandits`,
-      name: service ? `${service.service.name} Pandits in ${city.city.name}` : `Pandits in ${city.city.name}`,
-      numberOfItems: providers.length,
-      itemListElement: providers.map((provider, index) => ({
-        "@type": "ListItem", position: index + 1, name: provider.pandit.name,
-        url: `${origin}${provider.canonicalUrl}`,
-      })),
-    },
-  }];
-  if (service) result.push({
-    id: "pandit-location-service",
-    payload: {
-      "@context": "https://schema.org", "@type": "Service", "@id": `${origin}${canonical}#service`,
-      name: service.service.name, serviceType: service.service.name,
-      areaServed: { "@type": "City", name: city.city.name, containedInPlace: { "@type": "State", name: city.state.name } },
-      provider: { "@id": `${origin}/#organization` }, url: `${origin}${canonical}`,
-    },
+function bookingHref(
+  city: ProjectedCity,
+  provider: ProjectedProvider,
+  service: ProjectedService,
+) {
+  const params = new URLSearchParams({
+    cityId: String(city.city.id),
+    stateId: String(city.state.id),
+    masterServiceId: String(service.masterServiceId),
+    mode: service.mode,
+    pandit: String(provider.pandit.id),
+    serviceId: String(service.id),
   });
-  return result;
+  return `/online-puja-booking?${params}`;
 }
 
 export default function PanditCanonicalLocation() {
-  const { citySlug = "", pujaSlug } = useParams<{ citySlug: string; pujaSlug?: string }>();
-  const [, navigate] = useLocation();
-  const cityQuery = useQuery<CityPage>({
-    queryKey: ["/api/pandit-seo-network/cities", citySlug],
-    queryFn: () => fetchLocation(`/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}`),
-    retry: false,
-  });
-  const serviceQuery = useQuery<CityService>({
-    queryKey: ["/api/pandit-seo-network/cities", citySlug, "services", pujaSlug],
-    enabled: Boolean(pujaSlug),
-    queryFn: () => fetchLocation(`/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}/services/${encodeURIComponent(pujaSlug!)}`),
-    retry: false,
-  });
-
-  const disabled = cityQuery.error instanceof LocationRequestError
-    && cityQuery.error.status === 404
-    && cityQuery.error.responseMessage === "Not found";
+  const { citySlug = "", serviceSlug } = useParams<{ citySlug: string; serviceSlug?: string }>();
   useEffect(() => {
-    if (!disabled) return;
-    const params = new URLSearchParams({ city: citySlug });
-    const legacyService = discoveryServiceForPujaSlug(pujaSlug);
-    if (legacyService) params.set("service", legacyService);
-    appendPanditRouteContext(params, window.location.search, pujaSlug ? "puja_city" : "city");
-    navigate(`/book-pandit-online?${params}`, { replace: true });
-  }, [citySlug, disabled, navigate, pujaSlug]);
+    if (!window.location.pathname.startsWith("/pandits/")) return;
+    const suffix = window.location.pathname.slice("/pandits".length);
+    window.location.replace(`/book-pandit-online${suffix}${window.location.search}`);
+  }, []);
+  const cityQuery = useQuery<ProjectedCity>({
+    queryKey: ["/api/pandit-seo-network/cities", citySlug],
+    queryFn: async () => {
+      const response = await fetch(`/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}`);
+      if (!response.ok) throw new Error(response.status === 404 ? "City not found" : "Unable to load this city");
+      return response.json();
+    },
+    retry: false,
+  });
+  const serviceQuery = useQuery<ProjectedCityService>({
+    queryKey: ["/api/pandit-seo-network/cities", citySlug, "services", serviceSlug],
+    enabled: Boolean(serviceSlug),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}/services/${encodeURIComponent(serviceSlug!)}`,
+      );
+      if (!response.ok) throw new Error(response.status === 404 ? "City service not found" : "Unable to load this service");
+      return response.json();
+    },
+    retry: false,
+  });
+  const selectedService = serviceSlug ? serviceQuery.data : undefined;
+
+  if (cityQuery.isLoading || (serviceSlug && serviceQuery.isLoading)) {
+    return <main className="min-h-[70vh] bg-[#F5F0E6] px-5 py-20"><Skeleton className="mx-auto h-72 max-w-5xl bg-[#E9DEC9]" /></main>;
+  }
+  if (cityQuery.isError || (serviceSlug && serviceQuery.isError) || !cityQuery.data || (serviceSlug && !selectedService)) {
+    return <main className="min-h-[70vh] bg-[#F5F0E6] px-5 py-20 text-center">
+      <PageSeo title="Pandit page unavailable | Vedic Tatva" description="Browse active cities and published Vedic Pandits." canonical="/book-pandit-online" noindex />
+      <h1 className="font-serif text-3xl text-[#6D2B35]">Pandit page unavailable</h1>
+      <p className="mt-3 text-muted-foreground">This city or exact service is not currently available.</p>
+      <Link href="/book-pandit-online"><Button className="mt-6">Browse active locations</Button></Link>
+    </main>;
+  }
 
   const city = cityQuery.data;
-  const service = pujaSlug ? serviceQuery.data : undefined;
-  const providers = service?.providers || city?.providers || [];
-  const canonical = service?.canonicalUrl || city?.canonicalUrl || `/book-pandit-online/${citySlug}${pujaSlug ? `/${pujaSlug}` : ""}`;
-  const source = service ? "puja_city" : "city";
-  useEffect(() => {
-    if (city && (!pujaSlug || service)) {
-      trackPanditSeoEvent("discovery_impression", { slug: service?.service.slug || city.city.slug, source });
-    }
-  }, [city, pujaSlug, service, source]);
+  const providers = selectedService?.providers || city.providers;
+  const editorial = selectedService?.editorial || city.editorial;
+  const seo = buildPanditCitySeo({
+    canonicalUrl: selectedService?.canonicalUrl || city.canonicalUrl,
+    city: { name: city.city.name, canonicalUrl: city.canonicalUrl },
+    state: { name: city.state.name },
+    providers,
+    indexable: selectedService?.indexability.indexable ?? city.indexability.indexable,
+    ...(selectedService ? { service: { name: selectedService.service.name } } : {}),
+  }, typeof window === "undefined"
+    ? ""
+    : panditCitySeoOrigin(document.querySelector('link[rel="canonical"]')?.getAttribute("href"), window.location.origin));
+  const { title, description, indexable } = seo;
 
-  const pageSchemas = useMemo(
-    () => city ? schemas(city, service, canonical) : [],
-    [canonical, city, service],
-  );
-
-  if (cityQuery.isLoading || (pujaSlug && serviceQuery.isLoading)) {
-    return <main aria-busy="true" className="min-h-[70vh] bg-[#F8F2E5] px-5 py-16">
-      <span className="sr-only">Loading Pandits</span>
-      <Skeleton className="mx-auto h-80 max-w-6xl bg-[#E9DEC9]" />
-    </main>;
-  }
-  if (cityQuery.isError || (pujaSlug && serviceQuery.isError) || !city || (pujaSlug && !service)) {
-    return <main className="grid min-h-[70vh] place-items-center bg-[#F8F2E5] px-5 text-center">
-      <PageSeo title="Pandit location unavailable | Vedic Tatva" description="Browse active locations with published Pandits." canonical={canonical} noindex />
-      <div><h1 className="font-serif text-4xl text-[#5B1D27]">Pandit location unavailable</h1>
-        <p className="mt-3 text-[#715F55]">This city or service is not available.</p>
-        <Link href="/book-pandit-online"><Button className="mt-6 bg-[#7C291F]">Browse Pandits</Button></Link>
-      </div>
-    </main>;
-  }
-
-  const name = service ? `${service.service.name} Pandits in ${city.city.name}` : `Pandits in ${city.city.name}`;
-  const description = service
-    ? `View published Pandits offering ${service.service.name} in ${city.city.name}, ${city.state.name}, and continue to booking.`
-    : `View published Pandits and canonical puja services in ${city.city.name}, ${city.state.name}, and continue to booking.`;
-  const editorial = service?.editorial || city.editorial;
-
-  return <main className="min-h-screen bg-[#F8F2E5] text-[#4D312A]">
-    <PageSeo title={`${name} | Vedic Tatva`} description={description} canonical={canonical}
-      noindex={!(service || city).indexability.indexable} schemas={pageSchemas} />
-    <section className="border-b border-[#D5AE59]/35 bg-[#6D2632] px-5 py-14 text-[#FFF8E8] sm:py-20">
-      <div className="mx-auto max-w-6xl">
-        <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap gap-2 text-xs text-[#FBE9C9]/75">
-          <Link href="/">Home</Link><span aria-hidden="true">/</span>
-          <Link href="/book-pandit-online">Pandits</Link><span aria-hidden="true">/</span>
-          {service ? <><Link href={city.canonicalUrl}>{city.city.name}</Link><span aria-hidden="true">/</span><span>{service.service.name}</span></> : <span>{city.city.name}</span>}
+  return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
+    <PageSeo
+      title={title}
+      description={description}
+      canonical={seo.canonical}
+      noindex={!indexable}
+      schemas={seo.schemas}
+    />
+    <section className="border-b border-[#D4AF37]/25 bg-[#6D2B35] text-[#FBF7EE]">
+      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+        <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1 text-xs text-[#FBF7EE]/70">
+          <Link href="/">Home</Link><ChevronRight className="h-3 w-3" />
+          <Link href="/book-pandit-online">Pandits</Link><ChevronRight className="h-3 w-3" />
+          {selectedService ? <><Link href={city.canonicalUrl}>{city.city.name}</Link><ChevronRight className="h-3 w-3" /><span>{selectedService.service.name}</span></> : <span>{city.city.name}</span>}
         </nav>
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-[#F2C75C]"><MapPin className="h-4 w-4" />{city.city.name}, {city.state.name}</div>
-        <h1 className="mt-4 max-w-4xl font-serif text-4xl sm:text-6xl">{name}</h1>
-        <p className="mt-5 max-w-2xl leading-7 text-[#FBE9C9]/80">{description}</p>
+        <Badge className="mb-3 bg-[#E9C96A] text-[#6D2B35]"><MapPin className="mr-1 h-3 w-3" />{city.city.name}, {city.state.name}</Badge>
+        <h1 className="font-serif text-4xl font-semibold sm:text-5xl">
+          {selectedService ? `${selectedService.service.name} Pandits in ${city.city.name}` : `Pandits in ${city.city.name}`}
+        </h1>
+        <p className="mt-4 max-w-2xl text-[#FBF7EE]/75">{description}</p>
+        {!indexable && <p className="mt-4 text-sm text-[#E9C96A]">This useful page is available while our local published network grows.</p>}
       </div>
     </section>
 
-    <section aria-labelledby="providers-heading" className="mx-auto max-w-6xl px-5 py-14 sm:py-20">
-      <h2 id="providers-heading" className="font-serif text-3xl text-[#5B1D27]">Published Pandits</h2>
-      {providers.length ? <div className="mt-7 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {providers.map(provider => {
-          const exactService = service
-            ? provider.services.find(item => item.masterServiceId === service.service.id)
-            : undefined;
-          const mode = bookingMode(exactService?.mode);
-          return <Card key={provider.pandit.id} className="flex flex-col rounded-none border-[#D5AE59]/45 bg-[#FFFDF7] p-5">
-            <div className="flex items-center gap-4">
-              {provider.pandit.image ? <img className="h-16 w-16 rounded-full object-cover" src={provider.pandit.image} alt="" /> : null}
-              <div><h3 className="text-xl text-[#5B1D27]"><Link href={provider.canonicalUrl}>{provider.pandit.name}</Link></h3>
-                <p className="mt-1 text-xs text-[#715F55]">{city.city.name}{provider.pandit.verified ? " · Verified profile" : ""}</p></div>
-            </div>
-            {exactService && <div className="mt-5 border-t border-[#E8D9B7] pt-4 text-sm">
-              <p className="font-semibold text-[#6D2632]">{exactService.name}</p>
-              <p className="mt-1 text-[#715F55]">{displayMode(exactService.mode)}{exactService.durationMinutes ? ` · ${exactService.durationMinutes} minutes` : ""}{typeof exactService.price === "number" ? ` · ₹${exactService.price.toLocaleString("en-IN")}` : ""}</p>
-            </div>}
-            <div className="mt-auto flex gap-2 pt-6">
-              <Link className="inline-flex flex-1" href={provider.canonicalUrl}><Button variant="outline" className="w-full rounded-none border-[#7C291F] text-[#7C291F]">View profile</Button></Link>
-              <Link className="inline-flex flex-1" href={bookingHref(city, provider, exactService)}
-                onClick={() => { trackPanditSeoEvent("discovery_cta", { slug: service?.service.slug || city.city.slug, mode, source }); trackPanditSeoEvent("booking_handoff", { slug: service?.service.slug || city.city.slug, mode, source }); }}>
-                <Button className="w-full rounded-none bg-[#7C291F]">Book <ArrowRight className="ml-1 h-4 w-4" /></Button>
-              </Link>
-            </div>
-          </Card>;
-        })}
-      </div> : <div className="mt-7 border border-dashed border-[#C9A55A] p-8 text-center">
-        <ShieldCheck className="mx-auto h-7 w-7 text-[#8A5A1F]" /><p className="mt-3">No published Pandits currently match this service.</p>
-      </div>}
-    </section>
-
-    {!service && city.services.filter(item => item.indexability.indexable).length > 0 && <section className="border-y border-[#D5AE59]/35 bg-[#F1DFC0] px-5 py-12">
-      <div className="mx-auto max-w-6xl"><h2 className="font-serif text-3xl text-[#5B1D27]">Available puja services</h2>
-        <div className="mt-6 flex flex-wrap gap-3">{city.services.filter(item => item.indexability.indexable).map(item =>
-          <Link key={item.entityId} href={item.canonicalUrl} className="border border-[#9C6B31] bg-[#FFF8E8] px-4 py-3 text-sm font-semibold text-[#6D2632] hover:bg-white">{item.service.name}</Link>)}
-        </div></div>
+    {!selectedService && city.services.some((service) => service.indexability.indexable) && <section className="mx-auto max-w-6xl px-5 pt-10 sm:px-8">
+      <h2 className="font-serif text-2xl font-semibold text-[#6D2B35]">Services with established local availability</h2>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {city.services.filter((service) => service.indexability.indexable).map((service) =>
+          <Link key={service.service.id} href={service.canonicalUrl}>
+            <Badge variant="outline" className="bg-white px-3 py-2">{service.service.name} · {service.providers.length} Pandits</Badge>
+          </Link>)}
+      </div>
     </section>}
 
-    {editorial?.introduction && <section className="mx-auto max-w-3xl px-5 py-14"><h2 className="font-serif text-3xl text-[#5B1D27]">About booking in {city.city.name}</h2><p className="mt-5 whitespace-pre-line leading-8 text-[#715F55]">{editorial.introduction}</p></section>}
-    {!!editorial?.faqs?.length && <section className="mx-auto max-w-3xl px-5 pb-16"><h2 className="font-serif text-3xl text-[#5B1D27]">Questions and answers</h2><div className="mt-6 space-y-5">{editorial.faqs.map(faq => <div key={faq.question}><h3 className="font-semibold text-[#5B1D27]">{faq.question}</h3><p className="mt-2 leading-7 text-[#715F55]">{faq.answer}</p></div>)}</div></section>}
+    <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+      <h2 className="font-serif text-2xl font-semibold text-[#6D2B35]">
+        {providers.length} published {providers.length === 1 ? "Pandit" : "Pandits"} available
+      </h2>
+      {providers.length === 0 && <Card className="mt-5 border-[#D4AF37]/35 bg-white">
+        <CardContent className="p-6">
+          <h3 className="font-serif text-xl font-semibold text-[#6D2B35]">Find the next available verified Pandit</h3>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            No published Pandit currently matches this exact page. Browse active locations and services while the local network grows.
+          </p>
+          <Link href="/book-pandit-online"><Button className="mt-5">Browse available Pandits</Button></Link>
+        </CardContent>
+      </Card>}
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {providers.map((provider) => {
+          const exactServices = selectedService
+            ? provider.services.filter((item) => item.masterServiceId === selectedService.service.id)
+            : provider.services;
+          const bookingService = exactServices[0];
+          return <Card key={provider.pandit.id}>
+            <CardContent className="p-5">
+              <div className="flex gap-4">
+                <Avatar className="h-16 w-16"><AvatarImage src={provider.pandit.image || undefined} /><AvatarFallback>{provider.pandit.name[0]}</AvatarFallback></Avatar>
+                <div>
+                  <h3 className="flex items-center gap-1 font-serif text-xl font-semibold">{provider.pandit.name}{provider.pandit.verified && <ShieldCheck className="h-4 w-4 text-green-700" />}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{provider.pandit.experience || 0}+ years · {provider.pandit.rating || 0} ({provider.pandit.reviewCount || 0} reviews)</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{provider.pandit.languages}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {exactServices.map((service) => <Badge key={service.id} variant="secondary">{service.name} · {service.mode.replace("_", " ")}</Badge>)}
+              </div>
+              <div className="mt-5 flex gap-2">
+                {provider.canonicalUrl && <Link href={provider.canonicalUrl}><Button variant="outline">View profile</Button></Link>}
+                {bookingService && <a href={bookingHref(city, provider, bookingService)}><Button><Calendar className="mr-1.5 h-4 w-4" />Book exact service</Button></a>}
+              </div>
+            </CardContent>
+          </Card>;
+        })}
+      </div>
+    </section>
+
+    {editorial?.introduction && <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8">
+      <h2 className="font-serif text-3xl font-semibold text-[#6D2B35]">
+        {selectedService ? `About ${selectedService.service.name} in ${city.city.name}` : `About booking a Pandit in ${city.city.name}`}
+      </h2>
+      <p className="mt-5 whitespace-pre-line leading-8 text-[#594A43]">{editorial.introduction}</p>
+    </section>}
+
+    {!!editorial?.faqs?.length && <section className="mx-auto max-w-3xl px-5 pb-16 sm:px-8">
+      <h2 className="font-serif text-3xl font-semibold text-[#6D2B35]">Questions and answers</h2>
+      <div className="mt-6 space-y-5">
+        {editorial.faqs.map((faq) => <article key={faq.question} className="border-t border-[#D4AF37]/30 pt-5">
+          <h3 className="font-semibold text-[#2B1115]">{faq.question}</h3>
+          <p className="mt-2 leading-7 text-[#594A43]">{faq.answer}</p>
+        </article>)}
+      </div>
+    </section>}
   </main>;
 }

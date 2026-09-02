@@ -15,6 +15,18 @@ export function isPanditSeoNetworkEnabled(settings: { panditSeoNetworkEnabled?: 
   return settings?.panditSeoNetworkEnabled === true;
 }
 
+export async function getPanditSeoNetworkSitemapPages() {
+  if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return [];
+  const projection = await getPanditSeoNetworkProjection();
+  return projection.cities.flatMap((city) => [
+    ...(city.indexability.indexable && city.canonicalUrl
+      ? [{ loc: city.canonicalUrl, priority: "0.9", changefreq: "weekly" }]
+      : []),
+    ...city.services
+      .filter((service) => service.indexability.indexable && service.canonicalUrl)
+      .map((service) => ({ loc: service.canonicalUrl!, priority: "0.75", changefreq: "weekly" })),
+  ]);
+}
 export function selectPublicProfile(
   projection: PanditSeoNetworkProjection,
   slug: string,

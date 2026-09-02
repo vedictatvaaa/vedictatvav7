@@ -46,6 +46,8 @@ export async function getPubliclyEligiblePandits() {
 export function publicStorefrontPanditDto(pandit: any) {
   return {
     id: pandit.id,
+    cityId: pandit.cityId,
+    stateId: pandit.stateId,
     name: pandit.name,
     slug: pandit.slug,
     city: pandit.city,

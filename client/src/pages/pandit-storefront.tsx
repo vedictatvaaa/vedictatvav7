@@ -15,16 +15,16 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
 import { trackPanditSeoEvent } from "@/lib/analytics";
-import { bookingContextParams, pujaTypeForService } from "@/lib/puja-service-map";
+import { bookingContextParams } from "@/lib/puja-service-map";
 
 type Service = {
-  id: number; name: string; slug: string; category?: string; description?: string;
+  id: number; masterServiceId: number; name: string; slug: string; category?: string; description?: string;
   price?: number; durationMinutes?: number; mode?: string; preparation?: string;
   inclusions?: string[]; serviceAreas?: string[];
 };
 type StorefrontDto = {
   pandit: {
-    id: number; name: string; slug?: string; title?: string; city?: string; state?: string;
+    id: number; cityId?: number; stateId?: number; name: string; slug?: string; title?: string; city?: string; state?: string;
     regionalOrigin?: string; specialization?: string[] | string; languages?: string[] | string;
     experience?: number; fees?: number; rating?: number; reviewCount?: number; verified?: boolean;
     image?: string; bio?: string; education?: string;
@@ -52,21 +52,23 @@ type StorefrontDto = {
 const money = (n?: number) => typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : "Price on request";
 const listify = (value?: string[] | string) => Array.isArray(value) ? value : value ? value.split(",").map(x => x.trim()).filter(Boolean) : [];
 
-function bookingHref(panditId: number, service?: Service, packageId?: number) {
+function bookingHref(pandit: StorefrontDto["pandit"], service?: Service, packageId?: number) {
   const source = typeof window !== "undefined" ? window.location.search : "";
-  const params = bookingContextParams(source, panditId);
+  const params = bookingContextParams(source, pandit.id);
   params.set("source", "storefront");
   if (service) {
     params.delete("packageId");
     params.set("serviceId", String(service.id));
-    params.set("service", service.slug || String(service.id));
-    const mappedType = pujaTypeForService(service.name) || pujaTypeForService(service.slug);
-    if (mappedType) params.set("pujaType", mappedType);
-    else params.delete("pujaType");
+    params.set("masterServiceId", String(service.masterServiceId));
+    if (pandit.cityId) params.set("cityId", String(pandit.cityId));
+    if (pandit.stateId) params.set("stateId", String(pandit.stateId));
+    params.delete("service");
+    params.delete("pujaType");
     params.set("mode", service.mode === "online" ? "online" : "offline");
   }
   if (packageId) {
     params.delete("serviceId");
+    params.delete("masterServiceId");
     params.delete("service");
     params.delete("pujaType");
     params.set("packageId", String(packageId));
@@ -82,7 +84,7 @@ function SectionHeading({ eyebrow, title, copy }: { eyebrow: string; title: stri
   </div>;
 }
 
-function ServiceCard({ service, panditId, panditSlug }: { service: Service; panditId: number; panditSlug?: string }) {
+function ServiceCard({ service, pandit }: { service: Service; pandit: StorefrontDto["pandit"] }) {
   return <Card className="group relative flex h-full flex-col overflow-hidden rounded-[4px] border-[#D5AE59]/35 bg-[#FFFDF7] shadow-[0_12px_36px_rgba(91,29,39,.06)] transition-transform duration-300 hover:-translate-y-1">
     <div className="h-1 bg-[#A33B29]" />
     <div className="flex flex-1 flex-col p-5 sm:p-6">
@@ -94,7 +96,7 @@ function ServiceCard({ service, panditId, panditSlug }: { service: Service; pand
       {service.inclusions?.length ? <div className="mt-4 space-y-1.5">{service.inclusions.slice(0, 3).map(item => <div key={item} className="flex gap-2 text-xs text-[#6D5A50]"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#A86C1B]" />{item}</div>)}</div> : null}
       <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#E8D9B7] pt-5">
         <div><div className="flex items-center gap-1.5 text-xs text-[#806E62]"><Clock3 className="h-3.5 w-3.5" />{service.durationMinutes ? `${service.durationMinutes} minutes` : "Duration confirmed in booking"}</div><div className="mt-1 text-2xl font-semibold text-[#7C291F]">{money(service.price)}</div></div>
-        <Link href={bookingHref(panditId, service)} onClick={() => { const mode = service.mode === "online" ? "online" : service.mode === "hybrid" ? "hybrid" : "offline"; trackPanditSeoEvent("discovery_cta", { slug: service.slug, mode, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug: panditSlug || service.slug, mode, source: "storefront" }); }} className="inline-flex"><Button className="rounded-none bg-[#7C291F] text-[#FFF8E8] hover:bg-[#5B1D27]">Book service <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+        <Link href={bookingHref(pandit, service)} onClick={() => { const mode = service.mode === "online" ? "online" : service.mode === "hybrid" ? "hybrid" : "offline"; trackPanditSeoEvent("discovery_cta", { slug: service.slug, mode, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug: pandit.slug || service.slug, mode, source: "storefront" }); }} className="inline-flex"><Button className="rounded-none bg-[#7C291F] text-[#FFF8E8] hover:bg-[#5B1D27]">Book service <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
       </div>
     </div>
   </Card>;
@@ -153,10 +155,10 @@ export default function PanditStorefrontPage() {
   const book = () => {
     trackPanditSeoEvent("discovery_cta", { slug, source: "storefront" });
     trackPanditSeoEvent("booking_handoff", { slug, source: "storefront" });
-    navigate(bookingHref(pandit.id));
+    navigate(bookingHref(pandit));
   };
   const chat = () => requireAuth(
-    () => navigate(bookingHref(pandit.id)),
+    () => navigate(bookingHref(pandit)),
     { title: "Sign in to continue", description: "Continue to booking to share your ceremony requirements." },
   );
   const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); toast({ title: "Storefront link copied", description: "Share this page with your family." }); setTimeout(() => setCopied(false), 1800); } catch { toast({ title: "Copy unavailable", description: shareUrl }); } };
@@ -189,9 +191,9 @@ export default function PanditStorefrontPage() {
 
       <section className="border-b border-[#D5AE59]/30 bg-[#F7EBD1]"><div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-[#D5AE59]/35 sm:grid-cols-4">{[...(pandit.verified ? [{i:ShieldCheck,t:"Verified profile"}] : []),{i:CalendarDays,t:"Booking pathway"},{i:MessageCircle,t:"Share requirements"},{i:Globe2,t:"Published services"}].map(({i:Icon,t}) => <div key={t} className="flex items-center gap-3 px-5 py-5 text-xs font-semibold text-[#6D5A50]"><Icon className="h-5 w-5 text-[#A86C1B]" />{t}</div>)}</div></section>
 
-      <section id="services" className="mx-auto max-w-6xl px-5 py-16 sm:py-24"><SectionHeading eyebrow="The ceremony catalogue" title="Choose what your family needs" copy="Each offering is described plainly so you can prepare with confidence. Final availability and price are confirmed by the booking service." /><div className="mb-8 flex flex-wrap gap-2" role="tablist" aria-label="Service categories">{categories.map(item => <button key={item} role="tab" aria-selected={category === item} onClick={() => setCategory(item)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${category === item ? "border-[#7C291F] bg-[#7C291F] text-[#FFF8E8]" : "border-[#D5AE59]/60 text-[#7C291F] hover:bg-[#F7EBD1]"}`}>{item}</button>)}</div>{filteredServices.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{filteredServices.map(service => <ServiceCard key={service.id} service={service} panditId={pandit.id} panditSlug={slug} />)}</div> : <div className="border border-dashed border-[#D5AE59] p-10 text-center text-sm text-[#806E62]">Services will appear here when published.</div>}</section>
+      <section id="services" className="mx-auto max-w-6xl px-5 py-16 sm:py-24"><SectionHeading eyebrow="The ceremony catalogue" title="Choose what your family needs" copy="Each offering is described plainly so you can prepare with confidence. Final availability and price are confirmed by the booking service." /><div className="mb-8 flex flex-wrap gap-2" role="tablist" aria-label="Service categories">{categories.map(item => <button key={item} role="tab" aria-selected={category === item} onClick={() => setCategory(item)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${category === item ? "border-[#7C291F] bg-[#7C291F] text-[#FFF8E8]" : "border-[#D5AE59]/60 text-[#7C291F] hover:bg-[#F7EBD1]"}`}>{item}</button>)}</div>{filteredServices.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{filteredServices.map(service => <ServiceCard key={service.id} service={service} pandit={pandit} />)}</div> : <div className="border border-dashed border-[#D5AE59] p-10 text-center text-sm text-[#806E62]">Services will appear here when published.</div>}</section>
 
-      {!!data.packages?.length && <section id="packages" className="bg-[#F1DFC0]"><div className="mx-auto max-w-6xl px-5 py-16 sm:py-24"><SectionHeading eyebrow="Curated combinations" title="Puja packages for meaningful milestones" copy="Thoughtful collections of services, arranged for the moments your family will remember." /><div className="grid gap-5 md:grid-cols-2">{data.packages.map(pkg => <Card key={pkg.id} className="rounded-none border-[#C9953B]/40 bg-[#FFF8E8] p-6"><div className="flex items-start justify-between gap-4"><div><h3 className="text-2xl text-[#5B1D27]">{pkg.name}</h3><p className="mt-2 text-sm leading-6 text-[#715F55]">{pkg.description}</p></div><Package className="h-6 w-6 text-[#A86C1B]" /></div>{pkg.items?.length ? <div className="mt-5 space-y-2">{pkg.items.map(item => { const service = services.find(candidate => candidate.id === item.panditServiceId); return service ? <div key={item.panditServiceId} className="flex items-center gap-2 text-xs text-[#6D5A50]"><Check className="h-3.5 w-3.5 text-[#A86C1B]" />{service.name}</div> : null; })}</div> : null}<div className="mt-6 flex items-end justify-between border-t border-[#D5AE59]/35 pt-5"><div><span className="text-2xl font-semibold text-[#7C291F]">{money(pkg.price)}</span>{pkg.compareAtPrice && pkg.compareAtPrice > (pkg.price || 0) ? <span className="ml-2 text-xs text-[#806E62] line-through">{money(pkg.compareAtPrice)}</span> : null}</div><Link href={bookingHref(pandit.id, undefined, pkg.id)} className="inline-flex"><Button className="rounded-none bg-[#7C291F]">Book package <ArrowRight className="ml-2 h-4 w-4" /></Button></Link></div></Card>)}</div></div></section>}
+      {!!data.packages?.length && <section id="packages" className="bg-[#F1DFC0]"><div className="mx-auto max-w-6xl px-5 py-16 sm:py-24"><SectionHeading eyebrow="Curated combinations" title="Puja packages for meaningful milestones" copy="Thoughtful collections of services, arranged for the moments your family will remember." /><div className="grid gap-5 md:grid-cols-2">{data.packages.map(pkg => <Card key={pkg.id} className="rounded-none border-[#C9953B]/40 bg-[#FFF8E8] p-6"><div className="flex items-start justify-between gap-4"><div><h3 className="text-2xl text-[#5B1D27]">{pkg.name}</h3><p className="mt-2 text-sm leading-6 text-[#715F55]">{pkg.description}</p></div><Package className="h-6 w-6 text-[#A86C1B]" /></div>{pkg.items?.length ? <div className="mt-5 space-y-2">{pkg.items.map(item => { const service = services.find(candidate => candidate.id === item.panditServiceId); return service ? <div key={item.panditServiceId} className="flex items-center gap-2 text-xs text-[#6D5A50]"><Check className="h-3.5 w-3.5 text-[#A86C1B]" />{service.name}</div> : null; })}</div> : null}<div className="mt-6 flex items-end justify-between border-t border-[#D5AE59]/35 pt-5"><div><span className="text-2xl font-semibold text-[#7C291F]">{money(pkg.price)}</span>{pkg.compareAtPrice && pkg.compareAtPrice > (pkg.price || 0) ? <span className="ml-2 text-xs text-[#806E62] line-through">{money(pkg.compareAtPrice)}</span> : null}</div><Link href={bookingHref(pandit, undefined, pkg.id)} className="inline-flex"><Button className="rounded-none bg-[#7C291F]">Book package <ArrowRight className="ml-2 h-4 w-4" /></Button></Link></div></Card>)}</div></div></section>}
 
       {!!data.products?.length && <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><SectionHeading eyebrow="For the home altar" title="Recommended samagri" copy="A small selection of essentials, kept separate from your ceremony booking." /><Link href={`/puja-samagri-online?ref=${encodeURIComponent(slug)}`} className="mb-7 inline-flex shrink-0 items-center text-xs font-bold text-[#7C291F]">Shop all <ArrowRight className="ml-2 h-4 w-4" /></Link></div><div className="grid grid-cols-2 gap-4 sm:grid-cols-4">{data.products.map(product => <Card key={product.id} className="flex flex-col overflow-hidden rounded-none border-[#D5AE59]/35 bg-[#FFFDF7]"><Link href={`/product/${product.slug || product.id}?ref=${encodeURIComponent(slug)}`} className="block aspect-square overflow-hidden bg-[#F1DFC0]">{product.image ? <img src={product.image} alt={product.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" /> : <div className="grid h-full place-items-center text-[#A86C1B]"><ShoppingBag className="h-8 w-8" /></div>}</Link><div className="flex flex-1 flex-col p-3"><Link href={`/product/${product.slug || product.id}?ref=${encodeURIComponent(slug)}`} className="line-clamp-2 min-h-10 text-sm font-semibold text-[#5B1D27]">{product.name}</Link><div className="mt-2 text-base font-semibold text-[#7C291F]">{money(product.salePrice ?? product.price)}</div><Button onClick={() => { addToCart({ ...product, price: product.salePrice ?? product.price } as any, 1); toast({ title: "Added to cart", description: product.name }); }} className="mt-auto rounded-none bg-[#7C291F] text-xs hover:bg-[#5B1D27]"><ShoppingBag className="mr-1.5 h-3.5 w-3.5" />Add to cart</Button></div></Card>)}</div></section>}
 

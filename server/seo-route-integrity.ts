@@ -9,17 +9,12 @@ import {
   selectCityService,
   selectPublicProfile,
 } from "./pandit-seo-network/public-api";
-
-type PublicEntityDependencies = {
-  getProductBySlug: (slug: string) => Promise<unknown | undefined>;
-  getProductById: (id: number) => Promise<unknown | undefined>;
-  getPublishedPanditBySlug: (slug: string) => Promise<unknown | null>;
-  getBlogPostBySlug: (slug: string) => Promise<{ isPublished?: boolean } | undefined>;
-};
+import type { PanditSeoNetworkProjection } from "./pandit-seo-network/project";
 
 export type PublicRouteDecision =
   | { kind: "registered" }
   | { kind: "entity"; family: "product" | "pandit" | "blog"; found: boolean }
+  | { kind: "pandit-network"; found: boolean; indexable: boolean; disabled?: boolean }
   | { kind: "not-found" };
 
 const defaultDependencies: PublicEntityDependencies = {
@@ -33,6 +28,9 @@ const defaultDependencies: PublicEntityDependencies = {
     return getPubliclyPublishedPanditBySlug(slug);
   },
   getBlogPostBySlug: (slug) => storage.getBlogPostBySlug(slug),
+  getPanditNetwork: () => getPanditSeoNetworkProjection(),
+  getPanditNetworkEnabled: async () =>
+    isPanditSeoNetworkEnabled(await storage.getSiteSettings()),
 };
 
 function normalisePath(path: string): string {
@@ -71,6 +69,27 @@ export async function resolvePublicRouteDecision(
   dependencies: PublicEntityDependencies = defaultDependencies,
 ): Promise<PublicRouteDecision> {
   const cleanPath = normalisePath(path);
+
+  const networkMatch = cleanPath.match(/^\/(?:book-pandit-online|pandits)\/([^/]+)(?:\/([^/]+))?$/);
+  if (networkMatch) {
+    const citySlug = decodeRouteSegment(networkMatch[1]);
+    const serviceSlug = networkMatch[2] ? decodeRouteSegment(networkMatch[2]) : null;
+    if (!citySlug || (networkMatch[2] && !serviceSlug)) {
+      return { kind: "pandit-network", found: false, indexable: false };
+    }
+    if (!await dependencies.getPanditNetworkEnabled()) {
+      return { kind: "pandit-network", found: false, indexable: false, disabled: true };
+    }
+    const projection = await dependencies.getPanditNetwork();
+    const entity = serviceSlug
+      ? selectCityService(projection, citySlug, serviceSlug)
+      : selectCityHub(projection, citySlug);
+    return {
+      kind: "pandit-network",
+      found: Boolean(entity),
+      indexable: Boolean(entity?.indexability.indexable),
+    };
+  }
 
   const productMatch = cleanPath.match(/^\/product\/([^/]+)$/);
   if (productMatch) {
@@ -111,31 +130,34 @@ export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDepende
     if (req.path.includes(".") && !req.path.endsWith(".html") && !req.path.endsWith("/")) return next();
 
     try {
-      const locationMatch = req.path.match(/^\/book-pandit-online\/([^/]+)(?:\/([^/]+))?\/?$/);
-      if (locationMatch) {
-        const settings = await storage.getSiteSettings();
-        if (!isPanditSeoNetworkEnabled(settings)) return next();
-        const projection = await getPanditSeoNetworkProjection();
-        const location = locationMatch[2]
-          ? selectCityService(projection, locationMatch[1], locationMatch[2])
-          : selectCityHub(projection, locationMatch[1]);
-        if (location) return next();
-        res.locals.seoNotFound = true;
-        res.status(404);
-        res.setHeader("X-Robots-Tag", "noindex, follow");
+      const decision = await resolvePublicRouteDecision(req.path, dependencies);
+      if (decision.kind === "pandit-network" && decision.found) {
+        if (!decision.indexable) res.setHeader("X-Robots-Tag", "noindex, follow");
         return next();
       }
-      const decision = await resolvePublicRouteDecision(req.path, dependencies);
       if (decision.kind === "registered" || (decision.kind === "entity" && decision.found)) {
         return next();
       }
 
       res.locals.seoNotFound = true;
+      const nofollow = decision.kind === "pandit-network" && decision.disabled;
+      if (nofollow) {
+        res.locals.seoNotFoundRobotsFollow = false;
+      }
       res.status(404);
-      res.setHeader("X-Robots-Tag", "noindex, follow");
+      res.setHeader("X-Robots-Tag", nofollow ? "noindex, nofollow" : "noindex, follow");
       return next();
     } catch (error) {
       return next(error);
     }
   };
 }
+
+type PublicEntityDependencies = {
+  getProductBySlug: (slug: string) => Promise<unknown | undefined>;
+  getProductById: (id: number) => Promise<unknown | undefined>;
+  getPublishedPanditBySlug: (slug: string) => Promise<unknown | null>;
+  getBlogPostBySlug: (slug: string) => Promise<{ isPublished?: boolean } | undefined>;
+  getPanditNetwork: () => Promise<PanditSeoNetworkProjection>;
+  getPanditNetworkEnabled: () => Promise<boolean>;
+};

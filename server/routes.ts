@@ -22,7 +22,6 @@ import { registerProductSeoRoutes } from "./seo-products";
 import { registerMerchantHealthRoutes } from "./seo-merchant-health";
 import { registerSearchSuggestRoutes } from "./seo-search";
 import { registerBacklinkRoutes } from "./seo-backlinks";
-import { PANDIT_CITY_SUMMARIES, slugifyPuja } from "./pandit-cities-map";
 import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords";
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
 import { registerPanditPortalRoutes } from "./pandit-portal";
@@ -76,6 +75,7 @@ import { publicRouteIntegrityMiddleware } from "./seo-route-integrity";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
 import {
+  getPanditSeoNetworkSitemapPages,
   isPanditSeoNetworkEnabled,
   filterBySelectablePublicPandits,
   registerPanditSeoNetworkInvalidation,
@@ -84,7 +84,7 @@ import {
   selectCityService,
 } from "./pandit-seo-network/public-api";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
-import { indexablePanditLocationPaths, indexableProfileSlugs } from "./pandit-seo-network/sitemap";
+import { indexableProfileSlugs } from "./pandit-seo-network/sitemap";
 import { canonicalPanditRedirectTarget, panditRedirectTarget } from "./pandit-route-context";
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
@@ -96,6 +96,8 @@ import {
 import { insertNewsletterCampaignSchema } from "@shared/schema";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { ageing, allowedTransitions, isOperationallyStale, itemCounts, nextAction, normalizeOrderStatus, paymentProjection, validateTransition, verifyInventory } from "./order-operations";
+import { validateCanonicalServiceBookingContext } from "./pandit-booking-context";
+import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
 // Strips dangerous tags (script/style/iframe/object/embed/link/meta), all on*-event attributes,
@@ -296,7 +298,12 @@ export async function registerRoutes(
   app.get(Object.keys(SEO_ALIAS_REDIRECTS), (req, res) => {
     const dest = SEO_ALIAS_REDIRECTS[req.path];
     if (!dest) return res.status(404).end();
-    res.redirect(301, req.path === "/pandits" ? panditRedirectTarget(dest, req.query) : dest);
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    res.redirect(301, `${dest}${query}`);
+  });
+  app.get("/online-pandit-booking", (req, res) => {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    res.redirect(301, `/book-pandit-online${query}`);
   });
 
   // Dynamic 301s for the renamed slug families. These mirror the
@@ -317,24 +324,58 @@ export async function registerRoutes(
   app.get(/^\/shop\/([^/]+)$/, (req, res) => {
     res.redirect(301, `/puja-samagri-online/${req.params[0]}`);
   });
-  app.get(/^\/pandits\/([^/]+)\/([^/]+)$/, (req, res) => {
-    res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}/${req.params[1]}`, req.query));
-  });
-  app.get(/^\/pandits\/([^/]+)$/, (req, res) => {
-    res.redirect(301, panditRedirectTarget(`/book-pandit-online/${req.params[0]}`, req.query));
-  });
-  // Projection-known /puja/:service/:city pages are legacy aliases of the
-  // canonical city-service network. Leave every route untouched while the
-  // rollout is disabled.
-  app.get(/^\/puja\/([^/]+)\/([^/]+)$/, async (req, res, next) => {
+  app.get(/^\/(?:pandits|book-pandit-online)\/([^/]+)\/([^/]+)$/, async (req, res, next) => {
     try {
       if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return next();
+      const legacy = req.path.startsWith("/pandits/");
+      const target = resolvePanditCityCanonicalization(
+        await getPanditSeoNetworkProjection(),
+        legacy ? "legacy" : "canonical",
+        req.params[0],
+        req.params[1],
+      );
+      if (!target) return next();
+      return res.redirect(301, redirectTargetWithQuery(target, req.originalUrl));
+    } catch (error) {
+      return next(error);
+    }
+  });
+  app.get(/^\/pandits\/([^/]+)$/, async (req, res, next) => {
+    try {
+      if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return next();
+      const target = resolvePanditCityCanonicalization(
+        await getPanditSeoNetworkProjection(), "legacy", req.params[0],
+      );
+      if (!target) return next();
+      return res.redirect(301, redirectTargetWithQuery(target, req.originalUrl));
+    } catch (error) {
+      return next(error);
+    }
+  });
+  // Legacy /puja/:service/:city pages never remain independently indexable.
+  // Projection-known services redirect to the canonical network; disabled or
+  // unknown aliases become explicit noindex responses instead of old SPA pages.
+  app.get(/^\/(?:hi\/)?puja\/([^/]+)\/([^/]+)$/, async (req, res, next) => {
+    try {
+      const enabled = isPanditSeoNetworkEnabled(await storage.getSiteSettings());
+      if (!enabled) {
+        res.locals.seoNotFound = true;
+        res.locals.seoNotFoundRobotsFollow = false;
+        res.status(404);
+        res.setHeader("X-Robots-Tag", "noindex, nofollow");
+        return next();
+      }
       const service = selectCityService(
         await getPanditSeoNetworkProjection(),
         req.params[1],
         req.params[0],
       );
-      if (!service?.canonicalUrl) return next();
+      if (!service?.canonicalUrl) {
+        res.locals.seoNotFound = true;
+        res.status(404);
+        res.setHeader("X-Robots-Tag", "noindex, follow");
+        return next();
+      }
       return res.redirect(301, panditRedirectTarget(service.canonicalUrl, req.query));
     } catch (error) {
       return next(error);
@@ -1058,7 +1099,7 @@ Sitemap: ${baseUrl}/sitemap.xml
   app.get("/sitemap.xml", (req, res) => {
     const baseUrl = sitemapBase(req);
     const today = new Date().toISOString().split("T")[0];
-    const sections = ["pages", "products", "categories", "people", "festivals", "blog", "puja-cities", "sacred-library"];
+    const sections = ["pages", "products", "categories", "people", "festivals", "blog", "sacred-library"];
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
     for (const sec of sections) {
       xml += `  <sitemap>\n    <loc>${baseUrl}/sitemap-${sec}.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n`;
@@ -1073,41 +1114,11 @@ Sitemap: ${baseUrl}/sitemap.xml
     const seoMap = new Map(seoPagesList.filter(s => s.isActive).map(s => [s.pagePath, s]));
     const today = new Date().toISOString().split("T")[0];
     const baseUrl = sitemapBase(req);
-    const panditNetworkEnabled = isPanditSeoNetworkEnabled(await storage.getSiteSettings());
-    const projectedPanditLocations = panditNetworkEnabled
-      ? Array.from(indexablePanditLocationPaths(await getPanditSeoNetworkProjection())).map((loc) => ({
-          loc,
-          priority: loc.split("/").length > 3 ? "0.75" : "0.9",
-          changefreq: "weekly",
-        }))
-      : null;
-
     const staticPages = [
       { loc: "/", priority: "1.0", changefreq: "daily" },
       { loc: "/spiritual-essentials", priority: "0.8", changefreq: "weekly" },
       { loc: "/puja-samagri-online", priority: "0.8", changefreq: "weekly" },
-      { loc: "/online-pandit-booking", priority: "0.9", changefreq: "weekly" },
-      // Per-city pandit landings + per-(city, puja) long-tail landings.
-      // Generated from server/pandit-cities-map.ts so the sitemap stays
-      // in sync with the actual route table.
-      ...(projectedPanditLocations || (() => {
-        const out: Array<{ loc: string; priority: string; changefreq: string }> = [];
-        for (const c of PANDIT_CITY_SUMMARIES) {
-          out.push({
-            loc: `/book-pandit-online/${c.slug}`,
-            priority: c.live ? "0.9" : "0.7",
-            changefreq: c.live ? "weekly" : "monthly",
-          });
-          for (const pn of c.popularPujaNames) {
-            out.push({
-              loc: `/book-pandit-online/${c.slug}/${slugifyPuja(pn)}`,
-              priority: c.live ? "0.75" : "0.55",
-              changefreq: "monthly",
-            });
-          }
-        }
-        return out;
-      })()),
+      { loc: "/book-pandit-online", priority: "0.9", changefreq: "weekly" },
       { loc: "/online-puja-booking", priority: "0.9", changefreq: "weekly" },
       { loc: "/online-pind-daan", priority: "0.9", changefreq: "weekly" },
       // City landing pages use the hyphenated route convention
@@ -1223,6 +1234,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       { loc: "/shipping-policy", priority: "0.3", changefreq: "yearly" },
     ];
 
+    const networkPages = await getPanditSeoNetworkSitemapPages();
+    staticPages.push(...networkPages);
+
     let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
     for (const page of staticPages) {
       const seo = seoMap.get(page.loc);
@@ -1240,9 +1254,6 @@ Sitemap: ${baseUrl}/sitemap.xml
       if (!seo.isActive || !seo.robotsIndex) continue;
       const path = seo.pagePath;
       if (emittedPaths.has(path)) continue;
-      if (panditNetworkEnabled && /^\/book-pandit-online\/[^/]+(?:\/[^/]+)?\/?$/.test(path)) {
-        continue;
-      }
       // Skip paths that belong to a dedicated sub-sitemap to avoid duplicates.
       if (
         path.startsWith("/product/") ||
@@ -1251,6 +1262,8 @@ Sitemap: ${baseUrl}/sitemap.xml
         path.startsWith("/category/") ||
         path.startsWith("/festival/") ||
         path.startsWith("/blog/") ||
+        path.startsWith("/book-pandit-online/") ||
+        path.startsWith("/pandits/") ||
         path.startsWith("/pandit/") ||
         path.startsWith("/astrologer/")
       ) {
@@ -1322,46 +1335,22 @@ Sitemap: ${baseUrl}/sitemap.xml
     res.type("application/xml").send(xml);
   });
 
-  // ---- SEO: sitemap-puja-cities.xml — programmatic /puja/:type/:city pages ----
-  // Mirrors client/src/lib/cities.ts CITIES and client/src/lib/puja-types.ts
-  // PUJA_TYPES. When entries are added there, add them here too. Generates ~
-  // (cities × puja types) URLs.
-  app.get("/sitemap-puja-cities.xml", (req, res) => {
-    const cities = [
-      "varanasi", "haridwar", "rishikesh", "ujjain", "mathura", "vrindavan",
-      "tirupati", "gaya", "ayodhya", "puri", "dwarka", "prayagraj", "amritsar",
-      "kanchipuram", "madurai", "pushkar", "mumbai", "delhi", "bengaluru",
-      "hyderabad", "chennai", "kolkata", "pune", "ahmedabad", "jaipur",
-      "lucknow", "kanpur", "nagpur", "indore", "bhopal", "patna", "vadodara",
-      "surat", "ludhiana", "agra", "nashik", "faridabad", "ghaziabad",
-      "coimbatore", "visakhapatnam", "thane", "gurugram", "noida", "chandigarh",
-      "bhubaneswar", "ranchi", "raipur", "guwahati", "meerut", "dehradun",
-    ];
-    const pujaTypes = [
-      "satyanarayan-katha", "rudrabhishek", "griha-pravesh",
-      "mahamrityunjaya-jaap", "navagraha-shanti", "ganesh-puja", "lakshmi-puja",
-      "durga-puja", "saraswati-puja", "hanuman-puja", "kaal-sarp-dosh-nivaran",
-      "mangal-dosh-nivaran", "pitra-dosh-nivaran", "shani-shanti", "vastu-shanti",
-      "gauri-ganesh-puja", "bhoomi-pujan", "namkaran-sanskar", "mundan-sanskar",
-      "annaprashan",
-    ];
-    const today = new Date().toISOString().split("T")[0];
-    const baseUrl = sitemapBase(req);
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n`;
-    for (const t of pujaTypes) {
-      for (const c of cities) {
-        const enLoc = `${baseUrl}/puja/${t}/${c}`;
-        const hiLoc = `${baseUrl}/hi/puja/${t}/${c}`;
-        const enEsc = escapeXml(enLoc);
-        const hiEsc = escapeXml(hiLoc);
-        // En entry with hreflang alternates pointing at the Hindi twin.
-        xml += `  <url>\n    <loc>${enEsc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n    <xhtml:link rel="alternate" hreflang="en-IN" href="${enEsc}"/>\n    <xhtml:link rel="alternate" hreflang="hi-IN" href="${hiEsc}"/>\n    <xhtml:link rel="alternate" hreflang="x-default" href="${enEsc}"/>\n  </url>\n`;
-        // Hi twin entry with the reciprocal alternates.
-        xml += `  <url>\n    <loc>${hiEsc}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n    <xhtml:link rel="alternate" hreflang="en-IN" href="${enEsc}"/>\n    <xhtml:link rel="alternate" hreflang="hi-IN" href="${hiEsc}"/>\n    <xhtml:link rel="alternate" hreflang="x-default" href="${enEsc}"/>\n  </url>\n`;
+  // Retain the old sitemap URL for crawlers that cached it, but only emit the
+  // governed canonical projection. It is deliberately absent from sitemap.xml.
+  app.get("/sitemap-puja-cities.xml", async (req, res, next) => {
+    try {
+      const pages = await getPanditSeoNetworkSitemapPages();
+      const today = new Date().toISOString().split("T")[0];
+      const baseUrl = sitemapBase(req);
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+      for (const page of pages) {
+        xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${page.loc}`)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${page.changefreq}</changefreq>\n    <priority>${page.priority}</priority>\n  </url>\n`;
       }
+      xml += `</urlset>\n`;
+      return res.type("application/xml").send(xml);
+    } catch (error) {
+      return next(error);
     }
-    xml += `</urlset>\n`;
-    res.type("application/xml").send(xml);
   });
 
   // ---- SEO: sitemap-products.xml — every active product with image entries ----
@@ -3967,6 +3956,15 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const offering = (await storage.listPanditServicesWithMaster(service.panditId, true))
         .find(row => row.service.id === serviceId);
       if (!offering) return res.status(400).json({ message: "This service is no longer available" });
+      const { pandits: eligiblePandits } = await publicEligibility();
+      const pandit = eligiblePandits.find((candidate) => candidate.id === offering.service.panditId);
+      if (!pandit) return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
+      const contextError = validateCanonicalServiceBookingContext(req.body, {
+        masterServiceId: offering.master.id,
+        cityId: pandit.cityId,
+        stateId: pandit.stateId,
+      });
+      if (contextError) return res.status(400).json({ message: contextError });
       const requestedMode = resolvedBooking.mode === "online" ? "online" : "in_person";
       if (offering.service.mode !== "hybrid" && offering.service.mode !== requestedMode) {
         return res.status(400).json({ message: "The selected booking mode is not available for this service" });

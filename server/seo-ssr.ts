@@ -38,12 +38,11 @@ import {
   selectPublicProfile,
 } from "./pandit-seo-network/public-api";
 import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
-import { buildPanditCitySeoHead } from "./pandit-seo-network/city-seo";
 import {
   resolveSeoMetadata,
   type ResolvedSeoMetadata,
 } from "../shared/seo-metadata";
-
+import { buildPanditCitySeo } from "../shared/pandit-city-seo";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
@@ -196,6 +195,48 @@ export function stripNotFoundHeadConflicts(html: string): string {
     .replace(/<script\s+[^>]*\btype=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>\s*/gi, "");
 }
 
+export async function resolvePanditNetworkHead(
+  reqPath: string,
+  baseUrl: string,
+): Promise<Head | null> {
+  const match = reqPath.match(/^\/book-pandit-online\/([^/]+)(?:\/([^/]+))?\/?$/);
+  if (!match) return null;
+  let citySlug: string;
+  let serviceSlug: string | undefined;
+  try {
+    citySlug = decodeURIComponent(match[1]);
+    serviceSlug = match[2] ? decodeURIComponent(match[2]) : undefined;
+  } catch {
+    return null;
+  }
+
+  if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return null;
+  const projection = await getPanditSeoNetworkProjection();
+  const city = selectCityHub(projection, citySlug);
+  if (!city?.canonicalUrl) return null;
+  const selectedService = serviceSlug
+    ? selectCityService(projection, citySlug, serviceSlug)
+    : null;
+  if (serviceSlug && !selectedService?.canonicalUrl) return null;
+
+  const providers = selectedService?.providers || city.providers;
+  const seo = buildPanditCitySeo({
+    canonicalUrl: selectedService?.canonicalUrl || city.canonicalUrl,
+    city: { name: city.city.name, canonicalUrl: city.canonicalUrl },
+    state: { name: city.state.name },
+    providers,
+    indexable: selectedService?.indexability.indexable ?? city.indexability.indexable,
+    ...(selectedService ? { service: { name: selectedService.service.name } } : {}),
+  }, baseUrl);
+  return {
+    title: seo.title,
+    description: seo.description,
+    canonical: seo.canonical,
+    robotsIndex: seo.indexable,
+    robotsFollow: true,
+    jsonLd: seo.schemas,
+  };
+}
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
   const staticHeads: Record<string, Head> = {
     "/qa": {
@@ -245,31 +286,8 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
   };
   if (staticHeads[reqPath]) return staticHeads[reqPath];
 
-  const panditLocationMatch = reqPath.match(/^\/book-pandit-online\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?\/?$/);
-  if (panditLocationMatch) {
-    try {
-      if (isPanditSeoNetworkEnabled(await storage.getSiteSettings())) {
-        const projection = await getPanditSeoNetworkProjection();
-        const city = selectCityHub(projection, panditLocationMatch[1]);
-        const service = panditLocationMatch[2]
-          ? selectCityService(projection, panditLocationMatch[1], panditLocationMatch[2])
-          : undefined;
-        if (!city || (panditLocationMatch[2] && !service)) {
-          return {
-            title: `Pandit Location Not Found | ${SITE_NAME}`,
-            description: "This Pandit location is unavailable.",
-            canonical: reqPath,
-            robotsIndex: false,
-            robotsFollow: true,
-            jsonLd: [],
-          };
-        }
-        return buildPanditCitySeoHead(city, baseUrl, service || undefined);
-      }
-    } catch (error) {
-      throw new PanditSeoSsrResolutionError(error);
-    }
-  }
+  const panditNetworkHead = await resolvePanditNetworkHead(reqPath, baseUrl);
+  if (panditNetworkHead) return panditNetworkHead;
 
   // 0) Bespoke WhatsApp/social share cards (server/og-meta.ts).
   // These are hand-curated for the highest-intent routes (homepage,
@@ -601,6 +619,7 @@ export function seoHeadMiddleware() {
           description: "The requested page could not be found. Explore Vedic Tatva's puja services, verified Pandits, spiritual guidance, and authentic puja essentials.",
           canonical: path,
           noindex: true,
+           robotsFollow: res.locals.seoNotFoundRobotsFollow,
           jsonLd: [],
         }
       : null;

@@ -19,6 +19,7 @@ import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, servi
 import { trackPanditSeoEvent } from "@/lib/analytics";
 
 const PUJA_PARENT_H1 = "Book a Verified Pandit for Puja at Home";
+type BookingMode = "online" | "offline";
 
 const PUJA_FAQS = [
   { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
@@ -52,6 +53,9 @@ export default function PujaBooking() {
   const panditIdParam = searchParams.get("pandit");
   const panditId = panditIdParam ? parseInt(panditIdParam) : 0;
   const bookingServiceId = Number(searchParams.get("serviceId") || 0);
+  const masterServiceId = Number(searchParams.get("masterServiceId") || 0);
+  const canonicalCityId = Number(searchParams.get("cityId") || 0);
+  const canonicalStateId = Number(searchParams.get("stateId") || 0);
   const bookingPackageId = Number(searchParams.get("packageId") || 0);
   const bookingService = searchParams.get("service")?.trim() || "";
   const bookingSource = searchParams.get("source") === "storefront" ? "storefront" : "booking";
@@ -85,10 +89,10 @@ export default function PujaBooking() {
     const v = searchParams.get("pujaType") || "";
     return pujaOptions.some(p => p.value === v) ? v : customPujaType;
   })();
-  const initialMode = searchParams.get("mode") === "online" ? "online" : "offline";
+  const initialMode: BookingMode = searchParams.get("mode") === "online" ? "online" : "offline";
 
   const [pujaType, setPujaType] = useState(initialPujaType);
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState<BookingMode>(initialMode);
   const selectedOffering = bookingPackageId
     ? selectedStorefront?.packages?.find(pkg => pkg.id === bookingPackageId)
     : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
@@ -107,7 +111,13 @@ export default function PujaBooking() {
     const params = new URLSearchParams(searchString);
     const v = params.get("pujaType") || "";
     const service = params.get("service")?.trim() || "";
-    const nextPuja = v && pujaOptions.some(p => p.value === v) ? v : service ? `service:${service}` : "";
+    const nextPuja = bookingServiceId
+      ? `service:${bookingServiceId}`
+      : v && pujaOptions.some(p => p.value === v)
+        ? v
+        : service
+          ? `service:${service}`
+          : "";
     if (nextPuja !== pujaType) setPujaType(nextPuja);
     const m = params.get("mode");
     const nextMode = m === "online" ? "online" : "offline";
@@ -140,6 +150,11 @@ export default function PujaBooking() {
           totalAmount,
           ...(panditId > 0 ? { panditId } : {}),
           ...(bookingServiceId > 0 ? { panditServiceId: bookingServiceId } : {}),
+          ...(bookingServiceId > 0 ? {
+            masterServiceId,
+            cityId: canonicalCityId,
+            stateId: canonicalStateId,
+          } : {}),
           ...(bookingPackageId > 0 ? { panditPackageId: bookingPackageId } : {}),
         }),
       });
@@ -250,7 +265,7 @@ export default function PujaBooking() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Mode</label>
-                    <Select value={mode} onValueChange={setMode}>
+                    <Select value={mode} onValueChange={(value) => setMode(value as BookingMode)}>
                       <SelectTrigger className="w-full" data-testid="select-mode"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="offline">At Home / Venue</SelectItem>

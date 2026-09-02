@@ -6,3 +6,4 @@
 - [One-off TSX probes](tsx-probes.md) — temporary TSX scripts outside the workspace compile as CJS; use static absolute imports and wrap awaits in an async IIFE.
 - [Swiss Ephemeris install override](swisseph-install.md) — keep its node-gyp override on Node 20; the package's declared v10 path pulls firewall-blocked tar 6.2.1.
 - [Coolify restart discipline](coolify-restarts.md) — preserve the expensive dependency layer and use committed migrations; never run drizzle push automatically on every container restart.
+- [SEO network launch gates](seo-network-launch-gates.md) — default-off public SEO networks are not launched until admin enablement and standard-suite HTTP contract coverage both work.
