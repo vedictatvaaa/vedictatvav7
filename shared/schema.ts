@@ -2499,3 +2499,76 @@ export const pageViews = pgTable("page_views", {
 }));
 
 export type PageView = typeof pageViews.$inferSelect;
+
+// ============================================================================
+// Knowledge Graph — governed links between existing source records only.
+// Entity content remains authoritative in its existing table.
+// ============================================================================
+export const knowledgeGraphRelationships = pgTable("knowledge_graph_relationships", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sourceEntityType: text("source_entity_type").notNull(),
+  sourceEntityId: integer("source_entity_id").notNull(),
+  sourceDiscriminator: text("source_discriminator"),
+  relationshipType: text("relationship_type").notNull(),
+  targetEntityType: text("target_entity_type").notNull(),
+  targetEntityId: integer("target_entity_id").notNull(),
+  targetDiscriminator: text("target_discriminator"),
+  status: text("status").notNull().default("ACTIVE"),
+  displayOrder: integer("display_order").notNull().default(0),
+  metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+  createdByAdminId: integer("created_by_admin_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  sourceIdx: index("knowledge_graph_relationships_source_idx").on(t.sourceEntityType, t.sourceEntityId),
+  targetIdx: index("knowledge_graph_relationships_target_idx").on(t.targetEntityType, t.targetEntityId),
+  relationshipTypeIdx: index("knowledge_graph_relationships_relationship_type_idx").on(t.relationshipType),
+  sourceRelationshipIdx: index("knowledge_graph_relationships_source_relationship_idx").on(t.sourceEntityType, t.sourceEntityId, t.relationshipType),
+  targetRelationshipIdx: index("knowledge_graph_relationships_target_relationship_idx").on(t.targetEntityType, t.targetEntityId, t.relationshipType),
+  statusIdx: index("knowledge_graph_relationships_status_idx").on(t.status),
+  exactEdgeUnique: uniqueIndex("knowledge_graph_relationships_exact_edge_unique").on(
+    t.sourceEntityType, t.sourceEntityId, sql`COALESCE(${t.sourceDiscriminator}, '')`, t.relationshipType,
+    t.targetEntityType, t.targetEntityId, sql`COALESCE(${t.targetDiscriminator}, '')`,
+  ),
+  sourceTypeCheck: check("knowledge_graph_relationships_source_type_check", sql`${t.sourceEntityType} IN ('PUJA','PANDIT','LOCATION','TIRTH','TEMPLE','PRODUCT','ARTICLE','SERVICE','REVIEW','YATRA')`),
+  targetTypeCheck: check("knowledge_graph_relationships_target_type_check", sql`${t.targetEntityType} IN ('PUJA','PANDIT','LOCATION','TIRTH','TEMPLE','PRODUCT','ARTICLE','SERVICE','REVIEW','YATRA')`),
+  relationshipTypeCheck: check("knowledge_graph_relationships_relationship_type_check", sql`${t.relationshipType} IN ('performed_by','specializes_in','available_in','located_in','offers','related_to','related_article','related_product','associated_with','contains','available_puja','related_service','related_tirth','related_temple','related_yatra','discusses')`),
+  statusCheck: check("knowledge_graph_relationships_status_check", sql`${t.status} IN ('ACTIVE','DRAFT')`),
+  sourceIdCheck: check("knowledge_graph_relationships_source_id_check", sql`${t.sourceEntityId} > 0`),
+  targetIdCheck: check("knowledge_graph_relationships_target_id_check", sql`${t.targetEntityId} > 0`),
+  displayOrderCheck: check("knowledge_graph_relationships_display_order_check", sql`${t.displayOrder} BETWEEN 0 AND 10000`),
+  metadataCheck: check("knowledge_graph_relationships_metadata_check", sql`jsonb_typeof(${t.metadata}) = 'object'`),
+  sourceLocationCheck: check("knowledge_graph_relationships_source_location_check", sql`(${t.sourceEntityType} = 'LOCATION' AND ${t.sourceDiscriminator} IS NOT NULL AND ${t.sourceDiscriminator} IN ('STATE','CITY')) OR (${t.sourceEntityType} <> 'LOCATION' AND ${t.sourceDiscriminator} IS NULL)`),
+  targetLocationCheck: check("knowledge_graph_relationships_target_location_check", sql`(${t.targetEntityType} = 'LOCATION' AND ${t.targetDiscriminator} IS NOT NULL AND ${t.targetDiscriminator} IN ('STATE','CITY')) OR (${t.targetEntityType} <> 'LOCATION' AND ${t.targetDiscriminator} IS NULL)`),
+}));
+
+export const knowledgeGraphQualityRules = pgTable("knowledge_graph_quality_rules", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  sourceEntityType: text("source_entity_type").notNull(),
+  relationshipType: text("relationship_type").notNull(),
+  allowedTargetEntityTypes: text("allowed_target_entity_types").array().notNull(),
+  minimumRequiredCount: integer("minimum_required_count").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdByAdminId: integer("created_by_admin_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  sourceRelationshipUnique: uniqueIndex("knowledge_graph_quality_rules_source_relationship_unique").on(t.sourceEntityType, t.relationshipType),
+  activeIdx: index("knowledge_graph_quality_rules_active_idx").on(t.isActive),
+  sourceIdx: index("knowledge_graph_quality_rules_source_idx").on(t.sourceEntityType),
+  sourceTypeCheck: check("knowledge_graph_quality_rules_source_type_check", sql`${t.sourceEntityType} IN ('PUJA','PANDIT','LOCATION','TIRTH','TEMPLE','PRODUCT','ARTICLE','SERVICE','REVIEW','YATRA')`),
+  relationshipTypeCheck: check("knowledge_graph_quality_rules_relationship_type_check", sql`${t.relationshipType} IN ('performed_by','specializes_in','available_in','located_in','offers','related_to','related_article','related_product','associated_with','contains','available_puja','related_service','related_tirth','related_temple','related_yatra','discusses')`),
+  targetsCheck: check("knowledge_graph_quality_rules_targets_check", sql`cardinality(${t.allowedTargetEntityTypes}) BETWEEN 1 AND 10 AND ${t.allowedTargetEntityTypes} <@ ARRAY['PUJA','PANDIT','LOCATION','TIRTH','TEMPLE','PRODUCT','ARTICLE','SERVICE','REVIEW','YATRA']::text[]`),
+  minimumCountCheck: check("knowledge_graph_quality_rules_minimum_count_check", sql`${t.minimumRequiredCount} BETWEEN 1 AND 100`),
+}));
+
+export type KnowledgeGraphRelationship = typeof knowledgeGraphRelationships.$inferSelect;
+export type KnowledgeGraphQualityRule = typeof knowledgeGraphQualityRules.$inferSelect;
+export const insertKnowledgeGraphRelationshipSchema = createInsertSchema(knowledgeGraphRelationships).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export const insertKnowledgeGraphQualityRuleSchema = createInsertSchema(knowledgeGraphQualityRules).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertKnowledgeGraphRelationship = z.infer<typeof insertKnowledgeGraphRelationshipSchema>;
+export type InsertKnowledgeGraphQualityRule = z.infer<typeof insertKnowledgeGraphQualityRuleSchema>;
