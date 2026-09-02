@@ -1,0 +1,9 @@
+export const ENTITY_TYPES = ["PUJA", "PANDIT", "LOCATION", "TIRTH", "TEMPLE", "PRODUCT", "ARTICLE", "SERVICE", "REVIEW", "YATRA"] as const;
+export const SUPPORTED_ENTITY_TYPES = ["PUJA", "PANDIT", "LOCATION", "PRODUCT", "ARTICLE", "SERVICE", "REVIEW", "YATRA"] as const;
+export type EntityType = typeof ENTITY_TYPES[number];
+export type Entity = { type: EntityType; id: number; discriminator?: "CITY" | "STATE"; name: string; status: string; url: string | null; updatedAt: string | null; summary: Record<string, string | number | boolean | null>; connectionCount?: number };
+export type Edge = { id: number; relationshipType: string; status: "ACTIVE" | "DRAFT"; displayOrder: number; metadata: Record<string, unknown> | null; createdAt: string; updatedAt: string; stale: boolean; entity: Entity | null };
+export type Detail = { entity: Entity; connectionCount: number; incoming: Record<string, Edge[]>; outgoing: Record<string, Edge[]> };
+export type Definition = { relationshipType: string; sourceTypes: EntityType[]; targetTypes: EntityType[] };
+export type Page<T> = { page: number; limit: number; total: number; items: T[] };
+export type Rule = { id: number; sourceEntityType: EntityType; relationshipType: string; allowedTargetEntityTypes: EntityType[]; minimumRequiredCount: number; isActive: boolean };

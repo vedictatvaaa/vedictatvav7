@@ -18,11 +18,15 @@ export function positiveEntityId(value: unknown): number {
 }
 
 export function pagination(input: { page?: unknown; limit?: unknown }) {
-  const page = input.page === undefined ? 1 : positiveBoundedInteger(input.page, 1, 1_000_000, "page");
-  const limit = input.limit === undefined ? 25 : positiveBoundedInteger(input.limit, 1, MAX_PAGE_SIZE, "limit");
+  const page = input.page === undefined ? 1 : positiveBoundedInteger(queryInteger(input.page), 1, 1_000_000, "page");
+  const limit = input.limit === undefined ? 25 : positiveBoundedInteger(queryInteger(input.limit), 1, MAX_PAGE_SIZE, "limit");
   const offset = (page - 1) * limit;
   if (offset + limit > MAX_PAGINATION_WINDOW) throw new KnowledgeGraphValidationError(`page and limit may not exceed a ${MAX_PAGINATION_WINDOW} item window`);
   return { page, limit, offset };
+}
+
+function queryInteger(value: unknown): unknown {
+  return typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
 }
 
 export function boundedSearchTerm(value: unknown): string {

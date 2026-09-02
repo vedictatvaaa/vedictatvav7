@@ -61,7 +61,9 @@ test("search is bounded/paginated and summary and orphan counts derive from live
   const repo = new FakeRepository();
   const graph = new KnowledgeGraphService(repo as any, adapters({ PUJA: [dto("PUJA", 1, "Alpha"), dto("PUJA", 2, "Beta")], PANDIT: [dto("PANDIT", 3, "Pandit")] }) as any);
   await assert.rejects(() => graph.search({ type: "PUJA", term: "x".repeat(121) }), KnowledgeGraphValidationError);
-  assert.deepEqual((await graph.search({ type: "PUJA", page: 2, limit: 1 })).items.map((x: any) => x.id), [2]);
+  const secondPage = await graph.search({ type: "PUJA", page: 2, limit: 1 });
+  assert.equal(secondPage.total, 2);
+  assert.deepEqual(secondPage.items.map((x: any) => x.id), [2]);
   await graph.createRelationship({ source: { type: "PUJA", id: 1 }, relationshipType: "performed_by", target: { type: "PANDIT", id: 3 } }, 1);
   const summary = await graph.summary();
   assert.equal(summary.relationships, 1);

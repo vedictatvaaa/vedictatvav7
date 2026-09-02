@@ -42,6 +42,7 @@ test("IDs, LOCATION identity, pagination, and duplicate inputs are bounded", () 
   assert.throws(() => positiveEntityId(0), /positive/);
   assert.throws(() => positiveEntityId(Number.MAX_SAFE_INTEGER), /positive/);
   assert.deepEqual(pagination({ page: 2, limit: 50 }), { page: 2, limit: 50, offset: 50 });
+  assert.deepEqual(pagination({ page: "2", limit: "50" }), { page: 2, limit: 50, offset: 50 });
   assert.throws(() => pagination({ page: 1, limit: 101 }), /limit/);
   assert.throws(() => boundedSearch({ term: "", limit: 1_000, offset: 0 }), /limit/);
   assert.doesNotThrow(() => validateEntityRef({ type: "LOCATION", id: 1, discriminator: "CITY" }));

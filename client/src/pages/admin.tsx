@@ -132,6 +132,7 @@ const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab
 const CommunityTab          = safeLazy(() => import("./admin-tabs/CommunityTab"));
 const SacredLibraryTab      = safeLazy(() => import("./admin-tabs/SacredLibraryTab"));
 const LocationsTab          = safeLazy(() => import("./admin-tabs/LocationsTab"));
+const KnowledgeGraphTab     = safeLazy(() => import("@/components/admin/knowledge-graph"));
 
 // id → lazy component, used to warm a tab's JS chunk on hover/focus so the
 // click feels instant. Partial because a few legacy TabIds (e.g. the
@@ -189,6 +190,7 @@ const TAB_COMPONENTS: Partial<Record<TabId, { preload: () => Promise<unknown> }>
   "puja-library": PujaLibraryTab,
   community: CommunityTab,
   "sacred-library": SacredLibraryTab,
+  "knowledge-graph": KnowledgeGraphTab,
 };
 const prefetchedTabs = new Set<TabId>();
 function prefetchTab(id: TabId) {
@@ -793,6 +795,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "puja-library" && <PujaLibraryTab adminToken={adminToken} />}
               {activeTab === "community" && <CommunityTab adminToken={adminToken} />}
               {activeTab === "sacred-library" && <SacredLibraryTab adminToken={adminToken} />}
+              {activeTab === "knowledge-graph" && <KnowledgeGraphTab />}
             </Suspense>
             </TabErrorBoundary>
           </div>

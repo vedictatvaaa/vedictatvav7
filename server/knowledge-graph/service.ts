@@ -86,10 +86,11 @@ export class KnowledgeGraphService {
     if (term.length > 120) throw new KnowledgeGraphValidationError("Search term is too long");
     const entityStatus = input.status;
     if (entityStatus !== undefined && typeof entityStatus !== "string") throw new KnowledgeGraphValidationError("status must be a string");
-    // Status is normalized by adapters, so it must be filtered before page
-    // slicing. Chunk raw adapter pages until this bounded request window has
-    // enough matching candidates.
-    const rows = (await Promise.all(types.map((type) => this.fromAdapterUntil(type, term, offset + limit, discriminator, entityStatus)))).flat()
+    // Exact explorer totals and status-aware pagination require the complete
+    // matching identity set before the bounded page is sliced. Adapters still
+    // read only allowlisted DTO fields in fixed-size chunks.
+    const rows = (await Promise.all(types.map((type) => this.allFromAdapter(type, term, discriminator)))).flat()
+      .filter((entity: AdminEntityDto) => entityStatus === undefined || entity.status === entityStatus)
       .sort((a: AdminEntityDto, b: AdminEntityDto) => a.name.localeCompare(b.name));
     const edges = await this.repository.allRelationships();
     const connectionCounts = new Map<string, number>();
@@ -98,7 +99,12 @@ export class KnowledgeGraphService {
       connectionCounts.set(key(refOf(edge, "target")), (connectionCounts.get(key(refOf(edge, "target"))) || 0) + 1);
     });
     const pageItems = rows.slice(offset, offset + limit);
-    return { page, limit, items: pageItems.map((entity: AdminEntityDto) => ({ ...entity, connectionCount: connectionCounts.get(key(entity)) || 0 })) };
+    return {
+      page,
+      limit,
+      total: rows.length,
+      items: pageItems.map((entity: AdminEntityDto) => ({ ...entity, connectionCount: connectionCounts.get(key(entity)) || 0 })),
+    };
   }
   async summary() {
     const edges = await this.repository.allRelationships();
