@@ -2562,8 +2562,115 @@ export const knowledgeGraphQualityRules = pgTable("knowledge_graph_quality_rules
   minimumCountCheck: check("knowledge_graph_quality_rules_minimum_count_check", sql`${t.minimumRequiredCount} BETWEEN 1 AND 100`),
 }));
 
+// Canonical destination source records.  These deliberately do not share a
+// table with sellable tirth_yatra_tours: a destination and a tour have
+// different ownership and lifecycle rules.
+export const tirths = pgTable("tirths", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  migrationSourceKey: text("migration_source_key").notNull(),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  nameHindi: text("name_hindi"),
+  status: text("status").notNull().default("DRAFT"),
+  provenance: text("provenance").notNull(),
+  region: text("region"),
+  state: text("state"),
+  deity: text("deity"),
+  category: text("category"),
+  shortDescription: text("short_description"),
+  description: text("description"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  heroMediaUrl: text("hero_media_url"),
+  editorial: jsonb("editorial").notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  migrationSourceKeyUnique: uniqueIndex("tirths_migration_source_key_unique").on(t.migrationSourceKey),
+  slugUnique: uniqueIndex("tirths_slug_unique").on(t.slug),
+  statusIdx: index("tirths_status_idx").on(t.status),
+  publicEligibilityIdx: index("tirths_public_eligibility_idx").on(t.status, t.slug),
+  statusCheck: check("tirths_status_check", sql`${t.status} IN ('DRAFT','PUBLISHED','ARCHIVED')`),
+  provenanceCheck: check("tirths_provenance_check", sql`${t.provenance} IN ('TIRTH_GUIDE','TEMPLE_TOURISM','EDITORIAL')`),
+  sourceKeyCheck: check("tirths_migration_source_key_check", sql`length(${t.migrationSourceKey}) BETWEEN 1 AND 200`),
+  slugCheck: check("tirths_slug_check", sql`${t.slug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+  editorialCheck: check("tirths_editorial_check", sql`jsonb_typeof(${t.editorial}) = 'object'`),
+  coordinatesCheck: check("tirths_coordinates_check", sql`(${t.latitude} IS NULL AND ${t.longitude} IS NULL) OR (${t.latitude} IS NOT NULL AND ${t.longitude} IS NOT NULL)`),
+  latitudeRangeCheck: check("tirths_latitude_range_check", sql`${t.latitude} IS NULL OR ${t.latitude} BETWEEN -90 AND 90`),
+  longitudeRangeCheck: check("tirths_longitude_range_check", sql`${t.longitude} IS NULL OR ${t.longitude} BETWEEN -180 AND 180`),
+}));
+
+export const temples = pgTable("temples", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  migrationSourceKey: text("migration_source_key").notNull(),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  nameHindi: text("name_hindi"),
+  status: text("status").notNull().default("DRAFT"),
+  provenance: text("provenance").notNull(),
+  location: text("location"),
+  state: text("state"),
+  deity: text("deity"),
+  category: text("category"),
+  shortDescription: text("short_description"),
+  description: text("description"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  heroMediaUrl: text("hero_media_url"),
+  editorial: jsonb("editorial").notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  migrationSourceKeyUnique: uniqueIndex("temples_migration_source_key_unique").on(t.migrationSourceKey),
+  slugUnique: uniqueIndex("temples_slug_unique").on(t.slug),
+  statusIdx: index("temples_status_idx").on(t.status),
+  publicEligibilityIdx: index("temples_public_eligibility_idx").on(t.status, t.slug),
+  statusCheck: check("temples_status_check", sql`${t.status} IN ('DRAFT','PUBLISHED','ARCHIVED')`),
+  provenanceCheck: check("temples_provenance_check", sql`${t.provenance} IN ('TEMPLE_TOURISM','EDITORIAL')`),
+  sourceKeyCheck: check("temples_migration_source_key_check", sql`length(${t.migrationSourceKey}) BETWEEN 1 AND 200`),
+  slugCheck: check("temples_slug_check", sql`${t.slug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+  editorialCheck: check("temples_editorial_check", sql`jsonb_typeof(${t.editorial}) = 'object'`),
+  coordinatesCheck: check("temples_coordinates_check", sql`(${t.latitude} IS NULL AND ${t.longitude} IS NULL) OR (${t.latitude} IS NOT NULL AND ${t.longitude} IS NOT NULL)`),
+  latitudeRangeCheck: check("temples_latitude_range_check", sql`${t.latitude} IS NULL OR ${t.latitude} BETWEEN -90 AND 90`),
+  longitudeRangeCheck: check("temples_longitude_range_check", sql`${t.longitude} IS NULL OR ${t.longitude} BETWEEN -180 AND 180`),
+}));
+
+export const destinationSlugAliases = pgTable("destination_slug_aliases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  aliasSlug: text("alias_slug").notNull(),
+  canonicalSlug: text("canonical_slug").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  entityAliasUnique: uniqueIndex("destination_slug_aliases_entity_alias_unique").on(t.entityType, t.aliasSlug),
+  aliasLookupIdx: index("destination_slug_aliases_alias_lookup_idx").on(t.aliasSlug),
+  entityLookupIdx: index("destination_slug_aliases_entity_lookup_idx").on(t.entityType, t.entityId),
+  entityTypeCheck: check("destination_slug_aliases_entity_type_check", sql`${t.entityType} IN ('TIRTH','TEMPLE')`),
+  entityIdCheck: check("destination_slug_aliases_entity_id_check", sql`${t.entityId} > 0`),
+  aliasSlugCheck: check("destination_slug_aliases_alias_slug_check", sql`${t.aliasSlug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+  canonicalSlugCheck: check("destination_slug_aliases_canonical_slug_check", sql`${t.canonicalSlug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+  nonSelfCheck: check("destination_slug_aliases_non_self_check", sql`${t.aliasSlug} <> ${t.canonicalSlug}`),
+}));
+
+// A singleton.  Cache consumers include generation in their key and therefore
+// fail closed until a later Admin-only gate implementation explicitly enables it.
+export const knowledgeGraphPublicState = pgTable("knowledge_graph_public_state", {
+  id: integer("id").primaryKey().default(1),
+  isPublicEnabled: boolean("is_public_enabled").notNull().default(false),
+  generation: integer("generation").notNull().default(0),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  singletonCheck: check("knowledge_graph_public_state_singleton_check", sql`${t.id} = 1`),
+  generationCheck: check("knowledge_graph_public_state_generation_check", sql`${t.generation} >= 0`),
+}));
+
 export type KnowledgeGraphRelationship = typeof knowledgeGraphRelationships.$inferSelect;
 export type KnowledgeGraphQualityRule = typeof knowledgeGraphQualityRules.$inferSelect;
+export type Tirth = typeof tirths.$inferSelect;
+export type Temple = typeof temples.$inferSelect;
+export type DestinationSlugAlias = typeof destinationSlugAliases.$inferSelect;
+export type KnowledgeGraphPublicState = typeof knowledgeGraphPublicState.$inferSelect;
 export const insertKnowledgeGraphRelationshipSchema = createInsertSchema(knowledgeGraphRelationships).omit({
   id: true, createdAt: true, updatedAt: true,
 });

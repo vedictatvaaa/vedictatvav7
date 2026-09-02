@@ -8,6 +8,8 @@ import {
   YATRA_PERSISTENCE_CONTRACT,
   YATRA_TOUR_SOURCE_KEYS,
 } from "@shared/pilgrimage-source-contract";
+import { pilgrimageSites } from "@shared/temple-tourism-data";
+import { TIRTH_YATRAS_SERIALIZABLE } from "@shared/tirth-yatras-data";
 import {
   DESTINATION_SOURCE_COUNTS,
   LEGACY_ONLY_TEMPLE_TOURISM_SOURCE_KEYS,
@@ -19,22 +21,18 @@ import { isValidRelationshipCombination } from "./knowledge-graph";
 const keys = (rows: readonly (readonly [string, string])[]) => rows.map(([key]) => key);
 
 test("server-safe inventories exactly freeze the current client and seeded source keys", async () => {
-  const [tirthGuideFile, templeTourismFile, yatraSourceFile] = await Promise.all([
-    readFile(new URL("../client/src/lib/tirth-yatras-data.ts", import.meta.url), "utf8"),
-    readFile(new URL("../client/src/pages/temple-tourism.tsx", import.meta.url), "utf8"),
-    readFile(new URL("./yatra-pilgrimage.ts", import.meta.url), "utf8"),
-  ]);
+  const yatraSourceFile = await readFile(new URL("./yatra-pilgrimage.ts", import.meta.url), "utf8");
   const sourceKeys = (source: string, start: string, end: string, field: string) =>
     [...source.slice(source.indexOf(start), source.indexOf(end)).matchAll(new RegExp(`\\b${field}: "([^"]+)"`, "g"))]
       .map((match) => match[1]);
 
   assert.deepEqual(
     keys(TIRTH_GUIDE_SOURCE_ROWS),
-    sourceKeys(tirthGuideFile, "export const TIRTH_YATRAS", "export const TIRTH_YATRAS_BY_SLUG", "slug"),
+    TIRTH_YATRAS_SERIALIZABLE.map((record) => record.slug),
   );
   assert.deepEqual(
     keys(TEMPLE_TOURISM_SOURCE_ROWS),
-    sourceKeys(templeTourismFile, "const pilgrimageSites", "const categoryImages", "id"),
+    pilgrimageSites.map((record) => record.id),
   );
   assert.deepEqual(
     [...YATRA_TOUR_SOURCE_KEYS],
