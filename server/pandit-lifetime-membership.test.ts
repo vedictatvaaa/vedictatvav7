@@ -9,6 +9,7 @@ import { panditVerificationDto } from "./pandit-verification";
 
 const migration = readFileSync("migrations/0010_pandit_lifetime_registration.sql", "utf8");
 const successorMigration = readFileSync("migrations/0011_finalize_pandit_registration_numbers.sql", "utf8");
+const commerceMigration = readFileSync("migrations/0012_seed_pandit_membership_card_products.sql", "utf8");
 const schema = readFileSync("shared/schema.ts", "utf8");
 const routes = readFileSync("server/routes.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
@@ -165,4 +166,33 @@ test("known but unverified registration returns inactive identity only", () => {
     slug: "private",
   } as any);
   assert.deepEqual(dto, { status: "inactive", registrationNo: "1001000157" });
+});
+
+test("0012 seeds normal-commerce Plastic and Metal card siblings idempotently", () => {
+  assert.match(commerceMigration, /'pandit-membership-card-plastic', 'pandit-membership-card', 'Plastic'/);
+  assert.match(commerceMigration, /'pandit-membership-card-metal', 'pandit-membership-card', 'Metal'/);
+  assert.match(commerceMigration, /500, 500/);
+  assert.match(commerceMigration, /1000, 1000/);
+  assert.match(commerceMigration, /'pandit_membership_card'/);
+  assert.match(commerceMigration, /ON CONFLICT \(slug\) DO UPDATE/);
+  assert.match(commerceMigration, /\/og\/og-pandit-registration\.jpg/);
+});
+
+test("normal checkout and both Razorpay paths gate and stamp authoritative card items", () => {
+  assert.equal((routes.match(/stampPanditMembershipCardItems\(req,/g) || []).length, 3);
+  assert.match(routes, /item\.productType === "pandit_membership_card"/);
+  assert.match(routes, /validatePanditSession\(token\)/);
+  assert.match(routes, /!pandit\?\.verified \|\| !pandit\.registrationNo/);
+  assert.match(routes, /quantity < 1 \|\| quantity > 10/);
+  assert.match(routes, /panditRegistrationNo: pandit\.registrationNo/);
+  assert.match(routes, /productType: product\.productType/);
+  assert.match(routes, /trustedPrice = \(product\.salePrice && product\.salePrice > 0\) \? product\.salePrice : product\.price/);
+});
+
+test("card product discovery is protected and exposes no checkout ownership input", () => {
+  assert.match(routes, /"\/api\/pandit\/membership-card-products"/);
+  assert.match(routes, /Pandit authentication required/);
+  assert.match(routes, /eq\(products\.productType, "pandit_membership_card"\)/);
+  assert.match(routes, /variationGroupId === "pandit-membership-card"/);
+  assert.match(routes, /available: product\.stock > 0/);
 });

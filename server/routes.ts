@@ -66,6 +66,7 @@ import { panditApplications, panditCityRequests, insertFranchiseApplicationSchem
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { panditVerificationDto } from "./pandit-verification";
+import { validatePanditSession } from "./pandit-portal";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
@@ -151,6 +152,27 @@ const upload = multer({
     }
   },
 });
+
+async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{ items?: any[]; message?: string }> {
+  const cardItems = items.filter((item) => item.productType === "pandit_membership_card");
+  if (!cardItems.length) return { items };
+  const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
+  const panditId = await validatePanditSession(token);
+  if (!panditId) return { message: "Pandit authentication is required to order membership cards" };
+  const pandit = await storage.getPandit(panditId);
+  if (!pandit?.verified || !pandit.registrationNo) {
+    return { message: "An approved Pandit membership is required to order cards" };
+  }
+  const quantity = cardItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+    return { message: "Membership card quantity must be between 1 and 10" };
+  }
+  return {
+    items: items.map((item) => item.productType === "pandit_membership_card"
+      ? { ...item, panditId: pandit.id, panditRegistrationNo: pandit.registrationNo }
+      : item),
+  };
+}
 
 // Audio uploads for admin-managed Jap mantras. Lives under
 // uploads/mantra-audio/ so it's served by the existing /uploads
@@ -2880,6 +2902,27 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
     })));
   });
+  app.get("/api/pandit/membership-card-products", async (req: any, res) => {
+    const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
+    const panditId = await validatePanditSession(token);
+    if (!panditId) return res.status(401).json({ message: "Pandit authentication required" });
+    const cardProducts = (await db.select().from(products)
+      .where(eq(products.productType, "pandit_membership_card")))
+      .filter(product => product.variationGroupId === "pandit-membership-card")
+      .map(product => ({
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        description: product.description,
+        image: product.image,
+        price: (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price,
+        stock: product.stock,
+        available: product.stock > 0,
+        variationGroupId: product.variationGroupId,
+        variationLabel: product.variationLabel,
+      }));
+    res.json({ variationGroupId: "pandit-membership-card", products: cardProducts });
+  });
   app.get("/api/admin/locations", adminAuthMiddleware, async (_req, res) => {
     const [states, cities, allPandits, apps] = await Promise.all([db.select().from(indianStates), db.select().from(indianCities), storage.getPandits(), storage.getPanditApplications()]);
     const discoverable = allPandits.filter(p => p.verified && !p.onLeave
@@ -4625,9 +4668,16 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         const mockItems = await Promise.all(
           ((orderData?.items || []) as any[]).map(async (item: any) => {
             const product = item.productId ? await storage.getProduct(item.productId) : null;
-            return { ...item, hsnCode: product?.hsnCode || "", gstPercent: product?.gstPercent || 18 };
+            if (!product) return { ...item, _untrusted: true, price: 0, hsnCode: "", gstPercent: 18 };
+            const price = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
+            return { ...item, price, productType: product.productType, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 };
           })
         );
+        if (mockItems.some((item: any) => item._untrusted)) {
+          return res.status(400).json({ success: false, message: "Cart contains invalid items" });
+        }
+        const mockCardItems = await stampPanditMembershipCardItems(req, mockItems);
+        if (!mockCardItems.items) return res.status(403).json({ success: false, message: mockCardItems.message });
         const order = await storage.createOrder({
           customerName: orderData?.customerName || "Test Customer",
           customerEmail: orderData?.customerEmail || "",
@@ -4635,8 +4685,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           shippingAddress: orderData?.shippingAddress || "",
           billingAddress: orderData?.billingAddress || orderData?.shippingAddress || "",
           customerState: orderData?.customerState || "",
-          totalAmount: orderData?.totalAmount || 0,
-          items: mockItems,
+          totalAmount: mockCardItems.items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0),
+          items: mockCardItems.items,
           paymentMethod: orderData?.paymentMethod || "prepaid",
           couponCode: orderData?.couponCode || null,
           couponDiscount: orderData?.couponDiscount || 0,
@@ -4675,7 +4725,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       // pull authoritative prices from the products table, recompute shipping
       // and COD from server rules, and verify that the amount Razorpay
       // actually charged matches our recomputed payable. Reject mismatches.
-      const enrichedItems = await Promise.all(
+      let enrichedItems = await Promise.all(
         ((orderData?.items || []) as any[]).map(async (item: any) => {
           if (!item.productId) {
             return { ...item, _untrusted: true, hsnCode: "", gstPercent: 18, price: 0 };
@@ -4685,12 +4735,15 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
             return { ...item, _untrusted: true, hsnCode: "", gstPercent: 18, price: 0 };
           }
           const trustedPrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
-          return { ...item, price: trustedPrice, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 };
+            return { ...item, price: trustedPrice, productType: product.productType, hsnCode: product.hsnCode || "", gstPercent: product.gstPercent || 18 };
         })
       );
       if (enrichedItems.some((i: any) => i._untrusted)) {
         return res.status(400).json({ success: false, message: "Cart contains invalid items" });
       }
+      const paymentCardItems = await stampPanditMembershipCardItems(req, enrichedItems);
+      if (!paymentCardItems.items) return res.status(403).json({ success: false, message: paymentCardItems.message });
+      enrichedItems = paymentCardItems.items;
       const itemsSubtotal = enrichedItems.reduce((s, it: any) => s + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0);
       // Server-authoritative coupon revalidation (same as /api/checkout).
       let safeCouponDiscount = 0;
@@ -4833,7 +4886,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       // without a productId or with a missing/unknown product are rejected so
       // attackers cannot bypass the recompute by sending custom line items.
       let priceTamperReason: string | null = null;
-      const enrichedItems = await Promise.all(
+      let enrichedItems = await Promise.all(
         (items as any[]).map(async (item: any) => {
           if (!item.productId) {
             priceTamperReason = priceTamperReason || `missing productId on item "${item.name || "unknown"}"`;
@@ -4850,6 +4903,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           return {
             ...item,
             price: trustedPrice,
+            productType: product.productType,
             hsnCode: product.hsnCode || "",
             gstPercent: product.gstPercent || 18,
           };
@@ -4861,6 +4915,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           message: "One or more cart items could not be verified. Please refresh your cart and try again.",
         });
       }
+      const checkoutCardItems = await stampPanditMembershipCardItems(req, enrichedItems);
+      if (!checkoutCardItems.items) return res.status(403).json({ message: checkoutCardItems.message });
+      enrichedItems = checkoutCardItems.items;
 
       const itemsSubtotal = enrichedItems.reduce(
         (sum, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0),
