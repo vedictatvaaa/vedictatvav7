@@ -302,6 +302,9 @@ export const pandits = pgTable("pandits", {
   // Lifelong member id stamped automatically on account creation. Format
   // VT-PND-<id padded to 5 digits>. Immutable once set.
   membershipNo: text("membership_no").unique(),
+  // Permanent lifetime identity, allocated only by the transactional approval flow.
+  registrationNo: text("registration_no"),
+  registrationAssignedAt: timestamp("registration_assigned_at"),
   // Admin-controlled flag. When true, the pandit can download/share their
   // dual-sided business card from the dashboard. Defaults to true so any
   // pandit (incl. seeded fixtures) gets immediate access; admin can revoke.
@@ -319,6 +322,8 @@ export const pandits = pgTable("pandits", {
   stateIdx: index("pandits_state_idx").on(t.state),
   stateIdIdx: index("pandits_state_id_idx").on(t.stateId),
   cityIdIdx: index("pandits_city_id_idx").on(t.cityId),
+  registrationNoUnique: uniqueIndex("pandits_registration_no_unique").on(t.registrationNo)
+    .where(sql`${t.registrationNo} is not null`),
   verifiedIdx: index("pandits_verified_idx").on(t.verified),
   boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
 }));
@@ -364,10 +369,32 @@ export const panditApplications = pgTable("pandit_applications", {
   status: text("status").notNull().default("pending"),
   adminNote: text("admin_note"),
   reviewedAt: timestamp("reviewed_at"),
+  // Set exactly once when approval transaction creates the authoritative Pandit.
+  panditId: integer("pandit_id").references(() => pandits.id),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   stateIdIdx: index("pandit_applications_state_id_idx").on(t.stateId),
   cityIdIdx: index("pandit_applications_city_id_idx").on(t.cityId),
+  panditUnique: uniqueIndex("pandit_applications_pandit_id_unique").on(t.panditId)
+    .where(sql`${t.panditId} is not null`),
+}));
+
+export const panditCityRequests = pgTable("pandit_city_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  applicationId: integer("application_id").notNull().references(() => panditApplications.id),
+  stateId: integer("state_id").notNull().references(() => indianStates.id),
+  proposedCityName: text("proposed_city_name").notNull(),
+  status: text("status").notNull().default("pending"),
+  resolvedCityId: integer("resolved_city_id").references(() => indianCities.id),
+  resolutionReason: text("resolution_reason"),
+  resolvedBy: text("resolved_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  applicationUnique: uniqueIndex("pandit_city_requests_application_unique").on(t.applicationId),
+  statusIdx: index("pandit_city_requests_status_idx").on(t.status, t.createdAt),
+  stateIdx: index("pandit_city_requests_state_idx").on(t.stateId),
 }));
 
 export const franchiseApplications = pgTable("franchise_applications", {
@@ -1284,9 +1311,16 @@ export type InsertProductQuestion = z.infer<typeof insertProductQuestionSchema>;
 export type ProductQuestion = typeof productQuestions.$inferSelect;
 export const insertOrderSchema = createInsertSchema(orders);
 export const insertOrderStatusEventSchema = createInsertSchema(orderStatusEvents).omit({ id: true, createdAt: true });
-export const insertPanditSchema = createInsertSchema(pandits);
+export const insertPanditSchema = createInsertSchema(pandits).omit({
+  registrationNo: true,
+  registrationAssignedAt: true,
+});
 export const insertPanditReviewSchema = createInsertSchema(panditReviews);
-export const insertPanditApplicationSchema = createInsertSchema(panditApplications).omit({ id: true, status: true, adminNote: true, reviewedAt: true, createdAt: true });
+export const insertPanditApplicationSchema = createInsertSchema(panditApplications).omit({ id: true, status: true, adminNote: true, reviewedAt: true, panditId: true, createdAt: true });
+export const insertPanditCityRequestSchema = createInsertSchema(panditCityRequests).omit({
+  id: true, status: true, resolvedCityId: true, resolutionReason: true,
+  resolvedBy: true, createdAt: true, resolvedAt: true, updatedAt: true,
+});
 export const insertFranchiseApplicationSchema = createInsertSchema(franchiseApplications).omit({ id: true, status: true, adminNote: true, createdAt: true });
 export const insertPujaBookingSchema = createInsertSchema(pujaBookings);
 export const insertAstrologyBookingSchema = createInsertSchema(astrologyBookings);
@@ -1383,6 +1417,8 @@ export type InsertPanditReview = z.infer<typeof insertPanditReviewSchema>;
 export type PanditReview = typeof panditReviews.$inferSelect;
 export type InsertPanditApplication = z.infer<typeof insertPanditApplicationSchema>;
 export type PanditApplication = typeof panditApplications.$inferSelect;
+export type PanditCityRequest = typeof panditCityRequests.$inferSelect;
+export type InsertPanditCityRequest = z.infer<typeof insertPanditCityRequestSchema>;
 export type InsertFranchiseApplication = z.infer<typeof insertFranchiseApplicationSchema>;
 export type FranchiseApplication = typeof franchiseApplications.$inferSelect;
 export type InsertPujaBooking = z.infer<typeof insertPujaBookingSchema>;

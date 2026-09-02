@@ -58,11 +58,11 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
+  products, pandits, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
   type AbandonedCart,
 } from "@shared/schema";
-import { eq, and, gt, lt, like } from "drizzle-orm";
-import { panditApplications, insertFranchiseApplicationSchema } from "@shared/schema";
+import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
+import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
@@ -145,6 +145,38 @@ const upload = multer({
     }
   },
 });
+
+function isValidStoredProfilePhoto(value: unknown): value is string {
+  if (typeof value !== "string" || value.trim() !== value || !value) return false;
+  if (value.startsWith("/uploads/")) {
+    const relative = value.slice("/uploads/".length);
+    if (!relative || relative.includes("..") || path.isAbsolute(relative)) return false;
+    const filePath = path.resolve(uploadsDir, relative);
+    if (!filePath.startsWith(path.resolve(uploadsDir) + path.sep)) return false;
+    try {
+      const stat = fs.statSync(filePath);
+      return stat.isFile() && stat.size > 0 && stat.size <= 10 * 1024 * 1024
+        && /\.(?:jpe?g|png|gif|webp)$/i.test(filePath);
+    } catch {
+      return false;
+    }
+  }
+  const match = /^data:image\/(jpeg|png|gif|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match || value.length > 10 * 1024 * 1024) return false;
+  try {
+    const bytes = Buffer.from(match[2], "base64");
+    if (!bytes.length || bytes.toString("base64").replace(/=+$/, "") !== match[2].replace(/=+$/, "")) return false;
+    const signatures: Record<string, boolean> = {
+      jpeg: bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
+      png: bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+      gif: bytes.subarray(0, 3).toString("ascii") === "GIF",
+      webp: bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP",
+    };
+    return signatures[match[1]];
+  } catch {
+    return false;
+  }
+}
 
 // Audio uploads for admin-managed Jap mantras. Lives under
 // uploads/mantra-audio/ so it's served by the existing /uploads
@@ -3193,6 +3225,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const parsed = validate(insertPanditSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
     const d: any = parsed.data;
+    if (d.verified === true) {
+      return res.status(400).json({ message: "Verified Pandits must be created through application approval" });
+    }
     if (!Number.isInteger(d.stateId) || !Number.isInteger(d.cityId)) return res.status(400).json({ message: "A valid stateId and cityId are required" });
     const location = await resolveLocation(d.stateId, d.cityId);
     if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
@@ -3209,6 +3244,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const d: any = partial.data;
     const current = await storage.getPandit(Number(req.params.id));
     if (!current) return res.status(404).json({ message: "Pandit not found" });
+    if (d.verified === true && !current.verified) {
+      return res.status(400).json({ message: "Approve the linked Pandit application to verify and assign registration identity" });
+    }
     if (d.stateId !== undefined || d.cityId !== undefined || d.state !== undefined || d.city !== undefined) {
       if (!Number.isInteger(d.stateId) || !Number.isInteger(d.cityId)) return res.status(400).json({ message: "stateId and cityId are required together" });
       const location = await resolveLocation(d.stateId, d.cityId);
@@ -3237,6 +3275,45 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     });
     notifyPublish(req, [`/pandit/${pandit.id}`]);
     res.json(pandit);
+  });
+
+  app.get("/api/admin/pandits", adminAuthMiddleware, async (req, res) => {
+    const search = typeof req.query.search === "string" ? req.query.search.trim().slice(0, 120) : "";
+    const rows = search
+      ? await db.select().from(pandits).where(or(
+          ilike(pandits.name, `%${search}%`),
+          ilike(pandits.registrationNo, `%${search}%`),
+          ilike(pandits.phone, `%${search}%`),
+          ilike(pandits.email, `%${search}%`),
+        ))
+      : await db.select().from(pandits);
+    const applicationRows = rows.length
+      ? await db.select().from(panditApplications)
+      : [];
+    const requestRows = await db.select().from(panditCityRequests);
+    res.json(rows.map(pandit => {
+      const application = applicationRows.find(item => item.panditId === pandit.id);
+      return {
+        ...pandit,
+        application: application ?? null,
+        cityRequest: application
+          ? requestRows.find(item => item.applicationId === application.id) ?? null
+          : null,
+      };
+    }));
+  });
+
+  app.get("/api/admin/pandits/:id", adminAuthMiddleware, async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) return res.status(400).json({ message: "Invalid id" });
+    const [pandit] = await db.select().from(pandits).where(eq(pandits.id, id));
+    if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+    const [application] = await db.select().from(panditApplications)
+      .where(eq(panditApplications.panditId, pandit.id));
+    const [cityRequest] = application
+      ? await db.select().from(panditCityRequests).where(eq(panditCityRequests.applicationId, application.id))
+      : [];
+    res.json({ ...pandit, application: application ?? null, cityRequest: cityRequest ?? null });
   });
 
   app.delete("/api/pandits/:id", adminAuthMiddleware, async (req, res) => {
@@ -8651,6 +8728,16 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   // ---- Application Forms (Pandit & Astrologer) ----
   // Pandit applications go into pandit_applications table with status="pending".
   // An admin reviews and approves, which promotes the entry into the public pandits table.
+  app.post("/api/pandit-applications/upload-photo", upload.single("photo"), async (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "A valid profile photo is required" });
+    const url = `/uploads/${req.file.filename}`;
+    if (!isValidStoredProfilePhoto(url)) {
+      fs.rmSync(req.file.path, { force: true });
+      return res.status(400).json({ message: "The uploaded profile photo is invalid" });
+    }
+    res.status(201).json({ url });
+  });
+
   app.post("/api/pandit-applications", async (req, res) => {
     try {
       const schema = z.object({
@@ -8658,13 +8745,14 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         phone: z.string().min(1),
         email: z.string().email(),
         stateId: z.number().int().positive(),
-        cityId: z.number().int().positive(),
+        cityId: z.number().int().positive().optional(),
+        proposedCityName: z.string().trim().min(1).max(120).optional(),
         experience: z.string().min(1),
         specializations: z.string().optional(),
         education: z.string().optional(),
         languages: z.string().optional(),
         bio: z.string().optional(),
-        photo: z.string().optional(),
+        photo: z.string().min(1),
         regionalOrigin: z.string().optional(),
         serviceArea: z.string().optional(),
         gotra: z.string().optional(),
@@ -8672,29 +8760,38 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         feeRangeMin: z.union([z.string(), z.number()]).optional(),
         feeRangeMax: z.union([z.string(), z.number()]).optional(),
         membership: z.enum(["free", "silver", "gold", "elite"]).optional(),
+      }).superRefine((value, ctx) => {
+        if ((value.cityId == null) === (value.proposedCityName == null)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose a canonical city or submit one missing-city request" });
+        }
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
       const d = parsed.data;
-      const location = await resolveLocation(d.stateId, d.cityId);
-      if (!location) return res.status(400).json({ message: "Invalid active state/city combination" });
-      const photoStr = typeof d.photo === "string" ? d.photo : "";
-      const photoTooLarge = photoStr.length > 200_000; // ~200KB cap on stored photo payload
+      if (!isValidStoredProfilePhoto(d.photo)) {
+        return res.status(400).json({ message: "A valid successfully uploaded profile photo is required" });
+      }
+      const [selectedState] = await db.select().from(indianStates)
+        .where(and(eq(indianStates.id, d.stateId), eq(indianStates.isActive, true)));
+      if (!selectedState) return res.status(400).json({ message: "Invalid or inactive State" });
+      const location = d.cityId ? await resolveLocation(d.stateId, d.cityId) : undefined;
+      if (d.cityId && !location) return res.status(400).json({ message: "Invalid active state/city combination" });
       const expYears = Math.max(0, Math.min(80, parseInt(String(d.experience)) || 1));
       let feeMin = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMin ?? "")) || 1100));
       let feeMax = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMax ?? "")) || 11000));
       if (feeMax < feeMin) feeMax = feeMin;
-      const application = await storage.createPanditApplication({
+      const application = await db.transaction(async (tx) => {
+        const [created] = await tx.insert(panditApplications).values({
         fullName: d.fullName,
         phone: d.phone,
         email: d.email,
-        city: location.city.name,
-        state: location.state.name,
-        stateId: location.state.id,
-        cityId: location.city.id,
-        originalCity: location.city.name,
-        originalState: location.state.name,
-        locationReviewStatus: "resolved",
+        city: location?.city.name ?? d.proposedCityName!,
+        state: location?.state.name ?? selectedState.name,
+        stateId: location?.state.id ?? selectedState.id,
+        cityId: location?.city.id ?? null,
+        originalCity: location?.city.name ?? d.proposedCityName!,
+        originalState: location?.state.name ?? selectedState.name,
+        locationReviewStatus: location ? "resolved" : "pending_request",
         serviceArea: d.serviceArea || null,
         regionalOrigin: d.regionalOrigin || null,
         gotra: d.gotra || null,
@@ -8710,9 +8807,18 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         aadhaarLast4: null,
         panMasked: null,
         sampleVideoUrl: null,
-        photo: photoTooLarge || !photoStr ? null : photoStr,
+        photo: d.photo,
         bio: d.bio || null,
         membership: d.membership || "free",
+        }).returning();
+        if (!location) {
+          await tx.insert(panditCityRequests).values({
+            applicationId: created.id,
+            stateId: selectedState.id,
+            proposedCityName: d.proposedCityName!,
+          });
+        }
+        return created;
       });
       res.status(201).json({
         success: true,
@@ -8737,7 +8843,11 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const rawStatus = typeof req.query.status === "string" ? req.query.status : undefined;
       const status = rawStatus && ALLOWED_APP_STATUSES.has(rawStatus) ? rawStatus : undefined;
       const apps = await storage.getPanditApplications(status);
-      res.json(apps);
+      const requests = await db.select().from(panditCityRequests);
+      res.json(apps.map(application => ({
+        ...application,
+        cityRequest: requests.find(request => request.applicationId === application.id) ?? null,
+      })));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch applications" });
     }
@@ -8748,7 +8858,92 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     if (!id) return res.status(400).json({ message: "Invalid id" });
     const app2 = await storage.getPanditApplication(id);
     if (!app2) return res.status(404).json({ message: "Application not found" });
-    res.json(app2);
+    const [cityRequest] = await db.select().from(panditCityRequests)
+      .where(eq(panditCityRequests.applicationId, id));
+    res.json({ ...app2, cityRequest: cityRequest ?? null });
+  });
+
+  app.get("/api/admin/pandit-city-requests", adminAuthMiddleware, async (req: any, res) => {
+    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    if (status && !["pending", "mapped", "created", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid request status" });
+    }
+    const rows = status
+      ? await db.select().from(panditCityRequests).where(eq(panditCityRequests.status, status))
+      : await db.select().from(panditCityRequests);
+    res.json(rows);
+  });
+
+  app.post("/api/admin/pandit-city-requests/:id/resolve", adminAuthMiddleware, async (req: any, res) => {
+    const id = parsePositiveId(req.params.id);
+    if (!id) return res.status(400).json({ message: "Invalid id" });
+    const parsed = z.discriminatedUnion("action", [
+      z.object({ action: z.literal("map"), cityId: z.number().int().positive() }),
+      z.object({ action: z.literal("create"), name: z.string().trim().min(1).max(120), aliases: z.array(z.string().trim().min(1).max(120)).max(20).optional() }),
+      z.object({ action: z.literal("reject"), reason: z.string().trim().min(1).max(1000) }),
+    ]).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid location request resolution" });
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [request] = await tx.select().from(panditCityRequests)
+          .where(eq(panditCityRequests.id, id)).for("update");
+        if (!request) return { kind: "missing" as const };
+        if (request.status !== "pending") return { kind: "conflict" as const, request };
+        const [application] = await tx.select().from(panditApplications)
+          .where(eq(panditApplications.id, request.applicationId)).for("update");
+        if (!application || application.status !== "pending") return { kind: "invalid_application" as const };
+        const [state] = await tx.select().from(indianStates)
+          .where(and(eq(indianStates.id, request.stateId), eq(indianStates.isActive, true)));
+        if (!state) return { kind: "invalid_state" as const };
+        if (parsed.data.action === "reject") {
+          const [updated] = await tx.update(panditCityRequests).set({
+            status: "rejected", resolutionReason: parsed.data.reason,
+            resolvedBy: "admin", resolvedAt: new Date(), updatedAt: new Date(),
+          }).where(eq(panditCityRequests.id, id)).returning();
+          await tx.update(panditApplications).set({ locationReviewStatus: "rejected" })
+            .where(eq(panditApplications.id, application.id));
+          return { kind: "ok" as const, request: updated };
+        }
+        let city;
+        let resolutionStatus: "mapped" | "created";
+        if (parsed.data.action === "map") {
+          [city] = await tx.select().from(indianCities).where(and(
+            eq(indianCities.id, parsed.data.cityId),
+            eq(indianCities.stateId, state.id),
+            eq(indianCities.isActive, true),
+          ));
+          if (!city) return { kind: "invalid_city" as const };
+          resolutionStatus = "mapped";
+        } else {
+          [city] = await tx.insert(indianCities).values({
+            stateId: state.id, name: parsed.data.name,
+            slug: locationSlug(`${state.code}-${parsed.data.name}`),
+            aliases: parsed.data.aliases ?? [],
+          }).returning();
+          resolutionStatus = "created";
+        }
+        const now = new Date();
+        const [updated] = await tx.update(panditCityRequests).set({
+          status: resolutionStatus, resolvedCityId: city.id, resolvedBy: "admin",
+          resolvedAt: now, updatedAt: now,
+        }).where(eq(panditCityRequests.id, id)).returning();
+        await tx.update(panditApplications).set({
+          stateId: state.id, cityId: city.id, state: state.name, city: city.name,
+          locationReviewStatus: "resolved",
+        }).where(eq(panditApplications.id, application.id));
+        return { kind: "ok" as const, request: updated, city };
+      });
+      if (result.kind === "missing") return res.status(404).json({ message: "Location request not found" });
+      if (result.kind === "conflict") return res.status(409).json({ message: `Location request is already ${result.request.status}` });
+      if (result.kind === "invalid_application") return res.status(409).json({ message: "Only a pending application can be resolved" });
+      if (result.kind === "invalid_state") return res.status(400).json({ message: "The requested State is inactive or invalid" });
+      if (result.kind === "invalid_city") return res.status(400).json({ message: "City must be active and belong to the requested State" });
+      await auditAdmin(req, `pandit_location_request.${parsed.data.action}`, `pandit_city_request:${id}`, result);
+      res.json(result);
+    } catch (error: any) {
+      if (error?.code === "23505") return res.status(409).json({ message: "That canonical city already exists" });
+      res.status(500).json({ message: "Failed to resolve location request" });
+    }
   });
 
   app.patch("/api/admin/pandit-applications/:id/location", adminAuthMiddleware, async (req: any, res) => {
@@ -8764,6 +8959,11 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     if (!current) return res.status(404).json({ message: "Application not found" });
     if (current.status !== "pending") {
       return res.status(409).json({ message: "Only pending applications can have their location resolved" });
+    }
+    const [governedRequest] = await db.select().from(panditCityRequests)
+      .where(eq(panditCityRequests.applicationId, id));
+    if (governedRequest) {
+      return res.status(409).json({ message: "Resolve this application through its governed missing-city request" });
     }
     const location = await resolveLocation(parsed.data.stateId, parsed.data.cityId);
     if (!location) return res.status(400).json({ message: "Invalid active State/City combination" });
@@ -8784,81 +8984,98 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     res.json(updated);
   });
 
-  // Admin: approve an application — creates the public pandit row and marks application approved.
-  // Atomic: conditional UPDATE on status='pending' prevents concurrent double-approval.
+  // Admin approval creates/links exactly one Pandit and allocates its permanent
+  // registration number in the same transaction. A retry returns that identity.
   app.post("/api/admin/pandit-applications/:id/approve", adminAuthMiddleware, async (req: any, res) => {
     try {
       const id = parsePositiveId(req.params.id);
       if (!id) return res.status(400).json({ message: "Invalid id" });
       const note = typeof req.body?.note === "string" ? req.body.note : null;
-      const pending = await storage.getPanditApplication(id);
-      if (!pending) return res.status(404).json({ message: "Application not found" });
-      if (pending.status !== "pending") return res.status(409).json({ message: `Application is already ${pending.status}` });
-      if (!pending.stateId || !pending.cityId || pending.locationReviewStatus !== "resolved") {
-        return res.status(400).json({ message: "Resolve the application's State and City before approval" });
-      }
-      const location = await resolveLocation(pending.stateId, pending.cityId);
-      if (!location) {
-        return res.status(400).json({ message: "The application's State/City is inactive or invalid; resolve it before approval" });
-      }
+      const outcome = await db.transaction(async (tx) => {
+        const [pending] = await tx.select().from(panditApplications)
+          .where(eq(panditApplications.id, id)).for("update");
+        if (!pending) return { kind: "missing" as const };
+        if (pending.status === "approved" && pending.panditId) {
+          const [pandit] = await tx.select().from(pandits).where(eq(pandits.id, pending.panditId));
+          if (!pandit?.registrationNo) throw new Error("Approved application has no lifetime registration identity");
+          return { kind: "existing" as const, application: pending, pandit };
+        }
+        if (pending.status !== "pending") return { kind: "conflict" as const, status: pending.status };
+        if (!pending.stateId || !pending.cityId || pending.locationReviewStatus !== "resolved") {
+          return { kind: "location" as const };
+        }
+        if (!isValidStoredProfilePhoto(pending.photo)) return { kind: "photo" as const };
+        const [location] = await tx.select({ state: indianStates, city: indianCities })
+          .from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
+          .where(and(
+            eq(indianCities.id, pending.cityId), eq(indianCities.stateId, pending.stateId),
+            eq(indianCities.isActive, true), eq(indianStates.isActive, true),
+          ));
+        if (!location) return { kind: "location" as const };
+        const [unresolvedRequest] = await tx.select().from(panditCityRequests).where(and(
+          eq(panditCityRequests.applicationId, pending.id),
+          eq(panditCityRequests.status, "pending"),
+        ));
+        if (unresolvedRequest) return { kind: "location" as const };
 
-      // Conditional claim: only one concurrent approve will return a row.
-      const [claimed] = await db
-        .update(panditApplications)
-        .set({
-          status: "approved",
-          adminNote: note,
-          reviewedAt: new Date(),
-          state: location.state.name,
+        const baseFee = Math.round(((pending.feeRangeMin || 0) + (pending.feeRangeMax || 0)) / 2) || pending.feeRangeMin || 1100;
+        const slugBase = pending.fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "pandit";
+        const slug = `${slugBase}-${location.city.slug}-${pending.id}`;
+        const [createdPandit] = await tx.insert(pandits).values({
+          name: pending.fullName,
           city: location.city.name,
-        })
-        .where(and(
-          eq(panditApplications.id, id),
-          eq(panditApplications.status, "pending"),
-          eq(panditApplications.locationReviewStatus, "resolved"),
-          eq(panditApplications.stateId, location.state.id),
-          eq(panditApplications.cityId, location.city.id),
-        ))
-        .returning();
+          state: location.state.name,
+          stateId: location.state.id,
+          cityId: location.city.id,
+          originalCity: pending.originalCity || pending.city,
+          originalState: pending.originalState || pending.state,
+          locationReviewStatus: "resolved",
+          specialization: pending.pujaTypes,
+          languages: pending.languages,
+          experience: pending.yearsExperience,
+          fees: baseFee,
+          verified: true,
+          phone: pending.phone,
+          email: pending.email,
+          bio: pending.bio || "",
+          education: pending.education || "",
+          image: pending.photo,
+          regionalOrigin: pending.regionalOrigin,
+          serviceArea: pending.serviceArea,
+          slug,
+          registrationNo: sql`'VT-PAN-' || lpad(nextval('pandit_registration_no_seq')::text, 6, '0')`,
+          registrationAssignedAt: new Date(),
+        } as any).returning();
+        // Preserve the pre-existing membership_no contract alongside the new
+        // authoritative lifetime registration number.
+        const [pandit] = await tx.update(pandits).set({
+          membershipNo: `VT-PND-${String(createdPandit.id).padStart(5, "0")}`,
+          cardIssuedAt: createdPandit.cardIssuedAt ?? new Date(),
+        }).where(eq(pandits.id, createdPandit.id)).returning();
+        await tx.insert(panditStorefronts).values({ panditId: pandit.id }).onConflictDoNothing();
+        const [application] = await tx.update(panditApplications).set({
+          status: "approved", adminNote: note, reviewedAt: new Date(),
+          state: location.state.name, city: location.city.name, panditId: pandit.id,
+        }).where(and(eq(panditApplications.id, id), eq(panditApplications.status, "pending"))).returning();
+        if (!application) throw new Error("Application approval conflict");
+        return { kind: "created" as const, application, pandit };
+      });
+      if (outcome.kind === "missing") return res.status(404).json({ message: "Application not found" });
+      if (outcome.kind === "conflict") return res.status(409).json({ message: `Application is already ${outcome.status}` });
+      if (outcome.kind === "location") return res.status(400).json({ message: "Resolve the application's active State and City request before approval" });
+      if (outcome.kind === "photo") return res.status(400).json({ message: "A valid successfully uploaded profile photo is required before approval" });
+      const claimed = outcome.application;
+      const pandit = outcome.pandit;
 
-      if (!claimed) {
-        const existing = await storage.getPanditApplication(id);
-        if (!existing) return res.status(404).json({ message: "Application not found" });
-        return res.status(409).json({ message: `Application is already ${existing.status}` });
+      if (outcome.kind === "created") {
+        await auditAdmin(req, "pandit_application.approved", `pandit_application:${claimed.id}`, {
+          panditId: pandit.id,
+          registrationNo: pandit.registrationNo,
+          stateId: claimed.stateId,
+          cityId: claimed.cityId,
+        });
       }
-
-      const baseFee = Math.round(((claimed.feeRangeMin || 0) + (claimed.feeRangeMax || 0)) / 2) || claimed.feeRangeMin || 1100;
-      const slugBase = claimed.fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-      let slug = `${slugBase}-${claimed.city.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-      const existingBySlug = await storage.getPanditBySlug(slug);
-      if (existingBySlug) slug = `${slug}-${claimed.id}`;
-
-      const pandit = await storage.createPandit({
-        name: claimed.fullName,
-        city: claimed.city,
-        state: claimed.state,
-        stateId: claimed.stateId,
-        cityId: claimed.cityId,
-        originalCity: claimed.originalCity || claimed.city,
-        originalState: claimed.originalState || claimed.state,
-        locationReviewStatus: "resolved",
-        specialization: claimed.pujaTypes,
-        languages: claimed.languages,
-        experience: claimed.yearsExperience,
-        fees: baseFee,
-        verified: true,
-        phone: claimed.phone,
-        email: claimed.email,
-        bio: claimed.bio || "",
-        education: claimed.education || "",
-        image: claimed.photo || null,
-        regionalOrigin: claimed.regionalOrigin || null,
-        serviceArea: claimed.serviceArea || null,
-        slug,
-      } as any);
-      await storage.ensurePanditStorefront(pandit.id);
-
-      if (claimed.email) {
+      if (outcome.kind === "created" && claimed.email) {
         const msg = buildPanditApprovalEmail({
           to: claimed.email,
           fullName: claimed.fullName,
@@ -8872,7 +9089,13 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           .catch((e) => console.error("[email] approval send failed:", e));
       }
 
-      res.json({ success: true, application: claimed, panditId: pandit.id });
+      res.json({
+        success: true,
+        idempotent: outcome.kind === "existing",
+        application: claimed,
+        panditId: pandit.id,
+        registrationNo: pandit.registrationNo,
+      });
     } catch (error) {
       console.error("approve pandit-application error:", error);
       res.status(500).json({ message: "Failed to approve application" });

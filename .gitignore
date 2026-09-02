@@ -21,6 +21,7 @@ vite.config.ts.*
 !migrations/0006_knowledge_graph_foundation.sql
 !migrations/0007_canonical_destinations.sql
 !migrations/0008_tirth_yatra_inquiry_canonical_destination.sql
+!migrations/0010_pandit_lifetime_registration.sql
 *.sql.gz
 backups/
 # Local-only directories (not in git, sync'd separately)
