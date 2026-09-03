@@ -787,7 +787,7 @@ function Router() {
           {/* Canonical puja-booking URL is /online-puja-booking. Any
               client-side nav to legacy /puja is redirected; hard nav is
               caught by the server 301 in SEO_ALIAS_REDIRECTS. */}
-          <Route path="/puja">{() => { window.location.replace("/online-puja-booking"); return null; }}</Route>
+          <Route path="/puja">{() => { window.location.replace(`/online-puja-booking${window.location.search}`); return null; }}</Route>
           <Route path="/online-puja-booking" component={PujaBooking} />
           <Route path="/puja/:slug">{() => <ServiceLanding vertical="puja" pattern="/puja/:slug" />}</Route>
           <Route path="/tools/tithi-calculator" component={TithiCalculator} />

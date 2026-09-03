@@ -61,6 +61,7 @@ import {
   products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
   type AbandonedCart,
 } from "@shared/schema";
+import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
 import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
@@ -4188,6 +4189,30 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           sourceId: pkg.id,
           name: pkg.name,
           serviceIds: items.map(item => item.panditServiceId),
+          baseAmount,
+          samagriAmount,
+          totalAmount: baseAmount + samagriAmount,
+        },
+      };
+    } else {
+      const standardPuja = resolveStandardPuja(parsed.data.pujaType);
+      if (!standardPuja) {
+        return res.status(400).json({
+          message: "Please select a verified Pandit offering or a standard Puja from the booking list.",
+        });
+      }
+      const baseAmount = standardPuja.price;
+      const samagriAmount = Math.round(baseAmount * 0.3);
+      resolvedBooking = {
+        ...resolvedBooking,
+        panditServiceId: null,
+        panditPackageId: null,
+        pujaType: standardPuja.value,
+        totalAmount: baseAmount + samagriAmount,
+        pricingSnapshot: {
+          version: 1,
+          source: "standard_puja",
+          name: standardPuja.label,
           baseAmount,
           samagriAmount,
           totalAmount: baseAmount + samagriAmount,

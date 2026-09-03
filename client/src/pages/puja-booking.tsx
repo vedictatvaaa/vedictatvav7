@@ -17,6 +17,8 @@ import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
 import { trackPanditSeoEvent } from "@/lib/analytics";
+import { PujaDiscoveryHub } from "@/components/puja/PujaDiscoveryHub";
+import { STANDARD_PUJA_OPTIONS, resolveStandardPuja } from "@shared/standard-puja-catalogue";
 
 const PUJA_PARENT_H1 = "Book a Verified Pandit for Puja at Home";
 type BookingMode = "online" | "offline";
@@ -32,18 +34,7 @@ const PUJA_FAQS = [
   { q: "Is online puja booking available outside India?", a: "Yes — for NRIs, we offer two options: (1) book a pandit for puja at your family's home in India and join via video call, or (2) book a virtual puja where the pandit performs on your behalf at a sacred temple." },
 ];
 
-const pujaOptions = [
-  { value: "satyanarayan", label: "Satyanarayan Katha", price: 5100 },
-  { value: "grihapravesh", label: "Griha Pravesh", price: 7100 },
-  { value: "rudrabhishek", label: "Rudrabhishek", price: 11000 },
-  { value: "mahamrityunjay", label: "Mahamrityunjay Jaap", price: 9500 },
-  { value: "navgraha", label: "Navgraha Shanti", price: 8500 },
-  { value: "ganesh", label: "Ganesh Puja", price: 3500 },
-  { value: "pind-daan-kashi", label: "Pind Daan in Kashi (Manikarnika / Pishachmochan)", price: 11000 },
-  { value: "pind-daan-gaya", label: "Pind Daan in Gaya (Vishnupad / Akshayavat)", price: 15100 },
-  { value: "pind-daan-haridwar", label: "Pind Daan / Narayani Shila — Haridwar", price: 8100 },
-  { value: "pind-daan-yearly-remote", label: "Yearly Remote Tarpan & Shradh (Annual Subscription)", price: 9100 },
-];
+const pujaOptions = STANDARD_PUJA_OPTIONS;
 
 export default function PujaBooking() {
   const { toast } = useToast();
@@ -87,7 +78,7 @@ export default function PujaBooking() {
 
   const initialPujaType = (() => {
     const v = searchParams.get("pujaType") || "";
-    return pujaOptions.some(p => p.value === v) ? v : customPujaType;
+    return resolveStandardPuja(v)?.value || customPujaType;
   })();
   const initialMode: BookingMode = searchParams.get("mode") === "online" ? "online" : "offline";
 
@@ -98,7 +89,7 @@ export default function PujaBooking() {
     : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
   const analyticsSlug = selectedPandit?.slug
     || (bookingServiceId ? selectedStorefront?.services?.find(service => service.id === bookingServiceId)?.slug : undefined)
-    || (pujaOptions.some(option => option.value === pujaType) ? pujaType : undefined);
+    || (resolveStandardPuja(pujaType) ? pujaType : undefined);
   const availablePujaOptions = useMemo(() => customPujaType
     ? [...pujaOptions, {
         value: customPujaType,
@@ -111,10 +102,15 @@ export default function PujaBooking() {
     const params = new URLSearchParams(searchString);
     const v = params.get("pujaType") || "";
     const service = params.get("service")?.trim() || "";
-    const nextPuja = bookingServiceId
-      ? `service:${bookingServiceId}`
-      : v && pujaOptions.some(p => p.value === v)
-        ? v
+    const packageId = Number(params.get("packageId") || 0);
+    const serviceId = Number(params.get("serviceId") || 0);
+    const standardPuja = resolveStandardPuja(v);
+    const nextPuja = packageId
+      ? `package:${packageId}`
+      : serviceId
+        ? `service:${serviceId}`
+        : standardPuja
+          ? standardPuja.value
         : service
           ? `service:${service}`
           : "";
@@ -188,6 +184,11 @@ export default function PujaBooking() {
   });
 
   const canBook = pujaType && date && timeSlot && contactName && contactPhone && (mode === "online" || location);
+  const hasBookingContext = Boolean(
+    panditIdParam || bookingServiceId || masterServiceId || bookingPackageId || bookingService || searchParams.get("start") === "booking"
+  );
+
+  if (!hasBookingContext) return <PujaDiscoveryHub />;
 
   return (
     <div className="w-full pb-16 bg-white">

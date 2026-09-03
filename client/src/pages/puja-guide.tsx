@@ -1,10 +1,9 @@
 import { useMemo } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, IndianRupee, Calendar, ShoppingBag, ChevronRight } from "lucide-react";
+import { ArrowLeft, Clock, IndianRupee, Calendar, ShoppingBag, ChevronRight, MapPin } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 
@@ -122,6 +121,11 @@ function PujaGuideHub() {
 }
 
 function PujaDetailView({ slug }: { slug: string }) {
+  const search = new URLSearchParams(useSearch());
+  const requestedMode = search.get("mode");
+  const preferredMode = requestedMode === "online" || requestedMode === "offline"
+    ? requestedMode
+    : undefined;
   const { data, isLoading } = useQuery<PujaDetailResponse>({
     queryKey: ["/api/pujas", slug],
     queryFn: () => fetch(`/api/pujas/${encodeURIComponent(slug)}`).then((r) => {
@@ -173,13 +177,7 @@ function PujaDetailView({ slug }: { slug: string }) {
         <p className="text-sm text-[#D4AF37] uppercase tracking-wider mb-4">{puja.deity}</p>
         <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{puja.shortDescription}</p>
 
-        {puja.bookingShopUrl && puja.bookingShopLabel && (
-          <Link href={puja.bookingShopUrl}>
-            <Button size="lg" className="mb-8" data-testid="button-cta-puja">
-              <ShoppingBag className="w-4 h-4 mr-2" />{puja.bookingShopLabel}
-            </Button>
-          </Link>
-        )}
+         <PujaActions puja={puja} mode={preferredMode} className="mb-8" />
 
         {years.length > 0 && (
           <Card className="mb-8 border-[#D4AF37]/40">
@@ -255,17 +253,31 @@ function PujaDetailView({ slug }: { slug: string }) {
           </div>
         )}
 
-        {puja.bookingShopUrl && puja.bookingShopLabel && (
-          <Card className="border-[#D4AF37]/40 bg-[#FFFBF0]">
-            <CardContent className="pt-6 text-center">
-              <p className="text-base text-foreground mb-3">Ready to perform this puja?</p>
-              <Link href={puja.bookingShopUrl}>
-                <Button size="lg"><ShoppingBag className="w-4 h-4 mr-2" />{puja.bookingShopLabel}</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+         <Card className="border-[#D4AF37]/40 bg-[#FFFBF0]">
+           <CardContent className="pt-6 text-center">
+             <p className="text-base text-foreground mb-4">Ready to take the next step?</p>
+             <PujaActions puja={puja} mode={preferredMode} centered />
+           </CardContent>
+         </Card>
       </article>
+    </div>
+  );
+}
+
+function PujaActions({ puja, mode, className = "", centered = false }: { puja: PujaDetailFields; mode?: "online" | "offline"; className?: string; centered?: boolean }) {
+  const params = new URLSearchParams({ service: puja.name });
+  if (mode) params.set("mode", mode);
+  const panditQuery = params.toString();
+  return (
+    <div className={`flex flex-wrap gap-3 ${centered ? "justify-center" : ""} ${className}`}>
+      <Link href={`/book-pandit-online?${panditQuery}`} className="inline-flex min-h-11 items-center rounded-md bg-[#6D2B35] px-4 text-sm font-semibold text-white hover:bg-[#54212a]" data-testid={centered ? "button-book-puja-final" : "button-book-puja"}>
+        <MapPin className="mr-2 h-4 w-4" />Choose a Pandit to book
+      </Link>
+      {puja.bookingShopUrl && puja.bookingShopLabel && (
+        <a href={puja.bookingShopUrl} className="inline-flex min-h-11 items-center rounded-md border border-[#D4AF37]/60 px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F5EBDD]" data-testid="button-cta-puja">
+          <ShoppingBag className="mr-2 h-4 w-4" />{puja.bookingShopLabel}
+        </a>
+      )}
     </div>
   );
 }
