@@ -638,6 +638,24 @@ export const pujaBookings = pgTable("puja_bookings", {
   location: text("location"),
   contactName: text("contact_name").notNull(),
   contactPhone: text("contact_phone").notNull(),
+  // New fields are nullable so historical bookings retain their original shape.
+  contactEmail: text("contact_email"),
+  customerTimezone: text("customer_timezone"),
+  addressHouse: text("address_house"),
+  addressStreet: text("address_street"),
+  addressLocality: text("address_locality"),
+  addressCity: text("address_city"),
+  addressState: text("address_state"),
+  addressPostalCode: text("address_postal_code"),
+  addressLandmark: text("address_landmark"),
+  customerLatitude: real("customer_latitude"),
+  customerLongitude: real("customer_longitude"),
+  virtualJoiningPreference: text("virtual_joining_preference"),
+  matchedDistanceKm: real("matched_distance_km"),
+  travelBandId: integer("travel_band_id"),
+  travelAmount: integer("travel_amount"),
+  pricingPolicyVersion: integer("pricing_policy_version"),
+  contactReleasedAt: timestamp("contact_released_at"),
   status: text("status").notNull().default("pending"),
   totalAmount: integer("total_amount").notNull(),
   acceptedAt: timestamp("accepted_at"),
@@ -1872,6 +1890,14 @@ export const masterServices = pgTable("master_services", {
   supportedModes: text("supported_modes").array().notNull().default(sql`'{}'::text[]`),
   onlineAvailable: boolean("online_available").notNull().default(false),
   physicalAvailable: boolean("physical_available").notNull().default(true),
+  minRate: integer("min_rate"),
+  maxRate: integer("max_rate"),
+  currency: varchar("currency", { length: 3 }).notNull().default("INR"),
+  allowedBookingMode: text("allowed_booking_mode"),
+  defaultDurationMinutes: integer("default_duration_minutes"),
+  ratePolicyVersion: integer("rate_policy_version").notNull().default(1),
+  ratePolicyEffectiveAt: timestamp("rate_policy_effective_at"),
+  defaultSamagriTemplate: jsonb("default_samagri_template"),
   searchMetadata: jsonb("search_metadata"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1883,6 +1909,71 @@ export const masterServices = pgTable("master_services", {
 export const insertMasterServiceSchema = createInsertSchema(masterServices).omit({ id: true, createdAt: true, updatedAt: true });
 export type MasterService = typeof masterServices.$inferSelect;
 export type InsertMasterService = z.infer<typeof insertMasterServiceSchema>;
+
+export const masterServicePolicyAudits = pgTable("master_service_policy_audits", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  masterServiceId: integer("master_service_id").notNull().references(() => masterServices.id),
+  previousPolicy: jsonb("previous_policy"),
+  nextPolicy: jsonb("next_policy").notNull(),
+  adminUserId: integer("admin_user_id"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ serviceCreatedIdx: index("master_service_policy_audits_service_created_idx").on(t.masterServiceId, t.createdAt) }));
+
+export const travelBands = pgTable("travel_bands", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  minDistanceKm: real("min_distance_km").notNull(),
+  maxDistanceKm: real("max_distance_km").notNull(),
+  charge: integer("charge").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("INR"),
+  isActive: boolean("is_active").notNull().default(true),
+  effectiveAt: timestamp("effective_at").notNull().defaultNow(),
+  requiresDistantConfirmation: boolean("requires_distant_confirmation").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ activeDistanceIdx: index("travel_bands_active_distance_idx").on(t.isActive, t.minDistanceKm, t.maxDistanceKm) }));
+
+export const pujaBookingContactReleases = pgTable("puja_booking_contact_releases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer("booking_id").notNull().references(() => pujaBookings.id),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  releasedAt: timestamp("released_at").notNull().defaultNow(),
+}, (t) => ({ bookingUnique: uniqueIndex("puja_booking_contact_releases_booking_unique").on(t.bookingId) }));
+
+export const pujaBookingEvents = pgTable("puja_booking_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer("booking_id").notNull().references(() => pujaBookings.id),
+  eventType: text("event_type").notNull(),
+  recipientParty: text("recipient_party").notNull(),
+  recipientId: integer("recipient_id"),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ bookingCreatedIdx: index("puja_booking_events_booking_created_idx").on(t.bookingId, t.createdAt) }));
+
+export const pujaBookingDeliveries = pgTable("puja_booking_deliveries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  eventId: integer("event_id").notNull().references(() => pujaBookingEvents.id),
+  channel: text("channel").notNull(),
+  templateVersion: text("template_version").notNull().default("v1"),
+  idempotencyKey: text("idempotency_key").notNull(),
+  status: text("status").notNull().default("queued"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  providerReference: text("provider_reference"),
+  lastError: text("last_error"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({ idempotencyUnique: uniqueIndex("puja_booking_deliveries_idempotency_unique").on(t.idempotencyKey) }));
+
+export const pujaBookingSamagriVersions = pgTable("puja_booking_samagri_versions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  bookingId: integer("booking_id").notNull().references(() => pujaBookings.id),
+  version: integer("version").notNull(),
+  authorPanditId: integer("author_pandit_id").notNull().references(() => pandits.id),
+  items: jsonb("items").notNull(),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({ bookingVersionUnique: uniqueIndex("puja_booking_samagri_versions_booking_version_unique").on(t.bookingId, t.version) }));
 
 // Pandit-owned configuration for one approved master service.
 export const panditServices = pgTable("pandit_services", {

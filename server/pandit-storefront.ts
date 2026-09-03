@@ -39,6 +39,8 @@ import {
 import type { PanditProfileProjection } from "./pandit-seo-network/project";
 import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
 import { canonicalPanditRedirectTarget } from "./pandit-route-context";
+import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
+import { canonicalBookingMode } from "@shared/puja-booking";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -967,6 +969,11 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       return res.status(400).json({ message: "Selected mode is not supported by this service" });
     }
     try {
+      assertRateCompliant(parsed.data.price, master);
+      const requestedMode = parsed.data.mode === "hybrid" ? null : canonicalBookingMode(parsed.data.mode);
+      if (requestedMode && !modeAllowed(master, requestedMode)) return res.status(400).json({ message: "Selected mode is not allowed by the active service policy" });
+    } catch (error: any) { return res.status(400).json({ message: error.message, policy: { minRate: master.minRate, maxRate: master.maxRate } }); }
+    try {
       const service = await storage.createPanditService({ ...parsed.data, panditId: req.panditId!, isActive: true });
       const row = { service, master };
       res.status(201).json(publicPanditServiceDto(row));
@@ -990,6 +997,13 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     if (parsed.data.mode && !master.supportedModes.includes(parsed.data.mode)) {
       return res.status(400).json({ message: "Selected mode is not supported by this service" });
     }
+    try {
+      const price = parsed.data.price ?? existing.price;
+      assertRateCompliant(price, master);
+      const mode = parsed.data.mode ?? existing.mode;
+      const requestedMode = mode === "hybrid" ? null : canonicalBookingMode(mode);
+      if (requestedMode && !modeAllowed(master, requestedMode)) return res.status(400).json({ message: "Selected mode is not allowed by the active service policy" });
+    } catch (error: any) { return res.status(400).json({ message: error.message, policy: { minRate: master.minRate, maxRate: master.maxRate } }); }
     const service = await storage.updatePanditService(id, parsed.data);
     res.json(publicPanditServiceDto({ service, master }));
   });
@@ -1009,7 +1023,12 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     const ids = new Set(items.map(item => item.panditServiceId));
     if (ids.size !== items.length) return false;
     const services = await Promise.all(Array.from(ids).map(id => storage.getPanditService(id)));
-    return services.every(service => service?.panditId === panditId && service.isActive);
+    const valid = await Promise.all(services.map(async service => {
+      if (!service || service.panditId !== panditId || !service.isActive) return false;
+      const master = await storage.getMasterService(service.masterServiceId);
+      try { return !!master?.isActive && (assertRateCompliant(service.price, master), true); } catch { return false; }
+    }));
+    return valid.every(Boolean);
   };
   app.get("/api/pandit/packages", panditAuthMiddleware, async (req: PanditRequest, res) => {
     const packages = await storage.listPanditPackages(req.panditId!);

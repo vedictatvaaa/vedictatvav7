@@ -58,7 +58,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
+  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands,
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
@@ -105,6 +105,9 @@ import { insertNewsletterCampaignSchema } from "@shared/schema";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { ageing, allowedTransitions, decrementMembershipCardInventory, isOperationallyStale, itemCounts, membershipCardAllocations, nextAction, normalizeOrderStatus, parseInventoryAllocations, paymentProjection, validateTransition, verifyInventory, type InventoryAllocation } from "./order-operations";
 import { validateCanonicalServiceBookingContext } from "./pandit-booking-context";
+import { canonicalBookingMode, structuredAddressSchema } from "@shared/puja-booking";
+import { assertRateCompliant, authoritativeBookingPrice, modeAllowed } from "./puja-booking/pricing";
+import { customerBookingProjection } from "./puja-booking/projections";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
@@ -3088,6 +3091,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.post("/api/admin/master-services", adminAuthMiddleware, async (req: any, res) => {
     const parsed = masterServiceWriteSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
+    if ((parsed.data.minRate == null) !== (parsed.data.maxRate == null) || (parsed.data.minRate != null && parsed.data.maxRate! < parsed.data.minRate)) return res.status(400).json({ message: "Provide a valid minimum and maximum rate" });
     try {
       const service = await storage.createMasterService({ ...parsed.data, isActive: true });
       await auditAdmin(req, "master_service.created", `master_service:${service.id}`, { slug: service.slug });
@@ -3103,10 +3107,36 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid service ID" });
     const parsed = masterServiceWriteSchema.partial().extend({ isActive: z.boolean().optional() }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
-    const service = await storage.updateMasterService(id, parsed.data);
+    const current = await storage.getMasterService(id);
+    const min = parsed.data.minRate === undefined ? current?.minRate : parsed.data.minRate;
+    const max = parsed.data.maxRate === undefined ? current?.maxRate : parsed.data.maxRate;
+    if ((min == null) !== (max == null) || (min != null && max! < min)) return res.status(400).json({ message: "Provide a valid minimum and maximum rate" });
+    const patch: any = { ...parsed.data };
+    if (Object.keys(parsed.data).some(key => ["minRate", "maxRate", "allowedBookingMode"].includes(key))) {
+      patch.ratePolicyVersion = (current?.ratePolicyVersion || 0) + 1;
+      patch.ratePolicyEffectiveAt = new Date();
+    }
+    const service = await storage.updateMasterService(id, patch);
     if (!service) return res.status(404).json({ message: "Master service not found" });
     await auditAdmin(req, "master_service.updated", `master_service:${service.id}`, { fields: Object.keys(parsed.data) });
     res.json(service);
+  });
+  const travelBandWrite = z.object({ minDistanceKm: z.number().finite().min(0), maxDistanceKm: z.number().finite().min(0), charge: z.number().int().min(0), currency: z.literal("INR").default("INR"), isActive: z.boolean().default(true), requiresDistantConfirmation: z.boolean().default(false) }).refine(v => v.maxDistanceKm >= v.minDistanceKm, { message: "Maximum distance must be at least minimum distance" });
+  app.get("/api/admin/travel-bands", adminAuthMiddleware, async (_req, res) => res.json(await db.select().from(travelBands).orderBy(travelBands.minDistanceKm)));
+  app.post("/api/admin/travel-bands", adminAuthMiddleware, async (req, res) => {
+    const parsed = travelBandWrite.safeParse(req.body); if (!parsed.success) return res.status(400).json({ message: "Invalid travel band", errors: parsed.error.flatten() });
+    const overlap = await db.select({ id: travelBands.id }).from(travelBands).where(and(eq(travelBands.isActive, true), sql`${travelBands.minDistanceKm} <= ${parsed.data.maxDistanceKm} and ${travelBands.maxDistanceKm} >= ${parsed.data.minDistanceKm}`)).limit(1);
+    if (parsed.data.isActive && overlap.length) return res.status(409).json({ message: "Active travel bands cannot overlap" });
+    res.status(201).json((await db.insert(travelBands).values(parsed.data).returning())[0]);
+  });
+  app.patch("/api/admin/travel-bands/:id", adminAuthMiddleware, async (req, res) => {
+    const id = Number(req.params.id); const parsed = travelBandWrite.partial().safeParse(req.body);
+    if (!Number.isInteger(id) || id < 1 || !parsed.success) return res.status(400).json({ message: "Invalid travel band" });
+    const current = (await db.select().from(travelBands).where(eq(travelBands.id, id)).limit(1))[0]; if (!current) return res.status(404).json({ message: "Travel band not found" });
+    const next = { ...current, ...parsed.data }; if (next.maxDistanceKm < next.minDistanceKm) return res.status(400).json({ message: "Invalid distance range" });
+    const overlap = await db.select({ id: travelBands.id }).from(travelBands).where(and(eq(travelBands.isActive, true), sql`${travelBands.id} <> ${id} and ${travelBands.minDistanceKm} <= ${next.maxDistanceKm} and ${travelBands.maxDistanceKm} >= ${next.minDistanceKm}`)).limit(1);
+    if (next.isActive && overlap.length) return res.status(409).json({ message: "Active travel bands cannot overlap" });
+    res.json((await db.update(travelBands).set({ ...parsed.data, updatedAt: new Date() }).where(eq(travelBands.id, id)).returning())[0]);
   });
 
   app.patch("/api/admin/pandit-storefronts/:panditId/status", adminAuthMiddleware, async (req: any, res) => {
@@ -4114,19 +4144,33 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const { db } = await import("./db");
       const { pujaBookings } = await import("@shared/schema");
       const { eq, desc } = await import("drizzle-orm");
-      const rows = await db.select().from(pujaBookings).where(eq(pujaBookings.userId, uid)).orderBy(desc(pujaBookings.id)).limit(100);
-      res.json({ bookings: rows });
+       const rows = await db.select().from(pujaBookings).where(eq(pujaBookings.userId, uid)).orderBy(desc(pujaBookings.id)).limit(100);
+       const panditIds = [...new Set(rows.map(row => row.panditId).filter((id): id is number => id != null))];
+       const assigned = await Promise.all(panditIds.map(id => storage.getPandit(id)));
+       const panditsById = new Map(assigned.filter(Boolean).map(p => [p!.id, p]));
+       res.json({ bookings: rows.map(row => customerBookingProjection(row, row.panditId ? panditsById.get(row.panditId) : null)) });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
 
   app.post("/api/puja-bookings", customerAuthMiddleware, async (req: any, res) => {
     const parsed = validate(insertPujaBookingSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
+    const canonicalMode = canonicalBookingMode(req.body?.mode);
+    if (!canonicalMode) return res.status(400).json({ message: "Choose virtual or at-home Puja" });
+    if (!String(req.body?.contactEmail || "").trim() || !z.string().email().safeParse(req.body.contactEmail).success) return res.status(400).json({ message: "A valid contact email is required" });
+    if (!String(req.body?.customerTimezone || "").trim() || !z.string().refine(v => { try { Intl.DateTimeFormat(undefined, { timeZone: v }); return true; } catch { return false; } }).safeParse(req.body.customerTimezone).success) return res.status(400).json({ message: "A valid customer timezone is required" });
+    if (canonicalMode === "at_home") {
+      const address = structuredAddressSchema.safeParse(req.body?.address || {
+        house: req.body?.addressHouse, street: req.body?.addressStreet, locality: req.body?.addressLocality, city: req.body?.addressCity, state: req.body?.addressState, postalCode: req.body?.addressPostalCode, landmark: req.body?.addressLandmark,
+      });
+      if (!address.success) return res.status(400).json({ message: "A complete at-home address is required" });
+      Object.assign(req.body, { addressHouse: address.data.house, addressStreet: address.data.street, addressLocality: address.data.locality, addressCity: address.data.city, addressState: address.data.state, addressPostalCode: address.data.postalCode, addressLandmark: address.data.landmark });
+    }
     const serviceId = Number(parsed.data.panditServiceId || 0);
     const packageId = Number(parsed.data.panditPackageId || 0);
     if (serviceId && packageId) return res.status(400).json({ message: "Choose either a service or a package" });
 
-    let resolvedBooking = { ...parsed.data } as any;
+    let resolvedBooking = { ...parsed.data, ...req.body, mode: canonicalMode === "virtual" ? "online" : "offline", contactEmail: String(req.body.contactEmail).trim().toLowerCase(), customerTimezone: String(req.body.customerTimezone).trim() } as any;
     if (serviceId) {
       const service = await storage.getPanditService(serviceId);
       if (!service?.isActive) return res.status(400).json({ message: "This service is no longer available" });
@@ -4147,6 +4191,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return res.status(400).json({ message: "The selected booking mode is not available for this service" });
       }
       const baseAmount = offering.service.price;
+      try {
+        assertRateCompliant(baseAmount, offering.master);
+        if (!modeAllowed(offering.master, canonicalMode)) return res.status(400).json({ message: "This booking mode is unavailable" });
+      } catch (error: any) { return res.status(400).json({ message: error.message }); }
       const samagriAmount = Math.round(baseAmount * 0.3);
       resolvedBooking = {
         ...resolvedBooking,
@@ -4174,6 +4222,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (!items.length || !items.every(item => activeIds.has(item.panditServiceId))) {
         return res.status(400).json({ message: "This package contains an unavailable service" });
       }
+      try { for (const row of activeServices.filter(row => items.some(item => item.panditServiceId === row.service.id))) { assertRateCompliant(row.service.price, row.master); if (!modeAllowed(row.master, canonicalMode)) throw new Error("Package contains a service unavailable in this booking mode"); } } catch (error: any) { return res.status(400).json({ message: error.message }); }
       const baseAmount = pkg.price;
       const samagriAmount = Math.round(baseAmount * 0.3);
       resolvedBooking = {
@@ -4219,6 +4268,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         },
       };
     }
+    const activeBands = canonicalMode === "at_home" ? await db.select().from(travelBands).where(eq(travelBands.isActive, true)) : [];
+    const priced = authoritativeBookingPrice({ baseAmount: resolvedBooking.pricingSnapshot.baseAmount, samagriAmount: resolvedBooking.pricingSnapshot.samagriAmount, mode: canonicalMode, policy: { minRate: null, maxRate: null }, distanceKm: req.body?.matchedDistanceKm, travelBands: activeBands });
+    if (canonicalMode === "at_home" && priced.travelAmount == null) return res.status(409).json({ message: "Travel charge is pending until distance can be verified; no undisclosed charge was created." });
+    resolvedBooking.travelBandId = priced.travelBandId; resolvedBooking.travelAmount = priced.travelAmount; resolvedBooking.totalAmount = priced.totalAmount;
+    resolvedBooking.pricingSnapshot = { ...resolvedBooking.pricingSnapshot, travelAmount: priced.travelAmount, travelBandId: priced.travelBandId, pricingPolicyVersion: priced.pricingPolicyVersion, totalAmount: priced.totalAmount, bookingMode: canonicalMode };
 
     const requestedPanditId = resolvedBooking.panditId;
     if (requestedPanditId != null) {

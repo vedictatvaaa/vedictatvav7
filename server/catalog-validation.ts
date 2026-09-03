@@ -14,6 +14,11 @@ export const masterServiceWriteSchema = z.object({
   onlineAvailable: z.boolean().default(false),
   physicalAvailable: z.boolean().default(true),
   searchMetadata: z.record(z.string(), z.string().max(200)).nullable().optional(),
+  minRate: z.number().int().min(0).nullable().optional(),
+  maxRate: z.number().int().min(0).nullable().optional(),
+  allowedBookingMode: z.enum(["virtual", "at_home", "both"]).nullable().optional(),
+  defaultDurationMinutes: z.number().int().min(15).max(1440).nullable().optional(),
+  defaultSamagriTemplate: z.array(z.object({ name: safeText(120).min(1) })).max(100).nullable().optional(),
 });
 
 export const panditServiceWriteSchema = z.object({

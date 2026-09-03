@@ -11,6 +11,7 @@ import {
   panditServices,
   panditStorefronts,
   insertPujaBookingMessageSchema,
+  pujaBookingContactReleases, pujaBookingEvents, pujaBookingSamagriVersions,
 } from "@shared/schema";
 import { and, desc, eq, gt, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -25,6 +26,7 @@ import {
 } from "./pandit-dashboard";
 import { sendEmail } from "./email";
 import { buildPanditPasswordResetEmail } from "./pandit-account-emails";
+import { candidatePanditBookingProjection, assignedPanditBookingProjection } from "./puja-booking/projections";
 
 const SESSION_TTL_DAYS = 30;
 const ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -434,7 +436,7 @@ export function registerPanditPortalRoutes(app: Express) {
         .where(and(...conditions))
         .orderBy(desc(pujaBookings.date), desc(pujaBookings.id))
         .limit(200);
-      res.json({ bookings: rows });
+      res.json({ bookings: rows.map(row => row.contactReleasedAt ? assignedPanditBookingProjection(row, req.panditId!) : candidatePanditBookingProjection(row)) });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
 
@@ -449,7 +451,7 @@ export function registerPanditPortalRoutes(app: Express) {
         .select()
         .from(pujaBookings)
         .where(and(eq(pujaBookings.panditId, req.panditId!), gte(pujaBookings.date, start), lte(pujaBookings.date, end)));
-      res.json({ month, bookings: rows });
+      res.json({ month, bookings: rows.map(row => row.contactReleasedAt ? assignedPanditBookingProjection(row, req.panditId!) : candidatePanditBookingProjection(row)) });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
 
@@ -477,13 +479,18 @@ export function registerPanditPortalRoutes(app: Express) {
       const slot = confirmedTimeSlot || booking.timeSlot;
       // Atomic transition guard: only accept from pending/requested. Prevents
       // re-firing notifications on duplicate clicks or stale tabs.
+      const now = new Date();
       const updated = await db.update(pujaBookings)
-        .set({ status: "accepted", acceptedAt: new Date(), confirmedTimeSlot: slot })
+        .set({ status: "accepted", acceptedAt: now, confirmedTimeSlot: slot, contactReleasedAt: now })
         .where(and(eq(pujaBookings.id, id), inArray(pujaBookings.status, ["pending", "requested", "assigned"])))
         .returning({ id: pujaBookings.id });
       if (updated.length === 0) {
         return res.status(409).json({ error: "Booking is no longer pending — refresh to see the latest status." });
       }
+      // The conditional transition above is the single-winner guard. The
+      // unique booking index makes contact release idempotent/auditable.
+      await db.insert(pujaBookingContactReleases).values({ bookingId: id, panditId: req.panditId!, releasedAt: now }).onConflictDoNothing();
+      await db.insert(pujaBookingEvents).values({ bookingId: id, eventType: "booking_accepted", recipientParty: "customer", recipientId: booking.userId, payload: { confirmedTimeSlot: slot } });
       const pandit = (await db.select().from(pandits).where(eq(pandits.id, req.panditId!)).limit(1))[0];
       await db.insert(pujaBookingMessages).values({
         bookingId: id,
@@ -505,7 +512,8 @@ export function registerPanditPortalRoutes(app: Express) {
           meta: { bookingId: id },
         });
       } catch {}
-      res.json({ ok: true });
+      const accepted = (await db.select().from(pujaBookings).where(eq(pujaBookings.id, id)).limit(1))[0];
+      res.json({ ok: true, booking: assignedPanditBookingProjection(accepted, req.panditId!) });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Validation failed" });
       res.status(500).json({ error: e?.message });
@@ -590,7 +598,12 @@ export function registerPanditPortalRoutes(app: Express) {
       const { items, notifyCustomer } = schema.parse(req.body);
       const booking = await ensureMessagesAccessForBooking(id, req.panditId!);
       if (!booking) return res.status(404).json({ error: "Booking not found" });
-      await db.update(pujaBookings).set({ samagriList: items, samagriSentAt: new Date() }).where(eq(pujaBookings.id, id));
+      if (booking.status !== "accepted" || !booking.contactReleasedAt) return res.status(403).json({ error: "Only the assigned accepted Pandit can send samagri" });
+      const sentAt = new Date();
+      const latest = await db.select({ version: sql<number>`coalesce(max(${pujaBookingSamagriVersions.version}), 0)::int` }).from(pujaBookingSamagriVersions).where(eq(pujaBookingSamagriVersions.bookingId, id));
+      const version = Number(latest[0]?.version || 0) + 1;
+      await db.insert(pujaBookingSamagriVersions).values({ bookingId: id, version, authorPanditId: req.panditId!, items, sentAt });
+      await db.update(pujaBookings).set({ samagriList: items, samagriSentAt: sentAt }).where(eq(pujaBookings.id, id));
       if (notifyCustomer) {
         const pandit = (await db.select().from(pandits).where(eq(pandits.id, req.panditId!)).limit(1))[0];
         const list = items.map((i) => `• ${i.name}${i.qty ? ` — ${i.qty}` : ""}`).join("\n");
