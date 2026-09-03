@@ -32,6 +32,7 @@
 
   --font-sans: 'Plus Jakarta Sans', sans-serif;
   --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono: 'DM Mono', monospace;
 
   /* Register the top-bar marquee so Tailwind v4 recognizes
      `animate-marquee` as a utility (and `motion-safe:animate-marquee`
@@ -614,21 +615,46 @@ html.lenis body {
   }
 }
 
-/* Lifetime Pandit credential — deliberately self-contained so it prints as a
-   single ceremonial object rather than inheriting application chrome. */
+/* Royal Vedic Seal: a flat, print-safe institutional credential. */
 @keyframes vt-card-arrive { from { opacity: 0; transform: translateY(12px) rotateX(4deg); } to { opacity: 1; transform: translateY(0) rotateX(0); } }
 .vt-membership-card { animation: vt-card-arrive 620ms cubic-bezier(.22,1,.36,1) both; perspective: 1400px; }
-.vt-membership-card__face { position: relative; aspect-ratio: 1.586 / 1; overflow: hidden; border: 1px solid #c79839; border-radius: clamp(14px,2.6vw,27px); background: #f8edd8; box-shadow: 0 20px 42px rgba(64,19,22,.24), inset 0 0 0 4px rgba(255,231,169,.56); color: #351b1e; }
-.vt-membership-card__face::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.23; background-image: radial-gradient(rgba(94,54,26,.42) .45px, transparent .55px); background-size:5px 5px; mix-blend-mode:multiply; }
-.vt-card-maroon { background: linear-gradient(118deg,#3e0711,#741526 48%,#3b0710); color:#ffe9a1; }
-.vt-card-gold-line { background: linear-gradient(90deg,transparent,#e9c76d 16%,#fff1b2 50%,#e9c76d 84%,transparent); }
-.vt-card-temple { position:absolute; right:-2%; bottom:8%; width:40%; color:#84552d; opacity:.48; }
-.vt-card-mandala { position:absolute; right:4%; top:22%; width:30%; opacity:.15; color:#7e461e; }
-.vt-card-portrait { background:linear-gradient(145deg,#d7bc7d,#6b3223); border:3px solid #d2a64b; box-shadow:inset 0 0 0 3px #f8e7b7; }
+.vt-card-kicker { color:#8b671f; font-size:10px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; }
+.vt-membership-card__face { position:relative; aspect-ratio:1.586 / 1; overflow:hidden; border:1px solid #aa7b2d; border-radius:clamp(14px,2.6vw,27px); background:#5a1820; color:#f3dfab; box-shadow:0 20px 42px rgba(64,19,22,.24), inset 0 0 0 1px rgba(255,233,175,.35); }
+.vt-membership-card__face::before { content:""; position:absolute; inset:0; background:linear-gradient(135deg,#651d27 0%,#51131c 58%,#421019 100%); pointer-events:none; }
+.vt-card-inner-border { position:absolute; inset:3.2%; border:1px solid rgba(224,185,91,.62); border-radius:clamp(10px,1.8vw,18px); pointer-events:none; }
+.vt-card-header,.vt-card-front-content,.vt-card-back-content,.vt-card-footer { position:relative; z-index:1; }
+.vt-card-header { display:flex; align-items:center; justify-content:space-between; padding:7.5% 7.5% 0; }
+.vt-card-brand { display:flex; align-items:center; gap:clamp(7px,1.2vw,14px); color:#f4d78f; }
+.vt-card-brand b { display:block; font-family:var(--font-serif); font-size:clamp(14px,2.65vw,29px); letter-spacing:.09em; line-height:1; }
+.vt-card-brand small { display:block; margin-top:5px; font-size:clamp(5px,.78vw,9px); font-weight:700; letter-spacing:.2em; }
+.vt-card-seal { display:grid; height:clamp(28px,4.2vw,48px); width:clamp(28px,4.2vw,48px); place-items:center; border:1px solid #c49a45; border-radius:50%; padding:7px; color:#d9b564; box-shadow:inset 0 0 0 2px rgba(217,181,100,.18); }
+.vt-card-status { display:flex; align-items:center; gap:5px; border:1px solid rgba(219,181,91,.7); border-radius:999px; padding:5px 8px; color:#f5dda2; font-size:clamp(5px,.8vw,9px); font-weight:700; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
+.vt-card-status.is-inactive { color:#e5b4a7; border-color:#b57668; }
+.vt-card-front-content { display:flex; align-items:center; gap:6%; padding:8% 7.5% 5%; }
+.vt-card-portrait { flex:0 0 23%; aspect-ratio: .82; overflow:hidden; border:2px solid #c39b4c; border-radius:8px; background:#7b3030; box-shadow:inset 0 0 0 2px #71303a; }
 .vt-card-portrait img { width:100%; height:100%; object-fit:cover; }
-.vt-card-verified { border:1px solid rgba(234,199,109,.75); background:rgba(67,6,15,.78); color:#ffe3a1; }
-.vt-card-qr { background:#fff9eb; border:2px solid #4b111a; box-shadow:inset 0 0 0 4px #e8cc83; }
-.vt-card-map { background:linear-gradient(180deg,#df8335 0 33%,#fbf0d0 33% 66%,#34776c 66%); clip-path:polygon(35% 0,60% 7%,69% 19%,82% 29%,71% 42%,76% 57%,63% 71%,57% 93%,46% 81%,33% 76%,24% 58%,10% 46%,21% 31%,18% 15%); }
+.vt-card-portrait > div { display:grid; height:100%; place-items:center; font-family:var(--font-serif); font-size:clamp(27px,5vw,58px); color:#f7dfa1; }
+.vt-card-identity { min-width:0; }
+.vt-card-eyebrow { margin:0 0 5px; color:#c8a35b; font-size:clamp(6px,1vw,10px); font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
+.vt-card-identity h2 { overflow:hidden; margin:0; color:#fff1c5; font-family:var(--font-serif); font-size:clamp(16px,3.2vw,34px); font-weight:600; line-height:1.05; text-overflow:ellipsis; white-space:nowrap; }
+.vt-card-specialty { overflow:hidden; margin:5px 0 10px; color:#e0c686; font-size:clamp(7px,1.15vw,13px); text-overflow:ellipsis; white-space:nowrap; }
+.vt-card-field { display:flex; align-items:baseline; gap:8px; }
+.vt-card-field span,.vt-card-location { color:#c9a766; font-size:clamp(6px,.88vw,10px); text-transform:uppercase; letter-spacing:.08em; }
+.vt-card-field strong { color:#f6dda0; font-family:var(--font-mono); font-size:clamp(9px,1.5vw,16px); letter-spacing:.1em; }
+.vt-card-location { margin:8px 0 0; font-weight:600; text-transform:none; letter-spacing:0; }
+.vt-card-footer { position:absolute; inset: auto 7.5% 7%; display:flex; justify-content:space-between; border-top:1px solid rgba(207,167,79,.55); padding-top:3%; color:#d9b66b; font-family:var(--font-serif); font-size:clamp(8px,1.2vw,13px); letter-spacing:.11em; text-transform:uppercase; }
+.vt-card-back-content { display:flex; align-items:center; justify-content:space-between; gap:8%; padding:8% 8% 5%; }
+.vt-card-details { width:56%; }
+.vt-card-certification { margin:0 0 8%; color:#f0dba6; font-family:var(--font-serif); font-size:clamp(9px,1.35vw,15px); line-height:1.35; }
+.vt-card-details dl { margin:0; border-top:1px solid rgba(213,174,87,.55); }
+.vt-card-details dl > div { display:flex; gap:10px; border-bottom:1px solid rgba(213,174,87,.32); padding:5px 0; }
+.vt-card-details dt { width:31%; color:#c6a15a; font-size:clamp(6px,.82vw,9px); font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+.vt-card-details dd { overflow:hidden; margin:0; color:#f5dda2; font-size:clamp(7px,1vw,11px); text-overflow:ellipsis; white-space:nowrap; }
+.vt-card-verification { width:25%; text-align:center; }
+.vt-card-qr { aspect-ratio:1; border:5px solid #ead8a6; border-radius:5px; background:#faf4e6; padding:5px; }
+.vt-card-qr img { display:block; width:100%; height:100%; }
+.vt-card-verification b { display:block; margin-top:6px; color:#f2d995; font-size:clamp(7px,1vw,11px); letter-spacing:.08em; text-transform:uppercase; }
+.vt-card-verification span { display:block; overflow:hidden; margin-top:3px; color:#c8a362; font-family:var(--font-mono); font-size:clamp(5px,.68vw,8px); text-overflow:ellipsis; white-space:nowrap; }
 .vt-card-flip { transform-style:preserve-3d; transition:transform .7s cubic-bezier(.2,.75,.2,1); }
 .vt-card-flip[data-back="true"] { transform:rotateY(180deg); }
 .vt-card-flip__side { backface-visibility:hidden; }
