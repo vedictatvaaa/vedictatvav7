@@ -39,7 +39,7 @@ import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
 import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
-import { registerContentRoutes } from "./content-routes";
+import { findPublicPujaBySlug, registerContentRoutes } from "./content-routes";
 import { registerSacredLibraryRoutes } from "./sacred-library";
 import { hasAnalyticsConsent } from "./consent";
 import { privacyRegionForRequest } from "./privacy-region";
@@ -110,7 +110,6 @@ import { canonicalBookingMode, structuredAddressSchema } from "@shared/puja-book
 import { assertPackagePriceCompliant, assertRateCompliant, authoritativeBookingPrice, modeAllowed } from "./puja-booking/pricing";
 import { customerBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
-import { findPujaConflicts, publicPujaEligible } from "./puja-governance";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
@@ -3268,19 +3267,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     let verifiedMuhurat: { date: string; window?: string; reason: string } | undefined;
     if (selectedDate) {
       if (!service || !pujaSlug) return res.status(400).json({ message: "Puja and catalogue reference are required for Muhurat matching" });
-      const catalogue = await db.select().from(pujaTypes);
-      const cataloguePuja = catalogue.find(puja => puja.slug === pujaSlug);
-      const [reviewer] = cataloguePuja?.reviewedByPanditId
-        ? await db.select({ id: pandits.id }).from(pandits)
-          .where(and(eq(pandits.id, cataloguePuja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
-        : [];
-      const catalogueConflicts = cataloguePuja
-        ? findPujaConflicts(cataloguePuja, catalogue, cataloguePuja.id)
-        : [];
-      if (!cataloguePuja || !publicPujaEligible(cataloguePuja, catalogueConflicts, Boolean(reviewer))) {
+      const eligibleCataloguePuja = await findPublicPujaBySlug(pujaSlug);
+      if (!eligibleCataloguePuja) {
         return res.status(400).json({ message: "Puja catalogue reference is not approved for matching" });
       }
-      if (!cataloguePuja || cataloguePuja.name.trim().toLocaleLowerCase("en-IN") !== service.toLocaleLowerCase("en-IN")) {
+      const cataloguePuja = eligibleCataloguePuja.puja;
+      if (cataloguePuja.name.trim().toLocaleLowerCase("en-IN") !== service.toLocaleLowerCase("en-IN")) {
         return res.status(400).json({ message: "Puja does not match the catalogue reference" });
       }
       const year = Number(selectedDate.slice(0, 4));

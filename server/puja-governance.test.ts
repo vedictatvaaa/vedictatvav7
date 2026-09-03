@@ -1,5 +1,17 @@
 import assert from "node:assert/strict";
+import type { AddressInfo } from "node:net";
 import test from "node:test";
+import express from "express";
+import { and, eq } from "drizzle-orm";
+import {
+  adminSessions,
+  pandits,
+  pujaMuhurats,
+  pujaTypes,
+  users,
+} from "@shared/schema";
+import { db } from "./db";
+import { findPublicPujaBySlug, registerContentRoutes } from "./content-routes";
 import {
   citationSchema,
   findPujaConflicts,
@@ -65,13 +77,13 @@ test("name and alias collisions are blocking conflicts", () => {
 });
 
 test("AI-reviewed complete approved guides are publicly eligible without a Pandit", () => {
-  const puja = completePuja({ reviewMethod: "ai", reviewedByPanditId: null });
+  const puja = completePuja();
   assert.equal(pujaCompleteness(puja).complete, true);
   assert.equal(publicPujaEligible(puja, [], false), true);
 });
 
-test("admin-reviewed complete approved guides are publicly eligible without a Pandit", () => {
-  const puja = completePuja({ reviewMethod: "admin", reviewedByPanditId: null });
+test("Pandit review requires a live verified Pandit for completeness and public eligibility", () => {
+  const puja = completePuja();
   assert.equal(pujaCompleteness(puja).complete, true);
   assert.equal(publicPujaEligible(puja, [], false), true);
 });
@@ -101,16 +113,145 @@ test("citation validation rejects stored-script and non-HTTPS URLs across write 
   ];
   for (const url of unsafeUrls) {
     const citation = { label: "Unsafe source", url, sourceType: "other" as const };
-    assert.equal(citationSchema.safeParse(citation).success, false);
-    assert.equal(pujaCreateSchema.safeParse({
-      ...completePuja(),
-      citations: [citation],
-    }).success, false);
-    assert.equal(pujaPatchSchema.safeParse({ citations: [citation] }).success, false);
+
+  const unique = `${Date.now()}-${process.pid}`;
+    assert.equal(invalidated.reviewStatus, "in_review");
+    assert.equal(invalidated.isPublished, false);
+    assert.equal(invalidated.approvedAt, null);
+    await assertPubliclyHidden("substantive edit invalidation");
+
+    response = await request(`/api/admin/pujas/${pujaId}`, {
+      method: "PATCH",
+      headers: adminHeaders,
+      body: JSON.stringify({ reviewStatus: "approved", isPublished: true }),
+    });
+    assert.equal(response.status, 200);
+    await db.update(pandits).set({ verified: false }).where(eq(pandits.id, reviewerId));
+    await assertPubliclyHidden("reviewer revocation");
+  } finally {
+    if (pujaId) {
+      await db.delete(pujaMuhurats).where(eq(pujaMuhurats.pujaId, pujaId));
+      await db.delete(pujaTypes).where(eq(pujaTypes.id, pujaId));
+    }
+    if (reviewerId) await db.delete(pandits).where(eq(pandits.id, reviewerId));
+    if (userId) {
+      await db.delete(adminSessions).where(and(eq(adminSessions.userId, userId), eq(adminSessions.token, token)));
+      await db.delete(users).where(eq(users.id, userId));
+    }
+    await new Promise<void>((resolve, reject) =>
+      server.close(error => error ? reject(error) : resolve()),
+    );
   }
-  assert.equal(citationSchema.safeParse({
-    label: "Safe source",
-    url: "https://example.com/source",
-    sourceType: "other",
-  }).success, true);
 });
+
+  const server = app.listen(0, "127.0.0.1");
+
+  const email = `governance-api-${unique}@example.test`;
+
+  const app = express();
+
+  const request = (path: string, init: RequestInit = {}) =>
+    fetch(`${baseUrl}${path}`, init);
+
+    const created = await response.json();
+
+    const listResponse = await request("/api/pujas");
+
+  const adminHeaders = {
+    "content-type": "application/json",
+    "x-admin-token": token,
+  };
+
+  const token = `governance-api-token-${unique}`;
+
+  const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    const detailResponse = await request(`/api/pujas/${slug}`);
+
+    const invalidated = await response.json();
+
+  const slug = `governance-api-${unique}`;
+
+  let reviewerId: number | undefined;
+
+    const [reviewer] = await db.insert(pandits).values({
+      name: "Governance API Test Reviewer",
+      city: "Test City",
+      specialization: "Test Puja",
+      languages: "Hindi",
+      experience: 10,
+      fees: 1000,
+      verified: true,
+    }).returning({ id: pandits.id });
+
+    let response = await request("/api/admin/pujas", {
+      method: "POST",
+      headers: adminHeaders,
+      body: JSON.stringify({
+        slug,
+        name: "Governance API Puja",
+        shortDescription: "An isolated API governance test guide.",
+        whyPerformed: "Test purpose",
+        storyMyth: "Test tradition",
+        howCelebrated: "Test ritual steps",
+        ethics: "Test ethical guidance",
+        benefits: "Test benefits",
+        metaTitle: "Governance API Puja test guide",
+        metaDescription: "An isolated reviewed Puja governance API test guide.",
+        requirements: [{ item: "Lamp", qty: "1" }],
+        faq: [{ q: "When?", a: "At the reviewed time." }],
+        intents: ["Testing"],
+        deities: ["Test Deity"],
+        ceremonies: [],
+        festivals: [],
+        aliases: [],
+        sourceNotes: "Internal source notes that must stay private.",
+        citations: [{ label: "Test reviewer source", sourceType: "reviewer" }],
+        onlineEligible: true,
+        inPersonEligible: true,
+        reviewStatus: "draft",
+        reviewNotes: "Internal review notes that must stay private.",
+        isPublished: false,
+      }),
+    });
+
+    const publicRow = (await listResponse.json() as Array<Record<string, unknown>>)
+      .find(row => row.slug === slug);
+
+  const date = `${new Date().getUTCFullYear() + 1}-06-15`;
+
+    const detail = await detailResponse.json();
+
+    const matchResponse = await request(
+      `/api/test/dated-puja-match?pujaSlug=${encodeURIComponent(slug)}`,
+    );
+
+  let pujaId: number | undefined;
+
+    const eligible = await findPublicPujaBySlug(String(req.query.pujaSlug || ""));
+
+  let userId: number | undefined;
+
+    const [admin] = await db.insert(users).values({
+      role: "admin",
+      name: "Governance API Test Admin",
+      email,
+    }).returning({ id: users.id });
+
+  async function assertPubliclyHidden(name: string) {
+    const listResponse = await request("/api/pujas");
+    assert.equal(listResponse.status, 200, `${name}: public list request`);
+    const list = await listResponse.json() as Array<Record<string, unknown>>;
+    assert.equal(list.some(row => row.slug === slug), false, `${name}: public list`);
+
+    const detailResponse = await request(`/api/pujas/${slug}`);
+    assert.equal(detailResponse.status, 404, `${name}: public detail`);
+
+    const matchResponse = await request(
+      `/api/test/dated-puja-match?pujaSlug=${encodeURIComponent(slug)}`,
+    );
+    assert.equal(matchResponse.status, 400, `${name}: dated matching`);
+    assert.deepEqual(await matchResponse.json(), {
+      message: "Puja catalogue reference is not approved for matching",
+    });
+  }

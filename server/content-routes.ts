@@ -41,6 +41,21 @@ function publicPujaProjection(puja: Record<string, any>, reviewerName?: string |
   return { ...safe, reviewerName: reviewerName || null };
 }
 
+export async function findPublicPujaBySlug(slug: string) {
+  const catalogue = await db.select().from(pujaTypes);
+  const puja = catalogue.find(row => row.slug === slug);
+  if (!puja) return null;
+  const [reviewer] = puja.reviewMethod === "pandit" && puja.reviewedByPanditId
+    ? await db.select({ name: pandits.name }).from(pandits)
+      .where(and(eq(pandits.id, puja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
+    : [];
+  const reviewerVerified = puja.reviewMethod !== "pandit" || Boolean(reviewer);
+  if (!publicPujaEligible(puja, findPujaConflicts(puja, catalogue, puja.id), reviewerVerified)) {
+    return null;
+  }
+  return { puja, reviewerName: reviewer?.name || null };
+}
+
 const PUJA_HTML_FIELDS = ["whyPerformed", "storyMyth", "howCelebrated", "ethics", "benefits"] as const;
 function sanitizePujaPayload<T extends Record<string, any>>(body: T): T {
   const out: any = { ...body };
@@ -126,9 +141,9 @@ function publicAnswer(a: typeof qaAnswers.$inferSelect) {
 }
 
 export function registerContentRoutes(app: Express) {
-  // ============================================================
+  // --- AI Blog Generation -------------------------------------
   // P1 — AI Blog Generation (admin queue)
-  // ============================================================
+  // ------------------------------------------------------------
 
   // Admin: list blog posts filtered by status (default: pending)
   app.get("/api/admin/blog-queue", adminAuthMiddleware, async (req, res) => {
@@ -223,9 +238,9 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
-  // ============================================================
+  // --- Blog Comments ------------------------------------------
   // P2 — Blog Comments
-  // ============================================================
+  // ------------------------------------------------------------
 
   // Public: list approved comments for a blog post
   app.get("/api/blog-posts/:slug/comments", async (req, res) => {
@@ -314,9 +329,9 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
-  // ============================================================
+  // --- Community Q&A ------------------------------------------
   // P2 — Community Q&A
-  // ============================================================
+  // ------------------------------------------------------------
 
   // Public: list approved questions (with answer counts)
   app.get("/api/qa", async (req, res) => {
@@ -553,9 +568,9 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
-  // ============================================================
+  // --- Puja Library -------------------------------------------
   // P3 — Puja Library
-  // ============================================================
+  // ------------------------------------------------------------
 
   // Public: list pujas
   app.get("/api/pujas", async (req, res) => {
@@ -590,15 +605,9 @@ export function registerContentRoutes(app: Express) {
   // Public: read one puja with current-year + next-year muhurats
   app.get("/api/pujas/:slug", async (req, res) => {
     try {
-      const [puja] = await db.select().from(pujaTypes).where(eq(pujaTypes.slug, req.params.slug));
-      if (!puja) return res.status(404).json({ message: "Not found" });
-      const catalogue = await db.select().from(pujaTypes);
-      const [reviewer] = puja.reviewMethod === "pandit" && puja.reviewedByPanditId
-        ? await db.select({ name: pandits.name }).from(pandits).where(and(eq(pandits.id, puja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
-        : [];
-      if (!publicPujaEligible(puja, findPujaConflicts(puja, catalogue, puja.id), Boolean(reviewer))) {
-        return res.status(404).json({ message: "Not found" });
-      }
+      const eligible = await findPublicPujaBySlug(req.params.slug);
+      if (!eligible) return res.status(404).json({ message: "Not found" });
+      const { puja, reviewerName } = eligible;
       const year = new Date().getFullYear();
       const muhurats = await db.select().from(pujaMuhurats)
         .where(and(eq(pujaMuhurats.pujaId, puja.id), or(eq(pujaMuhurats.year, year), eq(pujaMuhurats.year, year + 1))!))
@@ -613,7 +622,7 @@ export function registerContentRoutes(app: Express) {
         .orderBy(desc(qaQuestions.upvotes), desc(qaQuestions.createdAt))
         .limit(8);
       res.json({
-        puja: publicPujaProjection(puja, reviewer?.name),
+        puja: publicPujaProjection(puja, reviewerName),
         muhurats: muhurats.map((m) => ({ year: m.year, muhurats: m.muhurats })),
         questions: questions.map(publicQuestion),
       });
@@ -741,9 +750,9 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
-  // ============================================================
+  // --- Muhurat Engine -----------------------------------------
   // P4 — Muhurat engine
-  // ============================================================
+  // ------------------------------------------------------------
 
   // Admin: regenerate muhurats for a year (or current+next)
   app.post("/api/admin/muhurats/regenerate", adminAuthMiddleware, async (req, res) => {
