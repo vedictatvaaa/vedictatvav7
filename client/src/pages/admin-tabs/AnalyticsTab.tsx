@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import type { Product, Order } from "@shared/schema";
-
 import { createFetcher } from "../admin-shared";
 
 // ============================================================
@@ -20,8 +18,19 @@ function AnalyticsTab() {
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
   const fetcher = createFetcher(adminToken);
   const [dateRange, setDateRange] = useState("30");
-  const fromDate = new Date(Date.now() - Number(dateRange) * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const toDate = new Date().toISOString().split("T")[0];
+  // Reporting windows follow the business timezone and include both endpoints.
+  const kolkataDate = (daysAgo: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const year = Number(parts.find(p => p.type === "year")?.value);
+    const month = Number(parts.find(p => p.type === "month")?.value);
+    const day = Number(parts.find(p => p.type === "day")?.value);
+    const date = new Date(Date.UTC(year, month - 1, day - daysAgo));
+    return date.toISOString().slice(0, 10);
+  };
+  const toDate = kolkataDate(0);
+  const fromDate = kolkataDate(Number(dateRange) - 1);
 
   const { data: salesData } = useQuery<any>({ queryKey: ["/api/admin/analytics/sales", dateRange], queryFn: () => fetcher(`/api/admin/analytics/sales?from=${fromDate}&to=${toDate}`) });
   const { data: categoryData } = useQuery<any[]>({ queryKey: ["/api/admin/analytics/category-sales"], queryFn: () => fetcher("/api/admin/analytics/category-sales") });
@@ -51,14 +60,14 @@ function AnalyticsTab() {
               <SelectItem value="365">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" className="min-h-11" onClick={() => window.open("/api/admin/export/sales-csv")} data-testid="button-analytics-export-csv">
+           <Button variant="outline" size="sm" className="min-h-11" onClick={() => window.open(`/api/admin/export/sales-csv?from=${fromDate}&to=${toDate}`)} data-testid="button-analytics-export-csv">
             <Download className="w-3 h-3 mr-1" /> CSV
           </Button>
-          <Button variant="outline" size="sm" className="min-h-11" onClick={() => window.open("/api/admin/export/gst-report")} data-testid="button-analytics-export-gst">
+           <Button variant="outline" size="sm" title="Export all-time GST report" aria-label="Export all-time GST report" className="min-h-11" onClick={() => window.open("/api/admin/export/gst-report")} data-testid="button-analytics-export-gst">
             <FileText className="w-3 h-3 mr-1" /> GST
           </Button>
-          <Button variant="outline" size="sm" className="col-span-2 min-h-11 sm:col-span-1" onClick={() => window.open("/api/admin/export/customers")} data-testid="button-analytics-export-customers">
-            <Users className="w-3 h-3 mr-1" /> Customers
+           <Button variant="outline" size="sm" title="Export all-time customer report" aria-label="Export all-time customer report" className="col-span-2 min-h-11 sm:col-span-1" onClick={() => window.open("/api/admin/export/customers")} data-testid="button-analytics-export-customers">
+            <Users className="w-3 h-3 mr-1" /> Customers · all time
           </Button>
         </div>
       </div>

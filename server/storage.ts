@@ -1342,15 +1342,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAnalyticsSales(from: Date, to: Date): Promise<any[]> {
+    // Order timestamps are stored as UTC timestamp values; reports use the
+    // business calendar rather than the database/server calendar.
+    const reportingDate = dsql`DATE(${orders.createdAt} AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')`;
     return db.select({
-      date: dsql<string>`DATE(${orders.createdAt})`,
+      date: reportingDate,
       totalSales: dsql<number>`COALESCE(SUM(${orders.totalAmount}), 0)`,
       orderCount: count(orders.id),
       gstCollected: dsql<number>`COALESCE(SUM(${orders.gstAmount}), 0)`,
     }).from(orders)
-      .where(and(gte(orders.createdAt, from), lte(orders.createdAt, to)))
-      .groupBy(dsql`DATE(${orders.createdAt})`)
-      .orderBy(dsql`DATE(${orders.createdAt})`);
+      // `to` is an exclusive bound. This makes date-only report end dates
+      // reliable when callers advance them to the following midnight.
+      .where(and(gte(orders.createdAt, from), lt(orders.createdAt, to)))
+      .groupBy(reportingDate)
+      .orderBy(reportingDate);
   }
 
   async getAnalyticsCategorySales(): Promise<any[]> {

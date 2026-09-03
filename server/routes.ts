@@ -12869,9 +12869,49 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   });
 
   // ---- Analytics Routes ----
+  const IST_TIME_ZONE = "Asia/Kolkata";
+  const istMidnight = (year: number, month: number, day: number): Date => {
+    // Kolkata has a fixed +05:30 offset, but keeping the business zone named
+    // here makes all calendar/reporting decisions explicit.
+    const calendarDay = new Date(Date.UTC(year, month - 1, day));
+    return new Date(`${calendarDay.toISOString().slice(0, 10)}T00:00:00.000+05:30`);
+  };
+
+  const istDateParts = (value: Date) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: IST_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(value);
+    const part = (type: string) => Number(parts.find(p => p.type === type)?.value);
+    return { year: part("year"), month: part("month"), day: part("day") };
+  };
+
+  const parseAnalyticsDate = (value: unknown, endOfDate = false): Date | null => {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/.exec(value);
+    if (dateOnly) {
+      // Date normalisation otherwise accepts values such as 2024-02-31.
+      const [year, month, day] = value.split("-").map(Number);
+      const calendarDay = new Date(Date.UTC(year, month - 1, day));
+      if (calendarDay.toISOString().slice(0, 10) !== value) return null;
+      return istMidnight(year, month, day + (endOfDate ? 1 : 0));
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const analyticsSalesDates = (req: express.Request, defaultDays = 30) => {
+    const from = req.query.from === undefined
+      ? new Date(Date.now() - defaultDays * 24 * 60 * 60 * 1000)
+      : parseAnalyticsDate(req.query.from);
+    const to = req.query.to === undefined ? new Date() : parseAnalyticsDate(req.query.to, true);
+    if (!from || !to || from >= to) return null;
+    return { from, to };
+  };
+
   app.get("/api/admin/analytics/sales", adminAuthMiddleware, async (req, res) => {
-    const from = req.query.from ? new Date(req.query.from as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const to = req.query.to ? new Date(req.query.to as string) : new Date();
+    const dates = analyticsSalesDates(req);
+    if (!dates) return res.status(400).json({ message: "Invalid date range. Use valid ISO dates and ensure from is before to." });
+    const { from, to } = dates;
     const data = await storage.getAnalyticsSales(from, to);
     const totalRevenue = data.reduce((sum, d) => sum + Number(d.totalSales), 0);
     const totalOrders = data.reduce((sum, d) => sum + Number(d.orderCount), 0);
@@ -12930,8 +12970,9 @@ Please create an optimized route that minimizes backtracking and maximizes the s
 
   // ---- Export Routes ----
   app.get("/api/admin/export/sales-csv", adminAuthMiddleware, async (req, res) => {
-    const from = req.query.from ? new Date(req.query.from as string) : new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const to = req.query.to ? new Date(req.query.to as string) : new Date();
+    const dates = analyticsSalesDates(req, 365);
+    if (!dates) return res.status(400).json({ message: "Invalid date range. Use valid ISO dates and ensure from is before to." });
+    const { from, to } = dates;
     const data = await storage.getAnalyticsSales(from, to);
     const header = "Date,Total Sales,Order Count,GST Collected\n";
     const rows = data.map(d => `${d.date},${d.totalSales},${d.orderCount},${d.gstCollected}`).join("\n");
@@ -13665,95 +13706,100 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   // Admin visitor analytics endpoint
   app.get("/api/admin/analytics/visitors", adminAuthMiddleware, async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { pageViews } = await import("@shared/schema");
-      const { sql, gte, desc } = await import("drizzle-orm");
-
-      const days = Math.min(Number(req.query.days || 30), 365);
+      const requestedDays = typeof req.query.days === "string" ? Number(req.query.days) : 30;
+      const days = Number.isFinite(requestedDays)
+        ? Math.max(1, Math.min(Math.floor(requestedDays), 365))
+        : 30;
       const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const { year, month, day } = istDateParts(now);
+      const today = istMidnight(year, month, day);
       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
       const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      // Aggregate in PostgreSQL: this avoids reading every page-view row into
+      // the application while retaining the established response fields.
+      const [summaryResult, dailyResult, devicesResult, browsersResult, osResult, pagesResult,
+        citiesResult, countriesResult, referrersResult, landingResult, recentResult] = await Promise.all([
+        db.execute(sql`
+          SELECT
+            COUNT(*) FILTER (WHERE created_at >= ${today})::int AS today,
+            COUNT(*) FILTER (WHERE created_at >= ${yesterday} AND created_at < ${today})::int AS yesterday,
+            COUNT(*) FILTER (WHERE created_at >= ${weekAgo})::int AS week,
+            COUNT(*) FILTER (WHERE created_at >= ${monthAgo})::int AS month,
+            COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE created_at >= ${since} AND created_at < ${now})::int AS "viewsInRange",
+            COUNT(DISTINCT session_id) FILTER (WHERE created_at >= ${since} AND created_at < ${now} AND session_id IS NOT NULL)::int AS "uniqueVisitors",
+            COUNT(DISTINCT session_id) FILTER (
+              WHERE created_at >= ${since} AND created_at < ${now} AND session_id IS NOT NULL
+              AND EXISTS (SELECT 1 FROM page_views prior WHERE prior.session_id = page_views.session_id AND prior.created_at < ${since})
+            )::int AS "returningVisitors",
+            MIN(created_at) AS "firstSeen", MAX(created_at) AS "lastSeen"
+          FROM page_views
+        `),
+        db.execute(sql`SELECT DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::text AS date, COUNT(*)::int AS count, COUNT(*)::int AS views,
+          COUNT(DISTINCT session_id)::int AS visitors FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now}
+          GROUP BY DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')
+          ORDER BY DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')`),
+        db.execute(sql`SELECT COALESCE(device, 'Unknown') AS name, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} GROUP BY COALESCE(device, 'Unknown') ORDER BY count DESC`),
+        db.execute(sql`SELECT COALESCE(browser, 'Unknown') AS name, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} GROUP BY COALESCE(browser, 'Unknown') ORDER BY count DESC`),
+        db.execute(sql`SELECT COALESCE(os, 'Unknown') AS name, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} GROUP BY COALESCE(os, 'Unknown') ORDER BY count DESC`),
+        db.execute(sql`SELECT COALESCE(path, '/') AS path, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} GROUP BY COALESCE(path, '/') ORDER BY count DESC LIMIT 15`),
+        db.execute(sql`SELECT city AS name, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} AND city IS NOT NULL GROUP BY city ORDER BY count DESC LIMIT 15`),
+        db.execute(sql`SELECT country AS name, COUNT(*)::int AS count FROM page_views
+          WHERE created_at >= ${since} AND created_at < ${now} AND country IS NOT NULL GROUP BY country ORDER BY count DESC LIMIT 15`),
+        db.execute(sql`SELECT COALESCE(NULLIF(lower(substring(referrer from '^(?:https?://)?(?:www\\.)?([^/?#]+)')), ''),
+            CASE WHEN referrer IS NULL OR referrer = '' THEN 'Direct' ELSE left(referrer, 60) END) AS name, COUNT(*)::int AS count
+          FROM page_views WHERE created_at >= ${since} AND created_at < ${now}
+          GROUP BY 1 ORDER BY count DESC LIMIT 15`),
+        db.execute(sql`WITH first_pages AS (
+            SELECT DISTINCT ON (session_id) session_id, path FROM page_views
+            WHERE created_at >= ${since} AND created_at < ${now} AND session_id IS NOT NULL
+            ORDER BY session_id, created_at, id
+          ) SELECT path, COUNT(*)::int AS count FROM first_pages GROUP BY path ORDER BY count DESC LIMIT 15`),
+        // Deliberately project only the fields rendered/exported by the admin UI.
+        db.execute(sql`SELECT id, path, referrer, device, browser, os, city, country, created_at AS "createdAt"
+          FROM page_views ORDER BY id DESC LIMIT 50`),
+      ]);
 
-      const allInRange = await db.select().from(pageViews).where(gte(pageViews.createdAt, since));
-      const allTime   = await db.select({ id: pageViews.id }).from(pageViews);
-
-      // Summary counts
-      const todayCount     = allInRange.filter(r => r.createdAt && r.createdAt >= today).length;
-      const yesterdayCount = allInRange.filter(r => r.createdAt && r.createdAt >= yesterday && r.createdAt < today).length;
-      const weekCount      = allInRange.filter(r => r.createdAt && r.createdAt >= weekAgo).length;
-      const monthCount     = allInRange.filter(r => r.createdAt && r.createdAt >= monthAgo).length;
-
-      // Daily chart — group by date string
-      const dailyMap: Record<string, number> = {};
-      for (const r of allInRange) {
-        if (!r.createdAt) continue;
-        const d = r.createdAt.toISOString().slice(0, 10);
-        dailyMap[d] = (dailyMap[d] || 0) + 1;
-      }
-      const daily = Object.entries(dailyMap).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
-
-      // Device / browser / OS breakdowns
-      function countBy(arr: typeof allInRange, key: keyof typeof allInRange[0]) {
-        const map: Record<string, number> = {};
-        for (const r of arr) {
-          const v = (r[key] as string) || "Unknown";
-          map[v] = (map[v] || 0) + 1;
-        }
-        return Object.entries(map).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-      }
-
-      const devices   = countBy(allInRange, "device");
-      const browsers  = countBy(allInRange, "browser");
-      const oses      = countBy(allInRange, "os");
-
-      // Top pages
-      const pageMap: Record<string, number> = {};
-      for (const r of allInRange) {
-        const p = r.path || "/";
-        pageMap[p] = (pageMap[p] || 0) + 1;
-      }
-      const topPages = Object.entries(pageMap).map(([path, count]) => ({ path, count })).sort((a, b) => b.count - a.count).slice(0, 15);
-
-      // Top cities & countries (skip nulls)
-      const cityMap: Record<string, number> = {};
-      const countryMap: Record<string, number> = {};
-      for (const r of allInRange) {
-        if (r.city) cityMap[r.city] = (cityMap[r.city] || 0) + 1;
-        if (r.country) countryMap[r.country] = (countryMap[r.country] || 0) + 1;
-      }
-      const topCities    = Object.entries(cityMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
-      const topCountries = Object.entries(countryMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
-
-      // Traffic sources — extract domain from referrer
-      const refMap: Record<string, number> = {};
-      for (const r of allInRange) {
-        let source = "Direct";
-        if (r.referrer) {
-          try {
-            const domain = new URL(r.referrer).hostname.replace(/^www\./, "");
-            source = domain || "Direct";
-          } catch { source = r.referrer.slice(0, 60); }
-        }
-        refMap[source] = (refMap[source] || 0) + 1;
-      }
-      const topReferrers = Object.entries(refMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 15);
-
-      // Recent 50 visits
-      const recent = await db.select().from(pageViews).orderBy(desc(pageViews.id)).limit(50);
+      const summaryRow = (summaryResult.rows[0] || {}) as Record<string, any>;
+      const viewsInRange = Number(summaryRow.viewsInRange || 0);
+      const uniqueVisitors = Number(summaryRow.uniqueVisitors || 0);
+      const summary = {
+        ...summaryRow,
+        today: Number(summaryRow.today || 0), yesterday: Number(summaryRow.yesterday || 0),
+        week: Number(summaryRow.week || 0), month: Number(summaryRow.month || 0), total: Number(summaryRow.total || 0),
+        viewsInRange, uniqueVisitors,
+        returningVisitors: Number(summaryRow.returningVisitors || 0),
+        viewsPerVisitor: uniqueVisitors ? viewsInRange / uniqueVisitors : 0,
+      };
+      const noRecords = summary.total === 0;
 
       res.json({
-        summary: { today: todayCount, yesterday: yesterdayCount, week: weekCount, month: monthCount, total: allTime.length },
-        daily,
-        devices,
-        browsers,
-        os: oses,
-        topPages,
-        topCities,
-        topCountries,
-        topReferrers,
-        recent,
+        summary,
+        daily: dailyResult.rows,
+        devices: devicesResult.rows,
+        browsers: browsersResult.rows,
+        os: osResult.rows,
+        topPages: pagesResult.rows,
+        topCities: citiesResult.rows,
+        topCountries: countriesResult.rows,
+        topReferrers: referrersResult.rows,
+        topLandingPages: landingResult.rows,
+        recent: recentResult.rows,
+        firstSeen: summary.firstSeen,
+        lastSeen: summary.lastSeen,
+        dataHealth: noRecords ? {
+          status: "no_data",
+          message: "No visitor records yet. Tracking begins only after a visitor grants analytics consent.",
+          trackingRequiresAnalyticsConsent: true,
+        } : { status: "ready", trackingRequiresAnalyticsConsent: true },
       });
     } catch (e: any) {
       res.status(500).json({ error: e?.message });
