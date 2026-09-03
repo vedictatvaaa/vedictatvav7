@@ -120,6 +120,7 @@ export function publicPanditDto(
   // commercial, provenance, or exact GPS fields.
   const {
     phone, email, passwordHash, lastLoginAt, latitude, longitude, leaveNote, leaveStartedAt,
+    accountStatus, suspendedUntil, moderationReason, mustChangePassword,
     verified, onLeave, tier, tierExpiresAt, commissionPct, productCommissionPct, membershipNo,
     legacyRegistrationNo, registrationNo,
     documents, application, applicationId,

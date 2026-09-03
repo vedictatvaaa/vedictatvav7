@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown } from "lucide-react";
+import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown, KeyRound, Copy, Ban, PauseCircle } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -46,6 +46,11 @@ function PanditsTab() {
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
   const [viewingPandit, setViewingPandit] = useState<Pandit | null>(null);
+  const [regeneratedPassword, setRegeneratedPassword] = useState<{ name: string; password: string; emailSent: boolean } | null>(null);
+  const [moderationTarget, setModerationTarget] = useState<Pandit | null>(null);
+  const [moderationAction, setModerationAction] = useState<"suspend" | "ban">("suspend");
+  const [moderationReason, setModerationReason] = useState("");
+  const [suspendedUntil, setSuspendedUntil] = useState("");
   const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all"); const [activeFilter, setActiveFilter] = useState("all"); const [qualityFilter, setQualityFilter] = useState("all");
   const [registrationLookup, setRegistrationLookup] = useState("");
   const [submittedRegistrationNo, setSubmittedRegistrationNo] = useState("");
@@ -109,6 +114,49 @@ function PanditsTab() {
       toast({ title: data.newVerified ? "Pandit Approved" : "Pandit Delisted", description: data.newVerified ? "Pandit is now live and visible." : "Pandit has been delisted from public view." });
     },
     onError: (error: Error) => toast({ title: "Pandit not updated", description: error.message, variant: "destructive" }),
+  });
+
+  const regeneratePasswordMutation = useMutation({
+    mutationFn: async (pandit: Pandit) => {
+      const response = await fetch(`/api/admin/pandits/${pandit.id}/regenerate-password`, {
+        method: "POST",
+        headers: { "x-admin-token": adminToken },
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || "Password regeneration failed");
+      return { ...body, name: pandit.name } as { temporaryPassword: string; emailSent: boolean; name: string };
+    },
+    onSuccess: data => {
+      setRegeneratedPassword({ name: data.name, password: data.temporaryPassword, emailSent: data.emailSent });
+      toast({ title: "Temporary password generated", description: data.emailSent ? "It was also emailed to the Pandit." : "Copy it and share it securely with the Pandit." });
+    },
+    onError: (error: Error) => toast({ title: "Could not regenerate password", description: error.message, variant: "destructive" }),
+  });
+
+  const moderationMutation = useMutation({
+    mutationFn: async ({ pandit, action, reason, until }: { pandit: Pandit; action: "activate" | "suspend" | "ban"; reason?: string; until?: string }) => {
+      const response = await fetch(`/api/admin/pandits/${pandit.id}/moderation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
+        body: JSON.stringify({
+          action,
+          reason,
+          ...(until ? { suspendedUntil: new Date(until).toISOString() } : {}),
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || "Moderation update failed");
+      return { body, action };
+    },
+    onSuccess: ({ action }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online"] });
+      setModerationTarget(null);
+      setModerationReason("");
+      setSuspendedUntil("");
+      toast({ title: action === "activate" ? "Pandit reactivated" : action === "suspend" ? "Pandit suspended" : "Pandit banned" });
+    },
+    onError: (error: Error) => toast({ title: "Account status not updated", description: error.message, variant: "destructive" }),
   });
 
   const updateFeesMutation = useMutation({
@@ -525,6 +573,24 @@ function PanditsTab() {
                       <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="min-h-11 text-primary border-primary/30 text-xs gap-1 sm:min-h-9" data-testid={`btn-edit-pandit-${pandit.id}`}>
                           <Edit className="w-3 h-3" /> Edit
                         </Button>
+                      <Button size="sm" variant="outline" disabled={regeneratePasswordMutation.isPending} onClick={() => regeneratePasswordMutation.mutate(pandit)} className="min-h-11 text-xs gap-1 sm:min-h-9" data-testid={`btn-regenerate-pandit-password-${pandit.id}`}>
+                        <KeyRound className="w-3 h-3" /> Regenerate password
+                      </Button>
+
+                      {(pandit as any).accountStatus === "suspended" || (pandit as any).accountStatus === "banned" ? (
+                        <Button size="sm" onClick={() => moderationMutation.mutate({ pandit, action: "activate" })} className="min-h-11 bg-emerald-600 text-white text-xs gap-1 sm:min-h-9">
+                          <CheckCircle className="w-3 h-3" /> Reactivate
+                        </Button>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => { setModerationTarget(pandit); setModerationAction("suspend"); }} className="min-h-11 border-amber-300 text-amber-700 text-xs gap-1 sm:min-h-9">
+                            <PauseCircle className="w-3 h-3" /> Suspend
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setModerationTarget(pandit); setModerationAction("ban"); }} className="min-h-11 border-red-300 text-red-700 text-xs gap-1 sm:min-h-9">
+                            <Ban className="w-3 h-3" /> Ban
+                          </Button>
+                        </>
+                      )}
 
                       {pandit.verified ? (
                         <Button size="sm" variant="outline" onClick={() => approveMutation.mutate(pandit.id)} className="min-h-11 text-orange-600 border-orange-200 text-xs gap-1 sm:min-h-9" data-testid={`btn-delist-pandit-${pandit.id}`}>
@@ -561,6 +627,29 @@ function PanditsTab() {
         }}
       />
       <Dialog open={!!viewingPandit} onOpenChange={o=>!o&&setViewingPandit(null)}><DialogContent><DialogHeader><DialogTitle>{viewingPandit?.name}</DialogTitle><DialogDescription>Read-only profile details</DialogDescription></DialogHeader>{viewingPandit && <div className="space-y-2 text-sm"><p>{(viewingPandit as any).state} · {viewingPandit.city}</p><p>{viewingPandit.specialization}</p><p>{viewingPandit.experience} years experience · {viewingPandit.availability}</p><p>{viewingPandit.bio}</p></div>}</DialogContent></Dialog>
+      <Dialog open={!!regeneratedPassword} onOpenChange={open => !open && setRegeneratedPassword(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Temporary password for {regeneratedPassword?.name}</DialogTitle><DialogDescription>The old password and all active sessions have been invalidated. This password must be changed after login.</DialogDescription></DialogHeader>
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+            <code className="flex-1 break-all text-base font-semibold">{regeneratedPassword?.password}</code>
+            <Button type="button" size="icon" variant="outline" onClick={() => { if (regeneratedPassword) void navigator.clipboard.writeText(regeneratedPassword.password); }} aria-label="Copy temporary password"><Copy className="h-4 w-4" /></Button>
+          </div>
+          <p className="text-xs text-muted-foreground">{regeneratedPassword?.emailSent ? "A copy was sent to the registered email address." : "No email was sent. Share this password securely; it will not be shown again."}</p>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!moderationTarget} onOpenChange={open => !open && setModerationTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{moderationAction === "ban" ? "Ban" : "Temporarily suspend"} {moderationTarget?.name}?</DialogTitle><DialogDescription>{moderationAction === "ban" ? "The profile will be removed from public discovery and portal access will be blocked until an admin reactivates it." : "The profile and portal access will be disabled until the selected date."}</DialogDescription></DialogHeader>
+          {moderationAction === "suspend" && <div><Label htmlFor="suspension-until">Suspended until</Label><Input id="suspension-until" type="datetime-local" value={suspendedUntil} onChange={event => setSuspendedUntil(event.target.value)} /></div>}
+          <div><Label htmlFor="moderation-reason">Reason</Label><Textarea id="moderation-reason" value={moderationReason} onChange={event => setModerationReason(event.target.value)} placeholder="Internal moderation reason" /></div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModerationTarget(null)}>Cancel</Button>
+            <Button variant="destructive" disabled={moderationMutation.isPending || (moderationAction === "suspend" && !suspendedUntil)} onClick={() => { if (moderationTarget) moderationMutation.mutate({ pandit: moderationTarget, action: moderationAction, reason: moderationReason, until: suspendedUntil }); }}>
+              {moderationMutation.isPending ? "Saving..." : moderationAction === "ban" ? "Ban Pandit" : "Suspend Pandit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

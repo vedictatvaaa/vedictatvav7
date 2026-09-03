@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Lock, Phone, Info, PlayCircle, Copy } from "lucide-react";
+import { Sparkles, Lock, Phone, Info, PlayCircle, Copy, Mail } from "lucide-react";
 import { panditApi, setPanditToken } from "@/lib/panditAuth";
 
 export default function PanditLoginPage() {
@@ -14,6 +14,9 @@ export default function PanditLoginPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const DEMO_PHONE = "9000012345";
   const DEMO_PASS = "demo1234";
@@ -33,6 +36,29 @@ export default function PanditLoginPage() {
     } catch (e: any) {
       toast({ title: "Login failed", description: e?.message || "Try again", variant: "destructive" });
     } finally { setLoading(false); }
+  };
+
+  const requestPasswordReset = async () => {
+    if (!phone || !resetEmail) {
+      toast({ title: "Phone and email required", variant: "destructive" });
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const response = await fetch("/api/pandit/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, email: resetEmail }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Could not request a password reset link");
+      toast({ title: "Check your email", description: body.message });
+      setShowForgotPassword(false);
+    } catch (error: any) {
+      toast({ title: "Request failed", description: error?.message || "Try again", variant: "destructive" });
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
@@ -66,9 +92,24 @@ export default function PanditLoginPage() {
             <div className="bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md p-3 text-xs text-[#5a4a3a] flex items-start gap-2">
               <Info className="h-4 w-4 text-[#6D2B35] shrink-0 mt-0.5" />
               <div>
-                <strong className="text-[#4a1a22]">First-time login?</strong> Use your <strong>10-digit registered phone number as your password</strong>. You'll be prompted to set a new password on the dashboard.
+                <strong className="text-[#4a1a22]">First-time login?</strong> Use the temporary password in your approval email. You will be prompted to create a new password immediately after signing in.
               </div>
             </div>
+            <Button type="button" variant="link" onClick={() => setShowForgotPassword(value => !value)} className="w-full text-[#6D2B35]">
+              Forgot password?
+            </Button>
+            {showForgotPassword && (
+              <div className="space-y-3 rounded-md border border-[#D4AF37]/30 bg-white p-3">
+                <p className="text-xs text-[#5a4a3a]/75">Enter the phone and email registered on your approved Pandit account.</p>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a4a3a]/50" />
+                  <Input type="email" placeholder="Registered email" className="pl-9" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} />
+                </div>
+                <Button type="button" variant="outline" onClick={requestPasswordReset} disabled={resetLoading} className="w-full border-[#6D2B35] text-[#6D2B35]">
+                  {resetLoading ? "Sending..." : "Email password reset link"}
+                </Button>
+              </div>
+            )}
 
             <div className="rounded-md border-2 border-dashed border-[#D4AF37]/60 bg-gradient-to-br from-[#FBF7EE] to-[#fff8e7] p-3.5">
               <div className="flex items-center gap-2 mb-2">

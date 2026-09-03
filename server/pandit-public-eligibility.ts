@@ -1,6 +1,8 @@
 type PublicPanditCandidate = {
   verified?: boolean | null;
   onLeave?: boolean | null;
+  accountStatus?: string | null;
+  suspendedUntil?: Date | null;
   locationReviewStatus?: string | null;
   stateId?: number | null;
   cityId?: number | null;
@@ -17,6 +19,8 @@ export function isPanditPubliclyEligible(
   activeCityById: ReadonlyMap<number, ActiveCity>,
 ) {
   if (!pandit.verified || pandit.onLeave || pandit.locationReviewStatus !== "resolved") return false;
+  if (pandit.accountStatus === "banned") return false;
+  if (pandit.accountStatus === "suspended" && (!pandit.suspendedUntil || pandit.suspendedUntil.getTime() > Date.now())) return false;
   if (pandit.stateId == null || pandit.cityId == null || !activeStateIds.has(pandit.stateId)) return false;
   return activeCityById.get(pandit.cityId)?.stateId === pandit.stateId;
 }

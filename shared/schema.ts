@@ -312,7 +312,11 @@ export const pandits = pgTable("pandits", {
   serviceArea: text("service_area"),
   regionalOrigin: text("regional_origin"),
   availability: text("availability").default("available"),
+  accountStatus: text("account_status").notNull().default("active"), // active | suspended | banned
+  suspendedUntil: timestamp("suspended_until"),
+  moderationReason: text("moderation_reason"),
   passwordHash: text("password_hash"),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   lastLoginAt: timestamp("last_login_at"),
   commissionPct: integer("commission_pct").default(25),
   tier: text("tier").notNull().default("free"), // free | silver | gold | guru_elite

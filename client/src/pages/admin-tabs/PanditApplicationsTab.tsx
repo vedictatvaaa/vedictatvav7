@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send, Copy } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -111,6 +111,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const [resolutionStateId, setResolutionStateId] = useState("");
   const [resolutionCityId, setResolutionCityId] = useState("");
   const [cityRequestReason, setCityRequestReason] = useState("");
+  const [undeliveredCredential, setUndeliveredCredential] = useState<{ password: string; name: string } | null>(null);
   const [sortKey, setSortKey] = useState<"createdAt" | "fullName" | "city" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -201,7 +202,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
         err.body = body;
         throw err;
       }
-      return { ...body, action } as { success: boolean; action: "approve" | "reject"; message?: string; registrationNo?: string };
+      return { ...body, action } as { success: boolean; action: "approve" | "reject"; message?: string; registrationNo?: string; approvalEmailSent?: boolean; temporaryPassword?: string; application?: PanditApplication };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-applications"] });
@@ -209,8 +210,13 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({
         title: data.action === "approve" ? "Application Approved" : "Application Rejected",
-        description: data.action === "approve" ? `A public pandit profile has been created${data.registrationNo ? ` (registration no. ${data.registrationNo})` : ""}.` : "Application marked as rejected.",
+        description: data.action === "approve"
+          ? `A public pandit profile has been created${data.registrationNo ? ` (registration no. ${data.registrationNo})` : ""}.${data.approvalEmailSent ? " Login credentials were emailed." : " Credential email was not delivered."}`
+          : "Application marked as rejected.",
       });
+      if (data.action === "approve" && data.temporaryPassword) {
+        setUndeliveredCredential({ password: data.temporaryPassword, name: data.application?.fullName || "Pandit" });
+      }
       setSelectedId(null);
     },
     onError: (err: any) => {
@@ -606,6 +612,21 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
               })()}
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!undeliveredCredential} onOpenChange={open => !open && setUndeliveredCredential(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Credential email was not delivered</DialogTitle>
+            <DialogDescription>Copy this temporary password for {undeliveredCredential?.name} and share it securely. It will not be shown again.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+            <code className="flex-1 break-all text-base font-semibold">{undeliveredCredential?.password}</code>
+            <Button type="button" size="icon" variant="outline" onClick={() => { if (undeliveredCredential) void navigator.clipboard.writeText(undeliveredCredential.password); }} aria-label="Copy temporary password">
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+          <DialogFooter><Button onClick={() => setUndeliveredCredential(null)}>Done</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

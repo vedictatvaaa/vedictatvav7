@@ -176,6 +176,7 @@ const Careers = lazy(() => import("@/pages/careers"));
 const Investors = lazy(() => import("@/pages/investors"));
 const Franchise = lazy(() => import("@/pages/franchise"));
 const BecomePandit = lazy(() => import("@/pages/become-pandit"));
+const PanditResetPassword = lazy(() => import("@/pages/pandit-reset-password"));
 const BecomeAstrologer = lazy(() => import("@/pages/become-astrologer"));
 const PanchangCalendar = lazy(() => import("@/pages/panchang-calendar"));
 const SpiritualDashboard = lazy(() => import("@/pages/spiritual-dashboard"));
@@ -803,6 +804,7 @@ function Router() {
           <Route path="/lucky-draw" component={LuckyDraw} />
           <Route path="/pilgrimage-card" component={PilgrimageCard} />
           <Route path="/pandit/login" component={PanditLogin} />
+          <Route path="/pandit/reset-password" component={PanditResetPassword} />
           <Route path="/pandit/portal" component={PanditPortal} />
           <Route path="/verify-pandit/:registrationNo" component={VerifyPandit} />
           <Route path="/store/:slug" component={PanditStorefront} />

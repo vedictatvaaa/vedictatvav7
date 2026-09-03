@@ -58,7 +58,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
+  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches,
   type AbandonedCart,
 } from "@shared/schema";
 import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
@@ -66,7 +66,7 @@ import { panditApplications, panditCityRequests, insertFranchiseApplicationSchem
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { panditVerificationDto } from "./pandit-verification";
-import { validatePanditSession } from "./pandit-portal";
+import { authorizePanditSession } from "./pandit-portal";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
@@ -95,7 +95,8 @@ import { canonicalPanditRedirectTarget, panditRedirectTarget } from "./pandit-ro
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
-import { sendEmail, sendEmailAsync, buildPanditApprovalEmail, buildPanditRejectionEmail, sendAbandonedCartNudge } from "./email";
+import { sendEmail, sendEmailAsync, buildPanditRejectionEmail, sendAbandonedCartNudge } from "./email";
+import { buildPanditApprovalEmail, buildPanditTemporaryPasswordEmail } from "./pandit-account-emails";
 import {
   enqueueWelcomeSeries, dispatchBroadcast, recordUnsubscribe, verifyUnsubscribeToken,
 } from "./email-marketing";
@@ -163,8 +164,9 @@ async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{
   const cardItems = items.filter((item) => item.productType === "pandit_membership_card");
   if (!cardItems.length) return { items };
   const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
-  const panditId = await validatePanditSession(token);
-  if (!panditId) return { message: "Pandit authentication is required to order membership cards" };
+  const authorization = await authorizePanditSession(token);
+  if (authorization.panditId == null) return { status: authorization.status, message: authorization.error };
+  const panditId = authorization.panditId;
   const pandit = await storage.getPandit(panditId);
   if (!isPanditEligibleForMembershipCardOrder(pandit)) {
     return { message: "An approved Pandit membership is required to order cards" };
@@ -2930,8 +2932,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
   app.get("/api/pandit/membership-card-products", async (req: any, res) => {
     const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
-    const panditId = await validatePanditSession(token);
-    if (!panditId) return res.status(401).json({ message: "Pandit authentication required" });
+    const authorization = await authorizePanditSession(token);
+    if (authorization.panditId == null) return res.status(authorization.status).json({ message: authorization.error, ...(authorization.code ? { code: authorization.code } : {}) });
+    const panditId = authorization.panditId;
     const pandit = await storage.getPandit(panditId);
     if (!isPanditEligibleForMembershipCardOrder(pandit)) {
       return res.status(403).json({ message: "An approved Pandit membership is required to view membership cards" });
@@ -3239,6 +3242,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .where(eq(pandits.registrationNo, registrationNo))
         .limit(1);
       if (!pandit) return res.status(404).json({ message: "Pandit verification not found" });
+      const { pandits: eligible } = await publicEligibility();
+      if (!eligible.some(item => item.id === pandit.id)) {
+        return res.status(404).json({ message: "Pandit verification not found" });
+      }
       return res.json(panditVerificationDto(pandit));
     } catch (error) {
       return next(error);
@@ -4772,7 +4779,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (!intent || intent.gateway_order_id !== razorpay_order_id) return res.status(400).json({ success: false, message: "Payment does not match checkout intent" });
       if (intent.pandit_id) {
         const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
-        if (await validatePanditSession(token) !== intent.pandit_id) return res.status(403).json({ success: false, message: "Pandit session no longer matches this checkout" });
+        const authorization = await authorizePanditSession(token);
+        if (authorization.panditId !== intent.pandit_id) {
+          return res.status(authorization.panditId == null ? authorization.status : 403).json({
+            success: false,
+            message: authorization.panditId == null ? authorization.error : "Pandit session no longer matches this checkout",
+            ...(authorization.panditId == null && authorization.code ? { code: authorization.code } : {}),
+          });
+        }
       }
       const keyId = process.env.RAZORPAY_KEY_ID, keySecret = process.env.RAZORPAY_KEY_SECRET;
       if (keySecret) {
@@ -9272,6 +9286,9 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const id = parsePositiveId(req.params.id);
       if (!id) return res.status(400).json({ message: "Invalid id" });
       const note = typeof req.body?.note === "string" ? req.body.note : null;
+      const temporaryPassword = crypto.randomBytes(9).toString("base64url");
+      const bcrypt = await import("bcryptjs");
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
       const outcome = await db.transaction(async (tx) => {
         const [pending] = await tx.select().from(panditApplications)
           .where(eq(panditApplications.id, id)).for("update");
@@ -9318,6 +9335,8 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           verified: true,
           phone: pending.phone,
           email: pending.email,
+          passwordHash,
+          mustChangePassword: true,
           bio: pending.bio || "",
           education: pending.education || "",
           image: pending.photo,
@@ -9356,18 +9375,22 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           cityId: claimed.cityId,
         });
       }
+      let approvalEmailSent = false;
       if (outcome.kind === "created" && claimed.email) {
-        const msg = buildPanditApprovalEmail({
-          to: claimed.email,
-          fullName: claimed.fullName,
-          city: claimed.city,
-          adminNote: note,
-        });
-        sendEmail(msg)
-          .then((r) => {
-            if (r.sent) console.log(`[email] Approval notice sent to ${claimed.email} (application ${claimed.id})`);
-          })
-          .catch((e) => console.error("[email] approval send failed:", e));
+        try {
+          const msg = buildPanditApprovalEmail({
+            to: claimed.email,
+            fullName: claimed.fullName,
+            city: claimed.city,
+            temporaryPassword,
+            adminNote: note,
+          });
+          const delivery = await sendEmail(msg);
+          approvalEmailSent = delivery.sent;
+          if (delivery.sent) console.log(`[email] Approval notice sent to ${claimed.email} (application ${claimed.id})`);
+        } catch (error) {
+          console.error("[email] approval send failed:", error);
+        }
       }
 
       res.json({
@@ -9376,10 +9399,86 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         application: claimed,
         panditId: pandit.id,
         registrationNo: pandit.registrationNo,
+        approvalEmailSent,
+        ...(outcome.kind === "created" && !approvalEmailSent ? { temporaryPassword } : {}),
       });
     } catch (error) {
       console.error("approve pandit-application error:", error);
       res.status(500).json({ message: "Failed to approve application" });
+    }
+  });
+
+  app.post("/api/admin/pandits/:id/regenerate-password", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const id = parsePositiveId(req.params.id);
+      if (!id) return res.status(400).json({ message: "Invalid id" });
+      const [pandit] = await db.select().from(pandits).where(eq(pandits.id, id)).limit(1);
+      if (!pandit) return res.status(404).json({ message: "Pandit not found" });
+      const temporaryPassword = crypto.randomBytes(9).toString("base64url");
+      const bcrypt = await import("bcryptjs");
+      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+      await db.transaction(async (tx) => {
+        await tx.update(pandits).set({ passwordHash, mustChangePassword: true }).where(eq(pandits.id, id));
+        await tx.delete(panditSessions).where(eq(panditSessions.panditId, id));
+      });
+      await auditAdmin(req, "pandit.password_regenerated", `pandit:${id}`, { sessionsRevoked: true });
+      let emailSent = false;
+      if (pandit.email) {
+        const result = await sendEmail(buildPanditTemporaryPasswordEmail({
+          to: pandit.email,
+          fullName: pandit.name,
+          temporaryPassword,
+        }));
+        emailSent = result.sent;
+      }
+      res.json({ ok: true, temporaryPassword, emailSent });
+    } catch (error) {
+      console.error("pandit password regeneration failed:", error);
+      res.status(500).json({ message: "Failed to regenerate Pandit password" });
+    }
+  });
+
+  app.post("/api/admin/pandits/:id/moderation", adminAuthMiddleware, async (req: any, res) => {
+    try {
+      const id = parsePositiveId(req.params.id);
+      if (!id) return res.status(400).json({ message: "Invalid id" });
+      const parsed = z.object({
+        action: z.enum(["activate", "suspend", "ban"]),
+        reason: z.string().trim().max(1000).optional(),
+        suspendedUntil: z.string().datetime().optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid moderation request" });
+      const [current] = await db.select().from(pandits).where(eq(pandits.id, id)).limit(1);
+      if (!current) return res.status(404).json({ message: "Pandit not found" });
+      const { action, reason } = parsed.data;
+      let suspendedUntil: Date | null = null;
+      if (action === "suspend") {
+        suspendedUntil = parsed.data.suspendedUntil ? new Date(parsed.data.suspendedUntil) : null;
+        if (!suspendedUntil || suspendedUntil.getTime() <= Date.now()) {
+          return res.status(400).json({ message: "Choose a future suspension end date" });
+        }
+      }
+      const accountStatus = action === "activate" ? "active" : action === "suspend" ? "suspended" : "banned";
+      const [updated] = await db.update(pandits).set({
+        accountStatus,
+        suspendedUntil,
+        moderationReason: action === "activate" ? null : reason || null,
+      }).where(eq(pandits.id, id)).returning();
+      if (action !== "activate") {
+        await db.delete(panditSessions).where(eq(panditSessions.panditId, id));
+        notifyUnpublish(req, [`/pandit/${current.slug || current.id}`, "/book-pandit-online"]);
+      } else {
+        notifyPublish(req, [`/pandit/${current.slug || current.id}`, "/book-pandit-online"]);
+      }
+      await auditAdmin(req, `pandit.${accountStatus}`, `pandit:${id}`, {
+        previousStatus: current.accountStatus,
+        suspendedUntil,
+        reason: reason || null,
+      });
+      res.json({ ok: true, pandit: updated });
+    } catch (error) {
+      console.error("pandit moderation failed:", error);
+      res.status(500).json({ message: "Failed to update Pandit account status" });
     }
   });
 

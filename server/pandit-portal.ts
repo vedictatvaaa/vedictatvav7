@@ -1,6 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { db } from "./db";
 import {
   pandits,
@@ -23,11 +23,64 @@ import {
   storefrontPublicPath,
   storefrontPublicationState,
 } from "./pandit-dashboard";
+import { sendEmail } from "./email";
+import { buildPanditPasswordResetEmail } from "./pandit-account-emails";
 
 const SESSION_TTL_DAYS = 30;
+const ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function newToken() {
   return randomBytes(32).toString("hex");
+}
+
+type PasswordLinkPayload = { panditId: number; email: string; passwordDigest: string; expiresAt: number };
+
+function activationSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) throw new Error("SESSION_SECRET is required for Pandit account activation");
+  return secret;
+}
+
+function signActivationPayload(encodedPayload: string): string {
+  return createHmac("sha256", activationSecret()).update(encodedPayload).digest("base64url");
+}
+
+function passwordDigest(passwordHash: string | null): string {
+  return createHmac("sha256", activationSecret()).update(passwordHash || "no-password").digest("hex");
+}
+
+function createPasswordLinkUrl(panditId: number, email: string, currentPasswordHash: string | null): string {
+  const payload: PasswordLinkPayload = {
+    panditId,
+    email: email.trim().toLowerCase(),
+    passwordDigest: passwordDigest(currentPasswordHash),
+    expiresAt: Date.now() + ACTIVATION_TTL_MS,
+  };
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const token = `${encodedPayload}.${signActivationPayload(encodedPayload)}`;
+  const siteUrl = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
+  return `${siteUrl}/pandit/reset-password?token=${encodeURIComponent(token)}`;
+}
+
+export function createPanditPasswordResetUrl(panditId: number, email: string, currentPasswordHash: string): string {
+  return createPasswordLinkUrl(panditId, email, currentPasswordHash);
+}
+
+function verifyPasswordLinkToken(token: string): PasswordLinkPayload | null {
+  const [encodedPayload, signature, ...rest] = token.split(".");
+  if (!encodedPayload || !signature || rest.length) return null;
+  const expected = Buffer.from(signActivationPayload(encodedPayload));
+  const received = Buffer.from(signature);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as PasswordLinkPayload;
+    if (!Number.isInteger(payload.panditId) || payload.panditId < 1) return null;
+    if (typeof payload.email !== "string" || !payload.email || typeof payload.passwordDigest !== "string") return null;
+    if (!Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -62,12 +115,56 @@ export async function validatePanditSession(token?: string): Promise<number | nu
   return rows[0].panditId;
 }
 
+export type PanditAuthorization =
+  | { panditId: number }
+  | { panditId: null; status: number; error: string; code?: string };
+
+export async function authorizePanditSession(
+  token?: string,
+  options: { allowPasswordChangeRequired?: boolean } = {},
+): Promise<PanditAuthorization> {
+  const panditId = await validatePanditSession(token);
+  if (!panditId) return { panditId: null, status: 401, error: "Pandit authentication required" };
+  const [pandit] = await db.select({
+    accountStatus: pandits.accountStatus,
+    suspendedUntil: pandits.suspendedUntil,
+    mustChangePassword: pandits.mustChangePassword,
+  }).from(pandits).where(eq(pandits.id, panditId)).limit(1);
+  if (!pandit) return { panditId: null, status: 401, error: "Pandit authentication required" };
+  if (pandit.accountStatus === "banned") {
+    return { panditId: null, status: 403, error: "This Pandit account has been banned." };
+  }
+  if (pandit.accountStatus === "suspended") {
+    if (!pandit.suspendedUntil || pandit.suspendedUntil.getTime() > Date.now()) {
+      return { panditId: null, status: 403, error: "This Pandit account is temporarily suspended." };
+    }
+    await db.update(pandits).set({ accountStatus: "active", suspendedUntil: null, moderationReason: null }).where(eq(pandits.id, panditId));
+  }
+  if (pandit.mustChangePassword && !options.allowPasswordChangeRequired) {
+    return {
+      panditId: null,
+      status: 403,
+      error: "You must change your temporary password before using the portal.",
+      code: "PASSWORD_CHANGE_REQUIRED",
+    };
+  }
+  return { panditId };
+}
+
 export function panditAuthMiddleware(req: PanditRequest, res: Response, next: NextFunction) {
   const token = (req.headers["x-pandit-token"] as string | undefined) || (req.cookies?.pandit_token as string | undefined);
-  validatePanditSession(token)
-    .then((id) => {
-      if (!id) return res.status(401).json({ error: "Pandit authentication required" });
-      req.panditId = id;
+  const routePath = req.originalUrl.split("?")[0];
+  const allowPasswordChangeRequired = new Set([
+    "/api/pandit/me",
+    "/api/pandit/change-password",
+    "/api/pandit/logout",
+  ]).has(routePath);
+  authorizePanditSession(token, { allowPasswordChangeRequired })
+    .then((authorization) => {
+      if (authorization.panditId == null) {
+        return res.status(authorization.status).json({ error: authorization.error, ...(authorization.code ? { code: authorization.code } : {}) });
+      }
+      req.panditId = authorization.panditId;
       next();
     })
     .catch(() => res.status(500).json({ error: "Auth check failed" }));
@@ -82,6 +179,68 @@ async function ensureMessagesAccessForBooking(bookingId: number, panditId: numbe
 
 export function registerPanditPortalRoutes(app: Express) {
   // ----- Auth -----
+  app.post("/api/pandit/forgot-password", async (req, res) => {
+    const generic = { ok: true, message: "If the details match an approved Pandit account, a password reset link has been sent." };
+    try {
+      const schema = z.object({
+        phone: z.string().min(6),
+        email: z.string().email(),
+      });
+      const { phone, email } = schema.parse(req.body);
+      const norm = phone.replace(/\D/g, "").slice(-10);
+      const normalizedEmail = email.trim().toLowerCase();
+      const rows = await db.select().from(pandits).where(eq(pandits.phone, norm)).limit(1);
+      const pandit = rows[0];
+      if (pandit && pandit.passwordHash && pandit.email?.trim().toLowerCase() === normalizedEmail) {
+        const resetUrl = createPasswordLinkUrl(pandit.id, normalizedEmail, pandit.passwordHash);
+        const message = buildPanditPasswordResetEmail({
+          to: pandit.email,
+          fullName: pandit.name,
+          resetUrl,
+        });
+        await sendEmail(message);
+      }
+      res.json(generic);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ error: "Enter your registered phone number and email address." });
+      console.error("pandit password reset request failed:", e);
+      res.json(generic);
+    }
+  });
+
+  app.post("/api/pandit/reset-password", async (req, res) => {
+    try {
+      const schema = z.object({
+        token: z.string().min(20),
+        newPassword: z.string().min(8).max(128),
+      });
+      const { token, newPassword } = schema.parse(req.body);
+      const payload = verifyPasswordLinkToken(token);
+      if (!payload) return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+      const rows = await db.select().from(pandits).where(eq(pandits.id, payload.panditId)).limit(1);
+      const pandit = rows[0];
+      if (!pandit || pandit.email?.trim().toLowerCase() !== payload.email) {
+        return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+      }
+      if (!pandit.passwordHash || passwordDigest(pandit.passwordHash) !== payload.passwordDigest) {
+        return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+      }
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      const updated = await db.update(pandits)
+        .set({ passwordHash, mustChangePassword: false })
+        .where(and(eq(pandits.id, pandit.id), eq(pandits.passwordHash, pandit.passwordHash)))
+        .returning({ id: pandits.id });
+      if (!updated.length) {
+        return res.status(400).json({ error: "This password reset link is invalid or has expired." });
+      }
+      await db.delete(panditSessions).where(eq(panditSessions.panditId, pandit.id));
+      res.json({ ok: true });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ error: "Password must be at least 8 characters." });
+      res.status(500).json({ error: "Could not activate the account." });
+    }
+  });
+
   app.post("/api/pandit/login", async (req, res) => {
     try {
       const schema = z.object({ phone: z.string().min(6), password: z.string().min(1) });
@@ -90,17 +249,18 @@ export function registerPanditPortalRoutes(app: Express) {
       const rows = await db.select().from(pandits).where(eq(pandits.phone, norm)).limit(1);
       if (!rows.length) return res.status(401).json({ error: "Invalid phone or password" });
       const p = rows[0];
-      let firstTime = false;
+      if (p.accountStatus === "banned") {
+        return res.status(403).json({ error: "This Pandit account has been banned. Contact the Vedic Tatva team for assistance." });
+      }
+      if (p.accountStatus === "suspended") {
+        if (!p.suspendedUntil || p.suspendedUntil.getTime() > Date.now()) {
+          const until = p.suspendedUntil ? ` until ${p.suspendedUntil.toLocaleDateString("en-IN")}` : "";
+          return res.status(403).json({ error: `This Pandit account is temporarily suspended${until}. Contact the Vedic Tatva team for assistance.` });
+        }
+        await db.update(pandits).set({ accountStatus: "active", suspendedUntil: null, moderationReason: null }).where(eq(pandits.id, p.id));
+      }
       if (!p.passwordHash) {
-        // First-time login bootstrap. Disabled in production by default to prevent account hijacking.
-        const allowBootstrap = process.env.PANDIT_ALLOW_PHONE_BOOTSTRAP === "true" || process.env.NODE_ENV !== "production";
-        if (!allowBootstrap) {
-          return res.status(401).json({ error: "Account not yet activated. Please ask admin to set your initial password." });
-        }
-        if (password.replace(/\D/g, "").slice(-10) !== norm) {
-          return res.status(401).json({ error: "First-time login: use your phone number as password" });
-        }
-        firstTime = true;
+        return res.status(403).json({ error: "No password is configured. Use Forgot password or contact the Vedic Tatva team." });
       } else {
         const ok = await bcrypt.compare(password, p.passwordHash);
         if (!ok) return res.status(401).json({ error: "Invalid phone or password" });
@@ -110,7 +270,7 @@ export function registerPanditPortalRoutes(app: Express) {
       await db.insert(panditSessions).values({ panditId: p.id, token, expiresAt });
       await db.update(pandits).set({ lastLoginAt: new Date() }).where(eq(pandits.id, p.id));
       res.cookie("pandit_token", token, { httpOnly: true, sameSite: "lax", maxAge: SESSION_TTL_DAYS * 86400 * 1000 });
-      res.json({ ok: true, token, mustChangePassword: firstTime, pandit: { id: p.id, name: p.name, city: p.city, image: p.image } });
+      res.json({ ok: true, token, mustChangePassword: !!p.mustChangePassword, pandit: { id: p.id, name: p.name, city: p.city, image: p.image } });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Validation failed", issues: e.issues });
       res.status(500).json({ error: e?.message });
@@ -126,13 +286,13 @@ export function registerPanditPortalRoutes(app: Express) {
 
   app.post("/api/pandit/change-password", panditAuthMiddleware, async (req: PanditRequest, res) => {
     try {
-      const schema = z.object({ newPassword: z.string().min(6) });
+      const schema = z.object({ newPassword: z.string().min(8).max(128) });
       const { newPassword } = schema.parse(req.body);
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.update(pandits).set({ passwordHash: hash }).where(eq(pandits.id, req.panditId!));
+      await db.update(pandits).set({ passwordHash: hash, mustChangePassword: false }).where(eq(pandits.id, req.panditId!));
       res.json({ ok: true });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return res.status(400).json({ error: "Password must be 6+ chars" });
+      if (e instanceof z.ZodError) return res.status(400).json({ error: "Password must be at least 8 characters" });
       res.status(500).json({ error: e?.message });
     }
   });
@@ -141,7 +301,7 @@ export function registerPanditPortalRoutes(app: Express) {
     const rows = await db.select().from(pandits).where(eq(pandits.id, req.panditId!)).limit(1);
     if (!rows.length) return res.status(404).json({ error: "Not found" });
     const { passwordHash, ...safe } = rows[0] as any;
-    res.json({ pandit: safe, mustChangePassword: !passwordHash, isOnline: isPanditOnline(req.panditId!) });
+    res.json({ pandit: safe, mustChangePassword: !!(rows[0] as any).mustChangePassword, isOnline: isPanditOnline(req.panditId!) });
   });
 
   // Home is deliberately session-scoped: no Pandit ID is accepted from the
@@ -620,16 +780,4 @@ export function registerPanditPortalRoutes(app: Express) {
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
 
-  // ----- Admin helper -----
-  app.post("/api/admin/pandits/:id/reset-password", async (req, res) => {
-    try {
-      const adminToken = req.headers["x-admin-token"] as string | undefined;
-      const { validateAdminSession } = await import("./admin-auth");
-      const adminId = await validateAdminSession(adminToken || "");
-      if (!adminId) return res.status(401).json({ error: "Admin auth required" });
-      const id = Number(req.params.id);
-      await db.update(pandits).set({ passwordHash: null }).where(eq(pandits.id, id));
-      res.json({ ok: true, note: "Pandit can now login with their phone number as initial password and must change it." });
-    } catch (e: any) { res.status(500).json({ error: e?.message }); }
-  });
 }
