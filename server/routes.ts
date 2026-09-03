@@ -110,6 +110,7 @@ import { canonicalBookingMode, structuredAddressSchema } from "@shared/puja-book
 import { assertPackagePriceCompliant, assertRateCompliant, authoritativeBookingPrice, modeAllowed } from "./puja-booking/pricing";
 import { customerBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
+import { findPujaConflicts, publicPujaEligible } from "./puja-governance";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
@@ -3267,10 +3268,18 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     let verifiedMuhurat: { date: string; window?: string; reason: string } | undefined;
     if (selectedDate) {
       if (!service || !pujaSlug) return res.status(400).json({ message: "Puja and catalogue reference are required for Muhurat matching" });
-      const [cataloguePuja] = await db.select({
-        id: pujaTypes.id,
-        name: pujaTypes.name,
-      }).from(pujaTypes).where(and(eq(pujaTypes.slug, pujaSlug), eq(pujaTypes.isPublished, true))).limit(1);
+      const catalogue = await db.select().from(pujaTypes);
+      const cataloguePuja = catalogue.find(puja => puja.slug === pujaSlug);
+      const [reviewer] = cataloguePuja?.reviewedByPanditId
+        ? await db.select({ id: pandits.id }).from(pandits)
+          .where(and(eq(pandits.id, cataloguePuja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
+        : [];
+      const catalogueConflicts = cataloguePuja
+        ? findPujaConflicts(cataloguePuja, catalogue, cataloguePuja.id)
+        : [];
+      if (!cataloguePuja || !publicPujaEligible(cataloguePuja, catalogueConflicts, Boolean(reviewer))) {
+        return res.status(400).json({ message: "Puja catalogue reference is not approved for matching" });
+      }
       if (!cataloguePuja || cataloguePuja.name.trim().toLocaleLowerCase("en-IN") !== service.toLocaleLowerCase("en-IN")) {
         return res.status(400).json({ message: "Puja does not match the catalogue reference" });
       }

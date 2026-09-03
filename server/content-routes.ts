@@ -3,15 +3,43 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { db } from "./db";
 import { adminAuthMiddleware } from "./admin-auth";
 import {
-  blogPosts, blogComments, qaQuestions, qaAnswers, pujaTypes, pujaMuhurats,
+  blogPosts, blogComments, qaQuestions, qaAnswers, pujaTypes, pujaMuhurats, pandits,
   insertBlogCommentSchema, insertQaQuestionSchema, insertQaAnswerSchema,
-  insertPujaTypeSchema,
 } from "@shared/schema";
 import { and, asc, desc, eq, isNull, or, sql, inArray } from "drizzle-orm";
 import { runDailyBlogGeneration, autoAnswerPendingQuestions, generateAiAnswerForQuestion } from "./blog-ai";
 import { regenerateMuhuratsForYear, regenerateForCurrentAndNextYear, computeMuhuratsForPuja } from "./muhurat-engine";
 import { sanitizeRichHtml } from "./html-sanitizer";
 import { hasAnalyticsConsent } from "./consent";
+import {
+  findPujaConflicts,
+  normalizeGovernance,
+  publicPujaEligible,
+  pujaCompleteness,
+  pujaCreateSchema,
+  pujaPatchSchema,
+} from "./puja-governance";
+
+const REVIEW_RELEVANT_FIELDS = [
+  "name", "slug", "deity", "shortDescription", "whyPerformed", "storyMyth",
+  "howCelebrated", "ethics", "requirements", "benefits", "faq", "category",
+  "intents", "deities", "ceremonies", "festivals", "aliases", "regionalVariations",
+  "onlineEligible", "inPersonEligible", "sourceNotes", "citations", "reviewedByPanditId",
+] as const;
+
+function reviewRelevantContentChanged(current: Record<string, any>, next: Record<string, any>): boolean {
+  return REVIEW_RELEVANT_FIELDS.some(field => JSON.stringify(current[field] ?? null) !== JSON.stringify(next[field] ?? null));
+}
+
+function publicPujaProjection(puja: Record<string, any>, reviewerName?: string | null) {
+  const {
+    muhuratRules: _muhuratRules,
+    reviewNotes: _reviewNotes,
+    reviewedByPanditId: _reviewedByPanditId,
+    ...safe
+  } = puja;
+  return { ...safe, reviewerName: reviewerName || null };
+}
 
 const PUJA_HTML_FIELDS = ["whyPerformed", "storyMyth", "howCelebrated", "ethics", "benefits"] as const;
 function sanitizePujaPayload<T extends Record<string, any>>(body: T): T {
@@ -129,7 +157,7 @@ export function registerContentRoutes(app: Express) {
   // Admin: approve a draft → publish it
   app.post("/api/admin/blog-queue/:id/approve", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const [post] = await db.update(blogPosts)
         .set({ status: "published", isPublished: true, publishedAt: new Date() })
         .where(eq(blogPosts.id, id))
@@ -144,7 +172,7 @@ export function registerContentRoutes(app: Express) {
   // Admin: reject a draft (kept in DB for audit; not publicly visible)
   app.post("/api/admin/blog-queue/:id/reject", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const [post] = await db.update(blogPosts)
         .set({ status: "rejected", isPublished: false })
         .where(eq(blogPosts.id, id))
@@ -261,7 +289,7 @@ export function registerContentRoutes(app: Express) {
   // Admin: moderate a comment
   app.patch("/api/admin/blog-comments/:id", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const status = String(req.body?.status || "approved");
       if (!["approved", "rejected", "pending"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
@@ -431,7 +459,7 @@ export function registerContentRoutes(app: Express) {
 
   app.patch("/api/admin/qa/questions/:id", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const patch: Record<string, unknown> = {};
       if (req.body?.status) patch.status = req.body.status;
       if (typeof req.body?.isFeatured === "boolean") patch.isFeatured = req.body.isFeatured;
@@ -504,7 +532,7 @@ export function registerContentRoutes(app: Express) {
   // Admin: ask AI to draft an answer to a question (returns text — does not save)
   app.post("/api/admin/qa/questions/:id/ai-draft", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       const [q] = await db.select().from(qaQuestions).where(eq(qaQuestions.id, id));
       if (!q) return res.status(404).json({ message: "Not found" });
       const txt = await generateAiAnswerForQuestion(q);
@@ -533,13 +561,27 @@ export function registerContentRoutes(app: Express) {
   app.get("/api/pujas", async (req, res) => {
     try {
       const category = req.query.category ? String(req.query.category) : null;
-      const where = category
-        ? and(eq(pujaTypes.isPublished, true), eq(pujaTypes.category, category))
-        : eq(pujaTypes.isPublished, true);
-      const rows = await db.select().from(pujaTypes).where(where)
+      const rows = await db.select().from(pujaTypes)
         .orderBy(asc(pujaTypes.displayOrder), asc(pujaTypes.name));
-      // strip muhuratRules from public payload (admin-only)
-      res.json(rows.map(({ muhuratRules: _r, ...rest }) => rest));
+      const verifiedReviewers = new Set((await db.select({ id: pandits.id }).from(pandits).where(eq(pandits.verified, true))).map(row => row.id));
+      const intent = req.query.intent ? String(req.query.intent).toLowerCase() : null;
+      const deity = req.query.deity ? String(req.query.deity).toLowerCase() : null;
+      const ceremony = req.query.ceremony ? String(req.query.ceremony).toLowerCase() : null;
+      const festival = req.query.festival ? String(req.query.festival).toLowerCase() : null;
+      const mode = req.query.mode ? String(req.query.mode) : null;
+      const publicRows = rows.filter(row => {
+        const conflicts = findPujaConflicts(row, rows, row.id);
+        if (!publicPujaEligible(row, conflicts, row.reviewedByPanditId != null && verifiedReviewers.has(row.reviewedByPanditId))) return false;
+        if (category && row.category !== category) return false;
+        if (intent && !(row.intents || []).some(value => value.toLowerCase() === intent)) return false;
+        if (deity && !(row.deities || []).some(value => value.toLowerCase() === deity)) return false;
+        if (ceremony && !(row.ceremonies || []).some(value => value.toLowerCase() === ceremony)) return false;
+        if (festival && !(row.festivals || []).some(value => value.toLowerCase() === festival)) return false;
+        if (mode === "online" && !row.onlineEligible) return false;
+        if (mode === "offline" && !row.inPersonEligible) return false;
+        return true;
+      });
+      res.json(publicRows.map(row => publicPujaProjection(row)));
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
     }
@@ -549,7 +591,14 @@ export function registerContentRoutes(app: Express) {
   app.get("/api/pujas/:slug", async (req, res) => {
     try {
       const [puja] = await db.select().from(pujaTypes).where(eq(pujaTypes.slug, req.params.slug));
-      if (!puja || !puja.isPublished) return res.status(404).json({ message: "Not found" });
+      if (!puja) return res.status(404).json({ message: "Not found" });
+      const catalogue = await db.select().from(pujaTypes);
+      const [reviewer] = puja.reviewedByPanditId
+        ? await db.select({ name: pandits.name }).from(pandits).where(and(eq(pandits.id, puja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
+        : [];
+      if (!publicPujaEligible(puja, findPujaConflicts(puja, catalogue, puja.id), Boolean(reviewer))) {
+        return res.status(404).json({ message: "Not found" });
+      }
       const year = new Date().getFullYear();
       const muhurats = await db.select().from(pujaMuhurats)
         .where(and(eq(pujaMuhurats.pujaId, puja.id), or(eq(pujaMuhurats.year, year), eq(pujaMuhurats.year, year + 1))!))
@@ -563,9 +612,8 @@ export function registerContentRoutes(app: Express) {
         .where(and(eq(qaQuestions.pujaSlug, puja.slug), eq(qaQuestions.status, "approved")))
         .orderBy(desc(qaQuestions.upvotes), desc(qaQuestions.createdAt))
         .limit(8);
-      const { muhuratRules: _r, ...publicPuja } = puja;
       res.json({
-        puja: publicPuja,
+        puja: publicPujaProjection(puja, reviewer?.name),
         muhurats: muhurats.map((m) => ({ year: m.year, muhurats: m.muhurats })),
         questions: questions.map(publicQuestion),
       });
@@ -578,7 +626,17 @@ export function registerContentRoutes(app: Express) {
   app.get("/api/admin/pujas", adminAuthMiddleware, async (_req, res) => {
     try {
       const rows = await db.select().from(pujaTypes).orderBy(asc(pujaTypes.displayOrder), asc(pujaTypes.name));
-      res.json(rows);
+      const reviewerIds = Array.from(new Set(rows.map(row => row.reviewedByPanditId).filter((id): id is number => id != null)));
+      const reviewerRows = reviewerIds.length
+        ? await db.select({ id: pandits.id, name: pandits.name }).from(pandits).where(and(inArray(pandits.id, reviewerIds), eq(pandits.verified, true)))
+        : [];
+      const reviewerNames = new Map(reviewerRows.map(row => [row.id, row.name]));
+      res.json(rows.map(row => ({
+        ...row,
+        completeness: pujaCompleteness({ ...row, reviewerVerified: row.reviewedByPanditId == null || reviewerNames.has(row.reviewedByPanditId) }),
+        conflicts: findPujaConflicts(row, rows, row.id),
+        reviewerName: row.reviewedByPanditId ? reviewerNames.get(row.reviewedByPanditId) || null : null,
+      })));
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
     }
@@ -586,9 +644,27 @@ export function registerContentRoutes(app: Express) {
 
   app.post("/api/admin/pujas", adminAuthMiddleware, async (req, res) => {
     try {
-      const parsed = insertPujaTypeSchema.safeParse(req.body);
+      const parsed = pujaCreateSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid", errors: parsed.error.flatten() });
-      const [created] = await db.insert(pujaTypes).values(sanitizePujaPayload(parsed.data as any)).returning();
+      const normalized = normalizeGovernance(sanitizePujaPayload(parsed.data as any));
+      const catalogue = await db.select().from(pujaTypes);
+      const conflicts = findPujaConflicts(normalized, catalogue);
+      const completeness = pujaCompleteness(normalized);
+      if (normalized.reviewedByPanditId) {
+        const [reviewer] = await db.select({ id: pandits.id }).from(pandits)
+          .where(and(eq(pandits.id, normalized.reviewedByPanditId), eq(pandits.verified, true))).limit(1);
+        if (!reviewer) return res.status(400).json({ message: "Reviewer must be a verified Pandit" });
+      }
+      if (normalized.reviewStatus === "approved" && (!completeness.complete || conflicts.length)) {
+        return res.status(409).json({ message: "Guide cannot be approved", completeness, conflicts });
+      }
+      if (normalized.isPublished && (normalized.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) {
+        return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
+      }
+      const [created] = await db.insert(pujaTypes).values({
+        ...normalized,
+        approvedAt: normalized.reviewStatus === "approved" ? new Date() : null,
+      }).returning();
       res.json(created);
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -597,9 +673,40 @@ export function registerContentRoutes(app: Express) {
 
   app.patch("/api/admin/pujas/:id", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
+      const [current] = await db.select().from(pujaTypes).where(eq(pujaTypes.id, id)).limit(1);
+      if (!current) return res.status(404).json({ message: "Not found" });
+      const parsed = pujaPatchSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid", errors: parsed.error.flatten() });
+      const patch = normalizeGovernance(sanitizePujaPayload(parsed.data as any));
+      const next = { ...current, ...patch };
+      if (current.reviewStatus === "approved" && reviewRelevantContentChanged(current, next)) {
+        next.reviewStatus = "in_review";
+        next.isPublished = false;
+        patch.reviewStatus = "in_review";
+        patch.isPublished = false;
+      }
+      if (next.reviewedByPanditId) {
+        const [reviewer] = await db.select({ id: pandits.id }).from(pandits)
+          .where(and(eq(pandits.id, next.reviewedByPanditId), eq(pandits.verified, true))).limit(1);
+        if (!reviewer) return res.status(400).json({ message: "Reviewer must be a verified Pandit" });
+      }
+      const catalogue = await db.select().from(pujaTypes);
+      const completeness = pujaCompleteness(next);
+      const conflicts = findPujaConflicts(next, catalogue, id);
+      if (next.reviewStatus === "approved" && (!completeness.complete || conflicts.length)) {
+        return res.status(409).json({ message: "Guide cannot be approved", completeness, conflicts });
+      }
+      if (next.isPublished && (next.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) {
+        return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
+      }
       const [u] = await db.update(pujaTypes)
-        .set({ ...sanitizePujaPayload(req.body), updatedAt: new Date() })
+        .set({
+          ...patch,
+          isPublished: next.reviewStatus === "approved" ? next.isPublished : false,
+          approvedAt: next.reviewStatus === "approved" ? (current.approvedAt || new Date()) : null,
+          updatedAt: new Date(),
+        })
         .where(eq(pujaTypes.id, id))
         .returning();
       if (!u) return res.status(404).json({ message: "Not found" });
@@ -609,9 +716,17 @@ export function registerContentRoutes(app: Express) {
     }
   });
 
+  app.get("/api/admin/puja-reviewers", adminAuthMiddleware, async (_req, res) => {
+    const reviewers = await db.select({ id: pandits.id, name: pandits.name, city: pandits.city })
+      .from(pandits)
+      .where(eq(pandits.verified, true))
+      .orderBy(asc(pandits.name));
+    res.json(reviewers);
+  });
+
   app.delete("/api/admin/pujas/:id", adminAuthMiddleware, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       await db.delete(pujaMuhurats).where(eq(pujaMuhurats.pujaId, id));
       await db.delete(pujaTypes).where(eq(pujaTypes.id, id));
       res.json({ success: true });

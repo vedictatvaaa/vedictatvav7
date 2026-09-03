@@ -30,6 +30,18 @@ interface PujaDetailFields extends PujaListItem {
   metaDescription: string | null;
   bookingShopUrl: string | null;
   bookingShopLabel: string | null;
+  intents: string[];
+  deities: string[];
+  ceremonies: string[];
+  festivals: string[];
+  aliases: string[];
+  regionalVariations: Array<{ name: string; regionOrTradition: string; note: string }>;
+  onlineEligible: boolean;
+  inPersonEligible: boolean;
+  sourceNotes: string;
+  citations: Array<{ label: string; url?: string; sourceType: string }>;
+  reviewerName: string | null;
+  approvedAt: string | null;
 }
 interface MuhuratEntry { date: string; tithi?: string; time?: string; note?: string; muhuratLabel?: string }
 interface PujaDetailResponse {
@@ -156,6 +168,11 @@ function PujaDetailView({ slug }: { slug: string }) {
 
   const puja = data.puja;
   const years = Object.keys(muhuratsByYear).map(Number).sort();
+  const eligiblePreferredMode = preferredMode === "online"
+    ? (puja.onlineEligible ? "online" : undefined)
+    : preferredMode === "offline"
+      ? (puja.inPersonEligible ? "offline" : undefined)
+      : undefined;
 
   return (
     <div className="min-h-screen bg-[#FBF7EE]">
@@ -178,8 +195,9 @@ function PujaDetailView({ slug }: { slug: string }) {
         <h1 className="text-3xl md:text-5xl font-serif font-bold text-[#6D2B35] mb-2" data-testid="heading-puja">{puja.name}</h1>
         <p className="text-sm text-[#D4AF37] uppercase tracking-wider mb-4">{puja.deity}</p>
         <p className="text-lg text-muted-foreground mb-8 leading-relaxed">{puja.shortDescription}</p>
+        {!!puja.intents?.length && <div className="mb-6 flex flex-wrap gap-2">{puja.intents.map(intent => <Badge key={intent} variant="outline">{intent}</Badge>)}</div>}
 
-         <PujaActions puja={puja} mode={preferredMode} className="mb-8" />
+         <PujaActions puja={puja} mode={eligiblePreferredMode} className="mb-8" />
 
         {years.length > 0 && (
           <Card className="mb-8 border-[#D4AF37]/40">
@@ -200,7 +218,7 @@ function PujaDetailView({ slug }: { slug: string }) {
                           <p className="text-xs text-muted-foreground">{m.muhuratLabel || m.tithi || m.note}</p>
                         )}
                         {m.time && <p className="text-xs text-muted-foreground">{m.time}</p>}
-                        <Link href={`/book-pandit-online?${new URLSearchParams({ service: puja.name, pujaSlug: slug, date: m.date, ...(m.time ? { muhurat: m.time } : {}), ...(preferredMode ? { mode: preferredMode } : {}), source: "puja-guide" })}`} className="mt-2 inline-flex min-h-8 items-center text-xs font-semibold text-[#6D2B35] underline underline-offset-4">
+                         <Link href={`/book-pandit-online?${new URLSearchParams({ service: puja.name, pujaSlug: slug, date: m.date, ...(m.time ? { muhurat: m.time } : {}), ...(eligiblePreferredMode ? { mode: eligiblePreferredMode } : {}), source: "puja-guide" })}`} className="mt-2 inline-flex min-h-8 items-center text-xs font-semibold text-[#6D2B35] underline underline-offset-4">
                           Match eligible Pandits
                         </Link>
                       </div>
@@ -266,10 +284,21 @@ function PujaDetailView({ slug }: { slug: string }) {
           </div>
         )}
 
+        {puja.regionalVariations?.length > 0 && <div className="mb-8"><h2 className="mb-3 text-xl font-serif font-bold text-[#6D2B35]">Regional and traditional variations</h2><div className="space-y-3">{puja.regionalVariations.map(variation => <Card key={`${variation.name}-${variation.regionOrTradition}`}><CardContent className="pt-6"><p className="font-semibold text-[#6D2B35]">{variation.name}</p><p className="text-xs uppercase tracking-wide text-[#D4AF37]">{variation.regionOrTradition}</p><p className="mt-2 text-sm text-muted-foreground">{variation.note}</p></CardContent></Card>)}</div></div>}
+
+        <Card className="mb-8 border-[#D4AF37]/30 bg-white">
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-serif font-bold text-[#6D2B35]">Review and sources</h2>
+            {puja.reviewerName && <p className="mt-2 text-sm">Religiously reviewed by <strong>{puja.reviewerName}</strong>{puja.approvedAt ? ` on ${new Date(puja.approvedAt).toLocaleDateString("en-IN")}` : ""}.</p>}
+            {puja.sourceNotes && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{puja.sourceNotes}</p>}
+            {!!puja.citations?.length && <ul className="mt-3 space-y-1 text-sm">{puja.citations.map((citation, index) => <li key={`${citation.label}-${index}`}>{citation.url ? <a className="font-semibold text-[#6D2B35] underline underline-offset-4" href={citation.url} target="_blank" rel="noreferrer">{citation.label}</a> : <span className="font-semibold">{citation.label}</span>} <span className="text-xs text-muted-foreground">({citation.sourceType})</span></li>)}</ul>}
+          </CardContent>
+        </Card>
+
          <Card className="border-[#D4AF37]/40 bg-[#FFFBF0]">
            <CardContent className="pt-6 text-center">
              <p className="text-base text-foreground mb-4">Ready to take the next step?</p>
-             <PujaActions puja={puja} mode={preferredMode} centered />
+             <PujaActions puja={puja} mode={eligiblePreferredMode} centered />
            </CardContent>
          </Card>
       </article>
@@ -278,14 +307,11 @@ function PujaDetailView({ slug }: { slug: string }) {
 }
 
 function PujaActions({ puja, mode, className = "", centered = false }: { puja: PujaDetailFields; mode?: "online" | "offline"; className?: string; centered?: boolean }) {
-  const params = new URLSearchParams({ service: puja.name });
-  if (mode) params.set("mode", mode);
-  const panditQuery = params.toString();
+  const bookingLink = (bookingMode: "online" | "offline") => `/book-pandit-online?${new URLSearchParams({ service: puja.name, mode: bookingMode })}`;
   return (
     <div className={`flex flex-wrap gap-3 ${centered ? "justify-center" : ""} ${className}`}>
-      <Link href={`/book-pandit-online?${panditQuery}`} className="inline-flex min-h-11 items-center rounded-md bg-[#6D2B35] px-4 text-sm font-semibold text-white hover:bg-[#54212a]" data-testid={centered ? "button-book-puja-final" : "button-book-puja"}>
-        <MapPin className="mr-2 h-4 w-4" />Choose a Pandit to book
-      </Link>
+      {puja.onlineEligible && mode !== "offline" && <Link href={bookingLink("online")} className="inline-flex min-h-11 items-center rounded-md bg-[#6D2B35] px-4 text-sm font-semibold text-white hover:bg-[#54212a]" data-testid={centered ? "button-book-puja-final" : "button-book-puja"}><MapPin className="mr-2 h-4 w-4" />Book virtual Puja</Link>}
+      {puja.inPersonEligible && mode !== "online" && <Link href={bookingLink("offline")} className="inline-flex min-h-11 items-center rounded-md border border-[#6D2B35]/30 px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F5EBDD]"><MapPin className="mr-2 h-4 w-4" />Book at-home Puja</Link>}
       {puja.bookingShopUrl && puja.bookingShopLabel && (
         <a href={puja.bookingShopUrl} className="inline-flex min-h-11 items-center rounded-md border border-[#D4AF37]/60 px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F5EBDD]" data-testid="button-cta-puja">
           <ShoppingBag className="mr-2 h-4 w-4" />{puja.bookingShopLabel}

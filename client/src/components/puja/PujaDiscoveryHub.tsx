@@ -17,6 +17,13 @@ export interface PujaListItem {
   difficulty: string | null;
   estimatedCost: string | null;
   durationMinutes: number | null;
+  intents: string[];
+  deities: string[];
+  ceremonies: string[];
+  festivals: string[];
+  aliases: string[];
+  onlineEligible: boolean;
+  inPersonEligible: boolean;
 }
 
 const categoryLabel = (category: string) => ({
@@ -39,6 +46,7 @@ export function PujaDiscoveryHub() {
   const preferredMode = incomingMode === "online" || incomingMode === "offline" ? incomingMode : undefined;
   const [term, setTerm] = useState("");
   const [category, setCategory] = useState("all");
+  const [intent, setIntent] = useState("all");
   const [showAll, setShowAll] = useState(false);
   const { data: pujas = [], isLoading, isError, refetch } = useQuery<PujaListItem[]>({
     queryKey: ["/api/pujas"],
@@ -49,17 +57,20 @@ export function PujaDiscoveryHub() {
     },
   });
   const categories = useMemo(() => Array.from(new Set(pujas.map((puja) => puja.category).filter(Boolean))).sort(), [pujas]);
+  const intents = useMemo(() => Array.from(new Set(pujas.flatMap((puja) => puja.intents || []).filter(Boolean))).sort(), [pujas]);
   const results = useMemo(() => {
     const query = term.trim().toLowerCase();
     return pujas.filter((puja) => {
       const matchesCategory = category === "all" || puja.category === category;
-      const matchesTerm = !query || [puja.name, puja.deity, puja.category, puja.shortDescription]
+      const matchesIntent = intent === "all" || puja.intents?.includes(intent);
+      const matchesMode = preferredMode === "online" ? puja.onlineEligible : preferredMode === "offline" ? puja.inPersonEligible : true;
+      const matchesTerm = !query || [puja.name, puja.deity, puja.category, puja.shortDescription, ...(puja.intents || []), ...(puja.deities || []), ...(puja.ceremonies || []), ...(puja.festivals || []), ...(puja.aliases || [])]
         .filter(Boolean).join(" ").toLowerCase().includes(query);
-      return matchesCategory && matchesTerm;
+      return matchesCategory && matchesIntent && matchesMode && matchesTerm;
     });
-  }, [category, pujas, term]);
+  }, [category, intent, preferredMode, pujas, term]);
   const visibleResults = showAll ? results : results.slice(0, 9);
-  const reset = () => { setTerm(""); setCategory("all"); setShowAll(false); };
+  const reset = () => { setTerm(""); setCategory("all"); setIntent("all"); setShowAll(false); };
 
   return (
     <main className="min-h-[100dvh] bg-[#f7f0e2] text-[#2b1716]">
@@ -103,6 +114,7 @@ export function PujaDiscoveryHub() {
           {categories.map((item) => <button key={item} onClick={() => { setCategory(item); setShowAll(false); }} aria-pressed={category === item} className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${category === item ? "border-[#681f2b] bg-[#681f2b] text-[#fff8e9]" : "border-[#b8893f]/35 bg-[#fffaf0] text-[#681f2b]"}`}>{categoryLabel(item)}</button>)}
           {(term || category !== "all") && <button onClick={reset} className="px-2 text-sm font-semibold text-[#681f2b] underline underline-offset-4">Reset</button>}
         </div>
+        {intents.length > 0 && <div className="mt-3 flex flex-wrap gap-2" aria-label="Puja intention filters"><button onClick={() => { setIntent("all"); setShowAll(false); }} aria-pressed={intent === "all"} className={`rounded-full border px-3 py-1.5 text-sm ${intent === "all" ? "border-[#977025] bg-[#f1e5ce] font-bold text-[#681f2b]" : "border-[#b8893f]/25 bg-transparent text-[#725c52]"}`}>Every intention</button>{intents.map(item => <button key={item} onClick={() => { setIntent(item); setShowAll(false); }} aria-pressed={intent === item} className={`rounded-full border px-3 py-1.5 text-sm ${intent === item ? "border-[#977025] bg-[#f1e5ce] font-bold text-[#681f2b]" : "border-[#b8893f]/25 bg-transparent text-[#725c52]"}`}>{item}</button>)}</div>}
         {isLoading ? <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-72 bg-[#e9dcc3]" />)}</div> :
           isError ? <div className="mt-8 rounded-md border border-[#b8893f]/35 bg-[#fffaf0] p-8 text-center"><p className="font-serif text-xl text-[#681f2b]">The Puja catalogue is taking a moment.</p><Button onClick={() => refetch()} className="mt-4 bg-[#681f2b] text-[#fff8e9] hover:bg-[#531622]">Try again</Button></div> :
           results.length === 0 ? <div className="mt-8 rounded-md border border-dashed border-[#b8893f]/45 bg-[#fffaf0] p-10 text-center"><BookOpen className="mx-auto h-6 w-6 text-[#977025]" /><p className="mt-3 font-serif text-xl text-[#681f2b]">No Puja matches that search.</p><button onClick={reset} className="mt-3 text-sm font-bold text-[#681f2b] underline underline-offset-4">Clear filters</button></div> :

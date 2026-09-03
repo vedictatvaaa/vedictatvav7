@@ -2421,6 +2421,20 @@ export const pujaTypes = pgTable("puja_types", {
   faq: jsonb("faq").default(sql`'[]'::jsonb`), // array of {q, a}
   aplusBlocks: jsonb("aplus_blocks").default(sql`'[]'::jsonb`), // optional rich content blocks
   category: text("category"), // "deity" | "occasion" | "remedial" | "samskara"
+  intents: text("intents").array().notNull().default(sql`ARRAY[]::text[]`),
+  deities: text("deities").array().notNull().default(sql`ARRAY[]::text[]`),
+  ceremonies: text("ceremonies").array().notNull().default(sql`ARRAY[]::text[]`),
+  festivals: text("festivals").array().notNull().default(sql`ARRAY[]::text[]`),
+  aliases: text("aliases").array().notNull().default(sql`ARRAY[]::text[]`),
+  regionalVariations: jsonb("regional_variations").notNull().default(sql`'[]'::jsonb`),
+  onlineEligible: boolean("online_eligible").notNull().default(false),
+  inPersonEligible: boolean("in_person_eligible").notNull().default(true),
+  reviewStatus: text("review_status").notNull().default("draft"),
+  reviewedByPanditId: integer("reviewed_by_pandit_id"),
+  reviewNotes: text("review_notes"),
+  sourceNotes: text("source_notes"),
+  citations: jsonb("citations").notNull().default(sql`'[]'::jsonb`),
+  approvedAt: timestamp("approved_at"),
   difficulty: text("difficulty").default("moderate"), // "simple" | "moderate" | "elaborate"
   durationMinutes: integer("duration_minutes"),
   estimatedCost: text("estimated_cost"),
@@ -2441,6 +2455,7 @@ export const pujaTypes = pgTable("puja_types", {
 }, (t) => ({
   categoryIdx: index("puja_types_category_idx").on(t.category),
   publishedIdx: index("puja_types_published_idx").on(t.isPublished),
+  reviewStatusIdx: index("puja_types_review_status_idx").on(t.reviewStatus),
 }));
 export const insertPujaTypeSchema = createInsertSchema(pujaTypes).omit({
   id: true, createdAt: true, updatedAt: true, viewCount: true,

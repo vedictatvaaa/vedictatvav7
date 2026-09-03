@@ -41,6 +41,8 @@ Vedic Tatva is a premium spiritual e-commerce and service marketplace offering s
 
 ## Where things live
 
+*   **Puja work starting point:** `ACTION_PLAN.md` — current invariants, approved architecture, migrations, verification baseline, and next steps for catalogue and booking changes.
+
 *   **Database Schema:** `shared/schema.ts`
 *   **API Contracts:** Defined implicitly by Drizzle schema and Zod validation in `shared/schema.ts`.
 *   **Shared Utilities:** `shared/`

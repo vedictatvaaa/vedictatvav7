@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,10 @@ interface PujaType {
   isPublished: boolean | null;
   difficulty: string | null;
   estimatedCost: string | null;
+  reviewStatus: string;
+  reviewerName?: string | null;
+  completeness?: { complete: boolean; missing: string[] };
+  conflicts?: Array<{ type: string; recordName: string; value: string }>;
 }
 
 export default function PujaLibraryTab({ adminToken }: { adminToken?: string }) {
@@ -135,7 +139,10 @@ export default function PujaLibraryTab({ adminToken }: { adminToken?: string }) 
               <div className="flex-1 min-w-0">
                 <div className="flex flex-row items-center gap-2 flex-wrap mb-1">
                   <Badge variant="secondary" className="text-xs">{p.category}</Badge>
-                  {!p.isPublished && <Badge className="text-xs bg-amber-100 text-amber-900">Draft</Badge>}
+                   <Badge className={`text-xs ${p.reviewStatus === "approved" ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"}`}>{(p.reviewStatus || "draft").replace("_", " ")}</Badge>
+                   {!p.isPublished && <Badge variant="outline" className="text-xs">Not public</Badge>}
+                   {p.completeness && !p.completeness.complete && <Badge className="text-xs bg-rose-100 text-rose-900">{p.completeness.missing.length} incomplete</Badge>}
+                   {!!p.conflicts?.length && <Badge className="text-xs bg-rose-100 text-rose-900">{p.conflicts.length} conflict{p.conflicts.length === 1 ? "" : "s"}</Badge>}
                   {p.difficulty && <Badge variant="outline" className="text-xs">{p.difficulty}</Badge>}
                 </div>
                 <p className="font-serif font-semibold text-[#6D2B35]">{p.name}</p>
@@ -214,6 +221,10 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
     queryFn: () => fetcher(`/api/admin/pujas`).then((rows: any[]) => rows.find((r) => r.id === existingId)),
     enabled: !!existingId,
   });
+  const { data: reviewers = [] } = useQuery<any[]>({
+    queryKey: ["/api/admin/puja-reviewers"],
+    queryFn: () => fetcher("/api/admin/puja-reviewers"),
+  });
 
   const [form, setForm] = useState<any>({
     slug: "",
@@ -228,7 +239,20 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
     benefits: "",
     metaTitle: "",
     metaDescription: "",
-    isPublished: true,
+    isPublished: false,
+    reviewStatus: "draft",
+    reviewedByPanditId: null,
+    reviewNotes: "",
+    sourceNotes: "",
+    citations: [],
+    intents: [],
+    deities: [],
+    ceremonies: [],
+    festivals: [],
+    aliases: [],
+    regionalVariations: [],
+    onlineEligible: false,
+    inPersonEligible: true,
     difficulty: "moderate",
     durationMinutes: 60,
     estimatedCost: "",
@@ -238,7 +262,7 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
   });
 
   // Hydrate from existing
-  useMemo(() => {
+  useEffect(() => {
     if (existing) setForm({ ...existing });
   }, [existing]);
 
@@ -250,9 +274,14 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
         method,
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
         body: JSON.stringify(form),
-      }).then((r) => {
-        if (!r.ok) throw new Error("Save failed");
-        return r.json();
+      }).then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          const missing = body?.completeness?.missing?.join(", ");
+          const conflict = body?.conflicts?.map((item: any) => `${item.value} conflicts with ${item.recordName}`).join("; ");
+          throw new Error([body.message || "Save failed", missing, conflict].filter(Boolean).join(": "));
+        }
+        return body;
       });
     },
     onSuccess: () => {
@@ -263,6 +292,12 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
   });
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  const listValue = (key: string) => Array.isArray(form[key]) ? form[key].join(", ") : "";
+  const setList = (key: string, value: string) => set(key, value.split(",").map(item => item.trim()).filter(Boolean));
+  const requirementsText = Array.isArray(form.requirements) ? form.requirements.map((item: any) => [item.item, item.qty, item.note].filter(Boolean).join(" | ")).join("\n") : "";
+  const faqText = Array.isArray(form.faq) ? form.faq.map((item: any) => `${item.q} | ${item.a}`).join("\n") : "";
+  const variationsText = Array.isArray(form.regionalVariations) ? form.regionalVariations.map((item: any) => `${item.name} | ${item.regionOrTradition} | ${item.note}`).join("\n") : "";
+  const citationsText = Array.isArray(form.citations) ? form.citations.map((item: any) => [item.label, item.url, item.sourceType].filter(Boolean).join(" | ")).join("\n") : "";
 
   return (
     <div className="space-y-3">
@@ -286,11 +321,37 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
       <div><Label>How celebrated (HTML)</Label><Textarea rows={4} value={form.howCelebrated || ""} onChange={(e) => set("howCelebrated", e.target.value)} /></div>
       <div><Label>Ethics — do's & don'ts (HTML)</Label><Textarea rows={3} value={form.ethics || ""} onChange={(e) => set("ethics", e.target.value)} /></div>
       <div><Label>Benefits</Label><Textarea rows={2} value={form.benefits || ""} onChange={(e) => set("benefits", e.target.value)} /></div>
+      <div className="rounded-md border border-[#D4AF37]/30 bg-[#FFFBF0] p-4 space-y-3">
+        <div><p className="font-serif font-semibold text-[#6D2B35]">Discovery taxonomy</p><p className="text-xs text-muted-foreground">Comma-separated values are normalized and deduplicated by the server.</p></div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label>Intentions</Label><Input value={listValue("intents")} onChange={e => setList("intents", e.target.value)} placeholder="prosperity, protection" /></div>
+          <div><Label>Deities</Label><Input value={listValue("deities")} onChange={e => setList("deities", e.target.value)} placeholder="Lakshmi, Ganesha" /></div>
+          <div><Label>Ceremonies</Label><Input value={listValue("ceremonies")} onChange={e => setList("ceremonies", e.target.value)} placeholder="house blessing" /></div>
+          <div><Label>Festivals</Label><Input value={listValue("festivals")} onChange={e => setList("festivals", e.target.value)} placeholder="Diwali" /></div>
+          <div className="sm:col-span-2"><Label>Aliases</Label><Input value={listValue("aliases")} onChange={e => setList("aliases", e.target.value)} placeholder="alternate names and spellings" /></div>
+        </div>
+        <div><Label>Regional or traditional variations</Label><Textarea rows={3} value={variationsText} onChange={e => set("regionalVariations", e.target.value.split("\n").map(line => { const [name, regionOrTradition, note] = line.split("|").map(part => part.trim()); return { name, regionOrTradition, note }; }).filter(item => item.name && item.regionOrTradition && item.note))} placeholder="Variation name | Region or tradition | Explanation" /></div>
+      </div>
+      <div><Label>Samagri checklist</Label><Textarea rows={3} value={requirementsText} onChange={e => set("requirements", e.target.value.split("\n").map(line => { const [item, qty, note] = line.split("|").map(part => part.trim()); return { item, qty, note: note || undefined }; }).filter(item => item.item && item.qty))} placeholder="Item | Quantity | Optional note" /></div>
+      <div><Label>Frequently asked questions</Label><Textarea rows={3} value={faqText} onChange={e => set("faq", e.target.value.split("\n").map(line => { const [q, ...answer] = line.split("|").map(part => part.trim()); return { q, a: answer.join(" | ") }; }).filter(item => item.q && item.a))} placeholder="Question | Answer" /></div>
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Meta title</Label><Input value={form.metaTitle || ""} onChange={(e) => set("metaTitle", e.target.value)} /></div>
         <div><Label>Estimated cost</Label><Input value={form.estimatedCost || ""} onChange={(e) => set("estimatedCost", e.target.value)} /></div>
       </div>
       <div><Label>Meta description</Label><Textarea rows={2} value={form.metaDescription || ""} onChange={(e) => set("metaDescription", e.target.value)} /></div>
+      <div className="rounded-md border border-[#D4AF37]/30 bg-[#FFFBF0] p-4 space-y-3">
+        <div><p className="font-serif font-semibold text-[#6D2B35]">Religious review and sources</p><p className="text-xs text-muted-foreground">Approval requires complete content, a verified Pandit reviewer, sources, and no catalogue conflicts.</p></div>
+        {existing?.completeness && !existing.completeness.complete && <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Missing: {existing.completeness.missing.join(", ")}</div>}
+        {!!existing?.conflicts?.length && <div className="rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">{existing.conflicts.map((item: any) => `${item.value} conflicts with ${item.recordName}`).join("; ")}</div>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label>Review status</Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewStatus || "draft"} onChange={e => set("reviewStatus", e.target.value)}><option value="draft">Draft</option><option value="in_review">In review</option><option value="changes_requested">Changes requested</option><option value="approved">Approved</option></select></div>
+          <div><Label>Reviewing verified Pandit</Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewedByPanditId || ""} onChange={e => set("reviewedByPanditId", e.target.value ? Number(e.target.value) : null)}><option value="">Select reviewer</option>{reviewers.map((reviewer: any) => <option key={reviewer.id} value={reviewer.id}>{reviewer.name}{reviewer.city ? ` — ${reviewer.city}` : ""}</option>)}</select></div>
+        </div>
+        <div><Label>Source notes</Label><Textarea rows={3} value={form.sourceNotes || ""} onChange={e => set("sourceNotes", e.target.value)} placeholder="Explain the textual, traditional, and practitioner basis used for this guide." /></div>
+        <div><Label>Citations</Label><Textarea rows={3} value={citationsText} onChange={e => set("citations", e.target.value.split("\n").map(line => { const [label, url, sourceType] = line.split("|").map(part => part.trim()); return { label, url: url || undefined, sourceType: sourceType || "other" }; }).filter(item => item.label))} placeholder="Source label | Optional https:// URL | scripture/commentary/tradition/reviewer/other" /></div>
+        <div><Label>Internal review notes</Label><Textarea rows={2} value={form.reviewNotes || ""} onChange={e => set("reviewNotes", e.target.value)} /></div>
+        <div className="flex flex-wrap gap-4 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={!!form.onlineEligible} onChange={e => set("onlineEligible", e.target.checked)} />Virtual eligible</label><label className="flex items-center gap-2"><input type="checkbox" checked={!!form.inPersonEligible} onChange={e => set("inPersonEligible", e.target.checked)} />At-home eligible</label></div>
+      </div>
       <div className="rounded-md border border-[#D4AF37]/30 bg-[#FFFBF0] p-4">
         <p className="font-serif font-semibold text-[#6D2B35]">Booking operations</p>
         <p className="mt-1 text-xs text-[#5a4a3a]/70">Rate bands, allowed service modes, travel bands and the versioned default samagri template require the booking-operations admin API. They are intentionally not persisted through this editorial Puja endpoint.</p>
@@ -303,7 +364,7 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
       </div>
       <div className="flex flex-row items-center gap-2">
         <input type="checkbox" id="published" checked={!!form.isPublished} onChange={(e) => set("isPublished", e.target.checked)} />
-        <Label htmlFor="published">Published</Label>
+        <Label htmlFor="published">Publish after approval</Label>
       </div>
       <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="button-save-puja">
         {saveMutation.isPending ? "Saving…" : existingId ? "Save changes" : "Create puja"}

@@ -22,6 +22,7 @@ vite.config.ts.*
 !migrations/0007_canonical_destinations.sql
 !migrations/0008_tirth_yatra_inquiry_canonical_destination.sql
 !migrations/0010_pandit_lifetime_registration.sql
+!migrations/0016_puja_catalogue_governance.sql
 !migrations/0011_finalize_pandit_registration_numbers.sql
 !migrations/0012_seed_pandit_membership_card_products.sql
 !migrations/0014_pandit_auth_moderation.sql
