@@ -35,6 +35,7 @@ function completePuja(overrides: Record<string, any> = {}) {
     onlineEligible: true,
     inPersonEligible: true,
     reviewStatus: "approved",
+    reviewMethod: "pandit",
     reviewedByPanditId: 7,
     isPublished: true,
     ...overrides,
@@ -63,12 +64,33 @@ test("name and alias collisions are blocking conflicts", () => {
   assert.ok(conflicts.some(conflict => conflict.type === "alias" && conflict.recordId === 1));
 });
 
-test("public eligibility requires approval, completeness, publication and no conflict", () => {
+test("AI-reviewed complete approved guides are publicly eligible without a Pandit", () => {
+  const puja = completePuja({ reviewMethod: "ai", reviewedByPanditId: null });
+  assert.equal(pujaCompleteness(puja).complete, true);
+  assert.equal(publicPujaEligible(puja, [], false), true);
+});
+
+test("admin-reviewed complete approved guides are publicly eligible without a Pandit", () => {
+  const puja = completePuja({ reviewMethod: "admin", reviewedByPanditId: null });
+  assert.equal(pujaCompleteness(puja).complete, true);
+  assert.equal(publicPujaEligible(puja, [], false), true);
+});
+
+test("Pandit review requires a live verified Pandit for completeness and public eligibility", () => {
   const puja = completePuja();
-  assert.equal(publicPujaEligible(puja), true);
+  assert.equal(pujaCompleteness({ ...puja, reviewerVerified: true }).complete, true);
+  assert.equal(pujaCompleteness({ ...puja, reviewerVerified: false }).complete, false);
+  assert.equal(publicPujaEligible(puja, [], true), true);
   assert.equal(publicPujaEligible(puja, [], false), false);
-  assert.equal(publicPujaEligible({ ...puja, reviewStatus: "in_review" }), false);
-  assert.equal(publicPujaEligible(puja, [{ type: "name", recordId: 2, recordName: "Duplicate", value: "lakshmi puja", blocking: true }]), false);
+  assert.equal(publicPujaEligible({ ...puja, reviewStatus: "in_review" }, [], true), false);
+  assert.equal(publicPujaEligible(puja, [{ type: "name", recordId: 2, recordName: "Duplicate", value: "lakshmi puja", blocking: true }], true), false);
+});
+
+test("Zod governance permits AI/admin approval and requires Pandit attribution only for Pandit review", () => {
+  assert.equal(pujaCreateSchema.safeParse(completePuja({ reviewMethod: "ai", reviewedByPanditId: null })).success, true);
+  assert.equal(pujaCreateSchema.safeParse(completePuja({ reviewMethod: "admin", reviewedByPanditId: null })).success, true);
+  assert.equal(pujaCreateSchema.safeParse(completePuja({ reviewMethod: "pandit", reviewedByPanditId: null })).success, false);
+  assert.equal(pujaCreateSchema.safeParse(completePuja({ reviewMethod: "ai", reviewedByPanditId: 7 })).success, false);
 });
 
 test("citation validation rejects stored-script and non-HTTPS URLs across write schemas", () => {

@@ -40,6 +40,7 @@ interface PujaDetailFields extends PujaListItem {
   inPersonEligible: boolean;
   sourceNotes: string;
   citations: Array<{ label: string; url?: string; sourceType: string }>;
+  reviewMethod: "ai" | "admin" | "pandit";
   reviewerName: string | null;
   approvedAt: string | null;
 }
@@ -93,7 +94,7 @@ function PujaGuideHub() {
             Authentic Guide to Hindu Pujas
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Each guide includes the story, vidhi, samagri checklist, ethics, and auspicious dates for the year — sourced from practising pandits.
+            Each catalogue-reviewed guide includes the story, vidhi, samagri checklist, ethics, and auspicious dates for the year.
           </p>
         </div>
 
@@ -289,7 +290,14 @@ function PujaDetailView({ slug }: { slug: string }) {
         <Card className="mb-8 border-[#D4AF37]/30 bg-white">
           <CardContent className="pt-6">
             <h2 className="text-xl font-serif font-bold text-[#6D2B35]">Review and sources</h2>
-            {puja.reviewerName && <p className="mt-2 text-sm">Religiously reviewed by <strong>{puja.reviewerName}</strong>{puja.approvedAt ? ` on ${new Date(puja.approvedAt).toLocaleDateString("en-IN")}` : ""}.</p>}
+            <p className="mt-2 text-sm">
+              {puja.reviewMethod === "pandit" && puja.reviewerName
+                ? <>Reviewed by verified Pandit <strong>{puja.reviewerName}</strong></>
+                : puja.reviewMethod === "admin"
+                  ? <>Reviewed by the Vedic Tatva editorial team</>
+                  : <>AI reviewed</>}
+              {puja.approvedAt ? ` on ${new Date(puja.approvedAt).toLocaleDateString("en-IN")}` : ""}.
+            </p>
             {puja.sourceNotes && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{puja.sourceNotes}</p>}
             {!!puja.citations?.length && <ul className="mt-3 space-y-1 text-sm">{puja.citations.map((citation, index) => <li key={`${citation.label}-${index}`}>{citation.url ? <a className="font-semibold text-[#6D2B35] underline underline-offset-4" href={citation.url} target="_blank" rel="noreferrer">{citation.label}</a> : <span className="font-semibold">{citation.label}</span>} <span className="text-xs text-muted-foreground">({citation.sourceType})</span></li>)}</ul>}
           </CardContent>

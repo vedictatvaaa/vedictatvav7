@@ -70,6 +70,29 @@ export function PujaDiscoveryHub() {
     });
   }, [category, intent, preferredMode, pujas, term]);
   const visibleResults = showAll ? results : results.slice(0, 9);
+  const featuredGroups = useMemo(() => {
+    const bySlug = new Map(pujas.map((puja) => [puja.slug, puja]));
+    return [
+      {
+        eyebrow: "Home & prosperity",
+        title: "Begin well. Build with blessing.",
+        body: "Housewarming, family vows, and prosperity observances presented as distinct decisions—not interchangeable labels.",
+        slugs: ["griha-pravesh-puja", "satyanarayan-puja", "ganesh-lakshmi-puja", "vastu-shanti-puja", "lakshmi-puja"],
+      },
+      {
+        eyebrow: "Shiva & graha support",
+        title: "Focused paths for prayer and resilience.",
+        body: "Separate Shiva, mantra, and traditional Jyotisha services with clear scope and eligibility.",
+        slugs: ["rudrabhishek-puja", "maha-mrityunjaya-jaap", "navagraha-shanti-puja", "kaal-sarp-dosh-puja"],
+      },
+      {
+        eyebrow: "Pitru services",
+        title: "Choose the ancestral rite by purpose.",
+        body: "Shradh, Tarpan, Pind Daan, pilgrimage rites, and final observances remain individually discoverable.",
+        slugs: ["shradh", "tarpan", "pind-daan", "gaya-pind-daan", "narayan-bali", "asthi-visarjan"],
+      },
+    ].map(group => ({ ...group, pujas: group.slugs.map(slug => bySlug.get(slug)).filter((puja): puja is PujaListItem => Boolean(puja)) }));
+  }, [pujas]);
   const reset = () => { setTerm(""); setCategory("all"); setIntent("all"); setShowAll(false); };
 
   return (
@@ -103,6 +126,36 @@ export function PujaDiscoveryHub() {
           <Link href={panditHref(undefined, preferredMode)} className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#e5c675] underline underline-offset-4 hover:text-[#fff8e9]"><MapPin className="h-4 w-4" /> Find a Pandit by location</Link>
         </div>
       </section>
+
+      {!isLoading && !isError && featuredGroups.some(group => group.pujas.length > 0) && (
+        <section id="signature-puja-pathways" className="scroll-mt-8 border-b border-[#b8893f]/25 bg-[#efe1c7]">
+          <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+            <div className="max-w-2xl">
+              <p className="text-[11px] font-bold uppercase tracking-[.24em] text-[#977025]">Signature Puja pathways</p>
+              <h2 className="mt-2 font-serif text-3xl font-semibold text-[#681f2b]">Start with the decision that matters most.</h2>
+              <p className="mt-3 text-sm leading-6 text-[#725c52]">These high-intent services have dedicated guides, booking paths, eligibility, and source context.</p>
+            </div>
+            <div className="mt-8 grid gap-px overflow-hidden rounded-md border border-[#b8893f]/30 bg-[#b8893f]/30 lg:grid-cols-3">
+              {featuredGroups.map((group, index) => group.pujas.length > 0 && (
+                <article key={group.eyebrow} className="relative bg-[#fffaf0] p-6">
+                  <span className="font-mono text-xs text-[#977025]">0{index + 1}</span>
+                  <p className="mt-5 text-[10px] font-bold uppercase tracking-[.2em] text-[#977025]">{group.eyebrow}</p>
+                  <h3 className="mt-2 font-serif text-2xl font-semibold leading-tight text-[#681f2b]">{group.title}</h3>
+                  <p className="mt-3 min-h-16 text-sm leading-6 text-[#725c52]">{group.body}</p>
+                  <div className="mt-5 border-t border-[#b8893f]/20 pt-3">
+                    {group.pujas.map(puja => (
+                      <Link key={puja.slug} href={`/puja-guide/${puja.slug}`} className="group flex min-h-11 items-center justify-between border-b border-[#b8893f]/15 text-sm font-semibold text-[#681f2b] last:border-0">
+                        <span>{puja.name}</span>
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section id="puja-catalogue" className="mx-auto max-w-6xl scroll-mt-8 px-5 py-12 sm:px-8">
         <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">

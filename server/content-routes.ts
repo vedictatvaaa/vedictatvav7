@@ -24,7 +24,7 @@ const REVIEW_RELEVANT_FIELDS = [
   "name", "slug", "deity", "shortDescription", "whyPerformed", "storyMyth",
   "howCelebrated", "ethics", "requirements", "benefits", "faq", "category",
   "intents", "deities", "ceremonies", "festivals", "aliases", "regionalVariations",
-  "onlineEligible", "inPersonEligible", "sourceNotes", "citations", "reviewedByPanditId",
+  "onlineEligible", "inPersonEligible", "sourceNotes", "citations", "reviewMethod", "reviewedByPanditId",
 ] as const;
 
 function reviewRelevantContentChanged(current: Record<string, any>, next: Record<string, any>): boolean {
@@ -571,7 +571,7 @@ export function registerContentRoutes(app: Express) {
       const mode = req.query.mode ? String(req.query.mode) : null;
       const publicRows = rows.filter(row => {
         const conflicts = findPujaConflicts(row, rows, row.id);
-        if (!publicPujaEligible(row, conflicts, row.reviewedByPanditId != null && verifiedReviewers.has(row.reviewedByPanditId))) return false;
+        if (!publicPujaEligible(row, conflicts, row.reviewMethod !== "pandit" || (row.reviewedByPanditId != null && verifiedReviewers.has(row.reviewedByPanditId)))) return false;
         if (category && row.category !== category) return false;
         if (intent && !(row.intents || []).some(value => value.toLowerCase() === intent)) return false;
         if (deity && !(row.deities || []).some(value => value.toLowerCase() === deity)) return false;
@@ -593,7 +593,7 @@ export function registerContentRoutes(app: Express) {
       const [puja] = await db.select().from(pujaTypes).where(eq(pujaTypes.slug, req.params.slug));
       if (!puja) return res.status(404).json({ message: "Not found" });
       const catalogue = await db.select().from(pujaTypes);
-      const [reviewer] = puja.reviewedByPanditId
+      const [reviewer] = puja.reviewMethod === "pandit" && puja.reviewedByPanditId
         ? await db.select({ name: pandits.name }).from(pandits).where(and(eq(pandits.id, puja.reviewedByPanditId), eq(pandits.verified, true))).limit(1)
         : [];
       if (!publicPujaEligible(puja, findPujaConflicts(puja, catalogue, puja.id), Boolean(reviewer))) {
@@ -633,9 +633,9 @@ export function registerContentRoutes(app: Express) {
       const reviewerNames = new Map(reviewerRows.map(row => [row.id, row.name]));
       res.json(rows.map(row => ({
         ...row,
-        completeness: pujaCompleteness({ ...row, reviewerVerified: row.reviewedByPanditId == null || reviewerNames.has(row.reviewedByPanditId) }),
+        completeness: pujaCompleteness({ ...row, reviewerVerified: row.reviewMethod !== "pandit" || (row.reviewedByPanditId != null && reviewerNames.has(row.reviewedByPanditId)) }),
         conflicts: findPujaConflicts(row, rows, row.id),
-        reviewerName: row.reviewedByPanditId ? reviewerNames.get(row.reviewedByPanditId) || null : null,
+        reviewerName: row.reviewMethod === "pandit" && row.reviewedByPanditId ? reviewerNames.get(row.reviewedByPanditId) || null : null,
       })));
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
@@ -649,20 +649,22 @@ export function registerContentRoutes(app: Express) {
       const normalized = normalizeGovernance(sanitizePujaPayload(parsed.data as any));
       const catalogue = await db.select().from(pujaTypes);
       const conflicts = findPujaConflicts(normalized, catalogue);
-      const completeness = pujaCompleteness(normalized);
-      if (normalized.reviewedByPanditId) {
+      if (normalized.reviewMethod !== "pandit") normalized.reviewedByPanditId = null;
+      let reviewerVerified = normalized.reviewMethod !== "pandit";
+      if (normalized.reviewMethod === "pandit") {
         const [reviewer] = await db.select({ id: pandits.id }).from(pandits)
           .where(and(eq(pandits.id, normalized.reviewedByPanditId), eq(pandits.verified, true))).limit(1);
         if (!reviewer) return res.status(400).json({ message: "Reviewer must be a verified Pandit" });
+        reviewerVerified = true;
       }
+      const completeness = pujaCompleteness({ ...normalized, reviewerVerified });
       if (normalized.reviewStatus === "approved" && (!completeness.complete || conflicts.length)) {
         return res.status(409).json({ message: "Guide cannot be approved", completeness, conflicts });
       }
-      if (normalized.isPublished && (normalized.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) {
-        return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
-      }
+      if (normalized.isPublished && (normalized.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
       const [created] = await db.insert(pujaTypes).values({
         ...normalized,
+        isPublished: normalized.reviewStatus === "approved",
         approvedAt: normalized.reviewStatus === "approved" ? new Date() : null,
       }).returning();
       res.json(created);
@@ -686,24 +688,28 @@ export function registerContentRoutes(app: Express) {
         patch.reviewStatus = "in_review";
         patch.isPublished = false;
       }
-      if (next.reviewedByPanditId) {
+      if (next.reviewMethod !== "pandit") {
+        next.reviewedByPanditId = null;
+        patch.reviewedByPanditId = null;
+      }
+      let reviewerVerified = next.reviewMethod !== "pandit";
+      if (next.reviewMethod === "pandit") {
         const [reviewer] = await db.select({ id: pandits.id }).from(pandits)
           .where(and(eq(pandits.id, next.reviewedByPanditId), eq(pandits.verified, true))).limit(1);
         if (!reviewer) return res.status(400).json({ message: "Reviewer must be a verified Pandit" });
+        reviewerVerified = true;
       }
       const catalogue = await db.select().from(pujaTypes);
-      const completeness = pujaCompleteness(next);
+      const completeness = pujaCompleteness({ ...next, reviewerVerified });
       const conflicts = findPujaConflicts(next, catalogue, id);
       if (next.reviewStatus === "approved" && (!completeness.complete || conflicts.length)) {
         return res.status(409).json({ message: "Guide cannot be approved", completeness, conflicts });
       }
-      if (next.isPublished && (next.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) {
-        return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
-      }
+      if (next.isPublished && (next.reviewStatus !== "approved" || !completeness.complete || conflicts.length)) return res.status(409).json({ message: "Only approved, complete, conflict-free guides can be published", completeness, conflicts });
       const [u] = await db.update(pujaTypes)
         .set({
           ...patch,
-          isPublished: next.reviewStatus === "approved" ? next.isPublished : false,
+          isPublished: next.reviewStatus === "approved",
           approvedAt: next.reviewStatus === "approved" ? (current.approvedAt || new Date()) : null,
           updatedAt: new Date(),
         })

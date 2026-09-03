@@ -23,6 +23,7 @@ interface PujaType {
   difficulty: string | null;
   estimatedCost: string | null;
   reviewStatus: string;
+  reviewMethod: "ai" | "admin" | "pandit";
   reviewerName?: string | null;
   completeness?: { complete: boolean; missing: string[] };
   conflicts?: Array<{ type: string; recordName: string; value: string }>;
@@ -140,6 +141,7 @@ export default function PujaLibraryTab({ adminToken }: { adminToken?: string }) 
                 <div className="flex flex-row items-center gap-2 flex-wrap mb-1">
                   <Badge variant="secondary" className="text-xs">{p.category}</Badge>
                    <Badge className={`text-xs ${p.reviewStatus === "approved" ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"}`}>{(p.reviewStatus || "draft").replace("_", " ")}</Badge>
+                    <Badge variant="outline" className="text-xs">{p.reviewMethod === "pandit" ? "Pandit reviewed" : p.reviewMethod === "admin" ? "Admin reviewed" : "AI reviewed"}</Badge>
                    {!p.isPublished && <Badge variant="outline" className="text-xs">Not public</Badge>}
                    {p.completeness && !p.completeness.complete && <Badge className="text-xs bg-rose-100 text-rose-900">{p.completeness.missing.length} incomplete</Badge>}
                    {!!p.conflicts?.length && <Badge className="text-xs bg-rose-100 text-rose-900">{p.conflicts.length} conflict{p.conflicts.length === 1 ? "" : "s"}</Badge>}
@@ -241,6 +243,7 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
     metaDescription: "",
     isPublished: false,
     reviewStatus: "draft",
+    reviewMethod: "ai",
     reviewedByPanditId: null,
     reviewNotes: "",
     sourceNotes: "",
@@ -340,13 +343,14 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
       </div>
       <div><Label>Meta description</Label><Textarea rows={2} value={form.metaDescription || ""} onChange={(e) => set("metaDescription", e.target.value)} /></div>
       <div className="rounded-md border border-[#D4AF37]/30 bg-[#FFFBF0] p-4 space-y-3">
-        <div><p className="font-serif font-semibold text-[#6D2B35]">Religious review and sources</p><p className="text-xs text-muted-foreground">Approval requires complete content, a verified Pandit reviewer, sources, and no catalogue conflicts.</p></div>
+        <div><p className="font-serif font-semibold text-[#6D2B35]">Review and sources</p><p className="text-xs text-muted-foreground">AI review is the baseline; admin or verified Pandit review are optional upgrades. Approval requires complete content, sources, and no catalogue conflicts.</p></div>
         {existing?.completeness && !existing.completeness.complete && <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">Missing: {existing.completeness.missing.join(", ")}</div>}
         {!!existing?.conflicts?.length && <div className="rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-900">{existing.conflicts.map((item: any) => `${item.value} conflicts with ${item.recordName}`).join("; ")}</div>}
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label>Review status</Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewStatus || "draft"} onChange={e => set("reviewStatus", e.target.value)}><option value="draft">Draft</option><option value="in_review">In review</option><option value="changes_requested">Changes requested</option><option value="approved">Approved</option></select></div>
-          <div><Label>Reviewing verified Pandit</Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewedByPanditId || ""} onChange={e => set("reviewedByPanditId", e.target.value ? Number(e.target.value) : null)}><option value="">Select reviewer</option>{reviewers.map((reviewer: any) => <option key={reviewer.id} value={reviewer.id}>{reviewer.name}{reviewer.city ? ` — ${reviewer.city}` : ""}</option>)}</select></div>
+          <div><Label>Review method</Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewMethod || "ai"} onChange={e => { const reviewMethod = e.target.value; setForm((f: any) => ({ ...f, reviewMethod, reviewedByPanditId: reviewMethod === "pandit" ? f.reviewedByPanditId : null })); }}><option value="ai">AI reviewed</option><option value="admin">Admin reviewed</option><option value="pandit">Pandit reviewed</option></select></div>
         </div>
+        {form.reviewMethod === "pandit" && <div><Label>Reviewing verified Pandit <span className="text-rose-700">*</span></Label><select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reviewedByPanditId || ""} onChange={e => set("reviewedByPanditId", e.target.value ? Number(e.target.value) : null)}><option value="">Select verified Pandit</option>{reviewers.map((reviewer: any) => <option key={reviewer.id} value={reviewer.id}>{reviewer.name}{reviewer.city ? ` — ${reviewer.city}` : ""}</option>)}</select><p className="mt-1 text-xs text-muted-foreground">Only this method displays a named Pandit publicly. The selection is optional unless Pandit review is chosen.</p></div>}
         <div><Label>Source notes</Label><Textarea rows={3} value={form.sourceNotes || ""} onChange={e => set("sourceNotes", e.target.value)} placeholder="Explain the textual, traditional, and practitioner basis used for this guide." /></div>
         <div><Label>Citations</Label><Textarea rows={3} value={citationsText} onChange={e => set("citations", e.target.value.split("\n").map(line => { const [label, url, sourceType] = line.split("|").map(part => part.trim()); return { label, url: url || undefined, sourceType: sourceType || "other" }; }).filter(item => item.label))} placeholder="Source label | Optional https:// URL | scripture/commentary/tradition/reviewer/other" /></div>
         <div><Label>Internal review notes</Label><Textarea rows={2} value={form.reviewNotes || ""} onChange={e => set("reviewNotes", e.target.value)} /></div>
@@ -364,7 +368,7 @@ function PujaEditor({ adminToken, existingId, onSaved }: { adminToken?: string; 
       </div>
       <div className="flex flex-row items-center gap-2">
         <input type="checkbox" id="published" checked={!!form.isPublished} onChange={(e) => set("isPublished", e.target.checked)} />
-        <Label htmlFor="published">Publish after approval</Label>
+        <Label htmlFor="published">Publish after approval (validated approved guides publish automatically)</Label>
       </div>
       <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="button-save-puja">
         {saveMutation.isPending ? "Saving…" : existingId ? "Save changes" : "Create puja"}

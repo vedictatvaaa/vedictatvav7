@@ -22,7 +22,16 @@ export const regionalVariationSchema = z.object({
   note: text(1000),
 });
 
-export const pujaGovernanceSchema = z.object({
+function validatePanditAttribution(value: { reviewMethod?: string; reviewedByPanditId?: number | null }, ctx: z.RefinementCtx) {
+  if (value.reviewMethod === "pandit" && !value.reviewedByPanditId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reviewedByPanditId"], message: "Pandit review requires a verified Pandit reviewer" });
+  }
+  if (value.reviewMethod !== "pandit" && value.reviewedByPanditId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reviewedByPanditId"], message: "Pandit attribution is only allowed for the pandit review method" });
+  }
+}
+
+const pujaGovernanceFieldsSchema = z.object({
   intents: textList,
   deities: textList,
   ceremonies: textList,
@@ -32,6 +41,7 @@ export const pujaGovernanceSchema = z.object({
   onlineEligible: z.boolean().default(false),
   inPersonEligible: z.boolean().default(true),
   reviewStatus: z.enum(["draft", "in_review", "approved", "changes_requested"]).default("draft"),
+  reviewMethod: z.enum(["ai", "admin", "pandit"]).default("ai"),
   reviewedByPanditId: z.number().int().positive().nullable().optional(),
   reviewNotes: z.string().trim().max(4000).nullable().optional(),
   sourceNotes: z.string().trim().max(6000).nullable().optional(),
@@ -39,8 +49,10 @@ export const pujaGovernanceSchema = z.object({
   approvedAt: z.coerce.date().nullable().optional(),
 });
 
-export const pujaCreateSchema = insertPujaTypeSchema.merge(pujaGovernanceSchema).omit({ approvedAt: true });
-export const pujaPatchSchema = pujaCreateSchema.partial();
+export const pujaGovernanceSchema = pujaGovernanceFieldsSchema.superRefine(validatePanditAttribution);
+
+export const pujaCreateSchema = insertPujaTypeSchema.merge(pujaGovernanceFieldsSchema).omit({ approvedAt: true }).superRefine(validatePanditAttribution);
+export const pujaPatchSchema = insertPujaTypeSchema.merge(pujaGovernanceFieldsSchema).omit({ approvedAt: true }).partial();
 
 export function normalizeTerm(value: unknown): string {
   return String(value || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-IN");
@@ -94,7 +106,7 @@ export function pujaCompleteness(puja: Record<string, any>) {
   if (taxonomyCount === 0) missing.push("A deity, ceremony, or festival");
   if (!Array.isArray(puja.citations) || puja.citations.length === 0) missing.push("At least one citation");
   if (!puja.onlineEligible && !puja.inPersonEligible) missing.push("At least one eligible mode");
-  if (puja.reviewStatus === "approved" && (!puja.reviewedByPanditId || puja.reviewerVerified === false)) {
+  if ((puja.reviewMethod || "ai") === "pandit" && (!puja.reviewedByPanditId || puja.reviewerVerified !== true)) {
     missing.push("Verified Pandit reviewer");
   }
   return { complete: missing.length === 0, missing };
@@ -147,9 +159,10 @@ export function publicPujaEligible(
   conflicts: PujaConflict[] = [],
   reviewerVerified = true,
 ): boolean {
+  const reviewMethod = puja.reviewMethod || "ai";
   return puja.isPublished === true
     && puja.reviewStatus === "approved"
-    && reviewerVerified
-    && pujaCompleteness(puja).complete
+    && (reviewMethod !== "pandit" || reviewerVerified)
+    && pujaCompleteness({ ...puja, reviewerVerified }).complete
     && conflicts.every(conflict => !conflict.blocking);
 }

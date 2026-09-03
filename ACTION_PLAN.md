@@ -20,7 +20,7 @@ This is the starting point for future developers and agents working on the Puja 
 - Samagri revisions are immutable and versioned; portal records are authoritative.
 - Notification attempts are durable and deduplicated; never fabricate delivery success.
 - Dated Pandit matching requires a published, approved, complete, conflict-free Puja catalogue record and an actual stored Muhurat.
-- Public Puja guides require current verified-Pandit review ownership. Material edits invalidate approval.
+- Public Puja guides may be AI-, admin-, or Pandit-reviewed. Only the Pandit method requires current verified-Pandit ownership; public disclosures must never name a Pandit unless that verification is live. Material edits invalidate approval.
 
 ## Database changes
 
@@ -28,12 +28,13 @@ Apply committed migrations in order. The relevant additions are:
 
 - `migrations/0015_puja_booking_operations.sql`
 - `migrations/0016_puja_catalogue_governance.sql`
+- `migrations/0017_ai_reviewed_puja_catalogue.sql`
 
 Do not replace the existing database or run destructive schema synchronization automatically.
 
 ## Immediate editorial operation
 
-The legacy Puja guides are intentionally in `in_review` and not public after the governance migration. An admin must complete taxonomy, source notes, citations, eligibility, and verified-Pandit attribution before approving and publishing each guide.
+An admin must complete taxonomy, source notes, citations, eligibility, and a review method before approving each guide. AI review is eligible for automatic publication when the guide is approved, complete, and conflict-free; admin and verified-Pandit review remain optional upgrades.
 
 ## Verification baseline
 
@@ -44,6 +45,6 @@ The legacy Puja guides are intentionally in `in_review` and not public after the
 
 ## Next highest-value work
 
-1. Complete verified religious review of the existing Puja queue and restore approved guides publicly.
+1. Optionally upgrade AI-reviewed guides to admin or verified-Pandit review without changing their public review attribution inaccurately.
 2. Add isolated API/browser fixtures for approval invalidation and concurrent duplicate submissions.
-3. Expand the Puja catalogue only through the governed editor and approved taxonomy.
+3. Keep future catalogue expansion versioned, sourced, and governed; do not add startup-time production content writes.

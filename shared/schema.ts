@@ -2430,6 +2430,9 @@ export const pujaTypes = pgTable("puja_types", {
   onlineEligible: boolean("online_eligible").notNull().default(false),
   inPersonEligible: boolean("in_person_eligible").notNull().default(true),
   reviewStatus: text("review_status").notNull().default("draft"),
+  // AI review is the baseline. Admin and Pandit review are optional upgrades;
+  // a Pandit attribution is only meaningful when this is "pandit".
+  reviewMethod: text("review_method").notNull().default("ai"),
   reviewedByPanditId: integer("reviewed_by_pandit_id"),
   reviewNotes: text("review_notes"),
   sourceNotes: text("source_notes"),
