@@ -41,10 +41,23 @@ export function bookingContextParams(source: string, panditId: number) {
   const service = incoming.get("service");
   const mode = incoming.get("mode");
   const contextSource = incoming.get("source");
+  const date = incoming.get("date");
+  const muhurat = incoming.get("muhurat");
+  const language = incoming.get("language");
+  const tradition = incoming.get("tradition");
+  const location = incoming.get("location");
+  const pujaSlug = incoming.get("pujaSlug");
   if (city && /^[a-z][a-z0-9-]{0,79}$/.test(city)) params.set("city", city);
   if (service && pujaTypeForService(service)) params.set("service", service);
   if (mode === "online" || mode === "offline" || mode === "hybrid") params.set("mode", mode);
-  if (["city", "puja_city", "profile", "directory", "storefront"].includes(contextSource || "")) {
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) params.set("date", date);
+  if (muhurat && muhurat.length <= 160) params.set("muhurat", muhurat);
+  if (language && language.length <= 80) params.set("language", language);
+  if (tradition && tradition.length <= 80) params.set("tradition", tradition);
+  if (location && location.length <= 120) params.set("location", location);
+  if (pujaSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(pujaSlug)) params.set("pujaSlug", pujaSlug);
+  if (service && !pujaTypeForService(service) && service.length <= 120) params.set("requestedService", service);
+  if (["city", "puja_city", "profile", "directory", "storefront", "muhurat", "puja-guide"].includes(contextSource || "")) {
     params.set("source", contextSource!);
   }
   params.set("pandit", String(panditId));

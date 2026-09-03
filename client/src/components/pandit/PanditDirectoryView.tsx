@@ -59,7 +59,13 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Pandit } from "@shared/schema";
 
-type PanditWithMeta = Pandit & { distance: number | null; isOnline?: boolean };
+type PanditWithMeta = Pandit & {
+  distance: number | null;
+  isOnline?: boolean;
+  matchReasons?: string[];
+  requestedMuhurat?: { date: string; window?: string; reason?: string };
+  calendarStatus?: "confirmation_required";
+};
 
 function formatDistance(d: number | null): string {
   if (d === null || d === undefined) return "";
@@ -432,6 +438,13 @@ function PanditCard({
                 <strong className="text-foreground">Specializes in:</strong> {p.specialization}
               </p>
             )}
+            {p.matchReasons?.length ? (
+              <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-2.5 text-xs" data-testid={`match-reasons-${p.id}`}>
+                <p className="font-semibold text-foreground">Why this Pandit matches</p>
+                <p className="mt-1 text-muted-foreground">{p.matchReasons.join(" · ")}</p>
+                {p.requestedMuhurat ? <p className="mt-1 text-amber-800">Requested: {p.requestedMuhurat.date}{p.requestedMuhurat.window ? ` · ${p.requestedMuhurat.window}` : ""}{p.requestedMuhurat.reason ? ` · ${p.requestedMuhurat.reason}` : ""}. Final calendar availability is confirmed during booking.</p> : null}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -576,8 +589,12 @@ function CompareDialog({
 // =====================================================================
 // Main directory view
 // =====================================================================
-export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, facetOptions, embedded = false }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean }) {
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, pujaSlug, language, tradition, date, muhurat, facetOptions, embedded = false }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; pujaSlug?: string; language?: string; tradition?: string; date?: string; muhurat?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean }) {
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...DEFAULT_FILTERS,
+    tradition: tradition || "",
+    languages: language ? [language] : [],
+  }));
   const [sortBy, setSortBy] = useState<"best" | "online" | "rating" | "price-low" | "price-high" | "distance" | "experience">("best");
   const [, navigate] = useLocation();
   const [compareIds, setCompareIds] = useState<number[]>([]);
@@ -631,13 +648,17 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     if (defaultCity) params.set("city", defaultCity);
     if (cityId) params.set("cityId", String(cityId));
     if (service) params.set("service", service);
-    if (filters.tradition) params.set("region", filters.tradition);
+    if (pujaSlug) params.set("pujaSlug", pujaSlug);
+    if (language) params.set("language", language);
+    if (date) params.set("date", date);
+    if (muhurat) params.set("muhurat", muhurat);
+    if (filters.tradition || tradition) params.set("region", filters.tradition || tradition || "");
     if (userLocation) {
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
     }
     return params.toString();
-  }, [defaultCity, cityId, stateId, mode, service, filters.tradition, userLocation]);
+  }, [defaultCity, cityId, stateId, mode, service, pujaSlug, language, tradition, date, muhurat, filters.tradition, userLocation]);
 
   const { data: pandits, isLoading, isError, refetch, isFetching } = useQuery<PanditWithMeta[]>({
     queryKey: ["/api/book-pandit-online", queryParams],
@@ -729,7 +750,15 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     ;
 
   const onlineCount = (pandits || []).filter((p) => p.isOnline).length;
-  const stateHref = stateId && stateSlug ? `/book-pandit-online?stateId=${stateId}&state=${encodeURIComponent(stateSlug)}${service ? `&service=${encodeURIComponent(service)}` : ""}` : "/book-pandit-online";
+  const stateHref = (() => {
+    if (!stateId || !stateSlug) return "/book-pandit-online";
+    const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+    params.delete("cityId");
+    params.delete("city");
+    params.set("stateId", String(stateId));
+    params.set("state", stateSlug);
+    return `/book-pandit-online?${params}`;
+  })();
 
   return (
     <div className={embedded ? "bg-background pb-32" : "bg-background min-h-screen pb-32"}>
@@ -774,8 +803,12 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                 <Select onValueChange={(value) => {
                   const chosen = cityOptions.find((item) => String(item.id) === value);
                   if (!chosen || !stateId || !stateSlug) return;
-                  const params = new URLSearchParams({ stateId: String(stateId), state: stateSlug, cityId: String(chosen.id), city: chosen.slug });
-                  if (service) params.set("service", service);
+                  const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+                  params.set("stateId", String(stateId));
+                  params.set("state", stateSlug);
+                  params.set("cityId", String(chosen.id));
+                  params.set("city", chosen.slug);
+                  params.delete("scope");
                   navigate(`/book-pandit-online?${params}`);
                 }}>
                   <SelectTrigger id="state-city-filter" className="mt-1 bg-background"><SelectValue placeholder={`Choose a City in ${stateLabel}`} /></SelectTrigger>
@@ -792,6 +825,11 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                   className="text-xs underline text-primary ml-auto"
                   onClick={() => { setAiSuggestion(null); setFilters({ ...filters, specialization: "" }); }}
                 >Clear</button>
+              </div>
+            )}
+            {date && (
+              <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm" data-testid="banner-muhurat-context">
+                <strong>Selected auspicious window:</strong> {date}{muhurat ? ` · ${muhurat}` : ""}. These Pandits match your ritual and filters; their calendar is confirmed in the booking request.
               </div>
             )}
           </div>

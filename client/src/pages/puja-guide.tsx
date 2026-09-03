@@ -138,8 +138,10 @@ function PujaDetailView({ slug }: { slug: string }) {
   const muhuratsByYear = useMemo(() => {
     const out: Record<number, MuhuratEntry[]> = {};
     if (!data?.muhurats) return out;
+    const today = new Date().toISOString().slice(0, 10);
     data.muhurats.forEach((group) => {
-      const list = Array.isArray(group.muhurats) ? group.muhurats : [];
+      const list = Array.isArray(group.muhurats) ? group.muhurats.filter((item) => item.date >= today) : [];
+      if (list.length === 0) return;
       if (!out[group.year]) out[group.year] = [];
       out[group.year].push(...list);
     });
@@ -198,11 +200,22 @@ function PujaDetailView({ slug }: { slug: string }) {
                           <p className="text-xs text-muted-foreground">{m.muhuratLabel || m.tithi || m.note}</p>
                         )}
                         {m.time && <p className="text-xs text-muted-foreground">{m.time}</p>}
+                        <Link href={`/book-pandit-online?${new URLSearchParams({ service: puja.name, pujaSlug: slug, date: m.date, ...(m.time ? { muhurat: m.time } : {}), ...(preferredMode ? { mode: preferredMode } : {}), source: "puja-guide" })}`} className="mt-2 inline-flex min-h-8 items-center text-xs font-semibold text-[#6D2B35] underline underline-offset-4">
+                          Match eligible Pandits
+                        </Link>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        )}
+        {years.length === 0 && (
+          <Card className="mb-8 border-[#D4AF37]/40 bg-[#FFFBF0]">
+            <CardContent className="pt-6">
+              <h2 className="text-xl font-serif font-bold text-[#6D2B35] inline-flex items-center gap-2"><Calendar className="w-5 h-5" />Auspicious dates</h2>
+              <p className="mt-2 text-sm text-muted-foreground">No upcoming catalogue-reviewed Muhurat window is available for this Puja. We will not suggest an unreviewed date.</p>
             </CardContent>
           </Card>
         )}

@@ -80,13 +80,26 @@ export function facetValues(value: string | null | undefined): string[] {
   return (value || "").split(",").map((v) => v.trim()).filter(Boolean);
 }
 
+function normalizedService(value: string): string {
+  return value
+    .toLocaleLowerCase("en-IN")
+    .replace(/\bnavagraha\b/g, "navgraha")
+    .replace(/\bpooja\b/g, "puja")
+    .replace(/\b(?:puja|mahapuja)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function matchesPanditService(
   pandit: Pick<DiscoveryPandit, "specialization">,
   service: string,
 ): boolean {
-  const wanted = service.trim().toLocaleLowerCase("en-IN");
+  const wanted = normalizedService(service);
   return !wanted || facetValues(pandit.specialization).some(
-    (value) => value.toLocaleLowerCase("en-IN").includes(wanted),
+    (value) => {
+      const offered = normalizedService(value);
+      return offered.includes(wanted) || wanted.includes(offered);
+    },
   );
 }
 
@@ -94,10 +107,13 @@ export function matchesPanditListingFilters(
   pandit: Pick<DiscoveryPandit, "specialization" | "languages" | "regionalOrigin">,
   filters: { service?: string; language?: string; region?: string },
 ): boolean {
-  const service = (filters.service || "").trim().toLocaleLowerCase("en-IN");
+  const service = normalizedService(filters.service || "");
   const language = (filters.language || "").trim().toLocaleLowerCase("en-IN");
   const region = (filters.region || "").trim().toLocaleLowerCase("en-IN");
-  return (!service || facetValues(pandit.specialization).some((value) => value.toLocaleLowerCase("en-IN").includes(service)))
+  return (!service || facetValues(pandit.specialization).some((value) => {
+    const offered = normalizedService(value);
+    return offered.includes(service) || service.includes(offered);
+  }))
     && (!language || facetValues(pandit.languages).some((value) => value.toLocaleLowerCase("en-IN").includes(language)))
     && (!region || facetValues(pandit.regionalOrigin).some((value) => value.toLocaleLowerCase("en-IN").includes(region)));
 }

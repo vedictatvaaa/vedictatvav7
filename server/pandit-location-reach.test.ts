@@ -128,6 +128,23 @@ test("service-filtered State and City counts match the filtered eligible records
   );
 });
 
+test("catalogue Puja suffixes and Navagraha spelling variants match Pandit offerings", () => {
+  assert.equal(
+    matchesPanditListingFilters(
+      { specialization: "Marriage, Griha Pravesh, Satyanarayan Katha", languages: "Hindi", regionalOrigin: "North Indian" },
+      { service: "Griha Pravesh Puja" },
+    ),
+    true,
+  );
+  assert.equal(
+    matchesPanditListingFilters(
+      { specialization: "Navgraha Shanti, Sunderkand", languages: "Hindi", regionalOrigin: "North Indian" },
+      { service: "Navagraha Shanti Puja" },
+    ),
+    true,
+  );
+});
+
 test("public listing DTO rejects private and internal fields", () => {
   const dto = publicPanditDto({
     ...validBase,

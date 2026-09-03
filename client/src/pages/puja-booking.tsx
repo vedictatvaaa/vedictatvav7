@@ -49,6 +49,8 @@ export default function PujaBooking() {
   const canonicalStateId = Number(searchParams.get("stateId") || 0);
   const bookingPackageId = Number(searchParams.get("packageId") || 0);
   const bookingService = searchParams.get("service")?.trim() || "";
+  const requestedService = searchParams.get("requestedService")?.trim() || "";
+  const requestedMuhurat = searchParams.get("muhurat")?.trim() || "";
   const bookingSource = searchParams.get("source") === "storefront" ? "storefront" : "booking";
   const customPujaType = bookingPackageId
     ? `package:${bookingPackageId}`
@@ -120,8 +122,8 @@ export default function PujaBooking() {
     if (nextMode !== mode) setMode(nextMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchString]);
-  const [date, setDate] = useState("");
-  const [timeSlot, setTimeSlot] = useState("");
+  const [date, setDate] = useState(searchParams.get("date") || "");
+  const [timeSlot, setTimeSlot] = useState(searchParams.get("muhurat") || "");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [location, setLocation] = useState("");
@@ -185,7 +187,7 @@ export default function PujaBooking() {
 
   const canBook = pujaType && date && timeSlot && contactName && contactPhone && (mode === "online" || location);
   const hasBookingContext = Boolean(
-    panditIdParam || bookingServiceId || masterServiceId || bookingPackageId || bookingService || searchParams.get("start") === "booking"
+    panditIdParam || bookingServiceId || masterServiceId || bookingPackageId || bookingService || requestedService || searchParams.get("start") === "booking"
   );
 
   if (!hasBookingContext) return <PujaDiscoveryHub />;
@@ -252,6 +254,12 @@ export default function PujaBooking() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-5 space-y-4">
+                {(requestedService || requestedMuhurat) && (
+                  <div className="rounded-md border border-[#D4AF37]/35 bg-[#FFFBF0] p-3 text-sm text-[#6D2B35]" data-testid="booking-muhurat-context">
+                    {requestedService ? <p><strong>Requested ritual:</strong> {requestedService}. Choose a server-priced offering below to confirm the booking.</p> : null}
+                    {requestedMuhurat ? <p className={requestedService ? "mt-1" : ""}><strong>Requested Muhurat:</strong> {date} · {requestedMuhurat}. The Pandit will confirm calendar availability.</p> : null}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Puja Type</label>
@@ -290,6 +298,7 @@ export default function PujaBooking() {
                       <Select value={timeSlot} onValueChange={setTimeSlot}>
                         <SelectTrigger className="pl-9 w-full" data-testid="select-time"><SelectValue placeholder="Select Time" /></SelectTrigger>
                         <SelectContent>
+                          {requestedMuhurat && <SelectItem value={requestedMuhurat}>Selected Muhurat ({requestedMuhurat})</SelectItem>}
                           <SelectItem value="morning">Morning (6 AM - 11 AM)</SelectItem>
                           <SelectItem value="afternoon">Afternoon (11 AM - 3 PM)</SelectItem>
                           <SelectItem value="evening">Evening (4 PM - 8 PM)</SelectItem>

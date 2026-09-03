@@ -59,6 +59,7 @@ import {
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
   products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands,
+  pujaTypes, pujaMuhurats,
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
@@ -3121,7 +3122,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     await auditAdmin(req, "master_service.updated", `master_service:${service.id}`, { fields: Object.keys(parsed.data) });
     res.json(service);
   });
-  const travelBandWrite = z.object({ minDistanceKm: z.number().finite().min(0), maxDistanceKm: z.number().finite().min(0), charge: z.number().int().min(0), currency: z.literal("INR").default("INR"), isActive: z.boolean().default(true), requiresDistantConfirmation: z.boolean().default(false) }).refine(v => v.maxDistanceKm >= v.minDistanceKm, { message: "Maximum distance must be at least minimum distance" });
+  const travelBandFields = z.object({ minDistanceKm: z.number().finite().min(0), maxDistanceKm: z.number().finite().min(0), charge: z.number().int().min(0), currency: z.literal("INR").default("INR"), isActive: z.boolean().default(true), requiresDistantConfirmation: z.boolean().default(false) });
+  const travelBandWrite = travelBandFields.refine(v => v.maxDistanceKm >= v.minDistanceKm, { message: "Maximum distance must be at least minimum distance" });
+  const travelBandPatch = travelBandFields.partial().refine(v => v.minDistanceKm === undefined || v.maxDistanceKm === undefined || v.maxDistanceKm >= v.minDistanceKm, { message: "Maximum distance must be at least minimum distance" });
   app.get("/api/admin/travel-bands", adminAuthMiddleware, async (_req, res) => res.json(await db.select().from(travelBands).orderBy(travelBands.minDistanceKm)));
   app.post("/api/admin/travel-bands", adminAuthMiddleware, async (req, res) => {
     const parsed = travelBandWrite.safeParse(req.body); if (!parsed.success) return res.status(400).json({ message: "Invalid travel band", errors: parsed.error.flatten() });
@@ -3130,7 +3133,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.status(201).json((await db.insert(travelBands).values(parsed.data).returning())[0]);
   });
   app.patch("/api/admin/travel-bands/:id", adminAuthMiddleware, async (req, res) => {
-    const id = Number(req.params.id); const parsed = travelBandWrite.partial().safeParse(req.body);
+    const id = Number(req.params.id); const parsed = travelBandPatch.safeParse(req.body);
     if (!Number.isInteger(id) || id < 1 || !parsed.success) return res.status(400).json({ message: "Invalid travel band" });
     const current = (await db.select().from(travelBands).where(eq(travelBands.id, id)).limit(1))[0]; if (!current) return res.status(404).json({ message: "Travel band not found" });
     const next = { ...current, ...parsed.data }; if (next.maxDistanceKm < next.minDistanceKm) return res.status(400).json({ message: "Invalid distance range" });
@@ -3208,6 +3211,9 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const service = typeof req.query.service === "string" ? req.query.service.trim() : "";
     const language = typeof req.query.language === "string" ? req.query.language.trim() : "";
     const region = typeof req.query.region === "string" ? req.query.region.trim() : "";
+    const selectedDate = typeof req.query.date === "string" ? req.query.date.trim() : "";
+    const muhurat = typeof req.query.muhurat === "string" ? req.query.muhurat.trim() : "";
+    const pujaSlug = typeof req.query.pujaSlug === "string" ? req.query.pujaSlug.trim() : "";
     const nearMe = req.query.nearMe === "true";
     const showAll = req.query.all === "true";
     const rawCityId = req.query.cityId, rawStateId = req.query.stateId;
@@ -3220,6 +3226,46 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const requestedRadius = req.query.radiusKm === undefined ? 50 : Number(req.query.radiusKm);
     if (!Number.isFinite(requestedRadius) || requestedRadius <= 0 || requestedRadius > 100) return res.status(400).json({ message: "radiusKm must be greater than 0 and at most 100" });
     if (nearMe && !validCoordinates(lat, lng)) return res.status(400).json({ message: "Near Me requires valid latitude and longitude" });
+    if (selectedDate) {
+      const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)
+        ? new Date(`${selectedDate}T00:00:00Z`)
+        : null;
+      if (!parsedDate || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== selectedDate) {
+        return res.status(400).json({ message: "Invalid date" });
+      }
+      if (selectedDate < new Date().toISOString().slice(0, 10)) {
+        return res.status(400).json({ message: "This Muhurat window is no longer upcoming" });
+      }
+    }
+
+    let verifiedMuhurat: { date: string; window?: string; reason: string } | undefined;
+    if (selectedDate) {
+      if (!service || !pujaSlug) return res.status(400).json({ message: "Puja and catalogue reference are required for Muhurat matching" });
+      const [cataloguePuja] = await db.select({
+        id: pujaTypes.id,
+        name: pujaTypes.name,
+      }).from(pujaTypes).where(and(eq(pujaTypes.slug, pujaSlug), eq(pujaTypes.isPublished, true))).limit(1);
+      if (!cataloguePuja || cataloguePuja.name.trim().toLocaleLowerCase("en-IN") !== service.toLocaleLowerCase("en-IN")) {
+        return res.status(400).json({ message: "Puja does not match the catalogue reference" });
+      }
+      const year = Number(selectedDate.slice(0, 4));
+      const [catalogueYear] = await db.select({ muhurats: pujaMuhurats.muhurats })
+        .from(pujaMuhurats)
+        .where(and(eq(pujaMuhurats.pujaId, cataloguePuja.id), eq(pujaMuhurats.year, year)))
+        .limit(1);
+      const catalogueEntries = Array.isArray(catalogueYear?.muhurats)
+        ? catalogueYear.muhurats as Array<{ date?: string; time?: string; label?: string; muhuratLabel?: string; tithi?: string; note?: string }>
+        : [];
+      const entry = catalogueEntries.find((candidate) => candidate.date === selectedDate);
+      if (!entry || (muhurat && entry.time !== muhurat)) {
+        return res.status(400).json({ message: "This Muhurat window is not in the selected Puja catalogue" });
+      }
+      verifiedMuhurat = {
+        date: selectedDate,
+        ...(entry.time ? { window: entry.time } : {}),
+        reason: entry.muhuratLabel || entry.label || entry.tithi || entry.note || "Catalogue-reviewed Muhurat",
+      };
+    }
 
     let selectedLocation = cityId ? await resolveCityLocation(cityId) : undefined;
     if (cityId && !selectedLocation) return res.status(400).json({ message: "Unknown or inactive cityId" });
@@ -3256,9 +3302,25 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       )) return false;
       return matchesPanditListingFilters(p, { service: serviceLc, language: languageLc, region: regionLc });
     }).sort((a, b) => nearMe ? a.distance! - b.distance! : 0)
-      .map(({ p, distance }) => showAll
-        ? adminPanditDto(p, isPanditOnline(p.id), distance)
-        : publicPanditDto(p, isPanditOnline(p.id), distance));
+      .map(({ p, distance }) => {
+        const dto = showAll
+          ? adminPanditDto(p, isPanditOnline(p.id), distance)
+          : publicPanditDto(p, isPanditOnline(p.id), distance);
+        const matchReasons = [
+          service ? `Offers ${service}` : "Eligible for public booking",
+          language ? `Speaks ${language}` : "",
+          region ? `Matches the ${region} tradition` : "",
+          selectedLocation ? `Serves ${selectedLocation.city.name}` : selectedStateId ? "Serves the selected State" : nearMe ? "Within the selected radius" : "",
+        ].filter(Boolean);
+        return {
+          ...dto,
+          matchReasons,
+          ...(verifiedMuhurat ? {
+            requestedMuhurat: verifiedMuhurat,
+            calendarStatus: "confirmation_required",
+          } : {}),
+        };
+      });
     res.json(results);
   });
 
