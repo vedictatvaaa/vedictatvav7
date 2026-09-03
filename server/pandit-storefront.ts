@@ -39,7 +39,7 @@ import {
 import type { PanditProfileProjection } from "./pandit-seo-network/project";
 import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
 import { canonicalPanditRedirectTarget } from "./pandit-route-context";
-import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
+import { assertPackagePriceCompliant, assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
 import { canonicalBookingMode } from "@shared/puja-booking";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
@@ -1019,16 +1019,28 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
 
   // Packages, gallery, and recurring availability are strictly owner-scoped.
   // The token-derived panditId is deliberately the only owner selector.
-  const packageItemsAreOwnedActive = async (panditId: number, items: Array<{ panditServiceId: number }>) => {
+  const packageItemsAreOwnedActive = async (panditId: number, items: Array<{ panditServiceId: number }>, packagePrice?: number) => {
     const ids = new Set(items.map(item => item.panditServiceId));
     if (ids.size !== items.length) return false;
     const services = await Promise.all(Array.from(ids).map(id => storage.getPanditService(id)));
+    const policies: any[] = [];
     const valid = await Promise.all(services.map(async service => {
       if (!service || service.panditId !== panditId || !service.isActive) return false;
       const master = await storage.getMasterService(service.masterServiceId);
-      try { return !!master?.isActive && (assertRateCompliant(service.price, master), true); } catch { return false; }
+      try {
+        if (!master?.isActive) return false;
+        assertRateCompliant(service.price, master);
+        policies.push(master);
+        return true;
+      } catch { return false; }
     }));
-    return valid.every(Boolean);
+    if (!valid.every(Boolean)) return false;
+    try {
+      if (packagePrice != null) assertPackagePriceCompliant(packagePrice, policies);
+      return true;
+    } catch {
+      return false;
+    }
   };
   app.get("/api/pandit/packages", panditAuthMiddleware, async (req: PanditRequest, res) => {
     const packages = await storage.listPanditPackages(req.panditId!);
@@ -1037,7 +1049,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
   app.post("/api/pandit/packages", panditAuthMiddleware, async (req: PanditRequest, res) => {
     const parsed = panditPackageWriteSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid package", errors: parsed.error.flatten() });
-    if (!(await packageItemsAreOwnedActive(req.panditId!, parsed.data.items))) return res.status(400).json({ message: "Packages require your active services" });
+    if (!(await packageItemsAreOwnedActive(req.panditId!, parsed.data.items, parsed.data.price))) return res.status(400).json({ message: "Package price and components must comply with active Puja policies" });
     try {
       const { items, ...data } = parsed.data;
       const { isPublished: _ignored, ...panditData } = data;
@@ -1056,7 +1068,9 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     if (!existing || existing.panditId !== req.panditId) return res.status(404).json({ message: "Package not found" });
     const parsed = (panditPackageWriteSchema as any).partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid package", errors: parsed.error.flatten() });
-    if (parsed.data.items && (!(await packageItemsAreOwnedActive(req.panditId!, parsed.data.items)))) return res.status(400).json({ message: "Packages require your active services" });
+    const governedItems = parsed.data.items || await storage.listPanditPackageItems(id);
+    const governedPrice = parsed.data.price ?? existing.price;
+    if (!(await packageItemsAreOwnedActive(req.panditId!, governedItems, governedPrice))) return res.status(400).json({ message: "Package price and components must comply with active Puja policies" });
     const { items, isPublished: _ignored, ...patch } = parsed.data;
     const pkg = await storage.updatePanditPackage(id, patch);
     const savedItems = items ? await storage.replacePanditPackageItems(id, items) : await storage.listPanditPackageItems(id);

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check, Video, Sparkles, Star, MessageCircle, Coins, Zap } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, CheckCircle2, ShieldCheck, Flame, Heart, Globe, BookOpen, Hash, Copy, Check, Video, Sparkles, Star, MessageCircle, Coins, Zap, House, Monitor, MapPin } from "lucide-react";
 import PageAPlusContent from "@/components/PageAPlusContent";
 import PageSeo from "@/components/PageSeo";
 import type { Pandit } from "@shared/schema";
@@ -126,17 +126,19 @@ export default function PujaBooking() {
   const [timeSlot, setTimeSlot] = useState(searchParams.get("muhurat") || "");
   const [contactName, setContactName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [location, setLocation] = useState("");
+  const [email, setEmail] = useState("");
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata");
+  const [address, setAddress] = useState({ building: "", street: "", locality: "", city: "", state: "", postalCode: "", landmark: "" });
 
   const selectedPuja = availablePujaOptions.find(p => p.value === pujaType);
-  const samagriCost = selectedPuja ? Math.round(selectedPuja.price * 0.3) : 0;
-  const totalAmount = selectedPuja ? selectedPuja.price + samagriCost : 0;
+  const serviceAmount = selectedPuja?.price || 0;
 
   const bookingMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/puja-bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           pujaType,
           mode,
@@ -144,8 +146,12 @@ export default function PujaBooking() {
           timeSlot,
           contactName,
           contactPhone,
-          location: mode === "offline" ? location : "Online",
-          totalAmount,
+          location: mode === "offline"
+            ? [address.building, address.street, address.locality, address.city, address.state, address.postalCode, address.landmark].filter(Boolean).join(", ")
+            : "Virtual Puja",
+          email,
+          timezone,
+          address: mode === "offline" ? address : undefined,
           ...(panditId > 0 ? { panditId } : {}),
           ...(bookingServiceId > 0 ? { panditServiceId: bookingServiceId } : {}),
           ...(bookingServiceId > 0 ? {
@@ -166,13 +172,14 @@ export default function PujaBooking() {
         source: bookingSource,
         outcome: "success",
       });
-      toast({ title: "Booking Confirmed!", description: "Your puja has been booked. You will receive a confirmation soon." });
+      toast({ title: "Request received", description: "We will confirm a Pandit and the server-approved booking breakdown shortly." });
       setPujaType("");
       setDate("");
       setTimeSlot("");
       setContactName("");
       setContactPhone("");
-      setLocation("");
+      setEmail("");
+      setAddress({ building: "", street: "", locality: "", city: "", state: "", postalCode: "", landmark: "" });
     },
     onError: () => {
       trackPanditSeoEvent("booking_outcome", {
@@ -185,7 +192,7 @@ export default function PujaBooking() {
     },
   });
 
-  const canBook = pujaType && date && timeSlot && contactName && contactPhone && (mode === "online" || location);
+  const canBook = pujaType && date && timeSlot && contactName && contactPhone && email && timezone && (mode === "online" || (address.locality && address.city && address.state && address.postalCode));
   const hasBookingContext = Boolean(
     panditIdParam || bookingServiceId || masterServiceId || bookingPackageId || bookingService || requestedService || searchParams.get("start") === "booking"
   );
@@ -274,13 +281,14 @@ export default function PujaBooking() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Mode</label>
-                    <Select value={mode} onValueChange={(value) => setMode(value as BookingMode)}>
-                      <SelectTrigger className="w-full" data-testid="select-mode"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="offline">At Home / Venue</SelectItem>
-                        <SelectItem value="online">Online (Video Call)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                     <div className="grid grid-cols-2 gap-2" data-testid="booking-mode-choice">
+                       <button type="button" onClick={() => setMode("online")} className={`rounded-md border p-3 text-left transition-colors ${mode === "online" ? "border-[#6D2B35] bg-[#FBF7EE]" : "border-[#D4AF37]/25"}`}>
+                         <Monitor className="mb-1 h-4 w-4 text-[#6D2B35]" /><span className="block text-sm font-semibold">Virtual Puja</span><span className="block text-[11px] text-muted-foreground">Join from your timezone</span>
+                       </button>
+                       <button type="button" onClick={() => setMode("offline")} className={`rounded-md border p-3 text-left transition-colors ${mode === "offline" ? "border-[#6D2B35] bg-[#FBF7EE]" : "border-[#D4AF37]/25"}`}>
+                         <House className="mb-1 h-4 w-4 text-[#6D2B35]" /><span className="block text-sm font-semibold">At-home Puja</span><span className="block text-[11px] text-muted-foreground">Matching begins from your area</span>
+                       </button>
+                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -319,7 +327,7 @@ export default function PujaBooking() {
               </CardHeader>
               <CardContent className="pt-5 space-y-4">
                 {pujaType ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground">Your Name</label>
                       <Input placeholder="Full name" value={contactName} onChange={(e) => setContactName(e.target.value)} data-testid="input-contact-name" />
@@ -328,12 +336,9 @@ export default function PujaBooking() {
                       <label className="text-sm font-medium text-foreground">Phone Number</label>
                       <Input placeholder="+91 XXXXX XXXXX" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} data-testid="input-contact-phone" />
                     </div>
-                    {mode === "offline" && (
-                      <div className="md:col-span-2 space-y-2">
-                        <label className="text-sm font-medium text-foreground">Address / Venue</label>
-                        <Input placeholder="Full address where puja will be performed" value={location} onChange={(e) => setLocation(e.target.value)} data-testid="input-location" />
-                      </div>
-                    )}
+                     <div className="space-y-2"><label className="text-sm font-medium text-foreground">Email for booking updates</label><Input type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} data-testid="input-contact-email" /></div>
+                     {mode === "online" && <div className="space-y-2"><label className="text-sm font-medium text-foreground">Your timezone</label><Input value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Asia/Kolkata" data-testid="input-timezone" /></div>}
+                     {mode === "offline" && <div className="md:col-span-2 rounded-md border border-[#D4AF37]/25 bg-[#FFFBF0] p-4"><div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#6D2B35]"><MapPin className="h-4 w-4" />At-home address</div><p className="mb-3 text-[11px] text-[#5a4a3a]/70">Only the assigned Pandit can receive your full address after accepting this request.</p><div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([["building","House, flat or building"],["street","Street"],["locality","Locality"],["city","City"],["state","State"],["postalCode","Postal code"],["landmark","Landmark (optional)"]] as const).map(([key,label]) => <div key={key} className={key === "landmark" ? "md:col-span-2" : ""}><label className="mb-1 block text-xs font-medium">{label}</label><Input value={address[key]} onChange={(e) => setAddress(current => ({ ...current, [key]: e.target.value }))} data-testid={`input-address-${key}`} /></div>)}</div></div>}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Complete step 1 to proceed.</p>
@@ -359,19 +364,14 @@ export default function PujaBooking() {
                     <span className="font-semibold text-[#5a4a3a]" data-testid="text-summary-pandit">{selectedPandit.name}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-center text-[13px]">
-                  <span className="text-[#5a4a3a]/60">Pandit dakshina</span>
-                  <span className="font-semibold text-[#5a4a3a]">{selectedPuja ? `₹${selectedPuja.price.toLocaleString()}` : "₹ --"}</span>
-                </div>
-                <div className="flex justify-between items-center text-[13px]">
-                  <span className="text-[#5a4a3a]/60">Samagri kit</span>
-                  <span className="font-semibold text-[#5a4a3a]">{selectedPuja ? `₹${samagriCost.toLocaleString()}` : "Optional"}</span>
-                </div>
+                <div className="flex justify-between items-center text-[13px]"><span className="text-[#5a4a3a]/60">Puja service</span><span className="font-semibold text-[#5a4a3a]">{selectedPuja ? `From ₹${serviceAmount.toLocaleString()}` : "Select a Puja"}</span></div>
+                <div className="flex justify-between items-center text-[13px]"><span className="text-[#5a4a3a]/60">Samagri</span><span className="font-semibold text-[#5a4a3a]">Confirmed by Pandit</span></div>
+                {mode === "offline" && <div className="flex justify-between items-center text-[13px]"><span className="text-[#5a4a3a]/60">Travel</span><span className="font-semibold text-[#5a4a3a]">Pending distance check</span></div>}
 
                 <div className="border-t border-[#D4AF37]/20 pt-4 mt-2">
                   <div className="flex justify-between items-center mb-4">
-                    <span className="font-semibold text-[#5a4a3a] text-[13px]">Estimated total</span>
-                    <span className="font-serif font-semibold text-xl text-[#6D2B35]">{selectedPuja ? `₹${totalAmount.toLocaleString()}` : "₹ --"}</span>
+                    <span className="font-semibold text-[#5a4a3a] text-[13px]">Authoritative total</span>
+                    <span className="font-serif font-semibold text-sm text-[#6D2B35]">Shown after review</span>
                   </div>
 
                   <Button
@@ -383,14 +383,14 @@ export default function PujaBooking() {
                     )}
                     data-testid="btn-confirm-booking"
                   >
-                    {bookingMutation.isPending ? "Booking…" : "Confirm booking"}
+                    {bookingMutation.isPending ? "Sending request…" : "Send booking request"}
                   </Button>
                   <div className="mt-3 space-y-2">
                     <p className="text-[11px] text-center text-[#5a4a3a]/55 inline-flex items-center justify-center gap-1 w-full">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" /> 100% secure checkout
                     </p>
                     <div className="rounded-md border border-[#D4AF37]/15 bg-[#FBF7EE] px-3 py-2 text-[11px] text-[#5a4a3a]/70 leading-relaxed">
-                      If you need help choosing the right puja, our team can guide you after booking.
+                       This is a request, not an availability promise. The final price, travel band and samagri arrangement are confirmed from the booking record.
                     </div>
                   </div>
                 </div>

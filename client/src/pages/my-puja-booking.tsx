@@ -47,8 +47,7 @@ export default function MyPujaBookingPage() {
       const qs = new URLSearchParams();
       if (ph) qs.set("phone", ph);
       if (accessToken) qs.set("t", accessToken);
-      if (user?.id) { qs.set("uid", String(user.id)); qs.set("email", user.email); }
-      const r = await fetch(`/api/puja-bookings/${id}/messages?${qs.toString()}`);
+       const r = await fetch(`/api/puja-bookings/${id}/messages?${qs.toString()}`, { credentials: "include" });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
         throw new Error(j.error || "Failed");
@@ -82,7 +81,8 @@ export default function MyPujaBookingPage() {
       const r = await fetch(`/api/puja-bookings/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: verifiedPhone, token: accessToken || undefined, message: draft.trim() }),
+        credentials: "include",
+        body: JSON.stringify({ phone: verifiedPhone || undefined, token: accessToken || undefined, message: draft.trim() }),
       });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
       setDraft("");
@@ -96,7 +96,8 @@ export default function MyPujaBookingPage() {
       const r = await fetch(`/api/puja-bookings/${id}/tip`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: verifiedPhone, token: accessToken || undefined, amountInr: tipAmt, message: tipMsg }),
+        credentials: "include",
+        body: JSON.stringify({ phone: verifiedPhone || undefined, token: accessToken || undefined, amountInr: tipAmt, message: tipMsg }),
       });
       if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || "Failed"); }
       toast({ title: "Dakshina pledged", description: "Our team will reach out with payment link." });
@@ -122,7 +123,7 @@ export default function MyPujaBookingPage() {
               <Button onClick={verify} className="w-full bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37]" data-testid="btn-verify-phone">Open Booking</Button>
             </div>
           </CardContent>
-        </Card>
+          </Card>
       </div>
     );
   }
@@ -141,6 +142,7 @@ export default function MyPujaBookingPage() {
   if (!data) return <div className="p-8 text-center text-sm text-[#5a4a3a]">Loading...</div>;
 
   const b = data.booking;
+  const assignedPandit = data.pandit || b.assignedPandit;
   const chatClosed = ["completed", "declined", "cancelled"].includes(b.status);
 
   return (
@@ -165,13 +167,14 @@ export default function MyPujaBookingPage() {
                 <div className="text-xl font-bold text-[#4a1a22]">₹{b.totalAmount.toLocaleString("en-IN")}</div>
               </div>
             </div>
-            {data.pandit ? (
+             {assignedPandit ? (
               <div className="mt-4 flex items-center gap-3 bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md p-3">
-                <div className="h-10 w-10 rounded-full bg-[#6D2B35] flex items-center justify-center text-[#D4AF37] font-bold">{(data.pandit.name || "P").charAt(0)}</div>
+                 <div className="h-10 w-10 rounded-full bg-[#6D2B35] flex items-center justify-center text-[#D4AF37] font-bold">{(assignedPandit.name || "P").charAt(0)}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-[#4a1a22]" data-testid="text-pandit-name">{data.pandit.name}</div>
-                  <div className="text-[11px] text-[#5a4a3a]/70">{data.pandit.city} · {data.pandit.rating?.toFixed(1)} ★</div>
+                   <div className="text-sm font-semibold text-[#4a1a22]" data-testid="text-pandit-name">{assignedPandit.name}</div>
+                   <div className="text-[11px] text-[#5a4a3a]/70">{assignedPandit.city} · verified Pandit</div>
                 </div>
+                 {b.status === "accepted" && (assignedPandit.phone || assignedPandit.email) && <div className="text-[11px] text-[#5a4a3a]/75 border-l border-[#D4AF37]/25 pl-3">{assignedPandit.phone && <div><Phone className="mr-1 inline h-3 w-3" />{assignedPandit.phone}</div>}{assignedPandit.email && <div>{assignedPandit.email}</div>}</div>}
                 <div className="flex flex-wrap gap-2 justify-end">
                   {b.mode === "online" && b.status === "accepted" && (
                     <>
@@ -198,8 +201,10 @@ export default function MyPujaBookingPage() {
             )}
           </CardContent>
         </Card>
+        <BookingBreakdown booking={b} deliveries={(data as any).notificationDeliveries || []} />
 
-        {/* Samagri */}
+         {/* Samagri */}
+         {Array.isArray((data as any).samagriVersions) && (data as any).samagriVersions.length > 0 && <Card className="mt-4"><CardContent className="p-5"><h2 className="text-base font-serif font-bold text-[#4a1a22]">Samagri history</h2><div className="mt-3 space-y-2">{(data as any).samagriVersions.map((v: any, i: number) => <div key={v.id || i} className="flex justify-between rounded border border-[#D4AF37]/20 p-2 text-xs"><span>Version {v.version || i + 1}</span><span>{v.deliveryStatus || v.status || "Saved"}</span></div>)}</div></CardContent></Card>}
         {Array.isArray(b.samagriList) && b.samagriList.length > 0 && (
           <Card className="mt-4">
             <CardContent className="p-5">
@@ -212,7 +217,7 @@ export default function MyPujaBookingPage() {
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-[#5a4a3a]/65 mt-3">You can order missing items from <a href="/puja-samagri-online" className="text-[#6D2B35] underline">Vedic Tatva shop</a>.</p>
+              <p className="text-[11px] text-[#5a4a3a]/65 mt-3">This is the latest list sent by Panditji. Earlier revisions remain part of the booking record.</p>
             </CardContent>
           </Card>
         )}
@@ -286,5 +291,50 @@ export default function MyPujaBookingPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function BookingBreakdown({ booking, deliveries }: { booking: any; deliveries: any[] }) {
+  const snapshot = booking.pricingSnapshot;
+  if (!snapshot && deliveries.length === 0) return null;
+  const rows = [
+    ["Puja service", snapshot?.baseAmount],
+    ["Samagri", snapshot?.samagriAmount],
+    ["Travel", snapshot?.travelAmount],
+  ] as const;
+  return (
+    <Card className="mt-4">
+      <CardContent className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-serif font-bold text-[#4a1a22]">Booking breakdown</h2>
+          <Badge variant="outline">{snapshot?.currency || "INR"}</Badge>
+        </div>
+        {snapshot && (
+          <div className="mt-3 space-y-2 text-sm">
+            {rows.map(([label, value]) => (
+              <div className="flex justify-between" key={label}>
+                <span className="text-[#5a4a3a]/70">{label}</span>
+                <span className="font-semibold">{value == null ? "Pending confirmation" : `₹${Number(value).toLocaleString("en-IN")}`}</span>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-between border-t border-[#D4AF37]/20 pt-2 font-semibold text-[#6D2B35]">
+              <span>Total</span>
+              <span>{snapshot.totalAmount == null ? "Pending confirmation" : `₹${Number(snapshot.totalAmount).toLocaleString("en-IN")}`}</span>
+            </div>
+          </div>
+        )}
+        {deliveries.length > 0 && (
+          <div className="mt-4 border-t border-[#D4AF37]/20 pt-3">
+            <p className="mb-2 text-xs font-semibold text-[#6D2B35]">Notification delivery</p>
+            {deliveries.map((delivery: any, index: number) => (
+              <div key={delivery.id || index} className="flex justify-between text-xs">
+                <span>{delivery.channel || "Portal"}</span>
+                <Badge variant="outline">{delivery.status || "recorded"}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

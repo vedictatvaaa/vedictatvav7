@@ -4,8 +4,9 @@ type Booking = Record<string, any>;
 type Pandit = Record<string, any> | null | undefined;
 const privateBookingKeys = new Set([
   "contactPhone", "contactEmail", "location", "addressHouse", "addressStreet",
-  "addressLandmark", "customerLatitude", "customerLongitude", "accessToken",
-  "pricingSnapshot", "contactReleasedAt",
+  "addressPostalCode", "addressLandmark", "customerLatitude", "customerLongitude",
+  "virtualJoiningPreference", "accessToken", "pricingSnapshot", "contactReleasedAt",
+  "userId", "needsReassignment", "reassignmentFlaggedAt", "declineReason",
 ]);
 function omit(source: Booking, hidden: Set<string>) {
   return Object.fromEntries(Object.entries(source).filter(([key]) => !hidden.has(key)));
@@ -16,12 +17,16 @@ export function candidatePanditBookingProjection(booking: Booking) {
     ...safe,
     mode: canonicalBookingMode(booking.mode),
     approximateArea: [booking.addressLocality, booking.addressCity].filter(Boolean).join(", ") || null,
-    contactName: booking.contactName ? String(booking.contactName).split(/\s+/)[0] : null,
+    matchedDistance: booking.matchedDistanceKm ?? null,
+    contactName: null,
   };
 }
 export function assignedPanditBookingProjection(booking: Booking, panditId: number) {
-  if (booking.panditId !== panditId || !booking.contactReleasedAt) return candidatePanditBookingProjection(booking);
-  return { ...omit(booking, new Set(["accessToken"])), mode: canonicalBookingMode(booking.mode) };
+  const released = booking.panditId === panditId
+    && Boolean(booking.contactReleasedAt)
+    && ["accepted", "confirmed", "in_progress", "completed"].includes(booking.status);
+  if (!released) return candidatePanditBookingProjection(booking);
+  return { ...omit(booking, new Set(["accessToken", "userId", "needsReassignment", "reassignmentFlaggedAt"])), mode: canonicalBookingMode(booking.mode) };
 }
 export function customerBookingProjection(booking: Booking, pandit?: Pandit) {
   const safe = omit(booking, new Set(["accessToken", "contactReleasedAt"]));
@@ -32,5 +37,8 @@ export function customerBookingProjection(booking: Booking, pandit?: Pandit) {
   };
 }
 export function accessTokenBookingProjection(booking: Booking) {
-  return omit(customerBookingProjection(booking), new Set(["userId", "contactPhone", "contactEmail", "addressHouse", "addressStreet", "addressLandmark", "customerLatitude", "customerLongitude"]));
+  return omit(customerBookingProjection(booking), new Set([
+    "userId", "contactPhone", "contactEmail", "addressHouse", "addressStreet",
+    "addressPostalCode", "addressLandmark", "customerLatitude", "customerLongitude",
+  ]));
 }

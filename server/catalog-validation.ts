@@ -18,7 +18,15 @@ export const masterServiceWriteSchema = z.object({
   maxRate: z.number().int().min(0).nullable().optional(),
   allowedBookingMode: z.enum(["virtual", "at_home", "both"]).nullable().optional(),
   defaultDurationMinutes: z.number().int().min(15).max(1440).nullable().optional(),
-  defaultSamagriTemplate: z.array(z.object({ name: safeText(120).min(1) })).max(100).nullable().optional(),
+  defaultSamagriTemplate: z.array(z.object({
+    name: safeText(120).min(1),
+    quantity: safeText(40).optional(),
+    unit: safeText(40).optional(),
+    note: safeText(500).optional(),
+    required: z.boolean().default(true),
+    arrangedBy: z.enum(["customer", "pandit", "vedic_tatva"]).default("customer"),
+    productId: z.number().int().positive().optional(),
+  })).max(100).nullable().optional(),
 });
 
 export const panditServiceWriteSchema = z.object({

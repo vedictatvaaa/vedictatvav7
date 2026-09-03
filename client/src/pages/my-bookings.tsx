@@ -17,6 +17,7 @@ type Booking = {
   tipAmountInr: number; tipPaidAt: string | null;
   completedAt: string | null; declineReason: string | null;
   accessToken: string | null; createdAt: string;
+  assignedPandit?: any; pricingSnapshot?: any; notificationDeliveries?: any[];
 };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -36,7 +37,7 @@ export default function MyBookingsPage() {
 
   useEffect(() => {
     if (!user) { setLocation("/login"); return; }
-    fetch(`/api/my-bookings/${user.id}?email=${encodeURIComponent(user.email)}`)
+    fetch(`/api/my-bookings/${user.id}`, { credentials: "include" })
       .then((r) => r.json())
       .then((j) => setBookings(j.bookings || []))
       .finally(() => setLoading(false));
@@ -114,7 +115,8 @@ function BookingCard({ b, userName }: { b: Booking; userName: string }) {
               <span><Phone className="h-3 w-3 inline mr-1" />{b.contactPhone}</span>
               {b.location && <span><MapPin className="h-3 w-3 inline mr-1" />{b.location}</span>}
             </div>
-            <div className="text-sm text-[#6D2B35] font-bold mt-1">₹{b.totalAmount.toLocaleString("en-IN")}</div>
+             <div className="text-sm text-[#6D2B35] font-bold mt-1">{b.pricingSnapshot?.totalAmount != null ? `₹${Number(b.pricingSnapshot.totalAmount).toLocaleString("en-IN")}` : `₹${Number(b.totalAmount || 0).toLocaleString("en-IN")}`}</div>
+             {b.pricingSnapshot && <div className="mt-1 text-[11px] text-[#5a4a3a]/65">Puja ₹{Number(b.pricingSnapshot.baseAmount || 0).toLocaleString("en-IN")} · Samagri {b.pricingSnapshot.samagriAmount == null ? "pending" : `₹${b.pricingSnapshot.samagriAmount}`} · Travel {b.pricingSnapshot.travelAmount == null ? "pending confirmation" : `₹${b.pricingSnapshot.travelAmount}`}</div>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">

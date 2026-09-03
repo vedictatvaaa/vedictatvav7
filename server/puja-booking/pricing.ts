@@ -12,6 +12,16 @@ export function assertRateCompliant(price: number, policy: RatePolicy): void {
   if (policy.minRate != null && price < policy.minRate) throw new Error(`Service price must be at least ${policy.minRate}`);
   if (policy.maxRate != null && price > policy.maxRate) throw new Error(`Service price must not exceed ${policy.maxRate}`);
 }
+export function assertPackagePriceCompliant(price: number, componentPolicies: RatePolicy[]): void {
+  if (!componentPolicies.length) throw new Error("Package requires at least one governed service");
+  if (!Number.isSafeInteger(price) || price < 0) throw new Error("Package price must be a non-negative whole number");
+  const minimum = componentPolicies.reduce((sum, policy) => sum + (policy.minRate ?? 0), 0);
+  const maximum = componentPolicies.every(policy => policy.maxRate != null)
+    ? componentPolicies.reduce((sum, policy) => sum + policy.maxRate!, 0)
+    : null;
+  if (price < minimum) throw new Error(`Package price must be at least ${minimum}`);
+  if (maximum != null && price > maximum) throw new Error(`Package price must not exceed ${maximum}`);
+}
 export function findTravelBand(distanceKm: number | null | undefined, bands: TravelBand[]): TravelBand | null {
   if (distanceKm == null || !Number.isFinite(distanceKm) || distanceKm < 0) return null;
   return bands.filter(b => b.minDistanceKm <= distanceKm && distanceKm <= b.maxDistanceKm)

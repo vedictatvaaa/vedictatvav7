@@ -58,7 +58,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands,
+  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
   pujaTypes, pujaMuhurats,
   type AbandonedCart,
 } from "@shared/schema";
@@ -107,8 +107,9 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { ageing, allowedTransitions, decrementMembershipCardInventory, isOperationallyStale, itemCounts, membershipCardAllocations, nextAction, normalizeOrderStatus, parseInventoryAllocations, paymentProjection, validateTransition, verifyInventory, type InventoryAllocation } from "./order-operations";
 import { validateCanonicalServiceBookingContext } from "./pandit-booking-context";
 import { canonicalBookingMode, structuredAddressSchema } from "@shared/puja-booking";
-import { assertRateCompliant, authoritativeBookingPrice, modeAllowed } from "./puja-booking/pricing";
+import { assertPackagePriceCompliant, assertRateCompliant, authoritativeBookingPrice, modeAllowed } from "./puja-booking/pricing";
 import { customerBookingProjection } from "./puja-booking/projections";
+import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
@@ -3094,7 +3095,17 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
     if ((parsed.data.minRate == null) !== (parsed.data.maxRate == null) || (parsed.data.minRate != null && parsed.data.maxRate! < parsed.data.minRate)) return res.status(400).json({ message: "Provide a valid minimum and maximum rate" });
     try {
-      const service = await storage.createMasterService({ ...parsed.data, isActive: true });
+      const service = await db.transaction(async (tx) => {
+        const [created] = await tx.insert(masterServices).values({ ...parsed.data, isActive: true }).returning();
+        await tx.insert(masterServicePolicyAudits).values({
+          masterServiceId: created.id,
+          previousPolicy: null,
+          nextPolicy: created,
+          adminUserId: req.adminUserId || null,
+          reason: "Master service created",
+        });
+        return created;
+      });
       await auditAdmin(req, "master_service.created", `master_service:${service.id}`, { slug: service.slug });
       res.status(201).json(service);
     } catch (error: any) {
@@ -3117,7 +3128,22 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       patch.ratePolicyVersion = (current?.ratePolicyVersion || 0) + 1;
       patch.ratePolicyEffectiveAt = new Date();
     }
-    const service = await storage.updateMasterService(id, patch);
+    const service = await db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(masterServices).where(eq(masterServices.id, id)).for("update").limit(1);
+      if (!locked) return null;
+      const [updated] = await tx.update(masterServices)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(masterServices.id, id))
+        .returning();
+      await tx.insert(masterServicePolicyAudits).values({
+        masterServiceId: id,
+        previousPolicy: locked,
+        nextPolicy: updated,
+        adminUserId: req.adminUserId || null,
+        reason: "Master service policy updated",
+      });
+      return updated;
+    });
     if (!service) return res.status(404).json({ message: "Master service not found" });
     await auditAdmin(req, "master_service.updated", `master_service:${service.id}`, { fields: Object.keys(parsed.data) });
     res.json(service);
@@ -4192,22 +4218,17 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(bookings);
   });
 
-  // Customer's own bookings — requires the caller to know BOTH the userId AND
-  // the registered email of that user (sent as ?email=... ). This matches the
-  // codebase's existing client-trust auth pattern but raises the bar so a
-  // simple userId guess cannot enumerate other users' bookings.
-  app.get("/api/my-bookings/:userId", async (req, res) => {
+  // Customer booking lists are authorized exclusively by the signed,
+  // HTTP-only customer session. Route parameters are never identity proof.
+  app.get("/api/my-bookings/:userId", customerAuthMiddleware, async (req: any, res) => {
     try {
       const uid = Number(req.params.userId);
-      const email = String(req.query.email || "").toLowerCase().trim();
-      if (!uid || !email) return res.status(400).json({ error: "userId and email are required" });
-      const u = await storage.getUser(uid);
-      if (!u || u.email.toLowerCase() !== email) return res.status(403).json({ error: "Identity check failed" });
+      if (!uid || uid !== req.customerUserId) return res.status(403).json({ error: "Access denied" });
       const { db } = await import("./db");
       const { pujaBookings } = await import("@shared/schema");
       const { eq, desc } = await import("drizzle-orm");
        const rows = await db.select().from(pujaBookings).where(eq(pujaBookings.userId, uid)).orderBy(desc(pujaBookings.id)).limit(100);
-       const panditIds = [...new Set(rows.map(row => row.panditId).filter((id): id is number => id != null))];
+       const panditIds = Array.from(new Set(rows.map(row => row.panditId).filter((id): id is number => id != null)));
        const assigned = await Promise.all(panditIds.map(id => storage.getPandit(id)));
        const panditsById = new Map(assigned.filter(Boolean).map(p => [p!.id, p]));
        res.json({ bookings: rows.map(row => customerBookingProjection(row, row.panditId ? panditsById.get(row.panditId) : null)) });
@@ -4284,7 +4305,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (!items.length || !items.every(item => activeIds.has(item.panditServiceId))) {
         return res.status(400).json({ message: "This package contains an unavailable service" });
       }
-      try { for (const row of activeServices.filter(row => items.some(item => item.panditServiceId === row.service.id))) { assertRateCompliant(row.service.price, row.master); if (!modeAllowed(row.master, canonicalMode)) throw new Error("Package contains a service unavailable in this booking mode"); } } catch (error: any) { return res.status(400).json({ message: error.message }); }
+      const packageComponents = activeServices.filter(row => items.some(item => item.panditServiceId === row.service.id));
+      try {
+        for (const row of packageComponents) {
+          assertRateCompliant(row.service.price, row.master);
+          if (!modeAllowed(row.master, canonicalMode)) throw new Error("Package contains a service unavailable in this booking mode");
+        }
+        assertPackagePriceCompliant(pkg.price, packageComponents.map(row => row.master));
+      } catch (error: any) { return res.status(400).json({ message: error.message }); }
       const baseAmount = pkg.price;
       const samagriAmount = Math.round(baseAmount * 0.3);
       resolvedBooking = {
@@ -4313,6 +4341,23 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         });
       }
       const baseAmount = standardPuja.price;
+      const standardMasterSlugs: Record<string, string> = {
+        satyanarayan: "satyanarayan-katha",
+        grihapravesh: "griha-pravesh",
+        rudrabhishek: "rudrabhishek",
+        mahamrityunjay: "mahamrityunjaya-jaap",
+        navgraha: "navgraha-shanti-puja",
+        ganesh: "ganesh-puja",
+      };
+      const masterPolicy = await storage.getMasterServiceBySlug(standardMasterSlugs[standardPuja.value] || standardPuja.value);
+      if (!masterPolicy) return res.status(409).json({ message: "This Puja has no active master pricing policy" });
+      try {
+        if (!masterPolicy.isActive) throw new Error("This Puja is currently unavailable");
+        assertRateCompliant(baseAmount, masterPolicy);
+        if (!modeAllowed(masterPolicy, canonicalMode)) throw new Error("This booking mode is unavailable");
+      } catch (error: any) {
+        return res.status(400).json({ message: error.message });
+      }
       const samagriAmount = Math.round(baseAmount * 0.3);
       resolvedBooking = {
         ...resolvedBooking,
@@ -4332,9 +4377,23 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     }
     const activeBands = canonicalMode === "at_home" ? await db.select().from(travelBands).where(eq(travelBands.isActive, true)) : [];
     const priced = authoritativeBookingPrice({ baseAmount: resolvedBooking.pricingSnapshot.baseAmount, samagriAmount: resolvedBooking.pricingSnapshot.samagriAmount, mode: canonicalMode, policy: { minRate: null, maxRate: null }, distanceKm: req.body?.matchedDistanceKm, travelBands: activeBands });
-    if (canonicalMode === "at_home" && priced.travelAmount == null) return res.status(409).json({ message: "Travel charge is pending until distance can be verified; no undisclosed charge was created." });
-    resolvedBooking.travelBandId = priced.travelBandId; resolvedBooking.travelAmount = priced.travelAmount; resolvedBooking.totalAmount = priced.totalAmount;
-    resolvedBooking.pricingSnapshot = { ...resolvedBooking.pricingSnapshot, travelAmount: priced.travelAmount, travelBandId: priced.travelBandId, pricingPolicyVersion: priced.pricingPolicyVersion, totalAmount: priced.totalAmount, bookingMode: canonicalMode };
+    const serviceSubtotal = resolvedBooking.pricingSnapshot.baseAmount + resolvedBooking.pricingSnapshot.samagriAmount;
+    // An at-home request may be created before a Pandit is assigned and a
+    // reliable distance exists. Preserve a server-priced subtotal and mark
+    // travel pending instead of inventing a charge or blocking the request.
+    resolvedBooking.travelBandId = priced.travelBandId;
+    resolvedBooking.travelAmount = priced.travelAmount;
+    resolvedBooking.totalAmount = priced.totalAmount ?? serviceSubtotal;
+    resolvedBooking.pricingSnapshot = {
+      ...resolvedBooking.pricingSnapshot,
+      travelAmount: priced.travelAmount,
+      travelBandId: priced.travelBandId,
+      pricingPolicyVersion: priced.pricingPolicyVersion,
+      totalAmount: priced.totalAmount,
+      amountDueBeforeTravel: serviceSubtotal,
+      travelPending: canonicalMode === "at_home" && priced.travelAmount == null,
+      bookingMode: canonicalMode,
+    };
 
     const requestedPanditId = resolvedBooking.panditId;
     if (requestedPanditId != null) {
@@ -4350,6 +4409,28 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       status: "pending",
       accessToken,
     } as any);
+    await enqueueBookingNotificationEvent(db, {
+      bookingId: booking.id,
+      eventType: "booking_requested",
+      recipientParty: "customer",
+      recipientId: booking.userId,
+      payload: { mode: canonicalMode },
+      channels: ["portal", "email", "whatsapp"],
+    });
+    if (booking.panditId) {
+      await enqueueBookingNotificationEvent(db, {
+        bookingId: booking.id,
+        eventType: "booking_offered",
+        recipientParty: "pandit",
+        recipientId: booking.panditId,
+        payload: {
+          mode: canonicalMode,
+          approximateArea: [booking.addressLocality, booking.addressCity].filter(Boolean).join(", ") || null,
+          matchedDistanceKm: booking.matchedDistanceKm,
+        },
+        channels: ["portal", "email", "whatsapp"],
+      });
+    }
     notifyPujaBooking(booking).catch((err) => console.error("[notify] booking notify failed", err));
     // Task #65 — pandit referral attribution for puja booking.
     try {
@@ -4357,7 +4438,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const amt = Number((booking as any).totalAmount || (booking as any).amount || 0);
       await attributeReferral(req, "booking", booking.id, amt, (booking as any).customerEmail || (booking as any).email);
     } catch {}
-    res.status(201).json({ ...booking, customerLink: `/my-puja-booking/${booking.id}?t=${accessToken}` });
+    res.status(201).json({ booking: customerBookingProjection(booking), customerLink: `/my-puja-booking/${booking.id}?t=${accessToken}` });
   });
 
   app.patch("/api/puja-bookings/:id", adminAuthMiddleware, async (req, res) => {
