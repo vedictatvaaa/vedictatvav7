@@ -57,7 +57,7 @@ export function initializeGoogleConsentMode() {
     ad_personalization: "denied",
     wait_for_update: 500,
   });
-  applyGoogleConsent(currentPreferences);
+  applyGoogleConsent(ALWAYS_GRANTED);
 }
 
 export function applyGoogleConsent(preferences: ConsentPreferences | null) {

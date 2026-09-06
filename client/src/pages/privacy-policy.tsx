@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
               <li>To communicate with you about your orders, bookings, and account.</li>
               <li>To provide customer support and respond to your inquiries.</li>
               <li>To personalize your experience and deliver relevant content and product recommendations.</li>
-              <li>To send promotional communications (with your consent), including offers, discounts, and new product announcements.</li>
+              <li>To send promotional communications, including offers, discounts, and new product announcements.</li>
               <li>To improve our website, products, and services based on usage patterns and feedback.</li>
               <li>To detect, prevent, and address fraud, security issues, or technical problems.</li>
               <li>To comply with legal obligations and enforce our terms of service.</li>
@@ -72,15 +72,15 @@ export default function PrivacyPolicy() {
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-serif text-[#6D2B35]">4. Cookies & Tracking Technologies</h2>
             <p className="text-sm text-[#5a4a3a]/70 leading-relaxed">
-              We use necessary storage to operate security, login, checkout, and privacy-preference features. Optional analytics and marketing technologies are disabled until you consent. You may accept, reject, or change optional categories at any time through the “Cookie settings” link in the site footer.
+              We use cookies and similar storage to operate security, login, checkout, analytics, marketing, and referral features.
             </p>
             <ul className="list-disc pl-6 text-sm text-[#5a4a3a]/70 leading-relaxed space-y-1.5">
-              <li><strong>Necessary:</strong> authentication, fraud prevention, cart and checkout functionality, and the <code>vt_consent</code> preference cookie. The preference cookie is retained for up to 6 months.</li>
-              <li><strong>Analytics:</strong> with consent, Google Analytics or Umami and anonymous Core Web Vitals help us understand page usage and technical performance. Analytics events do not include names, email addresses, phone numbers, postal addresses, or payment details.</li>
-              <li><strong>Marketing:</strong> with consent, Google Tag Manager and Meta Pixel may measure campaigns. The <code>vt_ref</code> cookie records a valid Pandit referral slug for attribution and is retained for 30 days.</li>
+              <li><strong>Necessary:</strong> authentication, fraud prevention, cart and checkout functionality.</li>
+              <li><strong>Analytics:</strong> Google Analytics or Umami and anonymous Core Web Vitals help us understand page usage and technical performance. Analytics events do not include names, email addresses, phone numbers, postal addresses, or payment details.</li>
+              <li><strong>Marketing:</strong> Google Tag Manager and Meta Pixel may measure campaigns. The <code>vt_ref</code> cookie records a valid Pandit referral slug for attribution and is retained for 30 days.</li>
             </ul>
             <p className="text-sm text-[#5a4a3a]/70 leading-relaxed">
-              Google consent signals default to denied before any Google analytics or advertising tag is loaded. If you withdraw consent, optional tracking is disabled on reload. Browser controls can also remove previously stored cookies.
+              Browser controls can remove previously stored cookies. Removing cookies may affect login, checkout, referral attribution, or analytics continuity.
             </p>
           </section>
 
