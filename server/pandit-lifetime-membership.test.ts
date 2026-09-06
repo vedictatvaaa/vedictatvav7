@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
+import express from "express";
+import { createServer } from "node:http";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import test from "node:test";
+import {
+  createMembershipCardProductsHandler,
+  type MembershipCardRouteProduct,
+} from "./membership-card-route";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { panditVerificationDto } from "./pandit-verification";
 import { publicStorefrontPanditDto } from "./pandit-public-access";
@@ -28,8 +34,30 @@ test("Pandit migrations are self-transactional for the Coolify psql runner", () 
 const schema = readFileSync("shared/schema.ts", "utf8");
 const routes = readFileSync("server/routes.ts", "utf8");
 const panditPortal = readFileSync("server/pandit-portal.ts", "utf8");
+const membershipCardRoute = readFileSync("server/membership-card-route.ts", "utf8");
 const seed = readFileSync("server/seed.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
+
+async function requestMembershipCardProducts(
+  overrides: Parameters<typeof createMembershipCardProductsHandler>[0],
+  options: { token?: string; query?: string } = {},
+) {
+  const app = express();
+  app.get("/api/pandit/membership-card-products", createMembershipCardProductsHandler(overrides));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/pandit/membership-card-products${options.query || ""}`,
+      options.token ? { headers: { "x-pandit-token": options.token } } : undefined,
+    );
+    return { status: response.status, body: await response.json() };
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+}
 
 test("0010 is additive and preserves legacy membership and card-order systems", () => {
   assert.match(migration, /ADD COLUMN IF NOT EXISTS registration_no text/);
@@ -355,13 +383,138 @@ test("non-card Razorpay mock preserves its prior client economics", () => {
 
 test("card product discovery is protected and exposes no checkout ownership input", () => {
   assert.match(routes, /"\/api\/pandit\/membership-card-products"/);
-  assert.match(routes, /const authorization = await authorizePanditSession\(token\)/);
+  assert.match(routes, /createMembershipCardProductsHandler\(\)/);
   assert.match(panditPortal, /error: "Pandit authentication required"/);
-  assert.match(routes, /const pandit = await storage\.getPandit\(panditId\)/);
-  assert.match(routes, /if \(!isPanditEligibleForMembershipCardOrder\(pandit\)\)/);
-  assert.match(routes, /status\(403\)\.json\(\{ message: "An approved Pandit membership is required to view membership cards"/);
-  assert.match(routes, /pandit\?\.verified === true[\s\S]*\^\\d\{10\}\$/);
-  assert.match(routes, /eq\(products\.productType, "pandit_membership_card"\)/);
-  assert.match(routes, /variationGroupId === "pandit-membership-card"/);
-  assert.match(routes, /available: product\.stock > 0/);
+  assert.match(membershipCardRoute, /const pandit = await dependencies\.getPandit\(authorization\.panditId\)/);
+  assert.match(membershipCardRoute, /if \(!isPanditEligibleForMembershipCardOrder\(pandit\)\)/);
+  assert.match(membershipCardRoute, /status\(403\)\.json\(\{[\s\S]*An approved Pandit membership is required to view membership cards/);
+  assert.match(membershipCardRoute, /pandit\?\.verified === true[\s\S]*\^\\d\{10\}\$/);
+  assert.match(membershipCardRoute, /eq\(products\.productType, "pandit_membership_card"\)/);
+  assert.match(membershipCardRoute, /variationGroupId === "pandit-membership-card"/);
+  assert.match(membershipCardRoute, /available: \(product\.stock \?\? 0\) > 0/);
+});
+
+test("membership card product discovery rejects missing and expired sessions", async () => {
+  const receivedTokens: Array<string | undefined> = [];
+  const authorize = async (token?: string) => {
+    receivedTokens.push(token);
+    return { panditId: null, status: 401, error: "Pandit authentication required" } as const;
+  };
+
+  const missing = await requestMembershipCardProducts({ authorize });
+  assert.equal(missing.status, 401);
+  assert.deepEqual(missing.body, { message: "Pandit authentication required" });
+  assert.deepEqual(receivedTokens, [undefined]);
+
+  const expired = await requestMembershipCardProducts({ authorize }, { token: "expired" });
+  assert.equal(expired.status, 401);
+  assert.deepEqual(expired.body, { message: "Pandit authentication required" });
+  assert.deepEqual(receivedTokens, [undefined, "expired"]);
+});
+
+test("membership card product discovery rejects suspended and unapproved Pandits", async () => {
+  const suspended = await requestMembershipCardProducts({
+    authorize: async () => ({
+      panditId: null,
+      status: 403,
+      error: "This Pandit account is temporarily suspended.",
+    }),
+  }, { token: "suspended" });
+  assert.equal(suspended.status, 403);
+  assert.deepEqual(suspended.body, {
+    message: "This Pandit account is temporarily suspended.",
+  });
+
+  let listedProducts = false;
+  const unapproved = await requestMembershipCardProducts({
+    authorize: async () => ({ panditId: 17 }),
+    getPandit: async () => ({ verified: false, registrationNo: "1001000017" }),
+    listProducts: async () => {
+      listedProducts = true;
+      return [];
+    },
+  }, { token: "unapproved" });
+  assert.equal(unapproved.status, 403);
+  assert.deepEqual(unapproved.body, {
+    message: "An approved Pandit membership is required to view membership cards",
+  });
+  assert.equal(listedProducts, false);
+});
+
+test("eligible Pandit receives only approved card variants and cannot override ownership", async () => {
+  const products: MembershipCardRouteProduct[] = [
+    {
+      id: 101,
+      slug: "pandit-membership-card-plastic",
+      name: "Plastic Membership Card",
+      description: "Approved card",
+      image: "/card.png",
+      category: "Pandit Membership",
+      productType: "pandit_membership_card",
+      price: 499,
+      salePrice: 399,
+      stock: 4,
+      variationGroupId: "pandit-membership-card",
+      variationLabel: "Plastic",
+      costPrice: 1,
+      privateOwnerId: 999,
+    },
+    {
+      id: 102,
+      slug: "ordinary-product",
+      name: "Ordinary Product",
+      description: "Not a card",
+      image: "/ordinary.png",
+      category: "Other",
+      productType: "product",
+      price: 100,
+      stock: 10,
+      variationGroupId: null,
+      variationLabel: null,
+    },
+    {
+      id: 103,
+      slug: "other-card-group",
+      name: "Unapproved Card Group",
+      description: "Not returned",
+      image: "/other-card.png",
+      category: "Pandit Membership",
+      productType: "pandit_membership_card",
+      price: 999,
+      stock: 10,
+      variationGroupId: "other-group",
+      variationLabel: "Other",
+    },
+  ];
+  const lookedUpPanditIds: number[] = [];
+  const response = await requestMembershipCardProducts({
+    authorize: async () => ({ panditId: 42 }),
+    getPandit: async (panditId) => {
+      lookedUpPanditIds.push(panditId);
+      return { verified: true, registrationNo: "1001000042" };
+    },
+    listProducts: async () => products,
+  }, { token: "eligible", query: "?panditId=999" });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(lookedUpPanditIds, [42]);
+  assert.deepEqual(response.body, {
+    variationGroupId: "pandit-membership-card",
+    products: [{
+      id: 101,
+      slug: "pandit-membership-card-plastic",
+      name: "Plastic Membership Card",
+      description: "Approved card",
+      image: "/card.png",
+      category: "Pandit Membership",
+      productType: "pandit_membership_card",
+      price: 399,
+      stock: 4,
+      available: true,
+      variationGroupId: "pandit-membership-card",
+      variationLabel: "Plastic",
+    }],
+  });
+  assert.equal("privateOwnerId" in response.body.products[0], false);
+  assert.equal("costPrice" in response.body.products[0], false);
 });

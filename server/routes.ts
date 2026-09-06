@@ -69,6 +69,10 @@ import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { panditVerificationDto } from "./pandit-verification";
 import { authorizePanditSession } from "./pandit-portal";
+import {
+  createMembershipCardProductsHandler,
+  isPanditEligibleForMembershipCardOrder,
+} from "./membership-card-route";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
@@ -159,12 +163,6 @@ const upload = multer({
     }
   },
 });
-
-function isPanditEligibleForMembershipCardOrder(pandit: any): boolean {
-  return pandit?.verified === true
-    && typeof pandit.registrationNo === "string"
-    && /^\d{10}$/.test(pandit.registrationNo);
-}
 
 async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{ items?: any[]; message?: string; status?: number }> {
   const cardItems = items.filter((item) => item.productType === "pandit_membership_card");
@@ -2936,34 +2934,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
     })));
   });
-  app.get("/api/pandit/membership-card-products", async (req: any, res) => {
-    const token = (req.headers["x-pandit-token"] as string | undefined) || req.cookies?.pandit_token;
-    const authorization = await authorizePanditSession(token);
-    if (authorization.panditId == null) return res.status(authorization.status).json({ message: authorization.error, ...(authorization.code ? { code: authorization.code } : {}) });
-    const panditId = authorization.panditId;
-    const pandit = await storage.getPandit(panditId);
-    if (!isPanditEligibleForMembershipCardOrder(pandit)) {
-      return res.status(403).json({ message: "An approved Pandit membership is required to view membership cards" });
-    }
-    const cardProducts = (await db.select().from(products)
-      .where(eq(products.productType, "pandit_membership_card")))
-      .filter(product => product.variationGroupId === "pandit-membership-card")
-      .map(product => ({
-        id: product.id,
-        slug: product.slug,
-        name: product.name,
-        description: product.description,
-        image: product.image,
-        category: product.category,
-        productType: product.productType,
-        price: (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price,
-        stock: product.stock,
-        available: product.stock > 0,
-        variationGroupId: product.variationGroupId,
-        variationLabel: product.variationLabel,
-      }));
-    res.json({ variationGroupId: "pandit-membership-card", products: cardProducts });
-  });
+  app.get(
+    "/api/pandit/membership-card-products",
+    createMembershipCardProductsHandler(),
+  );
   app.get("/api/admin/locations", adminAuthMiddleware, async (_req, res) => {
     const [states, cities, allPandits, apps] = await Promise.all([db.select().from(indianStates), db.select().from(indianCities), storage.getPandits(), storage.getPanditApplications()]);
     const discoverable = allPandits.filter(p => p.verified && !p.onLeave
