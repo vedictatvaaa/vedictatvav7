@@ -410,6 +410,7 @@ export const panditApplications = pgTable("pandit_applications", {
   status: text("status").notNull().default("pending"),
   adminNote: text("admin_note"),
   reviewedAt: timestamp("reviewed_at"),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
   // Set exactly once when approval transaction creates the authoritative Pandit.
   panditId: integer("pandit_id").references(() => pandits.id),
   createdAt: timestamp("created_at").defaultNow(),

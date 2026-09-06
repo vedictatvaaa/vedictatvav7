@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tag, CheckCircle, X, Zap, Truck, CreditCard, Banknote, Percent, Shield, Gift, Sparkles, MapPin, Award } from "lucide-react";
 import { trackBeginCheckout, trackPurchase } from "@/lib/analytics";
-import { getPanditToken } from "@/lib/panditAuth";
 
 declare global {
   interface Window {
@@ -63,7 +62,6 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const orderHeaders = () => ({
     "Content-Type": "application/json",
-    ...(getPanditToken() ? { "x-pandit-token": getPanditToken() as string } : {}),
   });
 
   const [form, setForm] = useState({

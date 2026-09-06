@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Video, Mic, ArrowLeft, Sparkles, Shield, Phone, AlertTriangle, Users, Copy, Share2, ChevronDown, ChevronUp, ListChecks, Save } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { getPanditToken } from "@/lib/panditAuth";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PujaCallPage() {
@@ -80,10 +79,8 @@ export default function PujaCallPage() {
       if (!id) { setError("Invalid call link"); return; }
       try {
         if (isPandit) {
-          // pandit verifies via session token
-          const tok = getPanditToken();
-          if (!tok) { setError("Pandit not logged in"); return; }
-          const r = await fetch(`/api/pandit/bookings/${id}/messages`, { headers: { "x-pandit-token": tok } });
+          // Pandit access is authenticated by the HttpOnly session cookie.
+          const r = await fetch(`/api/pandit/bookings/${id}/messages`, { credentials: "include" });
           if (!r.ok) throw new Error((await r.json()).error || "Cannot access");
           const j = await r.json();
           setBooking(j.booking); setVerified(true);

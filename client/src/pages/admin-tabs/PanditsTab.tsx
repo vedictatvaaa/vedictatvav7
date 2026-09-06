@@ -166,7 +166,10 @@ function PanditsTab() {
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ fees }),
       });
-      if (!res.ok) throw new Error("Update failed");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || "Update failed");
+        }
       return res.json();
     },
     onSuccess: () => {
@@ -180,7 +183,10 @@ function PanditsTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/pandits/${id}`, { method: "DELETE", headers: { "x-admin-token": adminToken } });
-      if (!res.ok) throw new Error("Delete failed");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || "Delete failed");
+        }
       return res.json();
     },
     onSuccess: () => {
@@ -194,7 +200,10 @@ function PanditsTab() {
   const boostMutation = useMutation({
     mutationFn: async ({ id, boostType }: { id: number; boostType: "monthly" | "yearly" }) => {
       const res = await fetch(`/api/pandits/${id}/boost`, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-token": adminToken }, body: JSON.stringify({ boostType }) });
-      if (!res.ok) throw new Error("Boost failed");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || "Boost failed");
+        }
       return res.json();
     },
     onSuccess: () => {
@@ -207,7 +216,10 @@ function PanditsTab() {
   const deactivateBoostMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await fetch(`/api/pandits/${id}/boost/deactivate`, { method: "POST", headers: { "x-admin-token": adminToken } });
-      if (!res.ok) throw new Error("Deactivate failed");
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || "Deactivate failed");
+        }
       return res.json();
     },
     onSuccess: () => {
@@ -286,11 +298,12 @@ function PanditsTab() {
       const coords = await geocodeCity(pandit.city);
       if (coords) {
         try {
-          await fetch(`/api/pandits/${pandit.id}`, {
+           const response = await fetch(`/api/pandits/${pandit.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
             body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
           });
+           if (!response.ok) throw new Error("Location update failed");
           done++;
         } catch {
           failed++;
@@ -385,7 +398,7 @@ function PanditsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2">
         <Input placeholder="Search pandits…" value={search} onChange={e=>setSearch(e.target.value)} />
         <Select value={stateFilter} onValueChange={v=>{setStateFilter(v);setCityFilter("");}}><SelectTrigger><SelectValue placeholder="All states"/></SelectTrigger><SelectContent><SelectItem value="all">All states</SelectItem>{locations.map(s=><SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent></Select>
-        <Select value={cityFilter} onValueChange={setCityFilter} disabled={!stateFilter || stateFilter === "all"}><SelectTrigger><SelectValue placeholder={stateFilter && stateFilter !== "all" ? "All cities" : "Select state first"}/></SelectTrigger><SelectContent><SelectItem value="all">All cities</SelectItem>{locations.find(s=>String(s.id)===stateFilter)?.cities.map(c=><SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+         <Select value={cityFilter} onValueChange={setCityFilter} disabled={!stateFilter || stateFilter === "all"}><SelectTrigger><SelectValue placeholder={stateFilter && stateFilter !== "all" ? "All cities" : "Select state first"}/></SelectTrigger><SelectContent><SelectItem value="all">All cities</SelectItem>{locations.find(s=>String(s.id)===stateFilter)?.cities.filter(c=>c.isActive).map(c=><SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent></Select>
         <Select value={verificationFilter} onValueChange={setVerificationFilter}><SelectTrigger><SelectValue placeholder="Verification"/></SelectTrigger><SelectContent><SelectItem value="all">All verification</SelectItem><SelectItem value="true">Verified</SelectItem><SelectItem value="false">Pending</SelectItem></SelectContent></Select>
         <Select value={activeFilter} onValueChange={setActiveFilter}><SelectTrigger><SelectValue placeholder="Listing status"/></SelectTrigger><SelectContent><SelectItem value="all">All listing status</SelectItem><SelectItem value="true">Active</SelectItem><SelectItem value="false">On leave</SelectItem></SelectContent></Select>
         <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}><SelectTrigger><SelectValue placeholder="Availability"/></SelectTrigger><SelectContent><SelectItem value="all">All availability</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="busy">Busy</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent></Select>
@@ -601,7 +614,11 @@ function PanditsTab() {
                           <CheckCircle className="w-3 h-3" /> Approve
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => deleteMutation.mutate(pandit.id)} className="min-h-11 text-red-500 sm:min-h-9" aria-label={`Delete ${pandit.name}`} data-testid={`btn-delete-pandit-${pandit.id}`}>
+                       <Button size="sm" variant="ghost" disabled={deleteMutation.isPending} onClick={() => {
+                         if (window.confirm(`Delete ${pandit.name}? This permanently removes the Pandit profile and cannot be undone.`)) {
+                           deleteMutation.mutate(pandit.id);
+                         }
+                       }} className="min-h-11 text-red-500 sm:min-h-9" aria-label={`Delete ${pandit.name}`} data-testid={`btn-delete-pandit-${pandit.id}`}>
                         <XCircle className="w-4 h-4" />
                       </Button>
                     </div>

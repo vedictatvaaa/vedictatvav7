@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw, Wallet, CreditCard, Package, Image, CalendarDays, Trash2 } from "lucide-react";
-import { getPanditToken } from "@/lib/panditAuth";
 import { useCart } from "@/lib/cart";
 import type { Product } from "@shared/schema";
 import { PanditEmptyState, PanditErrorState, PanditInlineLoading, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
@@ -20,7 +19,6 @@ import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 
 const headers = () => ({
   "Content-Type": "application/json",
-  ...(getPanditToken() ? { "x-pandit-token": getPanditToken() as string } : {}),
 });
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {

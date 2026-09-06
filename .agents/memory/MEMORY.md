@@ -12,3 +12,4 @@
 - [GitHub OAuth tree sync](github-oauth-tree-sync.md) — for multi-file Git Data writes, use the connection SDK client; proxy/durable payload crossings can fail before ref updates.
 - [Puja booking price authority](puja-booking-price-authority.md) — catalogue names are discovery context; only server-priced standard Pujas or eligible Pandit offerings may be confirmed.
 - [Muhurat matching authority](muhurat-matching-authority.md) — dated Pandit matching must validate a published catalogue record; catalogue eligibility never means calendar availability.
+- [Development schema application](dev-schema-application.md) — additive schema changes need explicit development DB application and unique migration numbering before startup.

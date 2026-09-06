@@ -29,13 +29,25 @@ export function adminAuthMiddleware(req: AdminRequest, res: Response, next: Next
   // migrate every admin call site away from localStorage.
   const headerToken = req.headers["x-admin-token"] as string | undefined;
   const cookieToken = (req as any).cookies?.vt_admin_token as string | undefined;
-  const token = headerToken || cookieToken;
-  if (!token) {
+  if (!headerToken && !cookieToken) {
     res.status(401).json({ message: "Admin authentication required" });
     return;
   }
 
-  // CSRF guard (15B). The vt_admin_token cookie is SameSite=Strict, which
+  // Validate the legacy header first, but fall back to the cookie when a stale
+  // localStorage token is present. This keeps the cookie session authoritative.
+  Promise.resolve()
+    .then(async () => {
+      const headerUserId = headerToken ? await validateAdminSession(headerToken) : null;
+      const cookieUserId = cookieToken && cookieToken !== headerToken ? await validateAdminSession(cookieToken) : null;
+      const userId = headerUserId || cookieUserId;
+      const authenticatedByHeader = !!headerUserId;
+      if (!userId) {
+        res.status(401).json({ message: "Invalid or expired admin session" });
+        return;
+      }
+
+      // CSRF guard (15B). The vt_admin_token cookie is SameSite=Strict, which
   // already prevents the browser from attaching it to a cross-site form POST
   // — but defence-in-depth: for any state-changing method authenticated
   // ONLY by the cookie (no explicit x-admin-token header), require the
@@ -43,8 +55,8 @@ export function adminAuthMiddleware(req: AdminRequest, res: Response, next: Next
   // serving on. The header path is CSRF-immune by design (cross-origin JS
   // can't set a custom header without a successful CORS preflight, and we
   // don't allow cross-origin admin calls).
-  const isMutation = req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
-  if (isMutation && !headerToken) {
+      const isMutation = req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
+      if (isMutation && !authenticatedByHeader) {
     const origin = req.headers.origin as string | undefined;
     const referer = req.headers.referer as string | undefined;
     const host = req.headers.host as string | undefined;
@@ -61,12 +73,6 @@ export function adminAuthMiddleware(req: AdminRequest, res: Response, next: Next
       return;
     }
   }
-  validateAdminSession(token)
-    .then((userId) => {
-      if (!userId) {
-        res.status(401).json({ message: "Invalid or expired admin session" });
-        return;
-      }
       req.adminUserId = userId;
       next();
     })

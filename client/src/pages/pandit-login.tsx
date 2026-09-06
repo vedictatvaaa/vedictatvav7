@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Lock, Phone, Info, PlayCircle, Copy, Mail } from "lucide-react";
-import { panditApi, setPanditToken } from "@/lib/panditAuth";
+import { panditApi } from "@/lib/panditAuth";
 
 export default function PanditLoginPage() {
   const { toast } = useToast();
@@ -30,7 +30,6 @@ export default function PanditLoginPage() {
     setLoading(true);
     try {
       const r = await panditApi("POST", "/api/pandit/login", { phone, password });
-      setPanditToken(r.token);
       toast({ title: `Welcome, ${r.pandit?.name || "Panditji"}`, description: r.mustChangePassword ? "Please set a new password from your profile." : undefined });
       setLocation("/pandit/portal");
     } catch (e: any) {
@@ -71,22 +70,22 @@ export default function PanditLoginPage() {
             <h1 className="text-xl md:text-2xl font-serif font-bold text-[#4a1a22]" data-testid="text-pandit-login-title">Panditji Portal</h1>
             <p className="text-xs text-[#5a4a3a]/70 mt-1">Sign in to manage your bookings, calendar & messages.</p>
           </div>
-          <div className="space-y-3">
+          <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
             <div>
               <Label htmlFor="p-phone">Registered phone</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a4a3a]/50" />
-                <Input id="p-phone" inputMode="numeric" placeholder="10-digit mobile" className="pl-9" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="input-pandit-phone" />
+                <Input id="p-phone" inputMode="numeric" autoComplete="tel" placeholder="10-digit mobile" className="pl-9" value={phone} onChange={(e) => setPhone(e.target.value)} data-testid="input-pandit-phone" />
               </div>
             </div>
             <div>
               <Label htmlFor="p-pass">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a4a3a]/50" />
-                <Input id="p-pass" type="password" className="pl-9" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} data-testid="input-pandit-password" />
+                <Input id="p-pass" type="password" autoComplete="current-password" className="pl-9" value={password} onChange={(e) => setPassword(e.target.value)} data-testid="input-pandit-password" />
               </div>
             </div>
-            <Button onClick={submit} disabled={loading} className="w-full bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-bold" data-testid="btn-pandit-login">
+            <Button type="submit" disabled={loading} className="w-full bg-[#6D2B35] hover:bg-[#5a1f29] text-[#D4AF37] font-bold" data-testid="btn-pandit-login">
               {loading ? "Signing in..." : "Sign In"}
             </Button>
             <div className="bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md p-3 text-xs text-[#5a4a3a] flex items-start gap-2">
@@ -95,6 +94,7 @@ export default function PanditLoginPage() {
                 <strong className="text-[#4a1a22]">First-time login?</strong> Use the temporary password in your approval email. You will be prompted to create a new password immediately after signing in.
               </div>
             </div>
+          </form>
             <Button type="button" variant="link" onClick={() => setShowForgotPassword(value => !value)} className="w-full text-[#6D2B35]">
               Forgot password?
             </Button>
@@ -103,7 +103,7 @@ export default function PanditLoginPage() {
                 <p className="text-xs text-[#5a4a3a]/75">Enter the phone and email registered on your approved Pandit account.</p>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#5a4a3a]/50" />
-                  <Input type="email" placeholder="Registered email" className="pl-9" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} />
+                  <Input type="email" autoComplete="email" placeholder="Registered email" className="pl-9" value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} />
                 </div>
                 <Button type="button" variant="outline" onClick={requestPasswordReset} disabled={resetLoading} className="w-full border-[#6D2B35] text-[#6D2B35]">
                   {resetLoading ? "Sending..." : "Email password reset link"}
@@ -134,7 +134,6 @@ export default function PanditLoginPage() {
                 Auto-fill demo credentials
               </Button>
             </div>
-          </div>
         </CardContent>
       </Card>
     </div>

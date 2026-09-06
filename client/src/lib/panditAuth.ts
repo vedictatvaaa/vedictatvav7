@@ -1,22 +1,20 @@
-const KEY = "vt_pandit_token";
-
 export function getPanditToken(): string | null {
-  try { return localStorage.getItem(KEY); } catch { return null; }
+  // Pandit sessions are HttpOnly-cookie-only. Keeping a bearer token in
+  // localStorage would make the 30-day session stealable by XSS.
+  return null;
 }
 export function setPanditToken(token: string) {
-  try { localStorage.setItem(KEY, token); } catch {}
+  void token;
 }
 export function clearPanditToken() {
-  try { localStorage.removeItem(KEY); } catch {}
+  // The server clears the HttpOnly cookie on logout.
 }
 
 export async function panditApi(method: string, url: string, body?: any) {
-  const tok = getPanditToken();
   const r = await fetch(url, {
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(tok ? { "x-pandit-token": tok } : {}),
     },
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,

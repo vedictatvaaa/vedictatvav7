@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { clearPanditToken, getPanditToken, panditApi } from "@/lib/panditAuth";
+import { clearPanditToken, panditApi } from "@/lib/panditAuth";
 import { usePanditDashboard } from "@/hooks/use-pandit-dashboard";
 import PanditHome from "@/components/pandit/PanditHome";
 import PanditEarnings from "@/components/pandit/PanditEarnings";
@@ -64,13 +64,12 @@ export default function PanditPortalPage() {
   const [password, setPassword] = useState("");
   const groups = useMemo(() => Array.from(new Set(nav.map(n => n.group))), []);
   useEffect(() => {
-    if (!getPanditToken()) { setLocation("/pandit/login"); return; }
     panditApi("GET", "/api/pandit/me").then((r) => {
       if (r.mustChangePassword) {
         setPasswordChangeRequired(true);
         setPwdOpen(true);
       }
-    }).catch(() => { clearPanditToken(); setLocation("/pandit/login"); });
+    }).catch(() => { setLocation("/pandit/login"); });
     const ping = () => { void panditApi("POST", "/api/pandit/heartbeat").catch(() => {}); };
     ping(); const id = window.setInterval(ping, 60000); return () => window.clearInterval(id);
   }, [setLocation]);

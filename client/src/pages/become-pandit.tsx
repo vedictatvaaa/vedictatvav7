@@ -191,6 +191,7 @@ export default function BecomePandit() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...rest,
+          termsAccepted: form.agreeTerms,
           stateId: Number(stateId),
           ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
           photo: uploadBody.url,

@@ -16,7 +16,7 @@ import {
   pujaBookingContactReleases, pujaBookingSamagriVersions,
   pujaBookingEvents, pujaBookingDeliveries,
 } from "@shared/schema";
-import { and, desc, eq, gt, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   buildChecklistStates,
@@ -33,6 +33,7 @@ import { candidatePanditBookingProjection, assignedPanditBookingProjection } fro
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
 import { canonicalBookingMode, samagriItemSchema } from "@shared/puja-booking";
+import { normalizePanditPhone } from "./pandit-phone";
 
 const SESSION_TTL_DAYS = 30;
 const ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -108,7 +109,17 @@ function createPasswordLinkUrl(panditId: number, email: string, currentPasswordH
   return `${siteUrl}/pandit/reset-password?token=${encodeURIComponent(token)}`;
 }
 
-export function createPanditPasswordResetUrl(panditId: number, email: string, currentPasswordHash: string): string {
+async function findPanditByCanonicalPhone(phone: string) {
+  const rows = await db.select().from(pandits).where(or(
+    eq(pandits.phone, phone),
+    sql`right(regexp_replace(${pandits.phone}, '[^0-9]', '', 'g'), 10) = ${phone}`,
+  )).limit(2);
+  // Prefer the exact canonical record if legacy duplicates exist. Never
+  // silently choose between two differently stored accounts.
+  return rows.length === 1 ? rows[0] : rows.find(row => row.phone === phone) || null;
+}
+
+export function createPanditPasswordResetUrl(panditId: number, email: string, currentPasswordHash: string | null): string {
   return createPasswordLinkUrl(panditId, email, currentPasswordHash);
 }
 
@@ -233,11 +244,11 @@ export function registerPanditPortalRoutes(app: Express) {
         email: z.string().email(),
       });
       const { phone, email } = schema.parse(req.body);
-      const norm = phone.replace(/\D/g, "").slice(-10);
+      const norm = normalizePanditPhone(phone);
+      if (!norm) return res.json(generic);
       const normalizedEmail = email.trim().toLowerCase();
-      const rows = await db.select().from(pandits).where(eq(pandits.phone, norm)).limit(1);
-      const pandit = rows[0];
-      if (pandit && pandit.passwordHash && pandit.email?.trim().toLowerCase() === normalizedEmail) {
+      const pandit = await findPanditByCanonicalPhone(norm);
+      if (pandit && pandit.email?.trim().toLowerCase() === normalizedEmail) {
         const resetUrl = createPasswordLinkUrl(pandit.id, normalizedEmail, pandit.passwordHash);
         const message = buildPanditPasswordResetEmail({
           to: pandit.email,
@@ -268,13 +279,13 @@ export function registerPanditPortalRoutes(app: Express) {
       if (!pandit || pandit.email?.trim().toLowerCase() !== payload.email) {
         return res.status(400).json({ error: "This password reset link is invalid or has expired." });
       }
-      if (!pandit.passwordHash || passwordDigest(pandit.passwordHash) !== payload.passwordDigest) {
+      if (passwordDigest(pandit.passwordHash) !== payload.passwordDigest) {
         return res.status(400).json({ error: "This password reset link is invalid or has expired." });
       }
       const passwordHash = await bcrypt.hash(newPassword, 10);
       const updated = await db.update(pandits)
         .set({ passwordHash, mustChangePassword: false })
-        .where(and(eq(pandits.id, pandit.id), eq(pandits.passwordHash, pandit.passwordHash)))
+        .where(eq(pandits.id, pandit.id))
         .returning({ id: pandits.id });
       if (!updated.length) {
         return res.status(400).json({ error: "This password reset link is invalid or has expired." });
@@ -291,10 +302,10 @@ export function registerPanditPortalRoutes(app: Express) {
     try {
       const schema = z.object({ phone: z.string().min(6), password: z.string().min(1) });
       const { phone, password } = schema.parse(req.body);
-      const norm = phone.replace(/\D/g, "").slice(-10);
-      const rows = await db.select().from(pandits).where(eq(pandits.phone, norm)).limit(1);
-      if (!rows.length) return res.status(401).json({ error: "Invalid phone or password" });
-      const p = rows[0];
+      const norm = normalizePanditPhone(phone);
+      if (!norm) return res.status(401).json({ error: "Invalid phone or password" });
+      const p = await findPanditByCanonicalPhone(norm);
+      if (!p) return res.status(401).json({ error: "Invalid phone or password" });
       if (p.accountStatus === "banned") {
         return res.status(403).json({ error: "This Pandit account has been banned. Contact the Vedic Tatva team for assistance." });
       }
@@ -315,18 +326,24 @@ export function registerPanditPortalRoutes(app: Express) {
       const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86400 * 1000);
       await db.insert(panditSessions).values({ panditId: p.id, token, expiresAt });
       await db.update(pandits).set({ lastLoginAt: new Date() }).where(eq(pandits.id, p.id));
-      res.cookie("pandit_token", token, { httpOnly: true, sameSite: "lax", maxAge: SESSION_TTL_DAYS * 86400 * 1000 });
-      res.json({ ok: true, token, mustChangePassword: !!p.mustChangePassword, pandit: { id: p.id, name: p.name, city: p.city, image: p.image } });
+      res.cookie("pandit_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_TTL_DAYS * 86400 * 1000,
+      });
+      res.json({ ok: true, mustChangePassword: !!p.mustChangePassword, pandit: { id: p.id, name: p.name, city: p.city, image: p.image } });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Validation failed", issues: e.issues });
       res.status(500).json({ error: e?.message });
     }
   });
 
-  app.post("/api/pandit/logout", panditAuthMiddleware, async (req: PanditRequest, res) => {
+  app.post("/api/pandit/logout", async (req: PanditRequest, res) => {
     const token = (req.headers["x-pandit-token"] as string | undefined) || (req.cookies?.pandit_token as string | undefined);
     if (token) await db.delete(panditSessions).where(eq(panditSessions.token, token));
-    res.clearCookie("pandit_token");
+    res.clearCookie("pandit_token", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
     res.json({ ok: true });
   });
 
@@ -335,7 +352,20 @@ export function registerPanditPortalRoutes(app: Express) {
       const schema = z.object({ newPassword: z.string().min(8).max(128) });
       const { newPassword } = schema.parse(req.body);
       const hash = await bcrypt.hash(newPassword, 10);
-      await db.update(pandits).set({ passwordHash: hash, mustChangePassword: false }).where(eq(pandits.id, req.panditId!));
+      const token = newToken();
+      const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 86400 * 1000);
+      await db.transaction(async (tx) => {
+        await tx.update(pandits).set({ passwordHash: hash, mustChangePassword: false }).where(eq(pandits.id, req.panditId!));
+        await tx.delete(panditSessions).where(eq(panditSessions.panditId, req.panditId!));
+        await tx.insert(panditSessions).values({ panditId: req.panditId!, token, expiresAt });
+      });
+      res.cookie("pandit_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_TTL_DAYS * 86400 * 1000,
+      });
       res.json({ ok: true });
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ error: "Password must be at least 8 characters" });

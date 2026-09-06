@@ -29,6 +29,7 @@ vite.config.ts.*
 !migrations/0012_seed_pandit_membership_card_products.sql
 !migrations/0014_pandit_auth_moderation.sql
 !migrations/0013_checkout_payment_intents_inventory.sql
+!migrations/0018_pandit_terms_acceptance.sql
 *.sql.gz
 backups/
 # Local-only directories (not in git, sync'd separately)
