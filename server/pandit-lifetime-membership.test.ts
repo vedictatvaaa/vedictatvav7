@@ -27,6 +27,7 @@ test("Pandit migrations are self-transactional for the Coolify psql runner", () 
 });
 const schema = readFileSync("shared/schema.ts", "utf8");
 const routes = readFileSync("server/routes.ts", "utf8");
+const panditPortal = readFileSync("server/pandit-portal.ts", "utf8");
 const seed = readFileSync("server/seed.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
 
@@ -146,10 +147,14 @@ test("admin registrationNo query is authenticated, exact, bounded, and never fal
 });
 
 test("public verification endpoint enforces exact grammar and bounded exact lookup", () => {
-  assert.match(routes, /"\/api\/pandits\/verify\/:registrationNo"/);
-  assert.match(routes, /if \(!\/\^\\d\{10\}\$\/\.test\(registrationNo\)\)/);
-  assert.match(routes, /\.where\(eq\(pandits\.registrationNo, registrationNo\)\)[\s\S]+\.limit\(1\)/);
-  assert.equal((routes.match(/Pandit verification not found/g) || []).length, 2);
+  const start = routes.indexOf('app.get("/api/pandits/verify/:registrationNo"');
+  const end = routes.indexOf('app.get("/api/pandits/:id"', start);
+  assert.ok(start >= 0 && end > start, "verification route must remain a bounded standalone handler");
+  const verificationRoute = routes.slice(start, end);
+  assert.match(verificationRoute, /if \(!\/\^\\d\{10\}\$\/\.test\(registrationNo\)\)/);
+  assert.match(verificationRoute, /\.where\(eq\(pandits\.registrationNo, registrationNo\)\)[\s\S]+\.limit\(1\)/);
+  assert.match(verificationRoute, /publicEligibility\(\)/);
+  assert.match(verificationRoute, /panditVerificationDto\(pandit\)/);
 });
 
 test("public verification DTO has an explicit safe allowlist", () => {
@@ -278,7 +283,9 @@ test("0012 safely seeds normal-commerce Plastic and Metal card siblings", () => 
 test("all four card-aware checkout paths gate authoritative card items", () => {
   assert.equal((routes.match(/stampPanditMembershipCardItems\(req,/g) || []).length, 4);
   assert.match(routes, /item\.productType === "pandit_membership_card"/);
-  assert.match(routes, /validatePanditSession\(token\)/);
+  assert.match(routes, /authorizePanditSession\(token\)/);
+  assert.match(panditPortal, /const panditId = await validatePanditSession\(token\)/);
+  assert.match(panditPortal, /if \(!panditId\) return \{ panditId: null, status: 401/);
   assert.match(routes, /isPanditEligibleForMembershipCardOrder\(pandit\)/);
   assert.match(routes, /quantity < 1 \|\| quantity > 10/);
   assert.match(routes, /panditRegistrationNo: pandit\.registrationNo/);
@@ -348,7 +355,8 @@ test("non-card Razorpay mock preserves its prior client economics", () => {
 
 test("card product discovery is protected and exposes no checkout ownership input", () => {
   assert.match(routes, /"\/api\/pandit\/membership-card-products"/);
-  assert.match(routes, /Pandit authentication required/);
+  assert.match(routes, /const authorization = await authorizePanditSession\(token\)/);
+  assert.match(panditPortal, /error: "Pandit authentication required"/);
   assert.match(routes, /const pandit = await storage\.getPandit\(panditId\)/);
   assert.match(routes, /if \(!isPanditEligibleForMembershipCardOrder\(pandit\)\)/);
   assert.match(routes, /status\(403\)\.json\(\{ message: "An approved Pandit membership is required to view membership cards"/);
