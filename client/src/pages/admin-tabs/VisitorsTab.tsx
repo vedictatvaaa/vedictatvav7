@@ -117,7 +117,7 @@ function VisitorsTab() {
   const fetcher = createFetcher(adminToken);
   const [days, setDays] = useState("30");
 
-  const { data, isLoading, refetch, isFetching } = useQuery<any>({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<any>({
     queryKey: ["/api/admin/analytics/visitors", days],
     queryFn: () => fetcher(`/api/admin/analytics/visitors?days=${days}`),
     refetchInterval: 60_000,
@@ -189,6 +189,20 @@ function VisitorsTab() {
           </Button>
         </div>
       </div>
+
+      {isError && (
+        <Card className="border-red-300 bg-red-50/70 dark:bg-red-950/20" role="alert">
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-semibold text-red-950 dark:text-red-100">Visitor analytics could not be loaded</p>
+              <p className="mt-1 text-sm text-red-900/80 dark:text-red-100/80">
+                {error instanceof Error ? error.message : "Check the admin session and try again."}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>Try again</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary stat cards */}
       {isLoading ? (

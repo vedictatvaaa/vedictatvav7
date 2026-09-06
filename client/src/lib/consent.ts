@@ -8,34 +8,17 @@ export interface ConsentPreferences {
   marketing: boolean;
 }
 
-const COOKIE_NAME = "vt_consent";
-const COOKIE_MAX_AGE_SECONDS = 180 * 24 * 60 * 60;
 const CONSENT_EVENT = "vt:consent-changed";
 export const OPEN_CONSENT_EVENT = "vt:open-consent";
 
-function readCookie(): ConsentPreferences | null {
-  if (typeof document === "undefined") return null;
-  const raw = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${COOKIE_NAME}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=");
-  if (!raw) return null;
-  const match = decodeURIComponent(raw).match(/^v1\.a([01])\.m([01])$/);
-  if (!match) return null;
-  return {
-    necessary: true,
-    analytics: match[1] === "1",
-    marketing: match[2] === "1",
-  };
-}
-
-let currentPreferences = readCookie();
+const ALWAYS_GRANTED: ConsentPreferences = {
+  necessary: true,
+  analytics: true,
+  marketing: true,
+};
 const listeners = new Set<() => void>();
 
 function notify() {
-  currentPreferences = readCookie();
   listeners.forEach((listener) => listener());
 }
 
@@ -49,15 +32,15 @@ function subscribe(listener: () => void) {
 }
 
 export function getConsentPreferences(): ConsentPreferences | null {
-  return currentPreferences;
+  return ALWAYS_GRANTED;
 }
 
 export function hasConsent(category: ConsentCategory): boolean {
-  return currentPreferences?.[category] === true;
+  return ALWAYS_GRANTED[category];
 }
 
 export function useConsentPreferences(): ConsentPreferences | null {
-  return useSyncExternalStore(subscribe, () => currentPreferences, () => null);
+  return useSyncExternalStore(subscribe, () => ALWAYS_GRANTED, () => ALWAYS_GRANTED);
 }
 
 export function initializeGoogleConsentMode() {
@@ -92,24 +75,9 @@ export function applyGoogleConsent(preferences: ConsentPreferences | null) {
 export function saveConsentPreferences(
   preferences: Pick<ConsentPreferences, "analytics" | "marketing">,
 ) {
-  if (typeof document === "undefined") return;
-  const value = `v1.a${preferences.analytics ? 1 : 0}.m${preferences.marketing ? 1 : 0}`;
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${COOKIE_NAME}=${encodeURIComponent(value)}; Path=/; Max-Age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
-  if (!preferences.marketing) {
-    document.cookie = `vt_ref=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
-  }
-  if (!preferences.analytics) {
-    try {
-      localStorage.removeItem("vt_session_id");
-      localStorage.removeItem("vedic_tatva_interactions");
-    } catch {
-      // Storage may be disabled by browser policy.
-    }
-  }
+  void preferences;
   notify();
-  applyGoogleConsent(currentPreferences);
-  window.dispatchEvent(new Event(CONSENT_EVENT));
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(CONSENT_EVENT));
 }
 
 export function openConsentPreferences() {

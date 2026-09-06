@@ -17,7 +17,18 @@ export type TabSection =
 export function createFetcher(token?: string) {
   return (url: string) => fetch(url, {
     headers: token ? { "x-admin-token": token } : {},
-  }).then((r) => { if (!r.ok) throw new Error("Fetch failed"); return r.json(); });
+    credentials: "include",
+  }).then(async (r) => {
+    if (!r.ok) {
+      let detail = "";
+      try {
+        const body = await r.json();
+        detail = typeof body?.message === "string" ? body.message : "";
+      } catch { /* preserve the HTTP status when the body is not JSON */ }
+      throw new Error(detail || `Request failed (${r.status})`);
+    }
+    return r.json();
+  });
 }
 
 // Unified status palette: amber (pending/warning), emerald (success),

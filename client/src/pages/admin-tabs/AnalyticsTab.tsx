@@ -32,12 +32,20 @@ function AnalyticsTab() {
   const toDate = kolkataDate(0);
   const fromDate = kolkataDate(Number(dateRange) - 1);
 
-  const { data: salesData } = useQuery<any>({ queryKey: ["/api/admin/analytics/sales", dateRange], queryFn: () => fetcher(`/api/admin/analytics/sales?from=${fromDate}&to=${toDate}`) });
-  const { data: categoryData } = useQuery<any[]>({ queryKey: ["/api/admin/analytics/category-sales"], queryFn: () => fetcher("/api/admin/analytics/category-sales") });
-  const { data: pvsData } = useQuery<any>({ queryKey: ["/api/admin/analytics/product-vs-service"], queryFn: () => fetcher("/api/admin/analytics/product-vs-service") });
-  const { data: profitData } = useQuery<any>({ queryKey: ["/api/admin/analytics/profit"], queryFn: () => fetcher("/api/admin/analytics/profit") });
-  const { data: customerData } = useQuery<any>({ queryKey: ["/api/admin/analytics/customers"], queryFn: () => fetcher("/api/admin/analytics/customers") });
-  const { data: productPerf } = useQuery<any>({ queryKey: ["/api/admin/analytics/product-performance"], queryFn: () => fetcher("/api/admin/analytics/product-performance") });
+  const salesQuery = useQuery<any>({ queryKey: ["/api/admin/analytics/sales", dateRange], queryFn: () => fetcher(`/api/admin/analytics/sales?from=${fromDate}&to=${toDate}`) });
+  const categoryQuery = useQuery<any[]>({ queryKey: ["/api/admin/analytics/category-sales"], queryFn: () => fetcher("/api/admin/analytics/category-sales") });
+  const pvsQuery = useQuery<any>({ queryKey: ["/api/admin/analytics/product-vs-service"], queryFn: () => fetcher("/api/admin/analytics/product-vs-service") });
+  const profitQuery = useQuery<any>({ queryKey: ["/api/admin/analytics/profit"], queryFn: () => fetcher("/api/admin/analytics/profit") });
+  const customerQuery = useQuery<any>({ queryKey: ["/api/admin/analytics/customers"], queryFn: () => fetcher("/api/admin/analytics/customers") });
+  const productPerfQuery = useQuery<any>({ queryKey: ["/api/admin/analytics/product-performance"], queryFn: () => fetcher("/api/admin/analytics/product-performance") });
+  const salesData = salesQuery.data;
+  const categoryData = categoryQuery.data;
+  const pvsData = pvsQuery.data;
+  const profitData = profitQuery.data;
+  const customerData = customerQuery.data;
+  const productPerf = productPerfQuery.data;
+  const analyticsError = [salesQuery, categoryQuery, pvsQuery, profitQuery, customerQuery, productPerfQuery]
+    .find(query => query.isError)?.error;
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "#2563eb", "#059669", "#7c3aed", "#ea580c", "#0891b2", "#be185d"];
 
@@ -71,6 +79,25 @@ function AnalyticsTab() {
           </Button>
         </div>
       </div>
+
+      {analyticsError && (
+        <Card className="border-red-300 bg-red-50/70 dark:bg-red-950/20" role="alert">
+          <CardContent className="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-semibold text-red-950 dark:text-red-100">Business analytics could not be loaded</p>
+              <p className="mt-1 text-sm text-red-900/80 dark:text-red-100/80">
+                {analyticsError instanceof Error ? analyticsError.message : "Check the admin session and try again."}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => {
+              void Promise.all([
+                salesQuery.refetch(), categoryQuery.refetch(), pvsQuery.refetch(),
+                profitQuery.refetch(), customerQuery.refetch(), productPerfQuery.refetch(),
+              ]);
+            }}>Try again</Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4">
         <Card className="bg-card border-border">

@@ -260,7 +260,6 @@ import SiteSchemas from "@/components/SiteSchemas";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useShakeToJapa } from "@/hooks/use-shake-to-japa";
 import ThemeApplier from "@/components/ThemeApplier";
-import ConsentManager from "@/components/ConsentManager";
 import { useConsentPreferences } from "@/lib/consent";
 
 function ScrollToTop() {
@@ -1134,7 +1133,6 @@ function App() {
                     <WishlistProvider>
                       <AmbientBackdropToggle />
                       <Toaster />
-                      <ConsentManager />
                       <LocaleScope>
                         <Router />
                       </LocaleScope>
