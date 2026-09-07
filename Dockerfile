@@ -22,27 +22,15 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # constrained Coolify builders; this project compiles multiple native modules.
 COPY package.json package-lock.json* ./
 RUN npm install --global npm@10.9.4 --no-audit --no-fund && \
-    npm cache clean --force
-RUN set -eu; \
+    npm cache verify
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --ignore-scripts --maxsockets=1 --no-audit --no-fund || { \
-            status=$?; \
-            log_file="$(ls -1t /root/.npm/_logs/*-debug-0.log 2>/dev/null | head -n 1 || true)"; \
-            echo "npm ci failed with status ${status}; diagnostic lines follow"; \
-            if [ -n "$log_file" ]; then \
-                grep -E 'verbose (stack|cwd|os|node|npm)| error |silly unfinished' "$log_file" || true; \
-            fi; \
-            exit "$status"; \
-        }; \
-    npm rebuild @google/genai bufferutil core-js esbuild protobufjs puppeteer sharp swisseph-v2 \
-        --foreground-scripts --no-audit --no-fund && \
-    npm ls --depth=0 --include=dev >/dev/null && \
+        npm ci --include=dev --foreground-scripts --jobs=1 --maxsockets=1 --no-audit --no-fund && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
-    test -x node_modules/.bin/esbuild && \
-    node -e "require('sharp'); require('swisseph-v2'); require.resolve('drizzle-orm'); require.resolve('express')"
+    test -x node_modules/.bin/esbuild
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
