@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, Compass, MapPin, Search, Sparkles, Video } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Compass, MapPin, Search, Sparkles, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,10 +9,52 @@ import PageSeo from "@/components/PageSeo";
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
 import { BecomePanditBanner, BecomePanditStrip } from "@/components/pandit/BecomePanditBanner";
 import { trackDiscoveryEvent } from "@/lib/analytics";
+import himalayanTempleImage from "@/assets/images/himalayan-trek.jpg";
+import holyRiverImage from "@/assets/images/holy-river.jpg";
+import jyotirlingaImage from "@/assets/images/jyotirlinga.jpg";
+import shaktiPeethaImage from "@/assets/images/shakti-peetha.jpg";
+import southTempleImage from "@/assets/images/south-temple.jpg";
+import templeHeroImage from "@/assets/images/temple-hero.jpg";
+import yatraPilgrimsImage from "@/assets/images/yatra-pilgrims.jpg";
 
 type City = { id: number; name: string; slug: string; count: number };
 type State = { id: number; name: string; code: string; slug: string; count: number; stateWideCount: number; cityCount: number; cities: City[] };
 type Summary = { states: State[]; facets: { services: string[]; languages: string[]; traditions: string[] } };
+
+const METRO_CITIES = new Set([
+  "new delhi", "mumbai", "bengaluru", "bangalore", "kolkata", "chennai",
+  "hyderabad", "pune", "ahmedabad", "jaipur", "lucknow", "surat",
+]);
+
+const STATE_PRESENTATION: Record<string, { localName: string; image: string; position?: string }> = {
+  "andhra pradesh": { localName: "ఆంధ్ర ప్రదేశ్", image: southTempleImage },
+  "assam": { localName: "অসম", image: shaktiPeethaImage },
+  "bihar": { localName: "बिहार", image: holyRiverImage },
+  "chhattisgarh": { localName: "छत्तीसगढ़", image: shaktiPeethaImage },
+  "delhi": { localName: "दिल्ली", image: templeHeroImage },
+  "goa": { localName: "गोवा", image: templeHeroImage },
+  "gujarat": { localName: "ગુજરાત", image: jyotirlingaImage },
+  "haryana": { localName: "हरियाणा", image: yatraPilgrimsImage },
+  "himachal pradesh": { localName: "हिमाचल प्रदेश", image: himalayanTempleImage },
+  "jharkhand": { localName: "झारखण्ड", image: jyotirlingaImage },
+  "karnataka": { localName: "ಕರ್ನಾಟಕ", image: southTempleImage },
+  "kerala": { localName: "കേരളം", image: southTempleImage },
+  "madhya pradesh": { localName: "मध्य प्रदेश", image: jyotirlingaImage },
+  "maharashtra": { localName: "महाराष्ट्र", image: jyotirlingaImage },
+  "odisha": { localName: "ଓଡ଼ିଶା", image: templeHeroImage },
+  "punjab": { localName: "ਪੰਜਾਬ", image: yatraPilgrimsImage },
+  "rajasthan": { localName: "राजस्थान", image: templeHeroImage },
+  "tamil nadu": { localName: "தமிழ்நாடு", image: southTempleImage },
+  "telangana": { localName: "తెలంగాణ", image: southTempleImage },
+  "uttar pradesh": { localName: "उत्तर प्रदेश", image: holyRiverImage },
+  "uttarakhand": { localName: "उत्तराखण्ड", image: himalayanTempleImage, position: "center 58%" },
+  "west bengal": { localName: "পশ্চিমবঙ্গ", image: shaktiPeethaImage },
+};
+
+const presentationFor = (state: State) => STATE_PRESENTATION[state.name.toLowerCase()] ?? {
+  localName: state.name,
+  image: templeHeroImage,
+};
 
 const linkFor = (state: State, city?: City, service?: string, mode?: "online" | "offline", context = "") => {
   const q = new URLSearchParams(context);
@@ -66,6 +108,16 @@ export default function PanditDirectory() {
 }
 
 function StateChooser({ state, service, preferredMode, context, onNavigate }: { state: State; service?: string; preferredMode?: "online" | "offline"; context: string; onNavigate: (path: string) => void }) {
+  const [showAllCities, setShowAllCities] = useState(false);
+  const metroCities = state.cities.filter((city) => METRO_CITIES.has(city.name.toLowerCase()));
+  const otherCities = state.cities
+    .filter((city) => !METRO_CITIES.has(city.name.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
+  const visibleOtherCities = showAllCities ? otherCities : otherCities.slice(0, 9);
+  const cityGroups = [
+    ...(metroCities.length ? [{ title: "Major metro cities", cities: metroCities }] : []),
+    { title: metroCities.length ? "Other cities" : "Cities", cities: visibleOtherCities },
+  ];
   const stateWide = new URLSearchParams(context);
   stateWide.set("stateId", String(state.id));
   stateWide.set("state", state.slug);
@@ -78,12 +130,19 @@ function StateChooser({ state, service, preferredMode, context, onNavigate }: { 
       <p className="mt-8 text-[11px] uppercase tracking-[.24em] text-[#9A7218]">{state.code} · {state.count} Pandits based here</p>
       <h1 className="mt-2 font-serif text-4xl font-semibold text-[#6D2B35]">Choose a City in {state.name}</h1>
       {service ? <p className="mt-3 text-sm text-[#5a4a3a]/70">Service: <strong>{service}</strong></p> : null}
-      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {state.cities.map(city => <button key={city.id} onClick={() => { trackDiscoveryEvent("city_selected", { state_id: state.id, city_id: city.id, has_service: !!service }); onNavigate(linkFor(state, city, service, preferredMode, context)); }} className="rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 text-left transition-transform hover:-translate-y-0.5">
-          <span className="flex items-center justify-between"><strong className="font-serif text-xl text-[#6D2B35]">{city.name}</strong><MapPin className="h-5 w-5 text-[#9A7218]" /></span>
-          <span className="mt-2 block text-sm text-[#5a4a3a]/70">{city.count} eligible {city.count === 1 ? "Pandit" : "Pandits"} based here</span>
-        </button>)}
-      </div>
+      {cityGroups.map((group) => <section key={group.title} className="mt-8">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[.2em] text-[#9A7218]">{group.title}</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {group.cities.map(city => <button key={city.id} onClick={() => { trackDiscoveryEvent("city_selected", { state_id: state.id, city_id: city.id, has_service: !!service }); onNavigate(linkFor(state, city, service, preferredMode, context)); }} className="group rounded-xl border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#9A7218]/50 hover:shadow-md">
+            <span className="flex items-center justify-between"><strong className="font-serif text-xl text-[#6D2B35]">{city.name}</strong><MapPin className="h-5 w-5 text-[#9A7218] transition-transform group-hover:scale-110" /></span>
+            <span className="mt-2 block text-sm text-[#5a4a3a]/70">{city.count} eligible {city.count === 1 ? "Pandit" : "Pandits"} based here</span>
+          </button>)}
+        </div>
+      </section>)}
+      {otherCities.length > 9 ? <button type="button" onClick={() => setShowAllCities((value) => !value)} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#9A7218]/30 bg-[#FBF7EE] px-5 text-sm font-semibold text-[#6D2B35] hover:bg-[#F2E8D5]" aria-expanded={showAllCities}>
+        {showAllCities ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        {showAllCities ? "Show fewer cities" : `More cities (${otherCities.length - 9})`}
+      </button> : null}
       <div className="mt-8 rounded-md border border-[#D4AF37]/30 bg-[#6D2B35] p-5 text-[#FBF7EE] sm:flex sm:items-center sm:justify-between">
         <div><h2 className="font-serif text-xl">Browse across {state.name}</h2><p className="mt-1 text-sm text-[#FBF7EE]/70">{state.stateWideCount} {state.stateWideCount === 1 ? "Pandit has" : "Pandits have"} State-wide or national reach.</p></div>
         <Button disabled={state.stateWideCount === 0} onClick={() => { trackDiscoveryEvent("state_wide_selected", { state_id: state.id, has_service: !!service }); onNavigate(`/book-pandit-online?${stateWide}`); }} className="mt-4 bg-[#E9C96A] text-[#6D2B35] hover:bg-[#F4D983] sm:mt-0">View State-wide</Button>
@@ -104,6 +163,9 @@ function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, co
     ]).slice(0, 6);
   }, [data, term, selectedService, preferredMode, context]);
   const nearby = () => { const params = new URLSearchParams(context); params.set("mode", "nearMe"); trackDiscoveryEvent("near_me_selected"); onNavigate(`/book-pandit-online?${params}`); };
+  const popularMetros = useMemo(() => data?.states.flatMap((state) =>
+    state.cities.filter((city) => METRO_CITIES.has(city.name.toLowerCase())).map((city) => ({ state, city }))
+  ).slice(0, 12) ?? [], [data]);
   return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
     <PageSeo title="Find a Vedic Pandit | Vedic Tatva" description="Find an eligible Vedic pandit by service, state, city, or your location." canonical="/book-pandit-online" />
     <section className="relative overflow-hidden bg-[#6D2B35] text-[#FBF7EE]">
@@ -123,13 +185,30 @@ function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, co
     </section>
     <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
       {date ? <div className="mb-6 rounded-md border border-[#D4AF37]/40 bg-[#FBF7EE] p-4 text-sm text-[#6D2B35]" data-testid="muhurat-location-prompt"><strong>Selected auspicious window:</strong> {date}{muhurat ? ` · ${muhurat}` : ""}. Choose a location to find Pandits eligible for this ritual. Calendar availability will be confirmed during booking.</div> : null}
-      <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">A considered beginning</p><h2 className="mt-1 text-3xl font-semibold text-[#6D2B35]">Browse by State</h2>{selectedService ? <p className="mt-2 text-sm text-[#5a4a3a]/70">Showing locations for <strong>{selectedService}</strong> <button className="ml-2 underline" onClick={() => onNavigate("/book-pandit-online")}>Clear</button></p> : null}</div><span className="hidden text-sm text-[#5a4a3a]/60 sm:block">Counts reflect eligible pandits</span></div>
+      {popularMetros.length ? <section className="mb-10">
+        <p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">Begin with a major city</p>
+        <h2 className="mt-1 text-2xl font-semibold text-[#6D2B35]">Popular metro cities</h2>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-2" data-lenis-prevent>
+          {popularMetros.map(({ state, city }) => <button key={city.id} onClick={() => onNavigate(linkFor(state, city, selectedService, preferredMode, context))} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#FBF7EE] px-4 text-sm font-semibold text-[#6D2B35] shadow-sm hover:border-[#9A7218] hover:bg-[#F2E8D5]"><MapPin className="h-4 w-4 text-[#9A7218]" />{city.name}</button>)}
+        </div>
+      </section> : null}
+      <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">Sacred traditions across India</p><h2 className="mt-1 text-3xl font-semibold text-[#6D2B35]">Browse by State</h2>{selectedService ? <p className="mt-2 text-sm text-[#5a4a3a]/70">Showing locations for <strong>{selectedService}</strong> <button className="ml-2 underline" onClick={() => onNavigate("/book-pandit-online")}>Clear</button></p> : null}</div><span className="hidden text-sm text-[#5a4a3a]/60 sm:block">Counts reflect eligible pandits</span></div>
       {isLoading ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-32 bg-[#E9DEC9]" />)}</div> :
       isError ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center"><p className="font-serif text-xl text-[#6D2B35]">The directory is taking a moment.</p><Button onClick={retry} className="mt-4 bg-[#6D2B35]">Try again</Button></div> :
       data?.states.length === 0 ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center">No eligible locations are available yet.</div> :
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{data?.states.map((s) => <div key={s.id} className="rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 transition-transform hover:-translate-y-0.5">
-        <button onClick={() => { trackDiscoveryEvent("state_selected", { state_id: s.id, has_service: !!selectedService }); onNavigate(linkFor(s, undefined, selectedService, preferredMode, context)); }} className="w-full text-left"><div className="flex items-start justify-between"><div><p className="text-xs uppercase tracking-[.2em] text-[#9A7218]">{s.code}</p><h3 className="mt-1 text-xl font-semibold text-[#6D2B35]">{s.name}</h3></div><Building2 className="h-5 w-5 text-[#9A7218]" /></div><p className="mt-4 text-sm text-[#5a4a3a]/70">{s.count} eligible pandits · {s.cityCount} cities</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#6D2B35]">Explore state <ArrowRight className="h-3.5 w-3.5" /></span></button>
-      </div>)}</div>}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{data?.states.map((s) => {
+        const presentation = presentationFor(s);
+        return <button key={s.id} onClick={() => { trackDiscoveryEvent("state_selected", { state_id: s.id, has_service: !!selectedService }); onNavigate(linkFor(s, undefined, selectedService, preferredMode, context)); }} className="group relative min-h-48 overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-[#3C171D] text-left shadow-md transition-all hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2">
+          <img src={presentation.image} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-80 transition duration-500 group-hover:scale-105" style={{ objectPosition: presentation.position }} />
+          <span className="absolute inset-0 bg-gradient-to-t from-[#210A0E] via-[#3C171D]/55 to-transparent" />
+          <span className="relative flex min-h-48 flex-col justify-end p-5 text-[#FFF9EC]">
+            <span className="text-[10px] font-semibold uppercase tracking-[.24em] text-[#F1D27B]">{s.code} · {s.cityCount} cities</span>
+            <span className="mt-1 block text-2xl font-semibold leading-tight">{s.name}</span>
+            <span className="mt-0.5 block text-base text-[#F8E7B2]">{presentation.localName}</span>
+            <span className="mt-3 flex items-center justify-between text-xs"><span>{s.count} eligible pandits</span><span className="inline-flex items-center gap-1 font-semibold text-[#F1D27B]">Explore <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" /></span></span>
+          </span>
+        </button>;
+      })}</div>}
       {data?.facets.services.length ? <div className="mt-12 rounded-md bg-[#6D2B35] p-6 text-[#FBF7EE]"><p className="text-[11px] uppercase tracking-[.24em] text-[#E9C96A]">Start with a service</p><h2 className="mt-1 text-2xl font-semibold">What brings you here?</h2><div className="mt-4 flex flex-wrap gap-2">{data.facets.services.slice(0, showAllServices ? undefined : 8).map(s => <button key={s} onClick={() => { trackDiscoveryEvent("service_selected", { service: s }); onNavigate(`/book-pandit-online?service=${encodeURIComponent(s)}`); }} className="rounded-full border border-[#E9C96A]/45 px-3 py-1.5 text-sm hover:bg-[#E9C96A] hover:text-[#6D2B35]">{s}</button>)}</div>{data.facets.services.length > 8 ? <button className="mt-4 text-sm font-semibold text-[#E9C96A] underline underline-offset-4" onClick={() => setShowAllServices(value => !value)}>{showAllServices ? "Show fewer services" : `View all ${data.facets.services.length} services`}</button> : null}</div> : null}
       <div className="mt-8 grid gap-3 sm:grid-cols-2"><Link href="/online-puja-booking?mode=online" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><Video className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Need a ritual from anywhere?</b><small className="text-[#5a4a3a]/65">Explore online Puja guides</small></span></Link><Link href="/pind-daan-booking" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><MapPin className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Sacred ancestor rites</b><small className="text-[#5a4a3a]/65">Pind daan and tarpan services</small></span></Link></div>
     </section><BecomePanditBanner />
