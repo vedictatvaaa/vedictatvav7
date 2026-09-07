@@ -102,7 +102,7 @@ import { canonicalPanditRedirectTarget, panditRedirectTarget } from "./pandit-ro
 import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
-import { sendEmail, sendEmailAsync, buildPanditRejectionEmail, sendAbandonedCartNudge } from "./email";
+import { sendEmail, sendEmailAsync, buildPanditRejectionEmail, buildPanditApplicationReceivedEmail, sendAbandonedCartNudge } from "./email";
 import { buildPanditApprovalEmail, buildPanditTemporaryPasswordEmail } from "./pandit-account-emails";
 import {
   enqueueWelcomeSeries, dispatchBroadcast, recordUnsubscribe, verifyUnsubscribeToken,
@@ -9336,6 +9336,22 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         }
         return created;
       });
+      try {
+        await enqueueTransactionalEmail({
+          eventKey: `pandit_application_received:${application.id}`,
+          kind: "pandit_application_received",
+          relatedType: "pandit_application",
+          relatedId: application.id,
+          recipientName: application.fullName,
+          message: buildPanditApplicationReceivedEmail({
+            to: application.email,
+            fullName: application.fullName,
+            city: application.city,
+          }),
+        });
+      } catch (emailError: any) {
+        console.error("[pandit-application] confirmation email queue failed:", emailError?.message || emailError);
+      }
       res.status(201).json({
         success: true,
         message: "Application received. Our team will review and contact you within 48 hours.",
@@ -9613,18 +9629,25 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       let approvalEmailSent = false;
       if (outcome.kind === "created" && claimed.email) {
         try {
-          const msg = buildPanditApprovalEmail({
+           const msg = buildPanditApprovalEmail({
             to: claimed.email,
             fullName: claimed.fullName,
             city: claimed.city,
             temporaryPassword,
             adminNote: note,
           });
-          const delivery = await sendEmail(msg);
-          approvalEmailSent = delivery.sent;
-          if (delivery.sent) console.log(`[email] Approval notice sent to ${claimed.email} (application ${claimed.id})`);
+           const queued = await enqueueTransactionalEmail({
+             eventKey: `pandit_application_approved:${claimed.id}`,
+             kind: "pandit_application_approved",
+             relatedType: "pandit_application",
+             relatedId: claimed.id,
+             recipientName: claimed.fullName,
+             message: msg,
+           });
+           approvalEmailSent = queued.created || queued.row.status === "queued" || queued.row.status === "retrying";
+           if (approvalEmailSent) console.log(`[email] Approval notice queued for ${claimed.email} (application ${claimed.id})`);
         } catch (error) {
-          console.error("[email] approval send failed:", error);
+           console.error("[email] approval queue failed:", error);
         }
       }
 
@@ -9742,11 +9765,14 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           fullName: claimed.fullName,
           adminNote: note,
         });
-        sendEmail(msg)
-          .then((r) => {
-            if (r.sent) console.log(`[email] Rejection notice sent to ${claimed.email} (application ${claimed.id})`);
-          })
-          .catch((e) => console.error("[email] rejection send failed:", e));
+        enqueueTransactionalEmail({
+          eventKey: `pandit_application_rejected:${claimed.id}`,
+          kind: "pandit_application_rejected",
+          relatedType: "pandit_application",
+          relatedId: claimed.id,
+          recipientName: claimed.fullName,
+          message: msg,
+        }).catch((e) => console.error("[email] rejection queue failed:", e));
       }
 
       res.json({ success: true, application: claimed });
