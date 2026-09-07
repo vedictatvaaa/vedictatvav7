@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { sendSms, sendWhatsApp } from "./msg91";
-import { sendEmail, buildBookingNotificationEmail } from "../email";
+import { buildBookingNotificationEmail, buildCustomerBookingStatusEmail } from "../email";
+import { enqueueTransactionalEmail } from "../email-outbox";
 import type { PujaBooking } from "@shared/schema";
 import { pujaBookingDeliveries, pujaBookingEvents } from "@shared/schema";
 import { db } from "../db";
@@ -175,13 +176,14 @@ export async function notifyPujaBooking(booking: PujaBooking): Promise<void> {
         customerPhone,
         location: booking.location,
       });
-      sendEmail(emailMsg)
-        .then(async (r) => {
-          const result = { ok: r.sent, reason: r.error };
-          log("email", "pandit", result);
-          await recordDelivery("pandit", booking.panditId, "email", result);
-        })
-        .catch(async (e) => recordDelivery("pandit", booking.panditId, "email", { ok: false, reason: safeDeliveryError(e) }));
+      await enqueueTransactionalEmail({
+        eventKey: `puja_booking:${booking.id}:${eventType}:pandit:email`,
+        kind: `puja_${eventType}_pandit`,
+        relatedType: "puja_booking",
+        relatedId: booking.id,
+        recipientName: panditName,
+        message: emailMsg,
+      });
     } else {
       console.log("[notify] no pandit email available; skipping pandit email");
       await recordDelivery("pandit", booking.panditId, "email", { ok: false, reason: "Email recipient or accepted template not configured" });
@@ -213,9 +215,28 @@ export async function notifyPujaBooking(booking: PujaBooking): Promise<void> {
       console.log("[notify] no customer phone available; skipping customer alert");
       await recordDelivery("customer", booking.userId, "whatsapp", { ok: false, reason: "WhatsApp recipient not configured" });
     }
-    // The legacy adapter has no customer-email template. Record this honestly
-    // rather than leaving a queued delivery that can never be processed.
-    await recordDelivery("customer", booking.userId, "email", { ok: false, reason: "Customer email template not configured" });
+    if (booking.contactEmail) {
+      const customerStatus = contactReleased ? "accepted" : "requested";
+      await enqueueTransactionalEmail({
+        eventKey: `puja_booking:${booking.id}:${eventType}:customer:email`,
+        kind: `puja_booking_${customerStatus}`,
+        relatedType: "puja_booking",
+        relatedId: booking.id,
+        recipientName: customerName,
+        message: buildCustomerBookingStatusEmail({
+          to: booking.contactEmail,
+          customerName,
+          panditName: contactReleased ? panditName : null,
+          pujaName,
+          pujaDate,
+          timeSlot,
+          mode,
+          status: customerStatus,
+        }),
+      });
+    } else {
+      await recordDelivery("customer", booking.userId, "email", { ok: false, reason: "Customer email recipient not configured" });
+    }
   } catch (err) {
     console.error("[notify] notifyPujaBooking error", err);
   }
@@ -291,13 +312,20 @@ export async function notifyPujaSamagri(
     }),
     deliver("email", async () => {
       if (!booking.contactEmail) return { ok: false, reason: "Email recipient not configured" };
-      const result = await sendEmail({
-        to: booking.contactEmail,
-        subject: `${pujaName} samagri list — version ${version}`,
-        text: `Namaste ${customerName} ji,\n\nPanditji has sent version ${version} of the samagri list for ${pujaName}:\n\n${itemLines}\n\nPlease open your Vedic Tatva booking for the complete record.`,
-        html: `<p>Namaste ${escapeHtml(customerName)} ji,</p><p>Panditji has sent version ${version} of the samagri list for <strong>${escapeHtml(pujaName)}</strong>.</p><pre>${escapeHtml(itemLines)}</pre><p>Please open your Vedic Tatva booking for the complete record.</p>`,
+      await enqueueTransactionalEmail({
+        eventKey: `${eventKey}:email`,
+        kind: eventType,
+        relatedType: "puja_booking",
+        relatedId: booking.id,
+        recipientName: customerName,
+        message: {
+          to: booking.contactEmail,
+          subject: `${pujaName} samagri list — version ${version}`,
+          text: `Namaste ${customerName} ji,\n\nPanditji has sent version ${version} of the samagri list for ${pujaName}:\n\n${itemLines}\n\nPlease open your Vedic Tatva booking for the complete record.`,
+          html: `<p>Namaste ${escapeHtml(customerName)} ji,</p><p>Panditji has sent version ${version} of the samagri list for <strong>${escapeHtml(pujaName)}</strong>.</p><pre>${escapeHtml(itemLines)}</pre><p>Please open your Vedic Tatva booking for the complete record.</p>`,
+        },
       });
-      return { ok: result.sent, reason: result.error };
+      return { ok: true };
     }),
   ]);
 }

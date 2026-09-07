@@ -95,7 +95,7 @@ function QuickTestBar({ adminToken }: { adminToken?: string }) {
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" />
             <span className="font-semibold text-primary text-sm">Quick Channel Test</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">— verify SendGrid &amp; MSG91 with one click</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">— verify Hostinger SMTP &amp; MSG91 with one click</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {anyResult && !open && (
@@ -204,7 +204,7 @@ function QuickTestBar({ adminToken }: { adminToken?: string }) {
             )}
 
             <p className="text-[11px] text-muted-foreground">
-              Sends a sample &ldquo;new puja booking&rdquo; notification to the numbers above using your configured MSG91 and SendGrid credentials.
+              Sends a sample &ldquo;new puja booking&rdquo; notification using your configured MSG91 channels and the Hostinger transactional email outbox.
               Results auto-clear after 30 seconds.
             </p>
           </div>
@@ -229,8 +229,154 @@ interface NotificationsStatus {
     whatsappTemplateLang: string;
     whatsappTemplateNamespace: boolean;
   };
-  sendgrid: { apiKey: boolean; mailFrom: string; mailFromName: string };
+  hostinger: {
+    provider: "hostinger-smtp";
+    configured: boolean;
+    host: string | null;
+    port: number;
+    secure: boolean;
+    from: string;
+    username: string | null;
+    passwordConfigured: boolean;
+  };
+  outbox: { counts: Record<string, number>; oldestQueuedAt: string | null };
   ready: { sms: boolean; whatsapp: boolean; email: boolean };
+}
+
+type OutboxRow = {
+  id: number;
+  kind: string;
+  recipientEmail: string;
+  subject: string;
+  status: string;
+  attemptCount: number;
+  lastError?: string | null;
+  sentAt?: string | null;
+  createdAt?: string | null;
+};
+
+function TransactionalEmailOutbox({ adminToken }: { adminToken?: string }) {
+  const { toast } = useToast();
+  const [rows, setRows] = useState<OutboxRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState("all");
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/email-outbox?limit=25&status=${encodeURIComponent(status)}`, {
+        headers: { "x-admin-token": adminToken || "" },
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.message || "Unable to load email queue");
+      setRows(json.rows || []);
+    } catch (error: any) {
+      toast({ title: "Email queue unavailable", description: error?.message || String(error), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [status, adminToken]);
+
+  const retry = async (id: number) => {
+    setRetryingId(id);
+    try {
+      const response = await fetch(`/api/admin/email-outbox/${id}/retry`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+      });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.message || "Retry failed");
+      toast({ title: "Email queued for retry" });
+      await load();
+    } catch (error: any) {
+      toast({ title: "Retry failed", description: error?.message || String(error), variant: "destructive" });
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const statusTone = (value: string) =>
+    value === "sent" ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+    : value === "failed" ? "bg-red-50 text-red-800 border-red-200"
+    : value === "processing" ? "bg-blue-50 text-blue-800 border-blue-200"
+    : "bg-amber-50 text-amber-800 border-amber-200";
+
+  return (
+    <Card data-testid="transactional-email-outbox">
+      <CardHeader className="flex-row items-start justify-between gap-3">
+        <div>
+          <CardTitle className="text-base">Transactional email queue</CardTitle>
+          <CardDescription>Recent delivery attempts. Recipient addresses and errors are sanitized.</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="queued">Queued</SelectItem>
+              <SelectItem value="retrying">Retrying</SelectItem>
+              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-28 w-full" /> : rows.length === 0 ? (
+          <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+            No transactional emails match this filter.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Email</th>
+                  <th className="px-3 py-2">Recipient</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Attempts</th>
+                  <th className="px-3 py-2">Created</th>
+                  <th className="px-3 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-t align-top">
+                    <td className="px-3 py-3">
+                      <div className="font-medium text-foreground">{row.subject}</div>
+                      <div className="text-xs text-muted-foreground">{row.kind}</div>
+                      {row.lastError && <div className="mt-1 max-w-md text-xs text-red-700">{row.lastError}</div>}
+                    </td>
+                    <td className="px-3 py-3 font-mono text-xs">{row.recipientEmail}</td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${statusTone(row.status)}`}>{row.status}</span>
+                    </td>
+                    <td className="px-3 py-3">{row.attemptCount}</td>
+                    <td className="px-3 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                      {row.createdAt ? new Date(row.createdAt).toLocaleString("en-IN") : "—"}
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      {row.status === "failed" && (
+                        <Button size="sm" variant="outline" onClick={() => retry(row.id)} disabled={retryingId === row.id}>
+                          {retryingId === row.id ? "Queuing…" : "Retry"}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function NotificationsTab({ adminToken }: { adminToken?: string }) {
@@ -294,7 +440,7 @@ function NotificationsTab({ adminToken }: { adminToken?: string }) {
           <h2 className="text-2xl font-bold text-primary">Booking Notifications</h2>
           <p className="text-sm text-muted-foreground mt-1">
             When a yajman books a puja, the assigned pandit is automatically notified via SMS, WhatsApp and Email.
-            Configure MSG91 (for SMS + WhatsApp) and SendGrid (for Email) below.
+             Configure MSG91 for SMS/WhatsApp and Hostinger SMTP for transactional email below.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-status">
@@ -319,6 +465,8 @@ function NotificationsTab({ adminToken }: { adminToken?: string }) {
               <ChannelBadge label="Email" ok={data.ready.email} />
             </CardContent>
           </Card>
+
+          <TransactionalEmailOutbox adminToken={adminToken} />
 
           <Card>
             <CardHeader>
@@ -350,24 +498,30 @@ function NotificationsTab({ adminToken }: { adminToken?: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Mail className="w-4 h-4" /> SendGrid (Email)</CardTitle>
-              <CardDescription>Used for the email notification sent to the assigned pandit.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2"><Mail className="w-4 h-4" /> Hostinger transactional email</CardTitle>
+              <CardDescription>All customer, Pandit, booking and recovery emails are queued durably and sent from your Hostinger mailbox.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              <StatusRow label="SENDGRID_API_KEY" ok={data.sendgrid.apiKey} hint="Required to send emails. Without it, emails are logged to the server console only." />
+              <StatusRow label="SMTP_HOST" ok={Boolean(data.hostinger.host)} hint="smtp.hostinger.com" />
+              <StatusRow label="SMTP_USER" ok={Boolean(data.hostinger.username)} hint="Hostinger mailbox username." />
+              <StatusRow label="SMTP_PASSWORD" ok={data.hostinger.passwordConfigured} hint="Mailbox password stored securely in Replit Secrets. It is never displayed here." />
               <div className="flex items-start justify-between gap-3 py-2 border-b border-muted last:border-b-0">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-foreground">MAIL_FROM</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">Sender email address (must be verified in SendGrid).</div>
+                  <div className="text-sm font-medium text-foreground">SMTP connection</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">SSL/TLS is required on port 465.</div>
                 </div>
-                <div className="text-xs font-mono px-2 py-1 rounded bg-muted text-muted-foreground">{data.sendgrid.mailFrom}</div>
+                <div className="text-xs font-mono px-2 py-1 rounded bg-muted text-muted-foreground">
+                  {data.hostinger.host || "not set"}:{data.hostinger.port} · {data.hostinger.secure ? "SSL/TLS" : "STARTTLS"}
+                </div>
               </div>
               <div className="flex items-start justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-foreground">MAIL_FROM_NAME</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">Friendly sender name shown in inboxes.</div>
+                  <div className="text-sm font-medium text-foreground">Transactional outbox</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Queued mail is retried automatically after temporary delivery failures.</div>
                 </div>
-                <div className="text-xs font-mono px-2 py-1 rounded bg-muted text-muted-foreground">{data.sendgrid.mailFromName}</div>
+                <div className="text-xs font-mono px-2 py-1 rounded bg-muted text-muted-foreground">
+                  {data.outbox.counts.queued || 0} queued · {data.outbox.counts.retrying || 0} retrying · {data.outbox.counts.failed || 0} failed
+                </div>
               </div>
             </CardContent>
           </Card>

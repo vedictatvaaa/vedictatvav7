@@ -8,7 +8,7 @@
 
 export type IntegrationKey =
   | "razorpay" | "shiprocket" | "openai" | "google_merchant"
-  | "msg91" | "sendgrid" | "google_oauth";
+  | "msg91" | "hostinger" | "google_oauth";
 
 export interface IntegrationInfo {
   key: IntegrationKey;
@@ -75,13 +75,13 @@ export function getIntegrationsStatus(): IntegrationInfo[] {
       docs: "https://docs.msg91.com/",
     },
     {
-      key: "sendgrid",
-      label: "SendGrid (Email)",
+      key: "hostinger",
+      label: "Hostinger SMTP (Email)",
       category: "Messaging",
-      envVars: ["SENDGRID_API_KEY"],
-      configured: Boolean(process.env.SENDGRID_API_KEY),
-      maskedIdentifier: mask(process.env.SENDGRID_API_KEY),
-      docs: "https://docs.sendgrid.com/",
+      envVars: ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "MAIL_FROM"],
+      configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && (process.env.SMTP_PASSWORD || process.env.SMTP_PASS)),
+      maskedIdentifier: mask(process.env.SMTP_USER),
+      docs: "https://support.hostinger.com/en/articles/1583217-how-to-find-email-configuration-details",
     },
     {
       key: "google_oauth",
@@ -128,10 +128,10 @@ export async function pingIntegration(key: IntegrationKey): Promise<{ ok: boolea
         const res = await timedFetch("https://api.openai.com/v1/models?limit=1", { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } });
         return { ok: res.ok, message: res.ok ? "Reachable" : `HTTP ${res.status}` };
       }
-      case "sendgrid": {
-        if (!process.env.SENDGRID_API_KEY) return { ok: false, message: "Not configured" };
-        const res = await timedFetch("https://api.sendgrid.com/v3/scopes", { headers: { Authorization: `Bearer ${process.env.SENDGRID_API_KEY}` } });
-        return { ok: res.ok, message: res.ok ? "Reachable" : `HTTP ${res.status}` };
+      case "hostinger": {
+        const { verifyEmailTransport } = await import("../email");
+        const result = await verifyEmailTransport();
+        return { ok: result.ok, message: result.ok ? "Authenticated over SSL/TLS" : result.error || "Not configured" };
       }
       case "msg91": {
         if (!process.env.MSG91_AUTH_KEY) return { ok: false, message: "Not configured" };

@@ -9,6 +9,7 @@ import { createServer } from "http";
 import { spawn } from "child_process";
 import { mkdirSync, readdirSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
+import { startEmailOutboxWorker } from "./email-outbox";
 
 const app = express();
 const httpServer = createServer(app);
@@ -208,6 +209,7 @@ app.use((req, res, next) => {
   const { seedSeoPages } = await import("./seo-seed");
   await seedSeoPages();
   await registerRoutes(httpServer, app);
+  startEmailOutboxWorker();
 
   // One-shot pandit slug backfill — guarantees every /p/<slug> URL exists
   // and is unique. Idempotent + cheap (only touches rows missing a slug or

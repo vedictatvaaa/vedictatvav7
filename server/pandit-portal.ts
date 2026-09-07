@@ -29,6 +29,7 @@ import {
 } from "./pandit-dashboard";
 import { buildPanditPasswordResetEmail } from "./pandit-account-emails";
 import { enqueueTransactionalEmail } from "./email-outbox";
+import { buildCustomerBookingStatusEmail } from "./email";
 import { candidatePanditBookingProjection, assignedPanditBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
@@ -690,6 +691,25 @@ export function registerPanditPortalRoutes(app: Express) {
           meta: { bookingId: id },
         });
       } catch {}
+      if (booking.contactEmail) {
+        await enqueueTransactionalEmail({
+          eventKey: `puja_booking:${id}:declined:customer:email`,
+          kind: "puja_booking_declined",
+          relatedType: "puja_booking",
+          relatedId: id,
+          recipientName: booking.contactName,
+          message: buildCustomerBookingStatusEmail({
+            to: booking.contactEmail,
+            customerName: booking.contactName,
+            pujaName: booking.pujaType,
+            pujaDate: booking.date,
+            timeSlot: booking.timeSlot || "",
+            mode: booking.mode || "offline",
+            status: "declined",
+            message: reason,
+          }),
+        });
+      }
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ error: e?.message }); }
   });
@@ -719,6 +739,25 @@ export function registerPanditPortalRoutes(app: Express) {
           meta: { bookingId: id },
         });
       } catch {}
+      if (booking.contactEmail) {
+        await enqueueTransactionalEmail({
+          eventKey: `puja_booking:${id}:completed:customer:email`,
+          kind: "puja_booking_completed",
+          relatedType: "puja_booking",
+          relatedId: id,
+          recipientName: booking.contactName,
+          message: buildCustomerBookingStatusEmail({
+            to: booking.contactEmail,
+            customerName: booking.contactName,
+            panditName: pandit?.name,
+            pujaName: booking.pujaType,
+            pujaDate: booking.date,
+            timeSlot: booking.timeSlot || "",
+            mode: booking.mode || "offline",
+            status: "completed",
+          }),
+        });
+      }
       // Award loyalty points for completed puja
       if (booking.userId) {
         try {

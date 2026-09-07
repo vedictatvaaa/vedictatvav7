@@ -258,6 +258,6 @@ export async function retryEmailOutbox(id: number): Promise<EmailOutbox | undefi
     lockedAt: null,
     lastError: null,
     updatedAt: new Date(),
-  }).where(eq(emailOutbox.id, id)).returning();
+  }).where(and(eq(emailOutbox.id, id), eq(emailOutbox.status, "failed"))).returning();
   return row;
 }

@@ -328,7 +328,7 @@ export interface IStorage {
   getNotificationSettings(): Promise<NotificationSettings>;
   updateNotificationSettings(patch: Partial<NotificationSettings>): Promise<NotificationSettings>;
 
-  // Abandoned cart capture for SendGrid recovery nudges.
+  // Abandoned cart capture for Hostinger SMTP recovery nudges.
   getAbandonedCarts(): Promise<AbandonedCart[]>;
   getAbandonedCartByEmail(email: string): Promise<AbandonedCart | undefined>;
   upsertAbandonedCart(data: InsertAbandonedCart): Promise<AbandonedCart>;

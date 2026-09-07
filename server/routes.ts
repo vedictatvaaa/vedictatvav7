@@ -116,7 +116,7 @@ import { assertPackagePriceCompliant, assertRateCompliant, authoritativeBookingP
 import { customerBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
-import { enqueueTransactionalEmail, getEmailOutboxSummary, listEmailOutbox, retryEmailOutbox } from "./email-outbox";
+import { enqueueTransactionalEmail, getEmailOutboxSummary, listEmailOutbox, processEmailOutboxOnce, retryEmailOutbox } from "./email-outbox";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
 // Strips dangerous tags (script/style/iframe/object/embed/link/meta), all on*-event attributes,
@@ -657,7 +657,7 @@ export async function registerRoutes(
     message: { message: "Too many login attempts. Please try again in 15 minutes." },
   });
   // Per-IP cap on password-reset requests — prevents email-bombing /
-  // SendGrid quota exhaustion.
+  // Hostinger mailbox abuse / email-bombing.
   const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 5,
@@ -865,7 +865,7 @@ export async function registerRoutes(
     }
 
     checks.razorpay = { ok: Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) };
-    checks.email = { ok: Boolean(process.env.SENDGRID_API_KEY || process.env.SMTP_PASS) };
+    checks.email = { ok: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && (process.env.SMTP_PASSWORD || process.env.SMTP_PASS)) };
     checks.openai = { ok: Boolean(process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY) };
 
     res.status(ok ? 200 : 503).json({
@@ -907,7 +907,7 @@ export async function registerRoutes(
       gemini:        { ok: !!e.GEMINI_API_KEY, vars: ["GEMINI_API_KEY"] },
       mistral:       { ok: !!e.MISTRAL_API_KEY, vars: ["MISTRAL_API_KEY"] },
       openrouter:    { ok: !!e.OPENROUTER_API_KEY, vars: ["OPENROUTER_API_KEY"] },
-      sendgrid:      { ok: !!e.SENDGRID_API_KEY, vars: ["SENDGRID_API_KEY"] },
+      hostinger:     { ok: !!(e.SMTP_HOST && e.SMTP_USER && (e.SMTP_PASSWORD || e.SMTP_PASS)), vars: ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASSWORD", "MAIL_FROM"] },
       msg91:         { ok: !!e.MSG91_AUTH_KEY, vars: ["MSG91_AUTH_KEY"] },
       googleOauth:   { ok: !!e.GOOGLE_CLIENT_ID, vars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] },
       googleIndexing:{ ok: !!e.GOOGLE_SERVICE_ACCOUNT_JSON, vars: ["GOOGLE_SERVICE_ACCOUNT_JSON", "GSC_SITE_URL"] },
@@ -3848,7 +3848,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
     const text = `Your Vedic Tatva order lookup code is ${code}. It expires in 10 minutes. If you did not request this, you can ignore this email.`;
     const html = `<p>Your Vedic Tatva order lookup code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:6px;color:#7a1f1f;">${code}</p><p>It expires in 10 minutes. If you did not request this, you can safely ignore this email.</p>`;
-    await sendEmail({ to: email, subject: "Your Vedic Tatva order lookup code", text, html });
+    await enqueueTransactionalEmail({
+      eventKey: `order_lookup_otp:${hashOtp(code, email)}`,
+      kind: "order_lookup_otp",
+      message: { to: email, subject: "Your Vedic Tatva order lookup code", text, html },
+    });
     res.json({ ok: true });
   });
 
@@ -4103,26 +4107,40 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     if (partial.data.status && partial.data.status !== priorStatus && order.customerEmail) {
       try {
         const newStatus = partial.data.status;
-        const { sendEmailAsync, buildOrderDispatchedEmail, buildOrderDeliveredEmail, buildOrderCancelledEmail } = await import("./email");
+        const { buildOrderDispatchedEmail, buildOrderDeliveredEmail, buildOrderCancelledEmail } = await import("./email");
         if (newStatus === "dispatched") {
           // Look up dispatch row (if any) to include courier + tracking #.
           // priorStatus !== newStatus already prevents double-sends from the
           // /api/dispatches endpoints (which call storage.updateOrder directly,
           // bypassing this PATCH route).
           const existingDispatch = await storage.getDispatchByOrderId(order.id).catch(() => null);
-          sendEmailAsync(buildOrderDispatchedEmail({
-            to: order.customerEmail,
-            customerName: order.customerName,
-            orderId: order.id,
-            courierName: existingDispatch?.courierName || null,
-            trackingNumber: existingDispatch?.trackingNumber || null,
-          }), "order-dispatched");
+          await enqueueTransactionalEmail({
+            eventKey: `order:${order.id}:dispatched`,
+            kind: "order_dispatched",
+            relatedType: "order",
+            relatedId: order.id,
+            recipientName: order.customerName,
+            message: buildOrderDispatchedEmail({
+              to: order.customerEmail,
+              customerName: order.customerName,
+              orderId: order.id,
+              courierName: existingDispatch?.courierName || null,
+              trackingNumber: existingDispatch?.trackingNumber || null,
+            }),
+          });
         } else if (newStatus === "delivered") {
-          sendEmailAsync(buildOrderDeliveredEmail({
-            to: order.customerEmail,
-            customerName: order.customerName,
-            orderId: order.id,
-          }), "order-delivered");
+          await enqueueTransactionalEmail({
+            eventKey: `order:${order.id}:delivered`,
+            kind: "order_delivered",
+            relatedType: "order",
+            relatedId: order.id,
+            recipientName: order.customerName,
+            message: buildOrderDeliveredEmail({
+              to: order.customerEmail,
+              customerName: order.customerName,
+              orderId: order.id,
+            }),
+          });
           // Post-delivery review request — separate email a few days later via
           // queued send so the customer has time to use the items.
           try {
@@ -4139,13 +4157,20 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
             }
           } catch (e: any) { console.warn("[review-request-queue] failed:", e?.message); }
         } else if (newStatus === "cancelled") {
-          sendEmailAsync(buildOrderCancelledEmail({
-            to: order.customerEmail,
-            customerName: order.customerName,
-            orderId: order.id,
-            reason: (req.body?.cancelReason || null),
-            refundExpected: order.paymentMethod !== "cod" && !!order.paymentId,
-          }), "order-cancelled");
+          await enqueueTransactionalEmail({
+            eventKey: `order:${order.id}:cancelled`,
+            kind: "order_cancelled",
+            relatedType: "order",
+            relatedId: order.id,
+            recipientName: order.customerName,
+            message: buildOrderCancelledEmail({
+              to: order.customerEmail,
+              customerName: order.customerName,
+              orderId: order.id,
+              reason: (req.body?.cancelReason || null),
+              refundExpected: order.paymentMethod !== "cod" && !!order.paymentId,
+            }),
+          });
         }
       } catch (e: any) { console.warn("[order-status-email] failed:", e?.message); }
     }
@@ -5987,15 +6012,22 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       // Fire-and-forget refund notification email
       try {
         if (order.customerEmail) {
-          const { buildRefundProcessedEmail, sendEmailAsync } = await import("./email");
-          sendEmailAsync(buildRefundProcessedEmail({
-            to: order.customerEmail,
-            customerName: order.customerName,
-            orderId: order.id,
-            refundAmount: amountInRupees,
-            refundId: refund.id,
-            paymentMethod: order.paymentMethod,
-          }), "refund-processed");
+          const { buildRefundProcessedEmail } = await import("./email");
+          await enqueueTransactionalEmail({
+            eventKey: `order:${order.id}:refund:${refund.id}`,
+            kind: "refund_processed",
+            relatedType: "order",
+            relatedId: order.id,
+            recipientName: order.customerName,
+            message: buildRefundProcessedEmail({
+              to: order.customerEmail,
+              customerName: order.customerName,
+              orderId: order.id,
+              refundAmount: amountInRupees,
+              refundId: refund.id,
+              paymentMethod: order.paymentMethod,
+            }),
+          });
         }
       } catch (e: any) { console.warn("[refund-email] failed:", e?.message); }
 
@@ -6558,10 +6590,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   // ------------------------------------------------------------
-  // Notifications (MSG91 SMS + WhatsApp + SendGrid Email) - admin
+  // Notifications (MSG91 SMS + WhatsApp + Hostinger SMTP Email) - admin
   // ------------------------------------------------------------
   app.get("/api/admin/notifications/status", adminAuthMiddleware, async (_req, res) => {
     const has = (k: string) => !!(process.env[k] && String(process.env[k]).trim().length > 0);
+    const { getEmailTransportStatus } = await import("./email");
+    const outbox = await getEmailOutboxSummary();
     res.json({
       msg91: {
         authKey: has("MSG91_AUTH_KEY"),
@@ -6576,17 +6610,89 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         whatsappTemplateLang: process.env.MSG91_WHATSAPP_TEMPLATE_LANG || "en",
         whatsappTemplateNamespace: has("MSG91_WHATSAPP_TEMPLATE_NAMESPACE"),
       },
-      sendgrid: {
-        apiKey: has("SENDGRID_API_KEY"),
-        mailFrom: process.env.MAIL_FROM || "no-reply@vedictatva.com",
-        mailFromName: process.env.MAIL_FROM_NAME || "Vedic Tatva",
+      hostinger: {
+        ...getEmailTransportStatus(),
+        passwordConfigured: has("SMTP_PASSWORD") || has("SMTP_PASS"),
       },
+      outbox,
       ready: {
         sms: has("MSG91_AUTH_KEY") && has("MSG91_SMS_TEMPLATE_ID"),
         whatsapp: has("MSG91_AUTH_KEY") && has("MSG91_WHATSAPP_INTEGRATED_NUMBER") && has("MSG91_WHATSAPP_TEMPLATE_NAME"),
-        email: has("SENDGRID_API_KEY"),
+        email: has("SMTP_HOST") && has("SMTP_USER") && (has("SMTP_PASSWORD") || has("SMTP_PASS")),
       },
     });
+  });
+
+  app.get("/api/admin/email-outbox", adminAuthMiddleware, async (req, res) => {
+    try {
+      const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+      const offset = Math.max(0, Number(req.query.offset) || 0);
+      res.json(await listEmailOutbox({
+        limit,
+        offset,
+        status: String(req.query.status || "all"),
+        kind: String(req.query.kind || "all"),
+        recipient: String(req.query.recipient || "").trim(),
+      }));
+    } catch (error: any) {
+      console.error("[admin email-outbox] list failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to load transactional email queue" });
+    }
+  });
+
+  app.get("/api/admin/email-outbox/summary", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const { getEmailTransportStatus, verifyEmailTransport } = await import("./email");
+      const transport = getEmailTransportStatus();
+      const verification = transport.configured ? await verifyEmailTransport() : { ok: false, error: "Hostinger SMTP is not configured" };
+      res.json({ transport, verification, outbox: await getEmailOutboxSummary() });
+    } catch (error: any) {
+      console.error("[admin email-outbox] summary failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to check Hostinger email status" });
+    }
+  });
+
+  app.post("/api/admin/email-outbox/:id/retry", adminAuthMiddleware, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: "Invalid email id" });
+      const row = await retryEmailOutbox(id);
+      if (!row) return res.status(404).json({ message: "Transactional email not found" });
+      await auditAdmin(req, "email.retry", `email_outbox:${id}`, { kind: row.kind });
+      res.json({ ok: true, id: row.id, status: row.status });
+    } catch (error: any) {
+      console.error("[admin email-outbox] retry failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to retry transactional email" });
+    }
+  });
+
+  app.post("/api/admin/email-outbox/test", adminAuthMiddleware, async (req, res) => {
+    try {
+      const parsed = z.object({ email: z.string().trim().email().max(320) }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "A valid test email address is required" });
+      const { buildCustomerBookingStatusEmail } = await import("./email");
+      const queued = await enqueueTransactionalEmail({
+        eventKey: `admin_email_test:${crypto.randomUUID()}`,
+        kind: "admin_test",
+        recipientName: "Vedic Tatva Administrator",
+        message: buildCustomerBookingStatusEmail({
+          to: parsed.data.email,
+          customerName: "Vedic Tatva Administrator",
+          pujaName: "Hostinger SMTP delivery test",
+          pujaDate: new Date().toLocaleDateString("en-IN"),
+          timeSlot: "System verification",
+          mode: "online",
+          status: "updated",
+          message: "This confirms that the Vedic Tatva transactional email outbox and Hostinger SMTP connection are working.",
+        }),
+      });
+      const delivery = await processEmailOutboxOnce(10);
+      await auditAdmin(req, "email.test", `email_outbox:${queued.row.id}`, { queued: queued.created });
+      res.json({ ok: true, queueId: queued.row.id, queued: queued.created, delivery });
+    } catch (error: any) {
+      console.error("[admin email-outbox] test failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to send Hostinger test email" });
+    }
   });
 
   // List recent notification logs (paginated, filterable)
@@ -6692,7 +6798,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     try {
       const { phone, email, panditName } = req.body as { phone?: string; email?: string; panditName?: string };
       const { sendSms, sendWhatsApp } = await import("./services/msg91");
-      const { sendEmail, buildBookingNotificationEmail } = await import("./email");
+      const { buildBookingNotificationEmail } = await import("./email");
 
       const sample = {
         panditName: panditName || "Pandit ji",
@@ -6744,8 +6850,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       if (email) {
         const msg = buildBookingNotificationEmail({ to: email, ...sample, location: null });
         msg.subject = `[TEST] ${msg.subject}`;
-        const r = await sendEmail(msg);
-        results.email = { ok: r.sent, reason: r.error };
+        const queued = await enqueueTransactionalEmail({
+          eventKey: `admin_notification_test:${crypto.randomUUID()}`,
+          kind: "admin_notification_test",
+          recipientName: sample.panditName,
+          message: msg,
+        });
+        await processEmailOutboxOnce(10);
+        results.email = { ok: true, reason: queued.created ? "Queued through Hostinger SMTP outbox" : "Already queued" };
       }
 
       res.json({ results });
@@ -9899,7 +10011,6 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       console.log("New career application:", d.roleTitle, "·", d.name, "·", d.email);
       // Best-effort notification — never block the response loop on email failures.
       try {
-        const { sendEmailAsync } = await import("./email");
         const safe = (s: string) => String(s || "").replace(/[<>]/g, "");
         const text = [
           `Role: ${safe(d.roleTitle)} (${safe(d.roleId)})`,
@@ -9908,11 +10019,16 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           d.linkedin ? `LinkedIn: ${safe(d.linkedin)}` : "",
           d.message ? `\nCover note:\n${safe(d.message)}` : "",
         ].filter(Boolean).join("\n");
-        sendEmailAsync({
-          to: "careers@vedictatva.com",
-          subject: `[Careers] ${d.roleTitle} — ${d.name}`,
-          text,
-        }, "careers.apply");
+        await enqueueTransactionalEmail({
+          eventKey: `careers_apply:${crypto.randomUUID()}`,
+          kind: "careers_apply",
+          recipientName: "Careers Team",
+          message: {
+            to: "careers@vedictatva.com",
+            subject: `[Careers] ${d.roleTitle} — ${d.name}`,
+            text,
+          },
+        });
       } catch { /* email module optional / not configured */ }
       res.status(201).json({ success: true, message: "Application received. Our team will review and respond within 3–5 business days." });
     } catch (error) {
@@ -9948,7 +10064,6 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const ticket = d.checkSize || d.ticket || "";
       console.log("New investor inquiry:", d.firm || "(individual)", "·", d.name, "·", d.email);
       try {
-        const { sendEmailAsync } = await import("./email");
         const safe = (s: string) => String(s || "").replace(/[<>]/g, "");
         const text = [
           `Name: ${safe(d.name)}`,
@@ -9958,11 +10073,16 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           ticket ? `Check size: ${safe(ticket)}` : "",
           d.message ? `\nNote:\n${safe(d.message)}` : "",
         ].filter(Boolean).join("\n");
-        sendEmailAsync({
-          to: "investors@vedictatva.com",
-          subject: `[Investors] ${d.firm || d.name} — inquiry`,
-          text,
-        }, "investors.inquiry");
+        await enqueueTransactionalEmail({
+          eventKey: `investor_inquiry:${crypto.randomUUID()}`,
+          kind: "investor_inquiry",
+          recipientName: "Investor Relations",
+          message: {
+            to: "investors@vedictatva.com",
+            subject: `[Investors] ${d.firm || d.name} — inquiry`,
+            text,
+          },
+        });
       } catch { /* email module optional */ }
       res.status(201).json({ success: true, message: "Thank you. Our founder will respond within 2 business days." });
     } catch (error) {
@@ -10763,30 +10883,32 @@ Return JSON:
         try {
           await storage.updatePdfKundliOrder(order.id, { status: "generating" });
           const { generatePremiumKundliPDF, buildKundliEmailHtml } = await import("./kundli-pdf");
-          const { sendEmail } = await import("./email");
           const target = updated || order;
           const built = await generatePremiumKundliPDF(target);
           const { html, text } = buildKundliEmailHtml(target);
           const pdfBase64 = fs.readFileSync(built.filePath).toString("base64");
-          const emailRes = await sendEmail({
-            to: target.email,
-            subject: `Your Premium Vedic Kundli Report — ${target.fullName}`,
-            html, text,
-            attachments: [{
-              filename: built.fileName,
-              content: pdfBase64,
-              type: "application/pdf",
-              disposition: "attachment",
-            }],
+          await enqueueTransactionalEmail({
+            eventKey: `kundli_report:${target.id}`,
+            kind: "kundli_report",
+            relatedType: "pdf_kundli_order",
+            relatedId: target.id,
+            recipientName: target.fullName,
+            message: {
+              to: target.email,
+              subject: `Your Premium Vedic Kundli Report — ${target.fullName}`,
+              html, text,
+              attachments: [{
+                filename: built.fileName,
+                content: pdfBase64,
+                type: "application/pdf",
+                disposition: "attachment",
+              }],
+            },
           });
-          // Once the PDF file exists on disk the report is downloadable. Email is a
-          // separate concern — track email failure via errorMessage but still mark the
-          // PDF as ready so the user is never blocked from getting their report.
           await storage.updatePdfKundliOrder(order.id, {
-            status: emailRes.sent ? "sent" : "ready",
+            status: "ready",
             pdfPath: built.filePath,
-            sentAt: emailRes.sent ? new Date() : undefined,
-            errorMessage: emailRes.sent ? null : (emailRes.error || "Email delivery skipped (provider not configured)"),
+            errorMessage: null,
           });
           console.log(`[kundli-pdf] Order #${order.id} → PDF generated (${built.fileName}); email sent=${emailRes.sent}`);
         } catch (err: any) {
@@ -12658,14 +12780,21 @@ Please create an optimized route that minimizes backtracking and maximizes the s
     try {
       const order = await storage.getOrder(dispatch.orderId);
       if (order?.customerEmail) {
-        const { buildOrderDispatchedEmail, sendEmailAsync } = await import("./email");
-        sendEmailAsync(buildOrderDispatchedEmail({
-          to: order.customerEmail,
-          customerName: order.customerName,
-          orderId: order.id,
-          courierName: dispatch.courierName,
-          trackingNumber: dispatch.trackingNumber,
-        }), "order-dispatched");
+        const { buildOrderDispatchedEmail } = await import("./email");
+        await enqueueTransactionalEmail({
+          eventKey: `order:${order.id}:dispatched`,
+          kind: "order_dispatched",
+          relatedType: "order",
+          relatedId: order.id,
+          recipientName: order.customerName,
+          message: buildOrderDispatchedEmail({
+            to: order.customerEmail,
+            customerName: order.customerName,
+            orderId: order.id,
+            courierName: dispatch.courierName,
+            trackingNumber: dispatch.trackingNumber,
+          }),
+        });
       }
     } catch (e: any) { console.warn("[order-dispatched-email] failed:", e?.message); }
 
@@ -12683,7 +12812,7 @@ Please create an optimized route that minimizes backtracking and maximizes the s
     const { orderIds, courierName, trackingPrefix } = req.body;
     if (!Array.isArray(orderIds)) return res.status(400).json({ message: "orderIds must be an array" });
     const results = [];
-    const { buildOrderDispatchedEmail, sendEmailAsync } = await import("./email");
+    const { buildOrderDispatchedEmail } = await import("./email");
     for (let i = 0; i < orderIds.length; i++) {
       const trackingNumber = trackingPrefix ? `${trackingPrefix}${(i + 1).toString().padStart(4, "0")}` : `TRK${Date.now()}${i}`;
       const dispatch = await storage.createDispatch({ orderId: orderIds[i], courierName: courierName || "Default Courier", trackingNumber });
@@ -12698,13 +12827,20 @@ Please create an optimized route that minimizes backtracking and maximizes the s
       try {
         const order = await storage.getOrder(orderIds[i]);
         if (order?.customerEmail) {
-          sendEmailAsync(buildOrderDispatchedEmail({
-            to: order.customerEmail,
-            customerName: order.customerName,
-            orderId: order.id,
-            courierName: dispatch.courierName,
-            trackingNumber: dispatch.trackingNumber,
-          }), "bulk-dispatch-email");
+          await enqueueTransactionalEmail({
+            eventKey: `order:${order.id}:dispatched`,
+            kind: "order_dispatched",
+            relatedType: "order",
+            relatedId: order.id,
+            recipientName: order.customerName,
+            message: buildOrderDispatchedEmail({
+              to: order.customerEmail,
+              customerName: order.customerName,
+              orderId: order.id,
+              courierName: dispatch.courierName,
+              trackingNumber: dispatch.trackingNumber,
+            }),
+          });
         }
       } catch (e: any) { console.warn("[bulk-dispatch-email] failed:", e?.message); }
     }

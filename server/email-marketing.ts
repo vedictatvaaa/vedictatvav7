@@ -33,15 +33,13 @@ function unsubSecret(): string {
 }
 let devSecretCache: string | null = null;
 
-// Returns true when ANY outbound email transport is configured (Hostinger
-// SMTP for the customer mailbox, the admin mailbox, or SendGrid as a
-// fallback). Without any of these, queued sends are marked "skipped" so
-// the engine quietly does nothing in dev/staging.
+// Returns true when the single Hostinger SMTP transport is configured.
+// Without it, queued sends are marked "skipped" in dev/staging.
 function emailDeliveryEnabled(): boolean {
   return !!(
-    (process.env.ECOM_SMTP_USER && process.env.ECOM_SMTP_PASS) ||
-    (process.env.SMTP_USER && process.env.SMTP_PASS) ||
-    process.env.SENDGRID_API_KEY
+    process.env.SMTP_HOST &&
+    process.env.SMTP_USER &&
+    (process.env.SMTP_PASSWORD || process.env.SMTP_PASS)
   );
 }
 
@@ -158,7 +156,7 @@ export async function runAbandonedCartSequence(): Promise<{ scanned: number; sen
         if (alreadyHandled.has(kind)) continue;
         const dueAt = baseTime + CART_DELAYS_MIN[kind] * 60 * 1000;
         if (Date.now() < dueAt) break; // not due yet, and later kinds aren't either
-        // No-op gracefully when SendGrid isn't configured: record one "skipped"
+        // No-op gracefully when Hostinger SMTP isn't configured: record one "skipped"
         // row per kind so we don't keep retrying every sweep.
         if (!emailDeliveryEnabled()) {
           await storage.createEmailSend({
