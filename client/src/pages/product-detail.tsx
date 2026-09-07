@@ -770,8 +770,6 @@ export default function ProductDetail() {
             const activePrice = hasVariations ? parsedVariations[selectedVariationIndex]?.price || product.price : product.price;
             const mrp = Math.round(activePrice * 1.22 / 10) * 10;
             const discountPct = Math.round(((mrp - activePrice) / mrp) * 100);
-            const rating = displayStats?.avg ?? 4.6;
-            const reviewCount = displayStats?.total ?? 338;
             return (
               <div className="flex flex-col gap-5">
                 {/* Title block */}
@@ -814,13 +812,15 @@ export default function ProductDetail() {
 
                   {/* Rating + sold row */}
                   <div className="flex items-center gap-3 mt-3 flex-wrap" data-testid="rating-sold-row">
-                    <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-md text-xs font-bold">
-                      <span>{rating.toFixed(1)}</span>
-                      <Star className="h-3 w-3 fill-white" />
-                    </div>
-                    <span className="text-xs text-[#5a4a3a]/70 font-medium">
-                      <span className="text-[#6D2B35] font-semibold">{reviewCount.toLocaleString()}</span> Ratings & Reviews
-                    </span>
+                    {displayStats ? <>
+                      <div className="flex items-center gap-1 bg-emerald-600 text-white px-2 py-0.5 rounded-md text-xs font-bold">
+                        <span>{displayStats.avg.toFixed(1)}</span>
+                        <Star className="h-3 w-3 fill-white" />
+                      </div>
+                      <span className="text-xs text-[#5a4a3a]/70 font-medium">
+                        <span className="text-[#6D2B35] font-semibold">{displayStats.total.toLocaleString()}</span> Ratings & Reviews
+                      </span>
+                    </> : <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#876F61]"><Sparkles className="h-3.5 w-3.5 text-[#C18A2B]" />New listing — reviews will appear after verified purchases</span>}
                     {product.salesCount > 50 && (
                       <>
                         <span className="text-[#D4AF37]">·</span>

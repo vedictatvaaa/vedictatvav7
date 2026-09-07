@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from "react";
 import { reportWebVitals } from "@/lib/web-vitals";
-import { Switch, Route, useLocation, Link, useRoute, Router as WouterRouter } from "wouter";
+import { Switch, Route, useLocation, useSearch, Link, useRoute, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -264,9 +264,14 @@ import { useConsentPreferences } from "@/lib/consent";
 
 function ScrollToTop() {
   const [location] = useLocation();
+  const search = useSearch();
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location]);
+    if (window.location.hash) {
+      requestAnimationFrame(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView());
+      return;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location, search]);
   return null;
 }
 
