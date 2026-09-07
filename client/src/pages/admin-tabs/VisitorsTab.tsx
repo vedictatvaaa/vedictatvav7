@@ -145,7 +145,7 @@ function VisitorsTab() {
   const midpoint = Math.ceil(daily.length / 2);
   const earlierViews = daily.slice(0, midpoint).reduce((sum, item) => sum + number(item.count), 0);
   const recentViews = daily.slice(midpoint).reduce((sum, item) => sum + number(item.count), 0);
-  const trendContext = !totalInRange ? "Awaiting consented visits" : recentViews > earlierViews ? "Building across the selected range" : recentViews < earlierViews ? "Cooling in the most recent days" : "Holding steady across the selected range";
+  const trendContext = !totalInRange ? "Awaiting visits" : recentViews > earlierViews ? "Building across the selected range" : recentViews < earlierViews ? "Cooling in the most recent days" : "Holding steady across the selected range";
 
   const deviceTotal = devices.reduce((s, d) => s + d.count, 0);
   const mobileCount = devices.find(d => d.name === "mobile")?.count || 0;
