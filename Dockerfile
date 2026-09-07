@@ -24,18 +24,17 @@ COPY package.json package-lock.json* ./
 RUN npm install --global npm@10.9.4 --no-audit --no-fund && \
     npm cache verify
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    set -eu; \
-    if ! env NODE_ENV=development \
+    env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --foreground-scripts --jobs=1 --maxsockets=1 --no-audit --no-fund; then \
-      echo "[builder] npm ci exited non-zero; validating whether npm hit its post-install exit-handler bug."; \
-      npm ls --depth=0 --include=dev >/dev/null; \
-    fi; \
+        npm ci --include=dev --ignore-scripts --maxsockets=1 --no-audit --no-fund && \
+    npm rebuild @google/genai bufferutil core-js esbuild protobufjs puppeteer sharp swisseph-v2 \
+        --foreground-scripts --no-audit --no-fund && \
+    npm ls --depth=0 --include=dev >/dev/null && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
     test -x node_modules/.bin/esbuild && \
-    node -e "require.resolve('drizzle-orm'); require.resolve('express'); require.resolve('sharp'); require.resolve('swisseph-v2')"
+    node -e "require('sharp'); require('swisseph-v2'); require.resolve('drizzle-orm'); require.resolve('express')"
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
