@@ -847,6 +847,7 @@ function Router() {
           <Route path="/investors" component={Investors} />
           <Route path="/franchise" component={Franchise} />
           <Route path="/become-pandit" component={BecomePandit} />
+          <Route path="/become-a-pandit">{() => { window.location.replace(`/become-pandit${window.location.search}${window.location.hash}`); return null; }}</Route>
           <Route path="/become-astrologer" component={BecomeAstrologer} />
           <Route path="/panchang-calendar" component={PanchangCalendar} />
           <Route path="/today-panchang" component={PanchangCalendar} />

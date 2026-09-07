@@ -64,7 +64,7 @@ import {
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
-import { eq, and, gt, gte, lt, like, or, ilike, sql } from "drizzle-orm";
+import { eq, and, gt, gte, lt, like, or, ilike, inArray, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
@@ -534,6 +534,9 @@ export async function registerRoutes(
     } catch (error) {
       return next(error);
     }
+  });
+  app.get("/become-a-pandit", (req, res) => {
+    res.redirect(301, redirectTargetWithQuery("/become-pandit", req.originalUrl));
   });
   app.get(/^\/pandits\/([^/]+)$/, async (req, res, next) => {
     try {
@@ -3067,6 +3070,14 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   // ---- Pandits ----
   app.get("/api/locations", async (_req, res) => {
+    const majorMetroOrder = [
+      "new delhi", "mumbai", "bengaluru", "bangalore", "chennai", "kolkata",
+      "hyderabad", "pune", "ahmedabad", "jaipur", "gurugram", "noida",
+    ];
+    const cityOrder = (name: string) => {
+      const index = majorMetroOrder.indexOf(name.trim().toLowerCase());
+      return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+    };
     const states = (await db.select().from(indianStates).where(eq(indianStates.isActive, true)))
       .sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
     const cities = await db.select().from(indianCities).where(eq(indianCities.isActive, true));
@@ -3074,7 +3085,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       ...state,
       cities: cities
         .filter(city => city.stateId === state.id)
-        .sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
+        .sort((a, b) => cityOrder(a.name) - cityOrder(b.name) || a.name.localeCompare(b.name, "en-IN")),
     })));
   });
   app.get(
