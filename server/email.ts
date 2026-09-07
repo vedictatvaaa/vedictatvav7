@@ -1,5 +1,4 @@
 import nodemailer, { type Transporter } from "nodemailer";
-import sgMail from "@sendgrid/mail";
 import type { Order } from "@shared/schema";
 
 // ---- From identities ----
@@ -11,9 +10,9 @@ const fromName = process.env.MAIL_FROM_NAME || "Vedic Tatva";
 const siteUrl = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
 const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER || "admin@vedictatva.com";
 
-// ---- Transport selection ----
-// Preferred: SMTP (e.g. Hostinger). Fallback: SendGrid via SENDGRID_API_KEY.
-// If neither is set we just log the message — useful for local dev.
+// ---- Hostinger SMTP transport ----
+// Email is intentionally SMTP-only. The domain mailbox on Hostinger is the
+// single delivery provider; there is no external API fallback.
 type SmtpKind = "admin" | "customer";
 
 const smtpHost = process.env.SMTP_HOST;
@@ -21,17 +20,9 @@ const smtpPort = Number(process.env.SMTP_PORT || 465);
 const smtpSecure = process.env.SMTP_SECURE
   ? process.env.SMTP_SECURE === "true"
   : smtpPort === 465;
-const sendgridKey = process.env.SENDGRID_API_KEY;
-
-// Admin mailbox (alerts to internal team, admin password reset).
 const adminUser = process.env.SMTP_USER;
-const adminPass = process.env.SMTP_PASS;
+const adminPass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
 const adminFrom = process.env.MAIL_FROM || adminUser || "admin@vedictatva.com";
-
-// Customer mailbox (order confirmations, dispatch updates, welcome, etc.).
-const ecomUser = process.env.ECOM_SMTP_USER;
-const ecomPass = process.env.ECOM_SMTP_PASS;
-const ecomFrom = process.env.ECOM_MAIL_FROM || ecomUser || "ecom@vedictatva.com";
 
 const transporters: Partial<Record<SmtpKind, Transporter>> = {};
 
@@ -42,38 +33,14 @@ if (smtpHost && adminUser && adminPass) {
     secure: smtpSecure,
     auth: { user: adminUser, pass: adminPass },
   });
-  console.log(`[email] Admin SMTP ${smtpHost}:${smtpPort} as ${adminUser}`);
-}
-
-if (smtpHost && ecomUser && ecomPass) {
-  transporters.customer = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpSecure,
-    auth: { user: ecomUser, pass: ecomPass },
-  });
-  console.log(`[email] Customer SMTP ${smtpHost}:${smtpPort} as ${ecomUser}`);
-}
-
-const sendgridConfigured = !transporters.admin && !transporters.customer && !!sendgridKey;
-if (sendgridConfigured) {
-  sgMail.setApiKey(sendgridKey!);
-  console.log("[email] Using SendGrid fallback transport.");
-} else if (!transporters.admin && !transporters.customer) {
-  console.warn("[email] No SMTP credentials and no SENDGRID_API_KEY — outgoing emails will be logged instead of sent.");
+  console.log(`[email] Hostinger SMTP ${smtpHost}:${smtpPort} as ${adminUser}`);
+} else {
+  console.warn("[email] Hostinger SMTP is not configured — outgoing emails will be queued and retried.");
 }
 
 function pickIdentity(kind: SmtpKind): { transporter: Transporter | null; from: string; user: string } {
-  if (kind === "customer") {
-    if (transporters.customer) return { transporter: transporters.customer, from: ecomFrom, user: ecomUser! };
-    // Fallback: if no customer mailbox is configured, send from the admin
-    // mailbox so messages still go out (better than dropping them).
-    if (transporters.admin) return { transporter: transporters.admin, from: adminFrom, user: adminUser! };
-  } else {
-    if (transporters.admin) return { transporter: transporters.admin, from: adminFrom, user: adminUser! };
-    if (transporters.customer) return { transporter: transporters.customer, from: ecomFrom, user: ecomUser! };
-  }
-  return { transporter: null, from: kind === "customer" ? ecomFrom : adminFrom, user: "" };
+  if (transporters.admin) return { transporter: transporters.admin, from: adminFrom, user: adminUser! };
+  return { transporter: null, from: adminFrom, user: adminUser || "" };
 }
 
 export interface EmailAttachment {
@@ -118,15 +85,15 @@ export async function sendEmail(msg: EmailMessage, opts: SendOptions = {}): Prom
   const kind: SmtpKind = opts.kind || "customer";
   const { transporter, from } = pickIdentity(kind);
 
-  if (!transporter && !sendgridConfigured) {
+  if (!transporter) {
     const attachInfo = msg.attachments?.length ? ` [${msg.attachments.length} attachment(s): ${msg.attachments.map(a => a.filename).join(", ")}]` : "";
     console.log(`[email:dev kind=${kind}] To: ${msg.to}\nSubject: ${msg.subject}${attachInfo}\n${msg.text}\n`);
-    return { sent: false, error: "no email transport configured" };
+    return { sent: false, error: "Hostinger SMTP is not configured" };
   }
 
   // All replies (regardless of which mailbox sent the message) should land
   // in the customer-facing inbox so a human reads them.
-  const replyTo = process.env.ECOM_SMTP_USER || "ecom@vedictatva.com";
+  const replyTo = process.env.SMTP_REPLY_TO || adminFrom;
   const text = msg.text && msg.text.trim().length ? msg.text : htmlToPlain(msg.html);
 
   try {
@@ -151,25 +118,7 @@ export async function sendEmail(msg: EmailMessage, opts: SendOptions = {}): Prom
       return { sent: true };
     }
 
-    // SendGrid fallback (only used when no SMTP transport at all).
-    await sgMail.send({
-      to: msg.to,
-      from: { email: from, name: fromName },
-      replyTo,
-      subject: msg.subject,
-      text,
-      html: msg.html,
-      ...(msg.headers ? { headers: msg.headers } : {}),
-      ...(msg.attachments?.length ? {
-        attachments: msg.attachments.map(a => ({
-          content: a.content,
-          filename: a.filename,
-          type: a.type || "application/octet-stream",
-          disposition: a.disposition || "attachment",
-        })),
-      } : {}),
-    });
-    return { sent: true };
+    return { sent: false, error: "Hostinger SMTP transport unavailable" };
   } catch (err: any) {
     const detail = err?.response?.body || err?.message || String(err);
     console.error(`[email kind=${kind}] Send failed:`, detail);
@@ -188,6 +137,37 @@ export function sendEmailAsync(msg: EmailMessage, context = "email", opts: SendO
 
 export function getAdminNotificationEmail(): string {
   return adminNotificationEmail;
+}
+
+export function getEmailTransportStatus(): {
+  provider: "hostinger-smtp";
+  configured: boolean;
+  host: string | null;
+  port: number;
+  secure: boolean;
+  from: string;
+  username: string | null;
+} {
+  return {
+    provider: "hostinger-smtp",
+    configured: Boolean(transporters.admin),
+    host: smtpHost || null,
+    port: smtpPort,
+    secure: smtpSecure,
+    from: adminFrom,
+    username: adminUser || null,
+  };
+}
+
+export async function verifyEmailTransport(): Promise<{ ok: boolean; error?: string }> {
+  const transporter = transporters.admin;
+  if (!transporter) return { ok: false, error: "Hostinger SMTP is not configured" };
+  try {
+    await transporter.verify();
+    return { ok: true };
+  } catch (error: any) {
+    return { ok: false, error: String(error?.message || error).slice(0, 500) };
+  }
 }
 
 const escapeHtml = (s: string) =>
