@@ -1260,6 +1260,39 @@ export const insertEmailSendSchema = createInsertSchema(emailSends).omit({ id: t
 export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
 export type EmailSend = typeof emailSends.$inferSelect;
 
+// Durable transactional email outbox. Message bodies are encrypted by the
+// server using a purpose-separated key derived from SESSION_SECRET, so the
+// Hostinger mailbox password is never used as an application encryption key.
+export const emailOutbox = pgTable("email_outbox", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  eventKey: text("event_key").notNull().unique(),
+  kind: text("kind").notNull(),
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  relatedType: text("related_type"),
+  relatedId: integer("related_id"),
+  bookingDeliveryId: integer("booking_delivery_id"),
+  subject: text("subject").notNull(),
+  payloadCiphertext: text("payload_ciphertext"),
+  payloadIv: text("payload_iv"),
+  payloadAuthTag: text("payload_auth_tag"),
+  status: text("status").notNull().default("queued"), // queued | processing | retrying | sent | failed | skipped
+  attemptCount: integer("attempt_count").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at").defaultNow(),
+  lockedAt: timestamp("locked_at"),
+  lastError: text("last_error"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  statusDueIdx: index("email_outbox_status_due_idx").on(t.status, t.nextAttemptAt),
+  kindStatusIdx: index("email_outbox_kind_status_idx").on(t.kind, t.status),
+  recipientIdx: index("email_outbox_recipient_idx").on(t.recipientEmail),
+}));
+export const insertEmailOutboxSchema = createInsertSchema(emailOutbox).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertEmailOutbox = z.infer<typeof insertEmailOutboxSchema>;
+export type EmailOutbox = typeof emailOutbox.$inferSelect;
+
 // One-shot newsletter campaign blast.
 export const newsletterCampaigns = pgTable("newsletter_campaigns", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
