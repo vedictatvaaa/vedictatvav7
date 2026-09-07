@@ -51,6 +51,7 @@ type SfForm = {
   facebookUrl: string;
   websiteUrl: string;
   themeColor: string;
+  bannerImage: string;
   productIds: number[];
   featuredPujas: string[];
 };
@@ -383,6 +384,7 @@ export function PanditStorefrontEditor({ focus = "storefront" }: { focus?: "stor
         facebookUrl: data.storefront.facebookUrl || "",
         websiteUrl: data.storefront.websiteUrl || "",
         themeColor: data.storefront.themeColor || "#6D2B35",
+        bannerImage: data.storefront.bannerImage || "",
         productIds: data.storefront.productIds || [],
         featuredPujas: data.storefront.featuredPujas || [],
       });
@@ -465,6 +467,8 @@ export function PanditStorefrontEditor({ focus = "storefront" }: { focus?: "stor
             <div><Label>Instagram URL</Label><Input value={form.instagramUrl} onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })} placeholder="https://instagram.com/…" /></div>
             <div><Label>Facebook URL</Label><Input value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} placeholder="https://facebook.com/…" /></div>
             <div><Label>Personal website</Label><Input value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} placeholder="https://…" /></div>
+            <div><Label>Storefront accent color</Label><Input type="text" value={form.themeColor} onChange={(e) => setForm({ ...form, themeColor: e.target.value })} placeholder="#6D2B35" /></div>
+            <div><Label>Banner image URL</Label><Input value={form.bannerImage} onChange={(e) => setForm({ ...form, bannerImage: e.target.value })} placeholder="/uploads/storefront-banner.jpg" /></div>
           </div>
         </CardContent>
       </Card>
