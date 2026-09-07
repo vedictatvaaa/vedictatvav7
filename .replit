@@ -89,3 +89,6 @@ SMTP_USER = "admin@vedictatva.com"
 MAIL_FROM = "admin@vedictatva.com"
 MAIL_FROM_NAME = "Vedic Tatva"
 ECOM_SMTP_USER = "ecom@vedictatva.com"
+
+[userenv.development]
+COOLIFY_BASE_URL = "http://187.77.184.249:8000"
