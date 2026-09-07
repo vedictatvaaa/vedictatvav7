@@ -112,6 +112,19 @@ function getCategoryFAQs(product: Product): { q: string; a: string }[] {
   ];
 }
 
+// Catalog entries may provide carefully scoped, product-specific FAQs. Prefer
+// them to broad category copy (especially for representative gemstone listings).
+function getProductFAQs(product: Product): { q: string; a: string }[] {
+  const stored = (product as any).seoFaq;
+  if (Array.isArray(stored)) {
+    const valid = stored
+      .filter((item: any) => typeof item?.question === "string" && typeof item?.answer === "string")
+      .map((item: any) => ({ q: item.question, a: item.answer }));
+    if (valid.length) return valid;
+  }
+  return getCategoryFAQs(product);
+}
+
 function useViewerCount(settings: SocialProofSettings | undefined) {
   const [count, setCount] = useState(0);
 
@@ -419,7 +432,7 @@ export default function ProductDetail() {
         { name: product.category, url: `/puja-samagri-online?category=${encodeURIComponent(product.category)}` },
         { name: product.name, url: seoData.path },
       ]),
-      faqPage(getCategoryFAQs(product).map(f => ({ question: f.q, answer: f.a }))),
+      faqPage(getProductFAQs(product).map(f => ({ question: f.q, answer: f.a }))),
     ];
   }, [product?.id, product?.name, product?.price, product?.stock, product?.image, product?.description, product?.category, product?.brand, reviews?.length, seoData]);
 
@@ -1673,7 +1686,7 @@ export default function ProductDetail() {
 
         {/* FAQ Section — slim, category-aware */}
         {(() => {
-          const faqs = getCategoryFAQs(product);
+          const faqs = getProductFAQs(product);
           return (
             <section className="mt-14" data-testid="section-faqs">
               {/* Slim section header */}

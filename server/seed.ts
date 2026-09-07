@@ -87,6 +87,12 @@ export async function seedDatabase() {
       console.error("Mala seed error:", e);
     }
     try {
+      const { seedGemstoneProducts } = await import("./seedGemstones");
+      await seedGemstoneProducts();
+    } catch (e) {
+      console.error("Gemstone seed error:", e);
+    }
+    try {
       const { seedDhotiKurtaProducts } = await import("./seedDhotiKurta");
       await seedDhotiKurtaProducts();
     } catch (e) {
@@ -162,6 +168,14 @@ export async function seedDatabase() {
     await seedMalaProducts();
   } catch (e) {
     console.error("Mala seed error:", e);
+  }
+
+  // Seed representative loose gemstone catalogue (idempotent by slug).
+  try {
+    const { seedGemstoneProducts } = await import("./seedGemstones");
+    await seedGemstoneProducts();
+  } catch (e) {
+    console.error("Gemstone seed error:", e);
   }
 
   // Seed Dhoti & Kurta catalogue (idempotent by slug)
