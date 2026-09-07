@@ -27,8 +27,8 @@ import {
   storefrontPublicPath,
   storefrontPublicationState,
 } from "./pandit-dashboard";
-import { sendEmail } from "./email";
 import { buildPanditPasswordResetEmail } from "./pandit-account-emails";
+import { enqueueTransactionalEmail } from "./email-outbox";
 import { candidatePanditBookingProjection, assignedPanditBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
@@ -255,7 +255,14 @@ export function registerPanditPortalRoutes(app: Express) {
           fullName: pandit.name,
           resetUrl,
         });
-        await sendEmail(message);
+        await enqueueTransactionalEmail({
+          eventKey: `pandit_password_reset:${pandit.id}:${passwordDigest(pandit.passwordHash)}`,
+          kind: "pandit_password_reset",
+          relatedType: "pandit",
+          relatedId: pandit.id,
+          recipientName: pandit.name,
+          message,
+        });
       }
       res.json(generic);
     } catch (e: any) {
