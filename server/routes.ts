@@ -9682,14 +9682,21 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       await auditAdmin(req, "pandit.password_regenerated", `pandit:${id}`, { sessionsRevoked: true });
       let emailSent = false;
       if (pandit.email) {
-        const result = await sendEmail(buildPanditTemporaryPasswordEmail({
-          to: pandit.email,
-          fullName: pandit.name,
-          temporaryPassword,
-        }));
-        emailSent = result.sent;
+        const queued = await enqueueTransactionalEmail({
+          eventKey: `pandit_password_regenerated:${pandit.id}:${passwordHash}`,
+          kind: "pandit_password_regenerated",
+          relatedType: "pandit",
+          relatedId: pandit.id,
+          recipientName: pandit.name,
+          message: buildPanditTemporaryPasswordEmail({
+            to: pandit.email,
+            fullName: pandit.name,
+            temporaryPassword,
+          }),
+        });
+        emailSent = queued.created || ["queued", "retrying"].includes(queued.row.status);
       }
-      res.json({ ok: true, temporaryPassword, emailSent });
+      res.json({ ok: true, temporaryPassword, emailQueued: emailSent });
     } catch (error) {
       console.error("pandit password regeneration failed:", error);
       res.status(500).json({ message: "Failed to regenerate Pandit password" });
