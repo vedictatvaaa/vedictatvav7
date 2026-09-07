@@ -173,6 +173,7 @@ export interface IStorage {
   logAdminAction(entry: InsertAdminAuditLog): Promise<AdminAuditLog>;
   getAdminAuditLogs(limit?: number): Promise<AdminAuditLog[]>;
   getBestsellerProducts(): Promise<Product[]>;
+  getApprovedProductRatingSummaries(productIds: number[]): Promise<Array<{ productId: number; rating: number; reviewCount: number }>>;
 
   getProductReviews(productId: number): Promise<ProductReview[]>;
   getAllReviews(): Promise<ProductReview[]>;
@@ -912,6 +913,19 @@ export class DatabaseStorage implements IStorage {
       .where(gt(products.stock, 0))
       .orderBy(dsql`COALESCE(${products.salesCount}, 0) DESC, ${products.id} DESC`)
       .limit(limit);
+  }
+
+  async getApprovedProductRatingSummaries(productIds: number[]): Promise<Array<{ productId: number; rating: number; reviewCount: number }>> {
+    const ids = Array.from(new Set(productIds)).filter(Number.isInteger).slice(0, 24);
+    if (!ids.length) return [];
+    return db.select({
+      productId: productReviews.productId,
+      rating: dsql<number>`avg(${productReviews.rating})::float8`,
+      reviewCount: dsql<number>`count(*)::int`,
+    })
+      .from(productReviews)
+      .where(and(inArray(productReviews.productId, ids), eq(productReviews.status, "approved")))
+      .groupBy(productReviews.productId);
   }
 
   async getProductReviews(productId: number, opts: { onlyApproved?: boolean } = {}): Promise<ProductReview[]> {

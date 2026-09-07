@@ -4861,7 +4861,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.get("/api/bestsellers", async (_req, res) => {
     try {
       const list = await storage.getBestsellerProducts();
-      res.json(list);
+      const summaries = await storage.getApprovedProductRatingSummaries(list.map(product => product.id));
+      const ratings = new Map(summaries.map(summary => [summary.productId, summary]));
+      res.json(list.map(product => {
+        const summary = ratings.get(product.id);
+        return summary ? { ...product, rating: summary.rating, reviewCount: summary.reviewCount } : product;
+      }));
     } catch (err: any) {
       console.error("[bestsellers] error", err);
       res.status(500).json({ message: err?.message || "Failed to load bestsellers" });

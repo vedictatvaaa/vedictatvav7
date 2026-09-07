@@ -1,8 +1,92 @@
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { indianCities, indianStates } from "@shared/schema";
 import { db } from "./db";
 import { storage } from "./storage";
 import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+
+const ADMIN_TRUST_BADGES = {
+  vedic_scholar: { label: "Vedic Scholar", detailAllowed: false },
+  ritual_specialist: { label: "Ritual Specialist", detailAllowed: true },
+  online_puja_ready: { label: "Online Puja Ready", detailAllowed: false },
+  regional_expert: { label: "Regional Expert", detailAllowed: true },
+  community_choice: { label: "Community Choice", detailAllowed: false },
+} as const;
+
+export const adminTrustBadgeSchema = z.object({
+  key: z.enum(["vedic_scholar", "ritual_specialist", "online_puja_ready", "regional_expert", "community_choice"]),
+  detail: z.string().trim().min(1).max(120).regex(/^[^<>\u0000-\u001F\u007F]*$/, "HTML and control characters are not allowed").optional(),
+}).superRefine((badge, ctx) => {
+  if (badge.detail && !ADMIN_TRUST_BADGES[badge.key].detailAllowed) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "This badge does not permit a detail" });
+  }
+});
+export const adminTrustBadgesSchema = z.array(adminTrustBadgeSchema).max(5)
+  .superRefine((badges, ctx) => {
+    if (new Set(badges.map(badge => badge.key)).size !== badges.length) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Badge keys must be unique" });
+    }
+  });
+
+export function publicAdminTrustBadges(value: unknown) {
+  const parsed = adminTrustBadgesSchema.safeParse(value);
+  if (!parsed.success) return [];
+  return parsed.data.map(badge => ({
+    key: badge.key,
+    label: ADMIN_TRUST_BADGES[badge.key].label,
+    ...(badge.detail ? { detail: badge.detail } : {}),
+  }));
+}
+
+export function storefrontServiceEnrichment(services: Array<{ category?: string | null; slug?: string | null; serviceAreas?: string[] | null; mode?: string | null }>, pandit: { city?: string | null; state?: string | null }) {
+  const categoryCounts = new Map<string, { name: string; slug: string; serviceCount: number }>();
+  const areas = new Map<string, string>();
+  let onlineAvailable = false;
+  for (const service of services) {
+    const mode = String(service.mode || "").toLowerCase();
+    if (service.category && service.slug) {
+      const slug = service.category.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      if (slug) {
+        const existing = categoryCounts.get(slug);
+        if (existing) existing.serviceCount++;
+        else categoryCounts.set(slug, { name: service.category.trim(), slug, serviceCount: 1 });
+      }
+    }
+    if (!["online", "virtual"].includes(mode)) {
+      for (const area of service.serviceAreas || []) {
+        const normalized = area.trim().replace(/\s+/g, " ");
+        const key = normalized.toLocaleLowerCase("en-IN");
+        if (normalized && !areas.has(key)) areas.set(key, normalized);
+      }
+    }
+    if (["online", "virtual", "both", "hybrid"].includes(mode)) onlineAvailable = true;
+  }
+  const primaryLocation = pandit.city || pandit.state
+    ? { ...(pandit.city ? { city: pandit.city } : {}), ...(pandit.state ? { state: pandit.state } : {}) }
+    : undefined;
+  return {
+    serviceCatalog: {
+      categories: Array.from(categoryCounts.values()).sort((a, b) => a.name.localeCompare(b.name)),
+      totalActiveServices: services.length,
+    },
+    serviceCoverage: {
+      ...(primaryLocation ? { primaryLocation } : {}),
+      inPersonAreas: Array.from(areas.values()).sort((a, b) => a.localeCompare(b)),
+      onlineAvailable,
+    },
+  };
+}
+
+export function storefrontVerifiedFacts(input: { verified?: boolean; registrationNo?: string | null; experience?: number | null; reviewCount?: number; completedBookingCount?: number; activeMembership?: boolean }) {
+  const facts: Array<{ key: string; label: string; detail?: string }> = [];
+  if (input.verified) facts.push({ key: "identity_verified", label: "Identity verified by Vedic Tatva" });
+  if (input.registrationNo) facts.push({ key: "registration", label: "Public registration credential" });
+  if (input.activeMembership) facts.push({ key: "active_membership", label: "Active Vedic Tatva membership" });
+  if (Number(input.experience) > 0) facts.push({ key: "experience", label: "Years of experience", detail: `${input.experience} years` });
+  if (Number(input.reviewCount) > 0) facts.push({ key: "published_reviews", label: "Published Pandit reviews", detail: String(input.reviewCount) });
+  if (Number(input.completedBookingCount) > 0) facts.push({ key: "completed_bookings", label: "Completed bookings", detail: String(input.completedBookingCount) });
+  return facts;
+}
 
 export async function getPubliclyEligiblePanditBySlug(slug: string) {
   const pandit = await storage.getPanditBySlug(slug);

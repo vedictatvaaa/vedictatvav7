@@ -5,6 +5,10 @@ import {
   publicPanditReviewDto,
   publicPanditServiceDto,
   publicStorefrontPanditDto,
+  adminTrustBadgesSchema,
+  publicAdminTrustBadges,
+  storefrontServiceEnrichment,
+  storefrontVerifiedFacts,
 } from "./pandit-public-access";
 
 test("public storefront DTO excludes private and commercial Pandit fields", () => {
@@ -93,4 +97,49 @@ test("public service DTO exposes catalogue identity and offering fields only", (
   assert.equal(dto.price, 5100);
   assert.equal("panditId" in dto, false);
   assert.equal("internalNote" in dto, false);
+});
+
+test("storefront service facets and coverage derive only from active public DTOs", () => {
+  const enrichment = storefrontServiceEnrichment([
+    { category: "Home Ceremonies", slug: "griha-pravesh", serviceAreas: [" Mumbai ", "mumbai"], mode: "in_person" },
+    { category: "Home Ceremonies", slug: "satyanarayan-puja", serviceAreas: ["Pune"], mode: "online" },
+    { category: "Life Events", slug: "wedding", serviceAreas: [], mode: "virtual" },
+  ], { city: "Mumbai", state: "Maharashtra" });
+  assert.deepEqual(enrichment.serviceCatalog, {
+    categories: [
+      { name: "Home Ceremonies", slug: "home-ceremonies", serviceCount: 2 },
+      { name: "Life Events", slug: "life-events", serviceCount: 1 },
+    ],
+    totalActiveServices: 3,
+  });
+  assert.deepEqual(enrichment.serviceCoverage, {
+    primaryLocation: { city: "Mumbai", state: "Maharashtra" },
+    inPersonAreas: ["Mumbai"],
+    onlineAvailable: true,
+  });
+});
+
+test("trust badge validation allows only controlled safe admin endorsements", () => {
+  assert.equal(adminTrustBadgesSchema.safeParse([{ key: "regional_expert", detail: "North India" }]).success, true);
+  assert.equal(adminTrustBadgesSchema.safeParse([{ key: "vedic_scholar", detail: "Unsupported" }]).success, false);
+  assert.equal(adminTrustBadgesSchema.safeParse([{ key: "regional_expert", detail: "<b>HTML</b>" }]).success, false);
+  assert.equal(adminTrustBadgesSchema.safeParse([{ key: "not_real" }]).success, false);
+  assert.deepEqual(publicAdminTrustBadges([{ key: "regional_expert", detail: "North India" }]), [
+    { key: "regional_expert", label: "Regional Expert", detail: "North India" },
+  ]);
+});
+
+test("verified facts expose only public-safe authoritative values", () => {
+  const facts = storefrontVerifiedFacts({
+    verified: true,
+    registrationNo: "VT-REG-1",
+    experience: 10,
+    reviewCount: 3,
+    completedBookingCount: 4,
+    activeMembership: true,
+  });
+  assert.deepEqual(facts.map(fact => fact.key), [
+    "identity_verified", "registration", "active_membership", "experience", "published_reviews", "completed_bookings",
+  ]);
+  assert.equal(JSON.stringify(facts).includes("VT-REG-1"), false, "registration identifiers must not be disclosed");
 });

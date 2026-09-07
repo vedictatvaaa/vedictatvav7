@@ -1906,6 +1906,10 @@ export const panditStorefronts = pgTable("pandit_storefronts", {
   // Curated puja types (subset of services the pandit offers) shown above the
   // generic "book any puja" CTA. Free-text array.
   featuredPujas: text("featured_pujas").array().notNull().default(sql`'{}'::text[]`),
+  // Public presentation endorsements selected only by an administrator. The
+  // API validates the bounded badge shape; this deliberately is not a
+  // free-form credential or notes field.
+  trustBadges: jsonb("trust_badges").notNull().default(sql`'[]'::jsonb`),
   // Editorial status is separate from Pandit public eligibility. Public reads
   // require both status=published and the shared eligibility predicate.
   status: text("status").notNull().default("published"),

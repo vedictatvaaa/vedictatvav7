@@ -38,7 +38,17 @@ type StorefrontRow = {
   productCommissionPct: number; isPublished: boolean; productCount: number;
   viewCount: number; totalCommission: number; referralCount: number;
   cardIssued?: boolean; membershipNo?: string | null;
+  trustBadges?: Array<{ key: string; detail?: string }>;
 };
+const TRUST_BADGES = [
+  { key: "vedic_scholar", label: "Vedic scholar", detailAllowed: false },
+  { key: "ritual_specialist", label: "Ritual specialist", detailAllowed: true },
+  { key: "online_puja_ready", label: "Online puja ready", detailAllowed: false },
+  { key: "regional_expert", label: "Regional expert", detailAllowed: true },
+  { key: "community_choice", label: "Community choice", detailAllowed: false },
+] as const;
+type TrustBadgeDraft = { key: typeof TRUST_BADGES[number]["key"]; detail: string };
+const safeBadgeDetail = (value: string) => value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
 type PayoutRow = {
   id: number; panditId: number; panditName?: string; amountInr: number;
   paidAt: string; method: string; reference?: string | null;
@@ -208,11 +218,28 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
   });
 
   const updateStorefront = useMutation({
-    mutationFn: (vars: { panditId: number; body: { productCommissionPct?: number; isPublished?: boolean } }) =>
+    mutationFn: (vars: { panditId: number; body: { productCommissionPct?: number; isPublished?: boolean; trustBadges?: Array<{ key: string; detail?: string }> } }) =>
       apiRequest("PATCH", `/api/admin/storefronts/${vars.panditId}`, vars.body, headers),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/storefronts"] }); toast({ title: "Saved" }); },
     onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
+  const [badgeTarget, setBadgeTarget] = useState<StorefrontRow | null>(null);
+  const [badgeDraft, setBadgeDraft] = useState<TrustBadgeDraft[]>([]);
+  const openBadgeEditor = (storefront: StorefrontRow) => {
+    setBadgeTarget(storefront);
+    setBadgeDraft((storefront.trustBadges || [])
+      .filter((badge): badge is { key: TrustBadgeDraft["key"]; detail?: string } => TRUST_BADGES.some(allowed => allowed.key === badge.key))
+      .map(badge => ({ key: badge.key, detail: badge.detail || "" })));
+  };
+  const toggleBadge = (key: TrustBadgeDraft["key"]) => setBadgeDraft(current =>
+    current.some(badge => badge.key === key) ? current.filter(badge => badge.key !== key) : [...current, { key, detail: "" }]);
+  const saveBadges = () => {
+    if (!badgeTarget) return;
+    updateStorefront.mutate({
+      panditId: badgeTarget.panditId,
+      body: { trustBadges: badgeDraft.map(badge => ({ key: badge.key, ...(safeBadgeDetail(badge.detail) ? { detail: safeBadgeDetail(badge.detail) } : {}) })) },
+    }, { onSuccess: () => setBadgeTarget(null) });
+  };
   const updateSubmission = useMutation({
     mutationFn: (vars: { type: StorefrontSubmission["type"]; id: number; isPublished: boolean }) =>
       apiRequest("PATCH", `/api/admin/storefront-submissions/${vars.type}/${vars.id}`, { isPublished: vars.isPublished }, headers),
@@ -310,7 +337,7 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="text-left text-xs text-stone-500"><th className="py-2">Pandit</th><th>Membership</th><th>Tier</th><th>Published</th><th>Card</th><th>Curated</th><th>Views</th><th>Commission</th><th>Override %</th></tr></thead>
+                    <thead><tr className="text-left text-xs text-stone-500"><th className="py-2">Pandit</th><th>Membership</th><th>Tier</th><th>Published</th><th>Card</th><th>Trust badges</th><th>Curated</th><th>Views</th><th>Commission</th><th>Override %</th></tr></thead>
                     <tbody>
                       {(storefronts.data?.items || []).map((s) => (
                         <tr key={s.panditId} className="border-t" data-testid={`row-storefront-${s.panditId}`}>
@@ -328,6 +355,7 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
                               <Button size="sm" variant="outline" disabled={issueCard.isPending} onClick={() => issueCard.mutate({ panditId: s.panditId, issued: !s.cardIssued })} data-testid={`btn-issue-card-${s.panditId}`}>{s.cardIssued ? "Revoke" : "Issue"}</Button>
                             </div>
                           </td>
+                           <td><Button size="sm" variant="outline" onClick={() => openBadgeEditor(s)} data-testid={`btn-trust-badges-${s.panditId}`}>Manage{(s.trustBadges || []).length ? ` (${s.trustBadges!.length})` : ""}</Button></td>
                           <td>{s.productCount}</td>
                           <td>{s.viewCount}</td>
                           <td className="font-semibold">{inr(s.totalCommission)}</td>
@@ -353,6 +381,22 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
               )}
             </CardContent>
           </Card>
+          <Dialog open={!!badgeTarget} onOpenChange={open => { if (!open) setBadgeTarget(null); }}>
+            <DialogContent data-lenis-prevent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
+              <DialogHeader><DialogTitle>Storefront trust badges</DialogTitle></DialogHeader>
+              <p className="text-sm text-stone-500">Select only approved endorsements. Supported details are optional public text limited to 120 characters.</p>
+              <div className="space-y-3">
+                {TRUST_BADGES.map(allowed => {
+                  const selectedBadge = badgeDraft.find(badge => badge.key === allowed.key);
+                  return <div key={allowed.key} className="rounded-lg border p-3">
+                    <label className="flex items-center gap-2 text-sm font-medium"><Checkbox checked={!!selectedBadge} onCheckedChange={() => toggleBadge(allowed.key)} />{allowed.label}</label>
+                    {selectedBadge && allowed.detailAllowed && <div className="mt-3"><Label htmlFor={`badge-detail-${allowed.key}`} className="text-xs">Public detail (optional)</Label><Input id={`badge-detail-${allowed.key}`} maxLength={120} value={selectedBadge.detail} onChange={event => setBadgeDraft(current => current.map(badge => badge.key === allowed.key ? { ...badge, detail: event.target.value } : badge))} placeholder="Short public context" /></div>}
+                  </div>;
+                })}
+              </div>
+              <DialogFooter><Button variant="outline" onClick={() => setBadgeTarget(null)}>Cancel</Button><Button disabled={updateStorefront.isPending} onClick={saveBadges}>{updateStorefront.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save badges</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="referrals" className="space-y-4">

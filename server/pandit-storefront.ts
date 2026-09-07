@@ -15,7 +15,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
-import { pandits, panditMembershipPurchases } from "@shared/schema";
+import { pandits, panditMembershipPurchases, pujaBookings } from "@shared/schema";
 import { eq, desc, and, sql, gte, isNotNull } from "drizzle-orm";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import type { AdminRequest } from "./admin-auth";
@@ -30,6 +30,10 @@ import {
   publicPanditAvailabilityRuleDto,
   publicPanditServiceDto,
   publicStorefrontPanditDto,
+  publicAdminTrustBadges,
+  storefrontServiceEnrichment,
+  storefrontVerifiedFacts,
+  adminTrustBadgesSchema,
 } from "./pandit-public-access";
 import { panditServiceWriteSchema, panditPackageWriteSchema, panditGalleryWriteSchema, panditAvailabilityWriteSchema } from "./catalog-validation";
 import { getConsentedReferralSlug, hasAnalyticsConsent, hasMarketingConsent } from "./consent";
@@ -333,16 +337,37 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
   const products = productIds.length
     ? (await Promise.all(productIds.map((id) => storage.getProduct(id)))).filter(Boolean)
     : [];
-  const reviews = await storage.getPanditReviews(pandit.id).catch(() => []);
-  const [storedServices, packages, gallery, availability] = await Promise.all([
+  const [reviews, storedServices, packages, gallery, availability, membership, completedBookings] = await Promise.all([
+    storage.getPanditReviews(pandit.id).catch(() => []),
     authoritativeProfile
       ? Promise.resolve([])
       : storage.listPanditServicesWithMaster(pandit.id, true).catch(() => []),
     storage.listPanditPackages(pandit.id, true).catch(() => []),
     storage.listPanditGalleryItems(pandit.id, true).catch(() => []),
     storage.listPanditAvailabilityRules(pandit.id, true).catch(() => []),
+    db.select({ id: panditMembershipPurchases.id }).from(panditMembershipPurchases).where(and(
+      eq(panditMembershipPurchases.panditId, pandit.id),
+      eq(panditMembershipPurchases.paymentStatus, "paid"),
+      gte(panditMembershipPurchases.expiresAt, new Date()),
+    )).limit(1).catch(() => []),
+    db.select({ count: sql<number>`count(*)::int` }).from(pujaBookings).where(and(
+      eq(pujaBookings.panditId, pandit.id),
+      eq(pujaBookings.status, "completed"),
+    )).catch(() => [{ count: 0 }]),
   ]);
   const services = authoritativeProfile?.services || storedServices.map(publicPanditServiceDto);
+  const enrichment = storefrontServiceEnrichment(services, publicStorefrontPanditDto(pandit));
+  const trust = {
+    verifiedFacts: storefrontVerifiedFacts({
+      verified: pandit.verified === true,
+      registrationNo: pandit.registrationNo,
+      experience: pandit.experience,
+      reviewCount: reviews.length,
+      completedBookingCount: completedBookings[0]?.count || 0,
+      activeMembership: membership.length > 0,
+    }),
+    adminBadges: publicAdminTrustBadges(sf?.trustBadges),
+  };
   const activeServiceIds = new Set(services.map(service => service.id));
   const packageDtos = (await Promise.all(packages.map(async pkg => {
     const items = await storage.listPanditPackageItems(pkg.id);
@@ -371,6 +396,8 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
       : null,
     products,
     services,
+    ...enrichment,
+    trust,
     reviews: reviews.slice(0, 10).map(publicPanditReviewDto),
     packages: packageDtos,
     gallery: gallery.map(publicPanditGalleryItemDto),
@@ -1803,6 +1830,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
           productCommissionPct: p.productCommissionPct ?? 0,
           isPublished: !!sf?.isPublished,
           productCount: Array.isArray(sf?.productIds) ? sf!.productIds.length : 0,
+          trustBadges: publicAdminTrustBadges(sf?.trustBadges).map(({ key, detail }) => ({ key, ...(detail ? { detail } : {}) })),
           viewCount: sf?.viewCount ?? 0,
           totalCommission: summary.totalCommission || 0,
           referralCount: summary.count || 0,
@@ -1820,6 +1848,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       const schema = z.object({
         productCommissionPct: z.number().int().min(0).max(50).optional(),
         isPublished: z.boolean().optional(),
+        trustBadges: adminTrustBadgesSchema.optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid" });
@@ -1829,6 +1858,9 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       }
       if (parsed.data.isPublished !== undefined) {
         await storage.updatePanditStorefront(panditId, { isPublished: parsed.data.isPublished });
+      }
+      if (parsed.data.trustBadges !== undefined) {
+        await storage.updatePanditStorefront(panditId, { trustBadges: parsed.data.trustBadges });
       }
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ message: e?.message }); }
