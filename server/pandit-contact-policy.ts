@@ -6,6 +6,9 @@ export type ContactOverride = "use_global" | "always_open" | "login_required" | 
 export function effectivePanditContactPolicy(globalMode: unknown, override: unknown): GlobalContactMode {
   const global: GlobalContactMode = ["open", "login_required", "disabled"].includes(String(globalMode))
     ? String(globalMode) as GlobalContactMode : "login_required";
+  // A global shutdown is a hard safety ceiling, not a default that a
+  // storefront-level preference can bypass.
+  if (global === "disabled") return "disabled";
   switch (override) {
     case "always_open": return "open";
     case "login_required": return "login_required";

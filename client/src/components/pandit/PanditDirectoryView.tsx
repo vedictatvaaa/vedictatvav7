@@ -27,8 +27,8 @@
 // landing page, pass `embedded` to suppress the duplicate H1 + mini-hero
 // (the parent page already provides those).
 // =====================================================================
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { bookingContextParams } from "@/lib/puja-service-map";
@@ -37,7 +37,7 @@ import {
   Search, MapPin, Star, ShieldCheck, Filter, X, Languages,
   Sparkles, Loader2,
   GraduationCap, Award, Check, MessageCircle, Calendar,
-  Wand2, Navigation, Phone,
+  Wand2, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,29 @@ type PanditWithMeta = Pandit & {
   requestedMuhurat?: { date: string; window?: string; reason?: string };
   calendarStatus?: "confirmation_required";
 };
+
+type DirectoryResponse = {
+  items: PanditWithMeta[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+  availableSorts: string[];
+};
+
+const SORT_OPTIONS = [
+  { value: "best_match", label: "Best match" },
+  { value: "highest_rated", label: "Highest rated" },
+  { value: "most_reviewed", label: "Most reviewed" },
+  { value: "price_low", label: "Price: low to high" },
+  { value: "price_high", label: "Price: high to low" },
+  { value: "nearest", label: "Nearest first", needsLocation: true },
+  { value: "experience", label: "Most experienced" },
+] as const;
 
 function formatDistance(d: number | null): string {
   if (d === null || d === undefined) return "";
@@ -189,12 +212,13 @@ type Filters = {
   languages: string[];
   priceMax: number;
   minRating: number;
+  verified: boolean;
   onlineOnly: boolean;
 };
 
 const DEFAULT_FILTERS: Filters = {
   q: "", tradition: "", specialization: "", languages: [],
-  priceMax: 25000, minRating: 0, onlineOnly: false,
+  priceMax: 25000, minRating: 0, verified: false, onlineOnly: false,
 };
 
 // Keyboard-accessible filter chip — semantic <button> with aria-pressed.
@@ -314,6 +338,14 @@ function FilterPanel({ filters, setFilters, facetOptions }: { filters: Filters; 
       </div>
 
       <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="cursor-pointer">Verified pandits</Label>
+          <Switch
+            checked={filters.verified}
+            onCheckedChange={(v) => setFilters({ ...filters, verified: v })}
+            data-testid="switch-verified"
+          />
+        </div>
         <div className="flex items-center justify-between">
           <Label className="flex items-center gap-2 cursor-pointer">
             <span className="relative flex h-2 w-2">
@@ -503,7 +535,7 @@ function CompareBar({
     <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur shadow-lg" data-testid="bar-compare">
       <div className="container max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
         <span className="text-sm font-medium">
-          Comparing {selected.length} of 3
+          {selected.length} of 3 selected on this page
         </span>
         <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
           {selected.map((p) => (
@@ -594,12 +626,22 @@ function CompareDialog({
 // Main directory view
 // =====================================================================
 export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, pujaSlug, language, tradition, date, muhurat, facetOptions, embedded = false }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; pujaSlug?: string; language?: string; tradition?: string; date?: string; muhurat?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean }) {
+  const initialQuery = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const [filters, setFilters] = useState<Filters>(() => ({
     ...DEFAULT_FILTERS,
-    tradition: tradition || "",
-    languages: language ? [language] : [],
+    q: initialQuery.get("q") || "",
+    tradition: initialQuery.get("region") || tradition || "",
+    specialization: initialQuery.get("service") || "",
+    languages: (initialQuery.get("language") || language || "").split(",").filter(Boolean),
+    priceMax: Number(initialQuery.get("maxPrice")) || DEFAULT_FILTERS.priceMax,
+    minRating: Number(initialQuery.get("minRating")) || 0,
+    verified: initialQuery.get("verified") === "true",
+    onlineOnly: initialQuery.get("onlineOnly") === "true",
   }));
-  const [sortBy, setSortBy] = useState<"best" | "online" | "rating" | "price-low" | "price-high" | "distance" | "experience">("best");
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.q);
+  const [sortBy, setSortBy] = useState(initialQuery.get("sort") || (mode === "nearMe" ? "nearest" : "best_match"));
+  const [page, setPage] = useState(Math.max(1, Number(initialQuery.get("page")) || 1));
+  const hasAppliedInitialDirectoryState = useRef(false);
   const [, navigate] = useLocation();
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -631,6 +673,21 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     );
   }, []);
 
+  // Search is intentionally debounced before it becomes part of the server query.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(filters.q.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [filters.q]);
+
+  // A changed directory constraint always starts a fresh server-side page.
+  useEffect(() => {
+    if (!hasAppliedInitialDirectoryState.current) {
+      hasAppliedInitialDirectoryState.current = true;
+      return;
+    }
+    setPage(1);
+  }, [debouncedSearch, filters.tradition, filters.specialization, filters.languages, filters.priceMax, filters.minRating, filters.verified, filters.onlineOnly, sortBy, userLocation, mode, cityId, stateId, defaultCity, service, language, date, muhurat, pujaSlug]);
+
   useEffect(() => {
     const activeCount = [
       !!filters.q,
@@ -639,106 +696,81 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
       filters.languages.length > 0,
       filters.priceMax !== DEFAULT_FILTERS.priceMax,
       filters.minRating > 0,
+      filters.verified,
       filters.onlineOnly,
     ].filter(Boolean).length;
     if (activeCount > 0) trackDiscoveryEvent("filters_changed", { active_count: activeCount });
-  }, [filters.q, filters.tradition, filters.specialization, filters.languages.length, filters.priceMax, filters.minRating, filters.onlineOnly]);
+  }, [debouncedSearch, filters.tradition, filters.specialization, filters.languages.length, filters.priceMax, filters.minRating, filters.verified, filters.onlineOnly]);
 
-  // Fetch pandits — server-side filters: city, region, lat/lng
+  // All directory filtering, ordering, and pagination belongs to the API.
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
     if (mode === "nearMe") params.set("nearMe", "true");
     if (stateId) params.set("stateId", String(stateId));
     if (defaultCity) params.set("city", defaultCity);
     if (cityId) params.set("cityId", String(cityId));
-    if (service) params.set("service", service);
+    if (filters.specialization || service) params.set("service", filters.specialization || service || "");
     if (pujaSlug) params.set("pujaSlug", pujaSlug);
-    if (language) params.set("language", language);
+    if (filters.languages.length) params.set("language", filters.languages.join(","));
+    else if (language) params.set("language", language);
     if (date) params.set("date", date);
     if (muhurat) params.set("muhurat", muhurat);
     if (filters.tradition || tradition) params.set("region", filters.tradition || tradition || "");
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    if (filters.minRating) params.set("minRating", String(filters.minRating));
+    if (filters.priceMax < DEFAULT_FILTERS.priceMax) params.set("maxPrice", String(filters.priceMax));
+    if (filters.verified) params.set("verified", "true");
+    if (filters.onlineOnly) params.set("onlineOnly", "true");
+    params.set("sort", sortBy);
+    params.set("page", String(page));
+    params.set("pageSize", "12");
     if (userLocation) {
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
+      if (mode === "nearMe") params.set("radiusKm", "50");
     }
     return params.toString();
-  }, [defaultCity, cityId, stateId, mode, service, pujaSlug, language, tradition, date, muhurat, filters.tradition, userLocation]);
+  }, [defaultCity, cityId, stateId, mode, service, pujaSlug, language, tradition, date, muhurat, filters, debouncedSearch, sortBy, page, userLocation]);
 
-  const { data: pandits, isLoading, isError, refetch, isFetching } = useQuery<PanditWithMeta[]>({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery<DirectoryResponse>({
     queryKey: ["/api/book-pandit-online", queryParams],
     queryFn: async () => {
       const r = await fetch(`/api/book-pandit-online?${queryParams}`);
       if (!r.ok) throw new Error(`Failed to load pandits (${r.status})`);
-      return r.json();
+      const response = await r.json();
+      // Canonical contract only: an array would hide inaccurate client-side totals.
+      if (!Array.isArray(response?.items) || !response?.pagination) throw new Error("Invalid directory response");
+      return response;
     },
     retry: 1,
     enabled: mode !== "nearMe" || !!userLocation,
   });
+  const pandits = data?.items || [];
+  const pagination = data?.pagination;
+  const availableSorts = data?.availableSorts || [];
+  const supportedSorts = SORT_OPTIONS.filter((option) =>
+    availableSorts.includes(option.value) && (!("needsLocation" in option) || !!userLocation),
+  );
 
-  // Client-side filter chain (server already handled city/region)
-  const filtered = useMemo(() => {
-    if (!pandits) return [];
-    const q = filters.q.trim().toLowerCase();
-    return pandits.filter((p) => {
-      if (q && !(`${p.name} ${p.specialization} ${p.bio || ""}`.toLowerCase().includes(q))) return false;
-      if (filters.specialization && !p.specialization.toLowerCase().includes(filters.specialization.toLowerCase())) return false;
-      if (filters.priceMax && p.fees > filters.priceMax) return false;
-      if (filters.minRating && (p.rating || 0) < filters.minRating) return false;
-      if (filters.onlineOnly && !p.isOnline) return false;
-      if (filters.languages.length > 0) {
-        const panditLangs = (p.languages || "").toLowerCase();
-        if (!filters.languages.some((l) => panditLangs.includes(l.toLowerCase()))) return false;
-      }
-      return true;
-    });
-  }, [pandits, filters]);
-
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    // Always: tier rank → boost → user-selected sort. Online-first when sortBy=online.
-    arr.sort((a, b) => {
-      if (sortBy === "online") {
-        const ao = a.isOnline ? 1 : 0;
-        const bo = b.isOnline ? 1 : 0;
-        if (ao !== bo) return bo - ao;
-      }
-      if (sortBy === "best") {
-        const ao = a.isOnline ? 1 : 0;
-        const bo = b.isOnline ? 1 : 0;
-        if (ao !== bo) return bo - ao;
-      }
-      switch (sortBy) {
-        case "rating": return (b.rating || 0) - (a.rating || 0);
-        case "price-low": return a.fees - b.fees;
-        case "price-high": return b.fees - a.fees;
-        case "experience": return (b.experience || 0) - (a.experience || 0);
-        case "distance": {
-          const ad = a.distance ?? Infinity;
-          const bd = b.distance ?? Infinity;
-          return ad - bd;
-        }
-        default: return (b.rating || 0) - (a.rating || 0);
-      }
-    });
-    return arr;
-  }, [filtered, sortBy]);
-
-  // Compare entities are derived from the FULL fetched dataset (not the
-  // currently-filtered list) so a selection doesn't vanish from the bar
-  // when the user adjusts filters. We also auto-prune any IDs that no
-  // longer exist in the fetched data (e.g. city changed).
+  // Compare is deliberately scoped to the loaded page. Selections that do
+  // not exist in the current response are removed as filters/pages change.
   const compareSelected = useMemo(
-    () => (pandits || []).filter((p) => compareIds.includes(p.id)),
+    () => pandits.filter((p) => compareIds.includes(p.id)),
     [pandits, compareIds],
   );
   useEffect(() => {
-    if (!pandits) return;
     const valid = new Set(pandits.map((p) => p.id));
     setCompareIds((cur) => {
       const next = cur.filter((id) => valid.has(id));
       return next.length === cur.length ? cur : next;
     });
-  }, [pandits]);
+  }, [data]);
+
+  useEffect(() => {
+    if (availableSorts.length && !availableSorts.includes(sortBy)) {
+      setSortBy(availableSorts.includes("best_match") ? "best_match" : availableSorts[0]);
+    }
+  }, [availableSorts, sortBy]);
 
   const toggleCompare = (id: number) => {
     setCompareIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
@@ -750,10 +782,11 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     + filters.languages.length
     + (filters.minRating > 0 ? 1 : 0)
     + (filters.priceMax < 25000 ? 1 : 0)
+    + (filters.verified ? 1 : 0)
     + (filters.onlineOnly ? 1 : 0)
     ;
 
-  const onlineCount = (pandits || []).filter((p) => p.isOnline).length;
+  const onlineCount = pandits.filter((p) => p.isOnline).length;
   const stateHref = (() => {
     if (!stateId || !stateSlug) return "/book-pandit-online";
     const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
@@ -783,7 +816,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                   {mode === "nearMe" ? "Pandits near you" : mode === "state" ? `Pandits in ${stateLabel}` : `Pandits in ${cityLabel}`}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1 flex items-center gap-3 flex-wrap">
-                  <span>{(pandits || []).length} pandits available</span>
+                  <span>{pagination ? `${pagination.total.toLocaleString("en-IN")} pandit${pagination.total === 1 ? "" : "s"} available` : "Loading results…"}</span>
                   {onlineCount > 0 && (
                     <span className="flex items-center gap-1.5 text-green-700">
                       <span className="relative flex h-2 w-2">
@@ -859,7 +892,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
         <div className="container max-w-7xl mx-auto px-4 pt-2">
           <div className="flex items-center justify-between gap-3 flex-wrap text-sm">
             <p className="text-muted-foreground flex items-center gap-3 flex-wrap" data-testid="text-embedded-stats">
-              <span>{(pandits || []).length} pandits available</span>
+              <span>{pagination ? `${pagination.total.toLocaleString("en-IN")} pandit${pagination.total === 1 ? "" : "s"} available` : "Loading results…"}</span>
               {onlineCount > 0 && (
                 <span className="flex items-center gap-1.5 text-green-700">
                   <span className="relative flex h-2 w-2">
@@ -938,23 +971,17 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                 </div>
                 <div className="mt-6 flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => setFilters(DEFAULT_FILTERS)}>Clear</Button>
-                  <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>Show {sorted.length}</Button>
+                  <Button className="flex-1" onClick={() => setFilterSheetOpen(false)}>Show {pagination?.total ?? 0}</Button>
                 </div>
               </SheetContent>
             </Sheet>
 
-            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]" data-testid="select-sort">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="best">Best match</SelectItem>
-                <SelectItem value="online">Online first</SelectItem>
-                <SelectItem value="rating">Top rated</SelectItem>
-                <SelectItem value="price-low">Price: low to high</SelectItem>
-                <SelectItem value="price-high">Price: high to low</SelectItem>
-                <SelectItem value="experience">Most experienced</SelectItem>
-                <SelectItem value="distance" disabled={!userLocation}>Nearest first</SelectItem>
+                {supportedSorts.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
               </SelectContent>
             </Select>
 
@@ -984,26 +1011,26 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                 </div>
               </CardContent>
             </Card>
-          ) : sorted.length === 0 ? (
+          ) : pandits.length === 0 ? (
             <Card data-testid="state-pandits-empty">
               <CardContent className="p-12 text-center">
                 <Search className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                 <p className="font-semibold">
-                  {(pandits || []).length === 0
+                  {(pagination?.total || 0) === 0
                     ? mode === "nearMe"
                       ? "No eligible Pandits found within 50 km"
                       : `No Pandits onboarded in ${cityLabel || stateLabel || "this area"} yet`
                     : "No pandits match these filters"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {(pandits || []).length === 0
+                  {(pagination?.total || 0) === 0
                     ? mode === "nearMe"
                       ? "Try again from another location, or browse by State and City instead."
                       : `We're verifying our first batch of ${cityLabel || stateLabel || "local"} Pandits — until then you can book the same ritual via a live online puja.`
                     : "Try clearing filters or expanding the price range."}
                 </p>
                 <div className="flex gap-2 justify-center mt-4 flex-wrap">
-                  {(pandits || []).length === 0 ? (
+                  {(pagination?.total || 0) === 0 ? (
                     <Link href="/online-puja-booking">
                       <Button data-testid="button-empty-online-puja">Book online puja</Button>
                     </Link>
@@ -1015,7 +1042,7 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
             </Card>
           ) : (
             <div className="space-y-3">
-              {sorted.map((p) => (
+              {pandits.map((p) => (
                 <PanditCard
                   key={p.id}
                   p={p}
@@ -1024,6 +1051,18 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
                   onToggleCompare={() => toggleCompare(p.id)}
                 />
               ))}
+              {pagination && pagination.totalPages > 1 ? (
+                <nav className="flex flex-wrap items-center justify-center gap-2 pt-4" aria-label="Directory pages">
+                  <Button variant="outline" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={!pagination.hasPreviousPage} aria-label="Previous page">Previous</Button>
+                  {Array.from({ length: pagination.totalPages }, (_, index) => index + 1)
+                    .filter((number) => number === 1 || number === pagination.totalPages || Math.abs(number - pagination.page) <= 1)
+                    .map((number, index, shown) => <span key={number} className="contents">
+                      {index > 0 && number - shown[index - 1] > 1 ? <span className="px-1 text-muted-foreground" aria-hidden="true">…</span> : null}
+                      <Button variant={number === pagination.page ? "default" : "outline"} size="sm" className="min-w-10" onClick={() => setPage(number)} aria-current={number === pagination.page ? "page" : undefined}>{number}</Button>
+                    </span>)}
+                  <Button variant="outline" onClick={() => setPage((current) => current + 1)} disabled={!pagination.hasNextPage} aria-label="Next page">Next</Button>
+                </nav>
+              ) : null}
             </div>
           )}
         </main>
@@ -1031,14 +1070,14 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
 
       {/* Mobile sticky action bar — shows when compare empty so the
           primary "book the top match" action is always one tap away. */}
-      {compareSelected.length === 0 && sorted.length > 0 && (
+      {compareSelected.length === 0 && pandits.length > 0 && (
         <div className="fixed bottom-0 inset-x-0 z-30 lg:hidden border-t bg-background/95 backdrop-blur shadow-lg" data-testid="bar-mobile-cta">
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="text-xs text-muted-foreground">Top result {cityLabel ? `in ${cityLabel}` : stateLabel ? `in ${stateLabel}` : "near you"}</div>
-              <div className="text-sm font-semibold truncate">{sorted[0].name} · ₹{sorted[0].fees.toLocaleString("en-IN")}</div>
+              <div className="text-sm font-semibold truncate">{pandits[0].name} · ₹{pandits[0].fees.toLocaleString("en-IN")}</div>
             </div>
-            <Link href={contextualProfileHref(sorted[0])} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: sorted[0].id, source: "mobile_top" })}>
+            <Link href={contextualProfileHref(pandits[0])} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: pandits[0].id, source: "mobile_top" })}>
               <Button size="sm" data-testid="button-mobile-book-top">
                 <MessageCircle className="h-4 w-4 mr-1.5" /> Book Now
               </Button>

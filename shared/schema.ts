@@ -356,6 +356,12 @@ export const pandits = pgTable("pandits", {
   onLeave: boolean("on_leave").notNull().default(false),
   leaveNote: text("leave_note"),
   leaveStartedAt: timestamp("leave_started_at"),
+  // Explicit admin rollout controls. These are deliberately fail-closed for
+  // newly approved records; 0024 preserves visibility for existing live rows.
+  directoryVisible: boolean("directory_visible").notNull().default(false),
+  searchEligible: boolean("search_eligible").notNull().default(false),
+  bookingEnabled: boolean("booking_enabled").notNull().default(false),
+  indexingMode: text("indexing_mode").notNull().default("auto"),
 }, (t) => ({
   cityIdx: index("pandits_city_idx").on(t.city),
   stateIdx: index("pandits_state_idx").on(t.state),
@@ -367,6 +373,8 @@ export const pandits = pgTable("pandits", {
     .where(sql`${t.legacyRegistrationNo} is not null`),
   verifiedIdx: index("pandits_verified_idx").on(t.verified),
   boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
+  governanceEligibilityIdx: index("pandits_governance_eligibility_idx").on(t.directoryVisible, t.searchEligible, t.bookingEnabled),
+  indexingModeCheck: check("pandits_indexing_mode_check", sql`${t.indexingMode} in ('auto', 'noindex')`),
 }));
 
 export const panditSessions = pgTable("pandit_sessions", {

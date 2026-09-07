@@ -141,13 +141,13 @@ function MessagesAdapter({ bookings, go }: { bookings: any[]; go: (s: string) =>
 function SettingsPanel({ onLeave, note, refresh }: { onLeave: boolean; note: string; refresh: () => void }) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
-  const [contactSettings, setContactSettings] = useState({ contactOverride: "use_global", showPhone: false, showWhatsapp: false, contactAvailable: true, directoryVisible: true, profilePublished: true });
+  const [contactSettings, setContactSettings] = useState({ contactOverride: "use_global" });
   const [contactLoading, setContactLoading] = useState(true);
   const [contactError, setContactError] = useState("");
   useEffect(() => {
     let active = true;
-    panditApi("GET", "/api/pandit/contact-settings").then((result) => {
-      if (active) setContactSettings(current => ({ ...current, ...(result.settings || result) }));
+    panditApi("GET", "/api/pandit/storefront").then((result) => {
+      if (active) setContactSettings({ contactOverride: result.storefront?.contactAccessOverride || "use_global" });
     }).catch((error: Error) => { if (active) setContactError(error.message || "Contact privacy settings could not be loaded."); }).finally(() => { if (active) setContactLoading(false); });
     return () => { active = false; };
   }, []);
@@ -158,7 +158,7 @@ function SettingsPanel({ onLeave, note, refresh }: { onLeave: boolean; note: str
   }
   async function saveContactSettings() {
     setBusy(true); setContactError("");
-    try { await panditApi("PATCH", "/api/pandit/contact-settings", contactSettings); toast({ title: "Contact privacy saved" }); }
+    try { await panditApi("PATCH", "/api/pandit/storefront", { contactAccessOverride: contactSettings.contactOverride }); toast({ title: "Contact privacy saved" }); }
     catch (error: any) { setContactError(error.message || "Contact privacy settings could not be saved."); }
     finally { setBusy(false); }
   }
@@ -174,8 +174,7 @@ function SettingsPanel({ onLeave, note, refresh }: { onLeave: boolean; note: str
     <p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#946c16]">Contact privacy</p><h2 className="mt-2 font-serif text-2xl">Control your contact visibility</h2><p className="mt-2 text-sm leading-6 text-[#806f5e]">Your phone number is only shared through Vedic Tatva’s authorized contact flow. Changes do not expose a number in your public profile.</p>
     {contactError && <p role="alert" className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{contactError}</p>}
     {contactLoading ? <div className="mt-5 h-24 animate-pulse rounded-lg bg-[#f2e6d2]" /> : <><div className="mt-5 space-y-4">
-      <label className="block text-sm font-semibold">Direct contact policy<select value={contactSettings.contactOverride} onChange={event => setContactSettings(current => ({ ...current, contactOverride: event.target.value }))} className="mt-1.5 block h-10 w-full rounded-md border border-[#d8c8ae] bg-white px-3 font-normal"><option value="use_global">Use Vedic Tatva global setting</option><option value="always_open">Always open</option><option value="login_required">Login required</option><option value="never_display">Never display</option></select></label>
-      {[["showPhone", "Allow phone calls after authorized reveal"], ["showWhatsapp", "Allow WhatsApp after authorized reveal"], ["contactAvailable", "Accept direct contact requests"], ["directoryVisible", "Show in the Pandit directory"], ["profilePublished", "Keep my public profile published"]] .map(([key, label]) => <label key={key} className="flex min-h-11 items-center justify-between gap-4 rounded-lg border border-[#eadfce] px-3 text-sm"><span>{label}</span><input type="checkbox" checked={Boolean(contactSettings[key as keyof typeof contactSettings])} onChange={event => setContactSettings(current => ({ ...current, [key]: event.target.checked }))} className="h-5 w-5 accent-[#55252d]" /></label>)}
+      <label className="block text-sm font-semibold">Direct contact policy<select value={contactSettings.contactOverride} onChange={event => setContactSettings(current => ({ ...current, contactOverride: event.target.value }))} className="mt-1.5 block h-10 w-full rounded-md border border-[#d8c8ae] bg-white px-3 font-normal"><option value="use_global">Use Vedic Tatva global setting</option><option value="login_required">Login required</option><option value="never_display">Never display</option></select></label>
     </div><Button onClick={saveContactSettings} disabled={busy} className="mt-5 bg-[#55252d] text-[#fff8e9] hover:bg-[#3e1b20]">{busy ? "Saving…" : "Save contact privacy"}</Button></>}
   </div></div>;
 }

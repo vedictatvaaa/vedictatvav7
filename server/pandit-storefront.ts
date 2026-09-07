@@ -951,7 +951,8 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         bio: z.string().max(2000).nullable().optional(),
         tagline: z.string().max(160).nullable().optional(),
         whatsappNumber: z.string().max(20).nullable().optional(),
-        contactAccessOverride: z.enum(["use_global", "always_open", "login_required", "never_display"]).optional(),
+        // Opening contact to anonymous visitors is an Admin-only decision.
+        contactAccessOverride: z.enum(["use_global", "login_required", "never_display"]).optional(),
         youtubeUrl: z.string().url().max(300).nullable().optional().or(z.literal("")),
         instagramUrl: z.string().url().max(300).nullable().optional().or(z.literal("")),
         facebookUrl: z.string().url().max(300).nullable().optional().or(z.literal("")),
@@ -1874,6 +1875,12 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       }
       if (parsed.data.contactAccessOverride !== undefined) {
         await storage.updatePanditStorefront(panditId, { contactAccessOverride: parsed.data.contactAccessOverride });
+        await storage.logAdminAction({
+          actor: `admin:${(req as any).adminUserId}`,
+          action: "pandit_contact_override.updated",
+          target: `pandit:${panditId}`,
+          details: { contactAccessOverride: parsed.data.contactAccessOverride },
+        });
       }
       res.json({ ok: true });
     } catch (e: any) { res.status(500).json({ message: e?.message }); }

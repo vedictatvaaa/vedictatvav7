@@ -3,7 +3,7 @@ import { z } from "zod";
 import { indianCities, indianStates } from "@shared/schema";
 import { db } from "./db";
 import { storage } from "./storage";
-import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+import { isPanditPubliclyEligible, effectivePanditGovernance } from "./pandit-public-eligibility";
 
 const ADMIN_TRUST_BADGES = {
   vedic_scholar: { label: "Vedic Scholar", detailAllowed: false },
@@ -93,7 +93,7 @@ export async function getPubliclyEligiblePanditBySlug(slug: string) {
   if (!pandit) return null;
 
   const { stateIds, cityById } = await loadActiveLocationContext();
-  return isPanditPubliclyEligible(pandit, stateIds, cityById) ? pandit : null;
+  return effectivePanditGovernance(pandit, stateIds, cityById).directory ? pandit : null;
 }
 
 export function isPanditStorefrontPublished(storefront: any) {
@@ -124,7 +124,7 @@ export async function getPubliclyEligiblePandits() {
     storage.getPandits(),
     loadActiveLocationContext(),
   ]);
-  return all.filter(pandit => isPanditPubliclyEligible(pandit, context.stateIds, context.cityById));
+  return all.filter(pandit => effectivePanditGovernance(pandit, context.stateIds, context.cityById).directory);
 }
 
 export function publicStorefrontPanditDto(pandit: any) {

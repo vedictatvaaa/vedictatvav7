@@ -2,10 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { contactQuotaMetadata, effectivePanditContactPolicy } from "./pandit-contact-policy";
 
-test("Pandit contact override takes precedence over global mode", () => {
-  assert.equal(effectivePanditContactPolicy("open", "never_display"), "disabled");
-  assert.equal(effectivePanditContactPolicy("disabled", "always_open"), "open");
-  assert.equal(effectivePanditContactPolicy("disabled", "use_global"), "disabled");
+test("every global and override combination obeys the disabled ceiling", () => {
+  const cases: Array<[string, string, string]> = [
+    ["open", "use_global", "open"], ["open", "always_open", "open"], ["open", "login_required", "login_required"], ["open", "never_display", "disabled"],
+    ["login_required", "use_global", "login_required"], ["login_required", "always_open", "open"], ["login_required", "login_required", "login_required"], ["login_required", "never_display", "disabled"],
+    ["disabled", "use_global", "disabled"], ["disabled", "always_open", "disabled"], ["disabled", "login_required", "disabled"], ["disabled", "never_display", "disabled"],
+  ];
+  for (const [global, override, expected] of cases) assert.equal(effectivePanditContactPolicy(global, override), expected, `${global}/${override}`);
   assert.equal(effectivePanditContactPolicy("invalid", "use_global"), "login_required");
 });
 

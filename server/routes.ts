@@ -35,6 +35,7 @@ import { registerKnowledgeGraphAdminRoutes } from "./knowledge-graph/admin-route
 import { registerDestinationAdminRoutes, registerDestinationPublicRoutes } from "./knowledge-graph/destination-routes";
 import { registerKnowledgeGraphPublicRoutes } from "./knowledge-graph/public-routes";
 import { registerPanditToolsRoutes } from "./pandit-tools";
+import { registerPanditGovernanceRoutes } from "./pandit-governance";
 import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
@@ -68,14 +69,17 @@ import { panditApplications, panditCityRequests, insertFranchiseApplicationSchem
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { normalizePanditPhone } from "./pandit-phone";
-import { PANDIT_CONTACT_ALLOWANCE, effectivePanditContactPolicy, contactQuotaMetadata } from "./pandit-contact-policy";
+import { parseDirectoryQuery, queryPanditDirectory } from "./pandit-directory-query";
+import { effectivePanditContactPolicy } from "./pandit-contact-policy";
+import { claimPanditContactQuota, getPanditContactQuota } from "./pandit-contact-quota";
+import { contactStatusDto, setPrivateContactResponse } from "./pandit-contact-response";
 import { panditVerificationDto } from "./pandit-verification";
 import { authorizePanditSession } from "./pandit-portal";
 import {
   createMembershipCardProductsHandler,
   isPanditEligibleForMembershipCardOrder,
 } from "./membership-card-route";
-import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+import { isPanditPubliclyEligible, effectivePanditGovernance } from "./pandit-public-eligibility";
 import {
   adminPanditDto,
   buildPanditDiscoverySummary,
@@ -84,7 +88,7 @@ import {
   matchesPanditListingFilters,
   publicPanditDto,
 } from "./pandit-discovery-policy";
-import { getPubliclyEligiblePandits, isPanditStorefrontPublished, publicPanditReviewDto } from "./pandit-public-access";
+import { getPubliclyEligiblePandits, getPubliclyPublishedPanditBySlug, isPanditStorefrontPublished, publicPanditReviewDto } from "./pandit-public-access";
 import { publicRouteIntegrityMiddleware } from "./seo-route-integrity";
 import { masterServiceWriteSchema } from "./catalog-validation";
 import { seedMasterServices } from "./catalog-seed";
@@ -283,6 +287,7 @@ export async function registerRoutes(
 
   const adminAuthMiddleware = sharedAdminAuth;
   registerPanditSeoNetworkAdminRoutes(app, adminAuthMiddleware);
+  registerPanditGovernanceRoutes(app, adminAuthMiddleware);
   registerKnowledgeGraphAdminRoutes(app, adminAuthMiddleware);
   registerDestinationAdminRoutes(app, adminAuthMiddleware);
   // These are destination compatibility reads, not the knowledge-graph public
@@ -346,93 +351,82 @@ export async function registerRoutes(
 
   // Contact details deliberately have no relationship to the public storefront
   // DTO. These routes are the sole contact disclosure boundary.
-  const CONTACT_ALLOWANCE = PANDIT_CONTACT_ALLOWANCE;
   const contactStatusLimiter = rateLimit({
     windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
     keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+    handler: (_req, res) => {
+      setPrivateContactResponse(res);
+      res.status(429).json({ message: "Too many contact status requests" });
+    },
   });
   const contactRevealLimiter = rateLimit({
     windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false,
     keyGenerator: (req: any) => `${req.customerUserId || "anonymous"}:${ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown")}`,
+    handler: (_req, res) => {
+      setPrivateContactResponse(res);
+      res.status(429).json({ message: "Too many contact reveal requests" });
+    },
   });
   const contactTarget = async (slug: string) => {
-    const rows = await db.select({
-      id: pandits.id, name: pandits.name, city: pandits.city, phone: pandits.phone,
-      whatsappNumber: panditStorefronts.whatsappNumber,
-      override: panditStorefronts.contactAccessOverride,
-      published: panditStorefronts.isPublished,
-    }).from(pandits).innerJoin(panditStorefronts, eq(panditStorefronts.panditId, pandits.id))
-      .where(eq(pandits.slug, slug)).limit(1);
-    return rows[0] || null;
-  };
-  const quota = async (executor: any, userId: number, now = new Date()) => {
-    const windowStart = new Date(now);
-    windowStart.setFullYear(windowStart.getFullYear() - 1);
-    const rows = await executor.select({ used: sql<number>`count(*)::int` }).from(panditContactReveals)
-      .where(and(eq(panditContactReveals.userId, userId), gte(panditContactReveals.revealedAt, windowStart)));
-    return { used: Number(rows[0]?.used || 0), windowStart };
-  };
-  const quotaDto = async (userId: number) => {
-    const state = await quota(db, userId);
-    const earliest = await db.select({ revealedAt: panditContactReveals.revealedAt }).from(panditContactReveals)
-      .where(and(eq(panditContactReveals.userId, userId), gte(panditContactReveals.revealedAt, state.windowStart)))
-      .orderBy(panditContactReveals.revealedAt).limit(1);
-    return contactQuotaMetadata(state.used, earliest[0]?.revealedAt);
+    // Reuse the storefront's authoritative public gate (verification,
+    // account/leave state, active reviewed location, and published status).
+    const pandit = await getPubliclyPublishedPanditBySlug(slug);
+    if (!pandit) return null;
+    const storefront = await storage.getPanditStorefrontByPanditId(pandit.id);
+    if (!storefront) return null;
+    const phone = normalizePanditPhone(pandit.phone);
+    const whatsappNumber = normalizePanditPhone(storefront.whatsappNumber);
+    return {
+      id: pandit.id, name: pandit.name, city: pandit.city, phone, whatsappNumber,
+      contactAvailable: Boolean(phone || whatsappNumber), override: storefront.contactAccessOverride,
+    };
   };
 
   app.get("/api/storefront/:slug/contact/status", contactStatusLimiter, async (req: any, res) => {
+    setPrivateContactResponse(res);
     try {
       const target = await contactTarget(String(req.params.slug));
-      if (!target || !target.published) return res.status(404).json({ message: "Pandit not found" });
+      if (!target) return res.status(404).json({ message: "Pandit not found" });
       const settings = await storage.getSiteSettings();
       const policy = effectivePanditContactPolicy(settings?.panditContactMode, target.override);
       const userId = readCustomerSession(req);
       const authenticated = !!userId && !!await storage.getUser(userId);
-      res.setHeader("Cache-Control", "private, no-store");
-      res.json({ policy, authenticated, quota: authenticated && policy === "login_required" ? await quotaDto(userId!) : null });
+      res.json(contactStatusDto(policy, target.contactAvailable, authenticated, authenticated && policy === "login_required" ? await getPanditContactQuota(userId!) : null));
     } catch { res.status(500).json({ message: "Unable to get contact status" }); }
   });
 
   app.post("/api/storefront/:slug/contact/reveal", async (req: any, res, next) => {
+    setPrivateContactResponse(res);
     const userId = readCustomerSession(req);
     if (userId && await storage.getUser(userId)) req.customerUserId = userId;
     next();
   }, contactRevealLimiter, async (req: any, res) => {
     try {
       const target = await contactTarget(String(req.params.slug));
-      if (!target || !target.published) return res.status(404).json({ message: "Pandit not found" });
+      if (!target) return res.status(404).json({ message: "Pandit not found" });
+      if (!target.contactAvailable) return res.status(409).json({ message: "Contact details are unavailable. Please book through Vedic Tatva." });
       const policy = effectivePanditContactPolicy((await storage.getSiteSettings())?.panditContactMode, target.override);
       if (policy === "disabled") return res.status(403).json({ message: "Direct contact is unavailable. Please book through Vedic Tatva.", policy });
       if (policy === "login_required" && !req.customerUserId) return res.status(401).json({ message: "Login to view contact details", policy });
       if (policy === "login_required") {
-        const outcome = await db.transaction(async (tx) => {
-          // Serializes all distinct-Pandit attempts for one customer. The
-          // database unique index remains the final duplicate-consumption guard.
-          await tx.execute(sql`select pg_advisory_xact_lock(${req.customerUserId})`);
-          const existing = await tx.select({ id: panditContactReveals.id }).from(panditContactReveals)
-            .where(and(eq(panditContactReveals.userId, req.customerUserId), eq(panditContactReveals.panditId, target.id))).limit(1);
-          if (existing.length) return { kind: "repeat" as const };
-          const state = await quota(tx, req.customerUserId);
-          if (state.used >= CONTACT_ALLOWANCE) return { kind: "exhausted" as const };
-          await tx.insert(panditContactReveals).values({ userId: req.customerUserId, panditId: target.id });
-          return { kind: "revealed" as const };
-        });
-        if (outcome.kind === "exhausted") return res.status(429).json({ message: "You've used all 10 free Pandit contacts for this 12-month period.", policy, quota: await quotaDto(req.customerUserId) });
+        const outcome = await claimPanditContactQuota(req.customerUserId, target.id);
+        if (outcome.kind === "exhausted") return res.status(429).json({ message: "You've used all 10 free Pandit contacts for this 12-month period.", policy, quota: outcome.quota });
       }
-      res.setHeader("Cache-Control", "private, no-store");
       // Explicit protected DTO: never spread Pandit/storefront DB rows.
       res.json({ contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, policy,
-        quota: req.customerUserId && policy === "login_required" ? await quotaDto(req.customerUserId) : null });
+        quota: req.customerUserId && policy === "login_required" ? await getPanditContactQuota(req.customerUserId) : null });
     } catch (error) { console.error("Contact reveal failed", error); res.status(500).json({ message: "Unable to reveal contact" }); }
   });
 
-  app.get("/api/account/pandit-contacts", customerAuthMiddleware, async (req: any, res) => {
+  app.get("/api/account/pandit-contacts", (req, res, next) => {
+    setPrivateContactResponse(res);
+    next();
+  }, customerAuthMiddleware, async (req: any, res) => {
     try {
-      const state = await quotaDto(req.customerUserId);
+      const state = await getPanditContactQuota(req.customerUserId);
       const items = await db.select({ panditId: pandits.id, name: pandits.name, city: pandits.city, revealedAt: panditContactReveals.revealedAt })
         .from(panditContactReveals).innerJoin(pandits, eq(panditContactReveals.panditId, pandits.id))
         .where(eq(panditContactReveals.userId, req.customerUserId)).orderBy(sql`${panditContactReveals.revealedAt} desc`);
-      res.setHeader("Cache-Control", "private, no-store");
       res.json({ items: items.map(item => ({ ...item, contactStatus: "revealed" })), quota: state });
     } catch { res.status(500).json({ message: "Unable to get contact history" }); }
   });
@@ -3174,7 +3168,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const [all, states, cities] = await Promise.all([storage.getPandits(), db.select().from(indianStates).where(eq(indianStates.isActive, true)), db.select().from(indianCities).where(eq(indianCities.isActive, true))]);
     const stateIds = new Set(states.map(s => s.id));
     const cityById = new Map(cities.map(c => [c.id, c]));
-    return { states, cities, pandits: all.filter(p => isPanditPubliclyEligible(p, stateIds, cityById)) };
+    return { states, cities, pandits: all.filter(p => effectivePanditGovernance(p, stateIds, cityById).directory) };
   }
 
   // Backfill the presentation row for existing eligible Pandits. The unique
@@ -3345,6 +3339,12 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const stateId = rawStateId === undefined ? undefined : Number(rawStateId);
     if (rawCityId !== undefined && (!Number.isInteger(cityId) || cityId! <= 0)) return res.status(400).json({ message: "Invalid cityId" });
     if (rawStateId !== undefined && (!Number.isInteger(stateId) || stateId! <= 0)) return res.status(400).json({ message: "Invalid stateId" });
+    let directoryQuery;
+    try {
+      directoryQuery = parseDirectoryQuery(req.query as Record<string, unknown>);
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message || "Invalid directory query" });
+    }
     const lat = req.query.lat === undefined ? undefined : Number(req.query.lat);
     const lng = req.query.lng === undefined ? undefined : Number(req.query.lng);
     const requestedRadius = req.query.radiusKm === undefined ? 50 : Number(req.query.radiusKm);
@@ -3411,52 +3411,34 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
       const token = (req.headers["x-admin-token"] as string | undefined) || (req as any).cookies?.vt_admin_token;
       if (!(await canViewAllPandits(true, token, sharedValidateAdminSession))) return res.status(401).json({ message: "Admin authentication required for all Pandits" });
     }
-    const { pandits: eligible } = await publicEligibility();
-    const candidates = showAll ? await storage.getPandits() : eligible;
-    const { isPanditOnline } = await import("./pandit-portal");
-    const regionLc = region.toLocaleLowerCase("en-IN"), serviceLc = service.toLocaleLowerCase("en-IN"), languageLc = language.toLocaleLowerCase("en-IN");
-    const results = candidates.map(p => {
-      const distance = nearMe && p.latitude != null && p.longitude != null ? Math.round(distanceBetweenKm(lat!, lng!, p.latitude, p.longitude) * 10) / 10 : undefined;
-      return { p, distance };
-    }).filter(({ p, distance }) => {
-      if (nearMe && (distance === undefined || distance > requestedRadius)) return false;
-      if (!nearMe && !matchesPanditDiscoveryReach(
-        p,
-        selectedLocation ? { cityId: selectedLocation.city.id, stateId: selectedLocation.state.id } : undefined,
-        selectedLocation ? undefined : selectedStateId,
-      )) return false;
-      return matchesPanditListingFilters(p, { service: serviceLc, language: languageLc, region: regionLc });
-    }).sort((a, b) => nearMe ? a.distance! - b.distance! : 0)
-      .map(({ p, distance }) => {
-        const dto = showAll
-          ? adminPanditDto(p, isPanditOnline(p.id), distance)
-          : publicPanditDto(p, isPanditOnline(p.id), distance);
-        const matchReasons = [
+    try {
+      const result = await queryPanditDirectory({
+        ...directoryQuery,
+        cityId: selectedLocation?.city.id,
+        stateId: selectedLocation?.state.id ?? selectedStateId,
+        // Existing city/state names have been resolved above; canonical IDs are
+        // the only values admitted into the scalable query.
+        nearMe,
+        lat,
+        lng,
+        radiusKm: requestedRadius,
+        showAll,
+      });
+      result.items = result.items.map((item: any) => ({
+        ...item,
+        matchReasons: [
           service ? `Offers ${service}` : "Eligible for public booking",
           language ? `Speaks ${language}` : "",
           region ? `Matches the ${region} tradition` : "",
           selectedLocation ? `Serves ${selectedLocation.city.name}` : selectedStateId ? "Serves the selected State" : nearMe ? "Within the selected radius" : "",
-        ].filter(Boolean);
-        return {
-          ...dto,
-          matchReasons,
-          ...(verifiedMuhurat ? {
-            requestedMuhurat: verifiedMuhurat,
-            calendarStatus: "confirmation_required",
-          } : {}),
-        };
-      });
-    if (showAll) return res.json(results);
-    const reviewSummaries = await storage.getPanditReviewSummaries(results.map(result => result.id));
-    const summaryByPandit = new Map(reviewSummaries.map(summary => [summary.panditId, summary]));
-    res.json(results.map(result => {
-      const summary = summaryByPandit.get(result.id);
-      return {
-        ...result,
-        rating: summary?.rating,
-        reviewCount: summary?.reviewCount ?? 0,
-      };
-    }));
+        ].filter(Boolean),
+        ...(verifiedMuhurat ? { requestedMuhurat: verifiedMuhurat, calendarStatus: "confirmation_required" } : {}),
+      }));
+      res.json(result);
+    } catch (error) {
+      console.error("book-pandit-online directory error:", error);
+      res.status(500).json({ message: "Failed to load Pandits" });
+    }
   });
 
   app.get("/api/pandits/verify/:registrationNo", async (req, res, next) => {
@@ -4399,7 +4381,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .find(row => row.service.id === serviceId);
       if (!offering) return res.status(400).json({ message: "This service is no longer available" });
       const { pandits: eligiblePandits } = await publicEligibility();
-      const pandit = eligiblePandits.find((candidate) => candidate.id === offering.service.panditId);
+       const pandit = eligiblePandits.find((candidate) => candidate.id === offering.service.panditId && candidate.bookingEnabled === true);
       if (!pandit) return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
       const contextError = validateCanonicalServiceBookingContext(req.body, {
         masterServiceId: offering.master.id,

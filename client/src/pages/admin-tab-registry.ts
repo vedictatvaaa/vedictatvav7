@@ -3,7 +3,7 @@ import {
   CalendarClock, HandHeart, Heart, Search, Globe, BarChart3, Settings, Truck,
   Shield, Lock, Eye, BellRing, Trophy, Inbox, AlertTriangle, FileText, Megaphone,
   Mail, Sparkles, Database, Wallet, Share2, Crown, Music, Code2, GitCommit,
-  Image as ImageIcon, Activity, BookKey, Radio, Network,
+  Image as ImageIcon, Activity, BookKey, Radio, Network, ShieldCheck,
 } from "lucide-react";
 import type { TabId, TabSection } from "./admin-shared";
 
@@ -30,6 +30,7 @@ export const TABS: TabDef[] = [
   { id: "pandit-payouts",  label: "Pandit Payouts",   icon: Wallet,        section: "People" },
   { id: "pandit-affiliate", label: "Pandit Affiliate", icon: Share2,       section: "People" },
   { id: "pandit-memberships", label: "Pandit Memberships", icon: Crown,    section: "People" },
+  { id: "pandit-governance", label: "Pandit Governance", icon: ShieldCheck, section: "People" },
   { id: "astrologers",     label: "Astrologers",      icon: Star,          section: "People" },
   { id: "matrimony",       label: "Matrimony",        icon: Heart,         section: "People" },
   { id: "reviews",         label: "Reviews",          icon: Star,          section: "Marketing" },

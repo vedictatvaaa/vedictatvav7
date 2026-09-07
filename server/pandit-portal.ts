@@ -153,6 +153,16 @@ export function isPanditOnline(panditId: number): boolean {
   const ts = heartbeats.get(panditId);
   return !!ts && Date.now() - ts < HEARTBEAT_TTL_MS;
 }
+/** A complete active snapshot for bulk directory filtering; never query this per row. */
+export function onlinePanditIds(): number[] {
+  const now = Date.now();
+  const ids: number[] = [];
+  for (const [id, seenAt] of heartbeats) {
+    if (now - seenAt >= HEARTBEAT_TTL_MS) { heartbeats.delete(id); continue; }
+    ids.push(id);
+  }
+  return ids;
+}
 export function panditLastSeenSecondsAgo(panditId: number): number | null {
   const ts = heartbeats.get(panditId);
   return ts ? Math.floor((Date.now() - ts) / 1000) : null;
