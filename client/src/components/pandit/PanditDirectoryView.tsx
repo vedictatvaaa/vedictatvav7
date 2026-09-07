@@ -32,7 +32,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { bookingContextParams } from "@/lib/puja-service-map";
-import { trackDiscoveryEvent } from "@/lib/analytics";
+import { trackDiscoveryEvent, trackPanditFunnelEvent } from "@/lib/analytics";
 import {
   Search, MapPin, Star, ShieldCheck, Filter, X, Languages,
   Sparkles, Loader2,
@@ -65,6 +65,9 @@ type PanditWithMeta = Pandit & {
   matchReasons?: string[];
   requestedMuhurat?: { date: string; window?: string; reason?: string };
   calendarStatus?: "confirmation_required";
+  // Public directory presence is independent of this optional, server-derived
+  // managed-booking signal. Absence is not treated as a negative eligibility.
+  managedBookingEligible?: boolean;
 };
 
 type DirectoryResponse = {
@@ -380,6 +383,7 @@ function PanditCard({
   const isOnline = !!p.isOnline && !p.onLeave;
   const dist = formatDistance(p.distance);
   const { requireAuth } = useAuth();
+  const managedBookingUnavailable = p.managedBookingEligible === false;
 
   return (
     <Card
@@ -507,16 +511,19 @@ function PanditCard({
             <Link href={contextualProfileHref(p)} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: p.id, source: "card" })}>
               <Button variant="outline" size="sm" data-testid={`button-view-${p.id}`}>View Profile</Button>
             </Link>
-            <Button
-              size="sm"
-              data-testid={`button-book-${p.id}`}
-              onClick={() => requireAuth(
-                () => { trackDiscoveryEvent("booking_handoff", { pandit_id: p.id, source: "card" }); window.location.href = `/online-puja-booking?${bookingContextParams(window.location.search, p.id)}`; },
-                { title: "Sign in to book", description: `Please sign in to book ${p.name}` }
-              )}
-            >
-              <Calendar className="h-4 w-4 mr-1.5" /> Book Now
-            </Button>
+            <Link href={`${contextualProfileHref(p)}#overview`} onClick={() => trackPanditFunnelEvent("contact_cta", { slug: p.slug || undefined, source: "directory" })}>
+              <Button size="sm" variant="outline" className="border-green-700 text-green-800" data-testid={`button-call-${p.id}`}><MessageCircle className="h-4 w-4 mr-1.5" /> Call Panditji</Button>
+            </Link>
+            {managedBookingUnavailable ? <span className="text-xs text-muted-foreground" aria-label="Managed booking unavailable">Managed booking unavailable</span> : <Button
+                size="sm"
+                data-testid={`button-book-${p.id}`}
+                onClick={() => requireAuth(
+                  () => { trackPanditFunnelEvent("booking_start", { slug: p.slug || undefined, source: "directory", managed_booking_eligible: p.managedBookingEligible === true }); trackDiscoveryEvent("booking_handoff", { pandit_id: p.id, source: "card" }); window.location.href = `/online-puja-booking?${bookingContextParams(window.location.search, p.id)}`; },
+                  { title: "Sign in to book", description: `Please sign in to book ${p.name}` }
+                )}
+              >
+                <Calendar className="h-4 w-4 mr-1.5" /> Book Now
+              </Button>}
           </div>
         </div>
       </CardContent>
@@ -748,6 +755,9 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
   const pandits = data?.items || [];
   const pagination = data?.pagination;
   const availableSorts = data?.availableSorts || [];
+  useEffect(() => {
+    if (data?.items.length) trackPanditFunnelEvent("directory_impression", { source: "directory" });
+  }, [data]);
   const supportedSorts = SORT_OPTIONS.filter((option) =>
     availableSorts.includes(option.value) && (!("needsLocation" in option) || !!userLocation),
   );

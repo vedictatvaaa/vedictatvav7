@@ -2,6 +2,8 @@ import { sql, type SQL } from "drizzle-orm";
 import { db } from "./db";
 import { adminPanditDto, publicPanditDto } from "./pandit-discovery-policy";
 import { onlinePanditIds } from "./pandit-portal";
+import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
+import { storage } from "./storage";
 
 export const DIRECTORY_SORTS = ["best_match", "highest_rated", "most_reviewed", "price_low", "price_high", "nearest", "experience"] as const;
 type DirectorySort = typeof DIRECTORY_SORTS[number];
@@ -98,10 +100,20 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
   const locationJoins = input.showAll
     ? sql`left join indian_states st on st.id = p.state_id left join indian_cities ct on ct.id = p.city_id and ct.state_id = p.state_id`
     : sql`join indian_states st on st.id = p.state_id and st.is_active = true join indian_cities ct on ct.id = p.city_id and ct.state_id = p.state_id and ct.is_active = true`;
-  const base = sql`from pandits p ${locationJoins} left join pandit_reviews r on r.pandit_id = p.id where ${filter}`;
+  // Ratings are derived solely from genuine, publishable reviews.
+  const base = sql`from pandits p ${locationJoins} left join pandit_reviews r on r.pandit_id = p.id and r.status = 'approved' where ${filter}`;
   const countResult: any = await db.execute(sql`select count(*)::int as total from (select p.id ${base} group by p.id ${having}) candidates`);
   const total = Number(countResult.rows[0]?.total || 0);
-  const rowsResult: any = await db.execute(sql`select p.*, avg(r.rating)::float as computed_rating, count(r.id)::int as computed_review_count, ${distance} as distance_km ${base} group by p.id ${having} order by ${order[input.sort]} limit ${input.pageSize} offset ${(input.page - 1) * input.pageSize}`);
+  const rowsResult: any = await db.execute(sql`select p.*, avg(r.rating)::float as computed_rating, count(r.id)::int as computed_review_count,
+    ${distance} as distance_km ${base} group by p.id ${having} order by ${order[input.sort]} limit ${input.pageSize} offset ${(input.page - 1) * input.pageSize}`);
+  const bookingById = new Map(await Promise.all(rowsResult.rows.map(async (row: any) => {
+    const services = await storage.listPanditServicesWithMaster(row.id, true);
+    const pandit = { accountStatus: row.account_status, verified: row.verified, onLeave: row.on_leave, archived: row.archived, bookingEnabled: row.booking_enabled, availability: row.availability };
+    return [row.id, evaluatePanditBookingEligibility(pandit, {
+      services: services.map(service => ({ mode: service.service.mode, serviceAreas: service.service.serviceAreas })),
+      pujaSupported: services.length > 0,
+    }).result.passed] as const;
+  })));
   const items = rowsResult.rows.map((row: any) => {
     const distanceValue = row.distance_km == null ? undefined : Math.round(Number(row.distance_km) * 10) / 10;
     if (input.showAll) {
@@ -135,7 +147,7 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
       createdAt: created_at,
       registrationNo: registration_no,
     }, activeOnlineIds.includes(pandit.id), distanceValue);
-    return { ...dto, ...(Number(computed_review_count) ? { rating: Math.round(Number(computed_rating) * 10) / 10 } : {}), reviewCount: Number(computed_review_count) };
+    return { ...dto, managedBookingEligible: bookingById.get(row.id) === true, ...(Number(computed_review_count) ? { rating: Math.round(Number(computed_rating) * 10) / 10 } : {}), reviewCount: Number(computed_review_count) };
   });
   const totalPages = Math.ceil(total / input.pageSize);
   return { items, pagination: { page: input.page, pageSize: input.pageSize, total, totalPages, hasNextPage: input.page < totalPages, hasPreviousPage: input.page > 1 }, availableSorts: DIRECTORY_SORTS.filter(sort => sort !== "nearest" || (input.lat !== undefined && input.lng !== undefined)) };

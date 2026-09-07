@@ -3,6 +3,13 @@ import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, real, check
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const panditFunnelEventNames = [
+  "directory_impression", "profile_view", "contact_cta_click", "contact_prompt_shown",
+  "reveal_success", "repeat_reveal", "quota_exhausted", "no_usable_contact",
+  "click_to_call", "booking_start", "booking_completion", "booking_error",
+] as const;
+export type PanditFunnelEventName = typeof panditFunnelEventNames[number];
+
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   role: text("role").notNull().default("user"),
@@ -484,9 +491,37 @@ export const panditReviews = pgTable("pandit_reviews", {
   // (when wired). Null until the pandit responds.
   panditReply: text("pandit_reply"),
   panditRepliedAt: timestamp("pandit_replied_at"),
+  // Public projections include only administrator-approved, genuine reviews.
+  status: text("status").notNull().default("pending"),
+  moderatedBy: text("moderated_by"),
+  moderatedAt: timestamp("moderated_at"),
+  moderationReason: text("moderation_reason"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   panditIdIdx: index("pandit_reviews_pandit_id_idx").on(t.panditId),
+  publicStatusIdx: index("pandit_reviews_public_status_idx").on(t.panditId, t.status),
+}));
+
+/** Retains old canonical profile slugs without reusing them for another Pandit. */
+export const panditSlugHistory = pgTable("pandit_slug_history", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  slug: text("slug").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  slugUnique: uniqueIndex("pandit_slug_history_slug_unique").on(t.slug),
+  panditIdx: index("pandit_slug_history_pandit_idx").on(t.panditId),
+}));
+
+/** Consent-aware aggregate-safe funnel events; no contact or customer values. */
+export const panditFunnelEvents = pgTable("pandit_funnel_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").references(() => pandits.id),
+  event: text("event").notNull(),
+  occurredAt: timestamp("occurred_at").notNull().defaultNow(),
+}, (t) => ({
+  eventTimeIdx: index("pandit_funnel_events_event_time_idx").on(t.event, t.occurredAt),
+  panditTimeIdx: index("pandit_funnel_events_pandit_time_idx").on(t.panditId, t.occurredAt),
 }));
 
 export const astrologers = pgTable("astrologers", {

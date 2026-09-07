@@ -51,12 +51,9 @@ test("booking diagnostics report every failed gate and never infer calendar avai
     accountStatus: "active",
     onLeave: false,
     archived: false,
-    directoryVisible: true,
     bookingEnabled: true,
     availability: "unavailable",
   }, {
-    published: true,
-    canonicalLocation: true,
     services: [{ ...service, serviceAreas: [] }],
   });
   assert.equal(diagnostics.checks.active.passed, true);
@@ -74,12 +71,9 @@ test("booking diagnostics pass only when every shared general gate passes", () =
     onLeave: false,
     archived: false,
     verified: true,
-    directoryVisible: true,
     bookingEnabled: true,
     availability: "available",
   }, {
-    published: true,
-    canonicalLocation: true,
     services: [service],
   });
   assert.equal(diagnostics.result.passed, true);

@@ -10,6 +10,16 @@ import {
   storefrontServiceEnrichment,
   storefrontVerifiedFacts,
 } from "./pandit-public-access";
+import { isPanditPubliclyEligible } from "./pandit-public-eligibility";
+
+test("public safety is independent from directory/search switches for published-profile contact", () => {
+  const states = new Set([1]);
+  const cities = new Map([[2, { id: 2, stateId: 1 }]]);
+  const safeButHidden = { verified: true, onLeave: false, archived: false, accountStatus: "active", locationReviewStatus: "resolved", stateId: 1, cityId: 2, directoryVisible: false, searchEligible: false };
+  assert.equal(isPanditPubliclyEligible(safeButHidden, states, cities), true);
+  assert.equal(isPanditPubliclyEligible({ ...safeButHidden, accountStatus: "banned" }, states, cities), false);
+  assert.equal(isPanditPubliclyEligible({ ...safeButHidden, verified: false }, states, cities), false);
+});
 
 test("public storefront DTO excludes private and commercial Pandit fields", () => {
   const dto = publicStorefrontPanditDto({

@@ -2,6 +2,9 @@ import type { NextFunction, Request, Response } from "express";
 import { REGISTERED_SPA_ROUTE_PATTERNS } from "@shared/spa-route-patterns";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
 import { storage } from "./storage";
+import { db } from "./db";
+import { pandits, panditSlugHistory } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { getPanditSeoNetworkProjection } from "./pandit-seo-network/cache";
 import {
   isPanditSeoNetworkEnabled,
@@ -135,6 +138,18 @@ export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDepende
     if (req.path.includes(".") && !req.path.endsWith(".html") && !req.path.endsWith("/")) return next();
 
     try {
+      // A retired slug is never reassigned. Redirect only when its current
+      // profile remains public, so a later suspension cannot leak existence.
+      const oldSlug = req.path.match(/^\/pandit\/([^/]+)\/?$/)?.[1];
+      if (oldSlug) {
+        const old = await db.select({ slug: pandits.slug }).from(panditSlugHistory)
+          .innerJoin(pandits, eq(panditSlugHistory.panditId, pandits.id))
+          .where(eq(panditSlugHistory.slug, decodeRouteSegment(oldSlug) || "")).limit(1);
+        if (old[0]?.slug && await getPubliclyPublishedPanditBySlug(old[0].slug)) {
+          const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+          return res.redirect(301, `/pandit/${encodeURIComponent(old[0].slug)}${query}`);
+        }
+      }
       const decision = await resolvePublicRouteDecision(req.path, dependencies);
       if (decision.kind === "pandit-network" && decision.found) {
         if (!decision.indexable) res.setHeader("X-Robots-Tag", "noindex, follow");

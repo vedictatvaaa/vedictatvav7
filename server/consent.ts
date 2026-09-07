@@ -15,7 +15,7 @@ export function parseConsentCookie(value: unknown): ServerConsentPreferences | n
 }
 
 export function hasAnalyticsConsent(req: Pick<Request, "cookies">): boolean {
-  return true;
+  return parseConsentCookie(req.cookies?.vt_consent)?.analytics === true;
 }
 
 export function hasMarketingConsent(req: Pick<Request, "cookies">): boolean {

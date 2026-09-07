@@ -4,7 +4,8 @@ import { contactStatusDto, setPrivateContactResponse } from "./pandit-contact-re
 
 test("contact status DTO never includes a contact value", () => {
   const payload = contactStatusDto("open", true, false, null);
-  assert.deepEqual(payload, { policy: "open", available: true, authenticated: false, quota: null });
+  assert.equal(payload.state, "open");
+  assert.deepEqual(payload, { policy: "open", available: true, authenticated: false, state: "open", quota: null });
   assert.equal(JSON.stringify(payload).match(/phone|whatsapp/i), null);
 });
 

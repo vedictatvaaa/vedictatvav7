@@ -16,7 +16,7 @@ import { PageHero } from "@/components/ui/section-primitives";
 import { Link } from "wouter";
 import { ChevronRight } from "lucide-react";
 import { faqPage as faqPageSchema, breadcrumbList as breadcrumbListSchema, service as serviceSchema, abs } from "@/lib/seo-schemas";
-import { trackPanditSeoEvent } from "@/lib/analytics";
+import { trackPanditFunnelEvent, trackPanditSeoEvent } from "@/lib/analytics";
 import { PujaDiscoveryHub } from "@/components/puja/PujaDiscoveryHub";
 import { STANDARD_PUJA_OPTIONS, resolveStandardPuja } from "@shared/standard-puja-catalogue";
 
@@ -182,6 +182,10 @@ export default function PujaBooking() {
       setAddress({ building: "", street: "", locality: "", city: "", state: "", postalCode: "", landmark: "" });
     },
     onError: () => {
+      trackPanditFunnelEvent("booking_completion_error", {
+        slug: analyticsSlug,
+        source: "booking",
+      });
       trackPanditSeoEvent("booking_outcome", {
         slug: analyticsSlug,
         mode,

@@ -1,4 +1,4 @@
-import type { Product } from "@shared/schema";
+import { panditFunnelEventNames, type PanditFunnelEventName, type Product } from "@shared/schema";
 import { hasConsent } from "./consent";
 
 type GtagFn = (...args: any[]) => void;
@@ -51,6 +51,41 @@ function emit(eventName: string, params: Record<string, any>) {
 
 export function trackDiscoveryEvent(action: string, data: Record<string, string | number | boolean> = {}) {
   emit("pandit_discovery", { action, ...data });
+}
+
+type PanditFunnelAction =
+  | "directory_impression" | "profile_view" | "contact_cta" | "contact_prompt"
+  | "contact_reveal" | "contact_repeat_reveal" | "contact_quota_exhausted"
+  | "contact_unavailable" | "click_to_call" | "booking_start" | "booking_completion_error";
+
+// Keep the contact funnel separate from discovery and SEO reporting. In
+// particular, callers must only pass safe routing/context metadata here — not
+// names, free text, account data, or a revealed contact value.
+export function trackPanditFunnelEvent(
+  action: PanditFunnelAction,
+  data: { slug?: string; source: "directory" | "storefront" | "booking"; managed_booking_eligible?: boolean } = { source: "storefront" },
+) {
+  const event: PanditFunnelEventName = ({
+    contact_cta: "contact_cta_click", contact_prompt: "contact_prompt_shown",
+    contact_reveal: "reveal_success", contact_repeat_reveal: "repeat_reveal",
+    contact_quota_exhausted: "quota_exhausted", contact_unavailable: "no_usable_contact",
+    booking_completion_error: "booking_error",
+  } as Record<string, PanditFunnelEventName>)[action] || action as PanditFunnelEventName;
+  emit("pandit_funnel", {
+    action,
+    slug: normalizeAnalyticsSlug(data.slug),
+    source: data.source,
+    ...(typeof data.managed_booking_eligible === "boolean" ? { managed_booking_eligible: data.managed_booking_eligible } : {}),
+  });
+  // Server storage is consent-gated independently. Do not include the external
+  // analytics source/flags: the release funnel stores only an action and slug.
+  if (hasConsent("analytics") && panditFunnelEventNames.includes(event)) {
+    fetch("/api/analytics/pandit-funnel", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      credentials: "same-origin", keepalive: true,
+      body: JSON.stringify({ event, ...(normalizeAnalyticsSlug(data.slug) !== "unspecified" ? { slug: normalizeAnalyticsSlug(data.slug) } : {}) }),
+    }).catch(() => {});
+  }
 }
 
 type PanditSeoAction = "discovery_impression" | "discovery_cta" | "booking_handoff" | "booking_outcome";

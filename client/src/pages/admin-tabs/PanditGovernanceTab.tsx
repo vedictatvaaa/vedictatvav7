@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createFetcher } from "../admin-shared";
 
 type BookingCheck = { passed: boolean; label: string; reason: string };
-type GovernanceAction = "publish" | "unpublish" | "booking_enable" | "booking_disable" | "verify" | "revoke_verification" | "archive" | "restore" | "suspend" | "reactivate" | "start_leave" | "end_leave" | "set_indexing" | "set_contact_override" | "set_location";
+type GovernanceAction = "publish" | "unpublish" | "directory_show" | "directory_hide" | "search_enable" | "search_disable" | "booking_enable" | "booking_disable" | "verify" | "revoke_verification" | "archive" | "restore" | "suspend" | "reactivate" | "start_leave" | "end_leave" | "set_indexing" | "set_contact_override" | "set_location";
 type GovernanceRow = {
   id: number;
   name: string;
@@ -42,9 +42,11 @@ type GovernanceResponse = {
 };
 
 const PAGE_SIZE = 25;
-const RISKY_ACTIONS = new Set<GovernanceAction>(["publish", "unpublish", "booking_enable", "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate"]);
+const RISKY_ACTIONS = new Set<GovernanceAction>(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate"]);
 const ACTIONS = [
   { value: "publish", label: "Publish storefront", bulk: true }, { value: "unpublish", label: "Unpublish storefront", bulk: true },
+  { value: "directory_show", label: "Make directory visible", bulk: true }, { value: "directory_hide", label: "Hide from directory", bulk: true },
+  { value: "search_enable", label: "Make search eligible", bulk: true }, { value: "search_disable", label: "Make search ineligible", bulk: true },
   { value: "booking_enable", label: "Enable booking", bulk: true }, { value: "booking_disable", label: "Disable booking", bulk: true },
   { value: "verify", label: "Verify account", bulk: true }, { value: "revoke_verification", label: "Revoke verification", bulk: true },
   { value: "archive", label: "Archive", bulk: true }, { value: "restore", label: "Restore", bulk: true },
@@ -64,7 +66,7 @@ function locationLabel(row: GovernanceRow) {
   return [location.name, location.city, location.state].filter(Boolean).join(" · ") || "Not assigned";
 }
 
-export default function PanditGovernanceTab({ adminToken }: { adminToken?: string }) {
+export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminToken?: string; onNavigate?: (tab: "reviews" | "analytics" | "seo" | "audit-log") => void }) {
   const { toast } = useToast();
   const fetcher = useMemo(() => createFetcher(adminToken), [adminToken]);
   const [page, setPage] = useState(1);
@@ -149,11 +151,12 @@ export default function PanditGovernanceTab({ adminToken }: { adminToken?: strin
       <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">Page {page} of {totalPages} · {governance.data?.pagination.total || 0} records</p><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" />Previous</Button><Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next<ChevronRight className="h-4 w-4" /></Button></div></div>
 
       <Dialog open={!!target || bulkOpen} onOpenChange={open => { if (!open) closeDialog(); }}><DialogContent data-lenis-prevent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{isBulk ? "Bulk governance action" : "Manage pandit governance"}</DialogTitle><DialogDescription>{isBulk ? `${selectedCount} selected record${selectedCount === 1 ? "" : "s"} will receive the same atomic control. If any record fails, none are changed.` : target?.name}</DialogDescription></DialogHeader><div className="space-y-4">
-        {target && <GovernanceDetail row={target} />}
+        {target && <GovernanceDetail row={target} onNavigate={onNavigate} />}
         <div><Label htmlFor="governance-action">Action</Label><Select value={action} onValueChange={next => setAction(next as GovernanceAction)}><SelectTrigger id="governance-action"><SelectValue placeholder="Choose an action" /></SelectTrigger><SelectContent>{(isBulk ? bulkActions : ACTIONS).map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
         {action === "set_indexing" && <div><Label htmlFor="governance-value">Index mode</Label><Select value={value} onValueChange={setValue}><SelectTrigger id="governance-value"><SelectValue placeholder="Choose index mode" /></SelectTrigger><SelectContent><SelectItem value="auto">Allow indexing</SelectItem><SelectItem value="noindex">Prevent indexing</SelectItem></SelectContent></Select></div>}
         {action === "set_contact_override" && <div><Label htmlFor="governance-value">Contact override</Label><Select value={value} onValueChange={setValue}><SelectTrigger id="governance-value"><SelectValue placeholder="Choose contact policy" /></SelectTrigger><SelectContent><SelectItem value="use_global">Use global policy</SelectItem><SelectItem value="always_open">Always open</SelectItem><SelectItem value="login_required">Login required</SelectItem><SelectItem value="never_display">Never display</SelectItem></SelectContent></Select></div>}
         {requiresReason && <div><Label htmlFor="governance-reason">Reason <span className="text-destructive">*</span></Label><Textarea id="governance-reason" value={reason} onChange={event => setReason(event.target.value)} placeholder="Record the operational reason for this change" /><label className="mt-3 flex items-start gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={checked => setConfirmed(checked === true)} />I confirm this governance action and its impact.</label></div>}
+        {action && <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><strong>Independent controls:</strong> Storefront publication, directory visibility, search eligibility, protected contact policy, and managed-booking eligibility are separate. This action changes only <strong>{action.startsWith("directory_") ? "directory visibility" : action.startsWith("search_") ? "search eligibility" : action.startsWith("booking_") ? "managed booking" : "the selected governance setting"}</strong>; it does not automatically change the others.</p>}
       </div><DialogFooter><Button variant="outline" onClick={closeDialog}>Cancel</Button><Button disabled={!canSubmit} onClick={submitAction}>{(updateOne.isPending || updateBulk.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Apply action</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
@@ -165,26 +168,27 @@ function GovernanceTableRow({ row, selected, onToggle, onManage }: { row: Govern
 function GovernanceCard({ row, selected, onToggle, onManage }: { row: GovernanceRow; selected: boolean; onToggle: () => void; onManage: () => void }) {
   return <Card><CardContent className="p-4"><div className="flex items-start gap-3"><Checkbox aria-label={`Select ${row.name}`} checked={selected} onCheckedChange={onToggle} /><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><div><p className="font-medium">{row.name}</p><p className="text-xs">{row.completeness.score}% complete · {row.bookingDiagnostics.result.passed ? "booking eligible" : "booking blocked"}</p></div><Button size="sm" variant="outline" onClick={onManage}>Manage</Button></div><p className="mt-3 text-xs"><MapPin className="mr-1 inline h-3.5 w-3.5" />{locationLabel(row)} · {row.publication.published ? "Published" : "Unpublished"}</p></div></div></CardContent></Card>;
 }
-function GovernanceDetail({ row }: { row: GovernanceRow }) {
-  const checks = Object.entries(row.bookingDiagnostics.checks);
+function GovernanceDetail({ row, onNavigate }: { row: GovernanceRow; onNavigate?: (tab: "reviews" | "analytics" | "seo" | "audit-log") => void }) {
+  const checks = Object.entries(row.bookingDiagnostics?.checks || {});
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) =>
     <section className="rounded-md border bg-background p-3"><h3 className="mb-1 font-semibold text-foreground">{title}</h3>{children}</section>;
   return <div className="grid gap-2 text-xs sm:grid-cols-2">
     <Section title="1. Profile"><p>{row.name} · {row.bio ? "bio present" : "bio missing"} · {row.languages || "languages missing"} · {row.experience || 0} years</p><p><MapPin className="mr-1 inline h-3.5 w-3.5" />{locationLabel(row)}</p></Section>
-    <Section title="2. Publication status"><StatusLine passed={row.publication.published} yes="Storefront published" no="Storefront unpublished" /></Section>
-    <Section title="3. Directory visibility"><StatusLine passed={row.publication.directoryVisible} yes="Directory visible" no="Directory hidden" /><p>Search eligibility: {row.publication.searchEligible ? "enabled" : "disabled"}</p></Section>
+    <Section title="2. Storefront publication"><StatusLine passed={row.publication.published} yes="Storefront published" no="Storefront unpublished" /><p className="mt-1 text-muted-foreground">Publication does not enable directory, contact, or booking automatically.</p></Section>
+    <Section title="3. Directory & search"><StatusLine passed={row.publication.directoryVisible} yes="Directory visible" no="Directory hidden" /><p>Search eligibility: <strong>{row.publication.searchEligible ? "enabled" : "disabled"}</strong></p><p className="mt-1 text-muted-foreground">Directory visibility and search are independent of service coverage, availability, and managed booking.</p></Section>
     <Section title="4. Verification status"><StatusLine passed={!!row.verified} yes="Verified" no="Unverified" /><p>Completeness never changes verification automatically.</p></Section>
-    <section className="rounded-md border bg-background p-3 sm:col-span-2"><h3 className="mb-1 font-semibold text-foreground">5. Booking eligibility</h3>{checks.map(([key, check]) => <p key={key} className={check.passed ? "" : "text-destructive"}>{check.label}: {check.passed ? "PASS" : "FAIL"} — {check.reason}</p>)}<p className={row.bookingDiagnostics.result.passed ? "mt-1 font-semibold" : "mt-1 font-semibold text-destructive"}>RESULT: {row.bookingDiagnostics.result.passed ? "ELIGIBLE" : "NOT ELIGIBLE"} — {row.bookingDiagnostics.result.reason}</p></section>
+    <section className="rounded-md border bg-background p-3 sm:col-span-2"><h3 className="mb-1 font-semibold text-foreground">5. Managed-booking eligibility</h3>{checks.length ? checks.map(([key, check]) => <p key={key} className={check.passed ? "" : "text-destructive"}>{check.label}: {check.passed ? "PASS" : "FAIL"} — {check.reason}</p>) : <p role="status" className="text-muted-foreground">Booking diagnostics are unavailable from the server. No eligibility status is assumed.</p>}{row.bookingDiagnostics?.result && <p className={row.bookingDiagnostics.result.passed ? "mt-1 font-semibold" : "mt-1 font-semibold text-destructive"}>RESULT: {row.bookingDiagnostics.result.passed ? "ELIGIBLE" : "NOT ELIGIBLE"} — {row.bookingDiagnostics.result.reason}</p>}<p className="mt-1 text-muted-foreground">This diagnostic governs managed Puja booking only; it never removes a directory listing or protected-contact option.</p></section>
     <Section title="6. Services"><p className="text-muted-foreground">Pandit assignments to active master-catalogue services; this does not modify the master Puja catalogue.</p>{row.services.length ? row.services.map(service => <p key={service.id}>{service.name} · {service.mode} · ₹{service.price}</p>) : <p>No active approved master-service assignment.</p>}</Section>
     <Section title="7. Service areas">{row.services.length ? row.services.map(service => <p key={service.id}>{service.name}: {service.serviceAreas.join(", ") || (["online", "virtual", "hybrid", "both"].includes(service.mode) ? "online/virtual coverage" : "not configured")}</p>) : <p>No service coverage configured.</p>}</Section>
     <Section title="8. Contact / privacy"><p>Policy override: {readable(row.contact.override)}</p><p>Phone configured: {row.contact.hasPhone ? "yes" : "no"} · WhatsApp configured: {row.contact.hasWhatsapp ? "yes" : "no"}</p></Section>
     <Section title="9. Membership status"><p>{readable(row.membership.status)} · tier {readable(row.membership.tier)}</p><p>Membership no: {row.membership.membershipNo || "not assigned"} · registration: {row.membership.registrationNo || "not assigned"}</p></Section>
     <Section title="10. Profile completeness"><p className="font-semibold">{row.completeness.score}% complete</p><p>Missing: {row.completeness.missing.join(", ") || "none"}</p></Section>
-    <Section title="11. Reviews"><p>{row.reviews.averageRating ?? "New"} · {row.reviews.count} genuine review{row.reviews.count === 1 ? "" : "s"}</p>{row.reviews.latest.map((review, i) => <p key={i}>★{review.rating}: {review.comment || "No comment"}</p>)}</Section>
-    <Section title="12. SEO / indexing status"><StatusLine passed={row.seo.effectiveIndexable} yes="Indexable" no="Not indexable" /><p>Mode: {readable(row.seo.indexingMode)}</p></Section>
-    <Section title="13. Slug / current URL"><p className="break-all">Slug: {row.slug || "not assigned"}</p><p className="break-all">{row.seo.canonicalUrl || "No canonical URL"}</p></Section>
+    <Section title="11. Genuine reviews"><p>{row.reviews.count ? `${row.reviews.averageRating ?? "Rating unavailable"} · ${row.reviews.count} genuine review${row.reviews.count === 1 ? "" : "s"}` : "New"}</p>{row.reviews.latest.map((review, i) => <p key={i}>★{review.rating}: {review.comment || "No comment"}</p>)}{onNavigate && <Button variant="link" size="sm" className="mt-1 h-auto px-0 text-xs" onClick={() => onNavigate("reviews")}>Open existing review moderation</Button>}</Section>
+    <Section title="12. SEO / indexing status"><StatusLine passed={row.seo.effectiveIndexable} yes="Indexable" no="Not indexable" /><p>Mode: {readable(row.seo.indexingMode)}</p><p className="mt-1 text-muted-foreground">Indexing follows publication and SEO policy, never booking eligibility.</p>{onNavigate && <Button variant="link" size="sm" className="mt-1 h-auto px-0 text-xs" onClick={() => onNavigate("seo")}>Open existing SEO Manager</Button>}</Section>
+    <Section title="13. Canonical URL / slug history"><p className="break-all">Slug: {row.slug || "not assigned"}</p><p className="break-all">{row.seo.canonicalUrl || "No canonical URL"}</p><p className="mt-1 text-muted-foreground">Slug history is not available in this response; use the audited SEO workflow before changing a canonical slug.</p></Section>
     <Section title="14. Contact reveal usage"><p>{row.contact.revealCount} unique customer reveal record{row.contact.revealCount === 1 ? "" : "s"}. Customer identities and contact values are not shown.</p></Section>
-    <section className="rounded-md border bg-background p-3 sm:col-span-2"><h3 className="mb-1 font-semibold text-foreground">15. Audit history</h3>{row.auditHistory.length ? row.auditHistory.map((audit, i) => <p key={i}>{readable(audit.action)} · {audit.details?.reason || "No reason recorded"}</p>) : <p>No governance events.</p>}</section>
+    <Section title="15. Privacy-safe funnel"><p>Directory, profile, protected-contact, and booking events are measured independently. Contact events do not imply booking eligibility.</p>{onNavigate && <Button variant="link" size="sm" className="mt-1 h-auto px-0 text-xs" onClick={() => onNavigate("analytics")}>Open existing Analytics</Button>}</Section>
+    <section className="rounded-md border bg-background p-3 sm:col-span-2"><h3 className="mb-1 font-semibold text-foreground">16. Audit history</h3>{row.auditHistory.length ? row.auditHistory.map((audit, i) => <p key={i}>{readable(audit.action)} · {audit.details?.reason || "No reason recorded"}</p>) : <p>No governance events.</p>}{onNavigate && <Button variant="link" size="sm" className="mt-2 h-auto px-0 text-xs" onClick={() => onNavigate("audit-log")}>Open existing audit log</Button>}</section>
   </div>;
 }
 

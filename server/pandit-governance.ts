@@ -4,12 +4,12 @@ import { z } from "zod";
 import { db } from "./db";
 import {
   adminAuditLogs, indianCities, indianStates, masterServices, panditContactReveals,
-  panditMembershipPurchases, panditReviews, panditServices, panditStorefronts, pandits,
+   panditFunnelEvents, panditMembershipPurchases, panditReviews, panditServices, panditStorefronts, pandits,
 } from "@shared/schema";
 import { effectivePanditGovernance } from "./pandit-public-eligibility";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 
-const actionSchema = z.enum(["publish", "unpublish", "booking_enable", "booking_disable", "verify",
+const actionSchema = z.enum(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify",
   "revoke_verification", "archive", "restore", "suspend", "reactivate", "start_leave", "end_leave",
   "set_location", "set_indexing", "set_contact_override"]);
 const write = z.object({
@@ -18,9 +18,9 @@ const write = z.object({
   indexingMode: z.enum(["auto", "noindex"]).optional(),
   contactAccessOverride: z.enum(["use_global", "always_open", "login_required", "never_display"]).optional(),
 });
-const sensitiveActions = new Set<z.infer<typeof actionSchema>>(["publish", "unpublish", "booking_enable",
+const sensitiveActions = new Set<z.infer<typeof actionSchema>>(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable",
   "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate"]);
-const bulkActions = new Set(["publish", "unpublish", "booking_enable", "booking_disable", "verify",
+const bulkActions = new Set(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify",
   "revoke_verification", "archive", "restore"]);
 
 type ServiceFact = { id: number; name: string; slug: string; mode: string; price: number; serviceAreas: string[] };
@@ -37,10 +37,8 @@ export function governanceCompleteness(p: any, extras: { services: ServiceFact[]
   return { score: Math.round((Object.keys(checks).length - missing.length) * 100 / Object.keys(checks).length), missing, checks };
 }
 
-export function bookingDiagnostics(p: any, input: { published: boolean; canonicalLocation: boolean; services: ServiceFact[] }) {
+export function bookingDiagnostics(p: any, input: { services: ServiceFact[] }) {
   return evaluatePanditBookingEligibility(p, {
-    published: input.published,
-    canonicalLocation: input.canonicalLocation,
     services: input.services,
     pujaSupported: input.services.length > 0,
   });
@@ -50,7 +48,8 @@ export function bookingDiagnostics(p: any, input: { published: boolean; canonica
 export function safeGovernanceAuditState(p: any) {
   return { verified: !!p.verified, accountStatus: p.accountStatus, archived: !!p.archived, onLeave: !!p.onLeave,
     directoryVisible: !!p.directoryVisible, searchEligible: !!p.searchEligible, bookingEnabled: !!p.bookingEnabled,
-    indexingMode: p.indexingMode || "auto", stateId: p.stateId || null, cityId: p.cityId || null };
+    indexingMode: p.indexingMode || "auto", stateId: p.stateId || null, cityId: p.cityId || null,
+    storefrontPublished: !!p.storefrontPublished };
 }
 
 export function safeGovernanceAuditDetails(details: unknown) {
@@ -87,23 +86,25 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
       ? await baseRows
       : await baseRows.limit(pageSize).offset((page - 1) * pageSize);
     const ids = rows.map(r => r.pandit.id);
-    const [serviceRows, reveals, reviews, memberships, audits, states, cities] = await Promise.all([
+    const [serviceRows, reveals, reviews, memberships, audits, states, cities, funnel] = await Promise.all([
       ids.length ? db.select({ service: panditServices, master: masterServices }).from(panditServices).innerJoin(masterServices, and(eq(panditServices.masterServiceId, masterServices.id), eq(masterServices.isActive, true))).where(and(inArray(panditServices.panditId, ids), eq(panditServices.isActive, true))) : [],
       ids.length ? db.select({ panditId: panditContactReveals.panditId, count: sql<number>`count(*)::int` }).from(panditContactReveals).where(inArray(panditContactReveals.panditId, ids)).groupBy(panditContactReveals.panditId) : [],
       ids.length ? db.select().from(panditReviews).where(inArray(panditReviews.panditId, ids)).orderBy(desc(panditReviews.createdAt)) : [],
       ids.length ? db.select({ panditId: panditMembershipPurchases.panditId }).from(panditMembershipPurchases).where(and(inArray(panditMembershipPurchases.panditId, ids), eq(panditMembershipPurchases.paymentStatus, "paid"))) : [],
       ids.length ? db.select().from(adminAuditLogs).where(inArray(adminAuditLogs.target, ids.map(id => `pandit:${id}`))).orderBy(desc(adminAuditLogs.createdAt)).limit(ids.length * 10) : [],
       db.select().from(indianStates).where(eq(indianStates.isActive, true)), db.select().from(indianCities).where(eq(indianCities.isActive, true)),
+      ids.length ? db.select({ panditId: panditFunnelEvents.panditId, event: panditFunnelEvents.event, count: sql<number>`count(*)::int` }).from(panditFunnelEvents).where(inArray(panditFunnelEvents.panditId, ids)).groupBy(panditFunnelEvents.panditId, panditFunnelEvents.event) : [],
     ]);
     const servicesBy = new Map<number, ServiceFact[]>(), revealBy = new Map(reveals.map(x => [x.panditId, Number(x.count)])), memberBy = new Set(memberships.map(x => x.panditId));
     for (const row of serviceRows) { const v = servicesBy.get(row.service.panditId) || []; v.push({ id: row.service.id, name: row.master.name, slug: row.master.slug, mode: row.service.mode, price: row.service.price, serviceAreas: row.service.serviceAreas || [] }); servicesBy.set(row.service.panditId, v); }
     const reviewsBy = new Map<number, any[]>(); for (const row of reviews) reviewsBy.set(row.panditId, [...(reviewsBy.get(row.panditId) || []), row]);
+    const funnelBy = new Map<number, Record<string, number>>(); for (const row of funnel) { const values = funnelBy.get(row.panditId!) || {}; values[row.event] = Number(row.count); funnelBy.set(row.panditId!, values); }
     const auditBy = new Map<number, any[]>(); for (const a of audits) { const id = Number(String(a.target).replace("pandit:", "")); const values = auditBy.get(id) || []; if (values.length < 10) values.push({ action: a.action, createdAt: a.createdAt, details: safeGovernanceAuditDetails(a.details) }); auditBy.set(id, values); }
     const activeStates = new Set(states.map(s => s.id)), activeCities = new Map(cities.map(c => [c.id, c]));
     let items = rows.map(({ pandit: p, state, city, storefront }) => {
       const services = servicesBy.get(p.id) || [], published = !!storefront?.isPublished && storefront.status === "published";
       const canonicalLocation = p.locationReviewStatus === "resolved" && !!p.stateId && activeStates.has(p.stateId) && activeCities.get(p.cityId || -1)?.stateId === p.stateId;
-      const diagnostics = bookingDiagnostics(p, { published, canonicalLocation, services });
+      const diagnostics = bookingDiagnostics(p, { services });
       const reviewRows = reviewsBy.get(p.id) || [], reviewCount = reviewRows.length, averageRating = reviewCount ? Math.round(reviewRows.reduce((n, r) => n + Number(r.rating), 0) * 10 / reviewCount) / 10 : null;
       return { id: p.id, name: p.name, slug: p.slug, image: p.image, bio: p.bio, languages: p.languages, experience: p.experience, specialization: p.specialization,
         accountStatus: p.accountStatus, archived: p.archived, onLeave: p.onLeave, verified: p.verified, availability: p.availability,
@@ -113,6 +114,7 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
         membership: { status: memberBy.has(p.id) ? "active" : "none", tier: p.tier, membershipNo: p.membershipNo, registrationNo: p.registrationNo },
         contact: { override: storefront?.contactAccessOverride || "use_global", hasPhone: !!p.phone, hasWhatsapp: !!storefront?.whatsappNumber, revealCount: revealBy.get(p.id) || 0 },
         reviews: { count: reviewCount, averageRating, latest: reviewRows.slice(0, 3).map(r => ({ rating: r.rating, comment: r.comment, createdAt: r.createdAt })) },
+         funnel: funnelBy.get(p.id) || {},
         seo: { indexingMode: p.indexingMode, effectiveIndexable: effectivePanditGovernance(p, activeStates, activeCities).indexable, canonicalUrl: `/pandit/${encodeURIComponent(p.slug || "")}` },
         completeness: governanceCompleteness(p, { services, membership: memberBy.has(p.id), hasContact: !!p.phone || !!storefront?.whatsappNumber, canonicalLocation, bookingReady: diagnostics.result.passed }),
         bookingDiagnostics: diagnostics, auditHistory: auditBy.get(p.id) || [] };
@@ -135,6 +137,8 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
     const p = (await db.select().from(pandits).where(eq(pandits.id, id)).limit(1))[0]; if (!p) throw new Error("Pandit not found");
     let change: any = {};
     if (input.action === "verify") change = { verified: true }; else if (input.action === "revoke_verification") change = { verified: false };
+    else if (input.action === "directory_show") change = { directoryVisible: true }; else if (input.action === "directory_hide") change = { directoryVisible: false };
+    else if (input.action === "search_enable") change = { searchEligible: true }; else if (input.action === "search_disable") change = { searchEligible: false };
     else if (input.action === "booking_enable") change = { bookingEnabled: true }; else if (input.action === "booking_disable") change = { bookingEnabled: false };
     else if (input.action === "archive") change = { archived: true }; else if (input.action === "restore") change = { archived: false };
     else if (input.action === "suspend") change = { accountStatus: "suspended", moderationReason: input.reason }; else if (input.action === "reactivate") change = { accountStatus: "active", suspendedUntil: null };
@@ -150,7 +154,7 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
       if (input.action === "publish" || input.action === "unpublish") await tx.insert(panditStorefronts).values({ panditId: id, isPublished: input.action === "publish", status: input.action === "publish" ? "published" : "draft" }).onConflictDoUpdate({ target: panditStorefronts.panditId, set: { isPublished: input.action === "publish", status: input.action === "publish" ? "published" : "draft", updatedAt: new Date() } });
       else if (input.action === "set_contact_override") { if (!input.contactAccessOverride) throw new Error("contactAccessOverride is required"); await tx.insert(panditStorefronts).values({ panditId: id, contactAccessOverride: input.contactAccessOverride }).onConflictDoUpdate({ target: panditStorefronts.panditId, set: { contactAccessOverride: input.contactAccessOverride, updatedAt: new Date() } }); }
       else await tx.update(pandits).set(change).where(eq(pandits.id, id));
-      await tx.insert(adminAuditLogs).values({ actor: `admin:${req.adminUserId || "authenticated"}`, action: `pandit_governance.${input.action}`, target: `pandit:${id}`, ipAddress: req.ip, details: { reason: input.reason || null, batchId: batchId || null, before: safeGovernanceAuditState(p), after: input.action === "publish" || input.action === "unpublish" ? { publication: input.action === "publish" } : change } });
+       await tx.insert(adminAuditLogs).values({ actor: `admin:${req.adminUserId || "authenticated"}`, action: `pandit_governance.${input.action}`, target: `pandit:${id}`, ipAddress: req.ip, details: { reason: input.reason || null, batchId: batchId || null, before: safeGovernanceAuditState(p), after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: input.action === "publish" ? true : input.action === "unpublish" ? false : undefined }) } });
     }); return { id, ok: true };
   }
   app.patch("/api/admin/pandit-governance/:id", adminAuthMiddleware, async (req: any, res) => { const parsed = write.safeParse(req.body); if (!parsed.success || !Number.isInteger(Number(req.params.id))) return res.status(400).json({ message: "Invalid governance request" }); try { res.json(await mutate(req, Number(req.params.id), parsed.data)); } catch (e: any) { res.status(e.message === "Pandit not found" ? 404 : 400).json({ message: e.message }); } });
@@ -168,6 +172,10 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
           const p = byId.get(id)!;
           const action = parsed.data.action;
           const change =
+            action === "directory_show" ? { directoryVisible: true } :
+            action === "directory_hide" ? { directoryVisible: false } :
+            action === "search_enable" ? { searchEligible: true } :
+            action === "search_disable" ? { searchEligible: false } :
             action === "booking_enable" ? { bookingEnabled: true } :
             action === "booking_disable" ? { bookingEnabled: false } :
             action === "verify" ? { verified: true } :
@@ -191,7 +199,7 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
               reason: parsed.data.reason,
               batchId,
               before: safeGovernanceAuditState(p),
-              after: action === "publish" || action === "unpublish" ? { publication: action === "publish" } : change,
+              after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: action === "publish" ? true : action === "unpublish" ? false : undefined }),
             },
           });
         }

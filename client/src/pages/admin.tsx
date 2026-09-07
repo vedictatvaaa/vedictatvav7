@@ -792,7 +792,7 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "pandit-payouts" && <PanditPayoutsTab adminToken={adminToken} />}
               {activeTab === "pandit-affiliate" && <PanditAffiliateTab adminToken={adminToken} />}
               {activeTab === "pandit-memberships" && <PanditMembershipsTab adminToken={adminToken} />}
-              {activeTab === "pandit-governance" && <PanditGovernanceTab adminToken={adminToken} />}
+              {activeTab === "pandit-governance" && <PanditGovernanceTab adminToken={adminToken} onNavigate={setActiveTab} />}
               {activeTab === "mantras" && <MantrasTab adminToken={adminToken} />}
               {activeTab === "blog-ai" && <BlogAiQueueTab adminToken={adminToken} />}
               {activeTab === "puja-library" && <PujaLibraryTab adminToken={adminToken} />}

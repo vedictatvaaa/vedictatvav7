@@ -15,7 +15,7 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { z } from "zod";
 import { storage } from "./storage";
 import { db } from "./db";
-import { pandits, panditMembershipPurchases, pujaBookings } from "@shared/schema";
+import { pandits, panditMembershipPurchases, pujaBookings, panditSlugHistory } from "@shared/schema";
 import { eq, desc, and, sql, gte, isNotNull } from "drizzle-orm";
 import { panditAuthMiddleware, type PanditRequest } from "./pandit-portal";
 import type { AdminRequest } from "./admin-auth";
@@ -45,6 +45,7 @@ import { buildPanditProfileSeoHead } from "./pandit-seo-network/seo";
 import { canonicalPanditRedirectTarget } from "./pandit-route-context";
 import { assertPackagePriceCompliant, assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
 import { canonicalBookingMode } from "@shared/puja-booking";
+import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -337,7 +338,7 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
   const products = productIds.length
     ? (await Promise.all(productIds.map((id) => storage.getProduct(id)))).filter(Boolean)
     : [];
-  const [reviews, storedServices, packages, gallery, availability, membership, completedBookings] = await Promise.all([
+  const [allReviews, storedServices, packages, gallery, availability, membership, completedBookings, bookingPandit] = await Promise.all([
     storage.getPanditReviews(pandit.id).catch(() => []),
     authoritativeProfile
       ? Promise.resolve([])
@@ -354,8 +355,14 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
       eq(pujaBookings.panditId, pandit.id),
       eq(pujaBookings.status, "completed"),
     )).catch(() => [{ count: 0 }]),
+    storage.getPandit(pandit.id).catch(() => undefined),
   ]);
+  const reviews = allReviews.filter(review => review.status === "approved");
   const services = authoritativeProfile?.services || storedServices.map(publicPanditServiceDto);
+  const managedBookingEligible = evaluatePanditBookingEligibility(bookingPandit || pandit, {
+    services: services.map(service => ({ mode: service.mode, serviceAreas: service.serviceAreas })),
+    pujaSupported: services.length > 0,
+  }).result.passed;
   const reviewCount = reviews.length;
   const reviewRating = reviewCount
     ? Math.round((reviews.reduce((total, review) => total + Number(review.rating || 0), 0) / reviewCount) * 10) / 10
@@ -410,6 +417,7 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
     packages: packageDtos,
     gallery: gallery.map(publicPanditGalleryItemDto),
     availability: availability.map(publicPanditAvailabilityRuleDto),
+    managedBookingEligible,
     canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`,
     share: { canonicalUrl: `/pandit/${encodeURIComponent(String(pandit.slug || ""))}`, referralSlug: pandit.slug },
     indexability: authoritativeProfile?.indexability,
@@ -869,9 +877,16 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
             req.query,
           ));
         }
-        if (!(await getPubliclyPublishedPanditBySlug(slug))) return next();
+        let canonicalSlug = slug;
+        if (!(await getPubliclyPublishedPanditBySlug(canonicalSlug))) {
+          const historical = await db.select({ slug: pandits.slug }).from(panditSlugHistory)
+            .innerJoin(pandits, eq(panditSlugHistory.panditId, pandits.id))
+            .where(eq(panditSlugHistory.slug, slug)).limit(1);
+          canonicalSlug = historical[0]?.slug || "";
+          if (!canonicalSlug || !(await getPubliclyPublishedPanditBySlug(canonicalSlug))) return next();
+        }
         return res.redirect(301, canonicalPanditRedirectTarget(
-          `/pandit/${encodeURIComponent(slug)}`,
+          `/pandit/${encodeURIComponent(canonicalSlug)}`,
           req.query,
         ));
       } catch (error) { return next(error); }

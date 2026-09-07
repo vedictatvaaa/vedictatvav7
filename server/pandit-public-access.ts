@@ -96,13 +96,21 @@ export async function getPubliclyEligiblePanditBySlug(slug: string) {
   return effectivePanditGovernance(pandit, stateIds, cityById).directory ? pandit : null;
 }
 
+/** Safety/publication profile gate. Deliberately does not apply directory or search switches. */
+export async function getPubliclySafePanditBySlug(slug: string) {
+  const pandit = await storage.getPanditBySlug(slug);
+  if (!pandit) return null;
+  const { stateIds, cityById } = await loadActiveLocationContext();
+  return isPanditPubliclyEligible(pandit, stateIds, cityById) ? pandit : null;
+}
+
 export function isPanditStorefrontPublished(storefront: any) {
   if (!storefront?.isPublished) return false;
   return (storefront.status || "published") === "published";
 }
 
 export async function getPubliclyPublishedPanditBySlug(slug: string) {
-  const pandit = await getPubliclyEligiblePanditBySlug(slug);
+  const pandit = await getPubliclySafePanditBySlug(slug);
   if (!pandit) return null;
   const storefront = await storage.getPanditStorefrontByPanditId(pandit.id);
   return isPanditStorefrontPublished(storefront) ? pandit : null;

@@ -17,6 +17,13 @@ export async function getPanditContactQuota(userId: number, now = new Date()) {
   return quotaState(db, userId, now);
 }
 
+/** Contact-free repeat check for status rendering; it does not claim quota. */
+export async function hasPanditContactReveal(userId: number, panditId: number) {
+  const rows = await db.select({ id: panditContactReveals.id }).from(panditContactReveals)
+    .where(and(eq(panditContactReveals.userId, userId), eq(panditContactReveals.panditId, panditId))).limit(1);
+  return rows.length > 0;
+}
+
 export type ContactQuotaClaim = {
   kind: "revealed" | "repeat" | "exhausted";
   quota: ReturnType<typeof contactQuotaMetadata>;

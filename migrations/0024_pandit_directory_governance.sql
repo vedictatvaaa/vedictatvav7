@@ -6,8 +6,11 @@ ALTER TABLE "pandits"
   ADD COLUMN IF NOT EXISTS "archived" boolean NOT NULL DEFAULT false;
 
 -- Preserve existing public directory records during the fail-closed rollout.
--- The audit guard makes manual reruns non-destructive after an administrator
--- has deliberately changed governance controls.
+-- A durable marker makes this backfill one-time even when no audit event exists.
+CREATE TABLE IF NOT EXISTS "migration_backfill_markers" (
+  "key" text PRIMARY KEY,
+  "applied_at" timestamp NOT NULL DEFAULT now()
+);
 UPDATE "pandits"
 SET "directory_visible" = true,
     "search_eligible" = true,
@@ -23,6 +26,7 @@ SET "directory_visible" = true,
       )
     )
 WHERE "verified" = true
+  AND NOT EXISTS (SELECT 1 FROM "migration_backfill_markers" WHERE "key" = '0024_pandit_directory_governance_backfill')
   AND "on_leave" = false
   AND "location_review_status" = 'resolved'
   AND "account_status" <> 'banned'
@@ -33,6 +37,8 @@ WHERE "verified" = true
     WHERE aal."target" = 'pandit:' || "pandits"."id"::text
       AND aal."action" LIKE 'pandit_governance.%'
   );
+INSERT INTO "migration_backfill_markers" ("key") VALUES ('0024_pandit_directory_governance_backfill')
+  ON CONFLICT ("key") DO NOTHING;
 
 ALTER TABLE "pandits" DROP CONSTRAINT IF EXISTS "pandits_indexing_mode_check";
 ALTER TABLE "pandits" ADD CONSTRAINT "pandits_indexing_mode_check"

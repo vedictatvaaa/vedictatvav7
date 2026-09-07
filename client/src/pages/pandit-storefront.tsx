@@ -13,7 +13,7 @@ import { useConsentPreferences } from "@/lib/consent";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
-import { trackPanditSeoEvent } from "@/lib/analytics";
+import { trackPanditFunnelEvent, trackPanditSeoEvent } from "@/lib/analytics";
 import { bookingContextParams } from "@/lib/puja-service-map";
 import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
 import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
@@ -45,6 +45,9 @@ type StorefrontDto = {
   trust?: { verifiedFacts: TrustItem[]; adminBadges: TrustItem[] };
   canonicalUrl?: string; indexability?: { status: string; indexable: boolean; reasons: string[]; };
   seo?: { title: string; description: string; canonical: string; ogImage?: string; ogType: "profile"; robotsIndex: boolean; robotsFollow: boolean; jsonLd: Array<{ id: string; payload: Record<string, any>; }>; };
+  // This is intentionally optional while older public DTOs are in circulation.
+  // Only an explicit true may be used for an exhaustion booking handoff.
+  managedBookingEligible?: boolean;
 };
 type ContactStatus = {
   policy: "open" | "login_required" | "disabled";
@@ -123,6 +126,7 @@ export default function PanditStorefrontPage() {
   const { data: bestsellers, isLoading: bestsellersLoading } = useQuery<CatalogProduct[]>({ queryKey: ["/api/bestsellers"], queryFn: async () => { const r = await fetch("/api/bestsellers"); if (!r.ok) throw new Error("Bestsellers unavailable"); return r.json(); } });
   useEffect(() => { const secure = window.location.protocol === "https:" ? "; Secure" : ""; document.cookie = consent?.marketing && slug ? `vt_ref=${encodeURIComponent(slug)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${secure}` : `vt_ref=; Path=/; Max-Age=0; SameSite=Lax${secure}`; }, [consent?.marketing, slug]);
   useEffect(() => { if (data?.pandit) trackPanditSeoEvent("discovery_impression", { slug, source: "storefront" }); }, [data?.pandit, slug]);
+  useEffect(() => { if (data?.pandit) trackPanditFunnelEvent("profile_view", { slug, source: "storefront" }); }, [data?.pandit, slug]);
   useEffect(() => { if (lightbox < 0) return; const close = (e: KeyboardEvent) => e.key === "Escape" && setLightbox(-1); window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [lightbox]);
 
   if (isLoading) return <div className="min-h-[100dvh] bg-[#FCF8F0] p-4"><div className="mx-auto max-w-6xl animate-pulse space-y-4"><div className="h-5 w-40 rounded bg-[#EADCC7]" /><div className="h-56 rounded-2xl bg-[#EADCC7]" /><div className="h-8 w-64 rounded bg-[#EADCC7]" /><div className="grid gap-3 sm:grid-cols-4">{[1,2,3,4].map(i => <div key={i} className="h-48 rounded-xl bg-[#EADCC7]" />)}</div></div></div>;
@@ -134,15 +138,33 @@ export default function PanditStorefrontPage() {
   const filtered = !selectedFacet ? services : services.filter(service => service.category === selectedFacet.name || service.category?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") === selectedFacet.slug);
   const displayName = /^(?:pt\.?|pandit)\s/i.test(pandit.name) ? pandit.name : `${pandit.title || "Pandit"} ${pandit.name}`;
   const shareUrl = typeof window !== "undefined" ? new URL(data.canonicalUrl || `/pandit/${slug}`, window.location.origin).toString() : `/pandit/${slug}`;
-  const book = (service?: Service, packageId?: number) => { trackPanditSeoEvent("discovery_cta", { slug, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug, source: "storefront" }); navigate(bookingHref(pandit, service, packageId)); };
+  const bookingEligible = data.managedBookingEligible === true;
+  const bookingKnownUnavailable = data.managedBookingEligible === false;
+  const book = (service?: Service, packageId?: number) => {
+    if (bookingKnownUnavailable) {
+      trackPanditFunnelEvent("booking_completion_error", { slug, source: "storefront", managed_booking_eligible: false });
+      toast({ title: "Managed booking is unavailable", description: "You can still view this profile or use Call Panditji when contact is available." });
+      return;
+    }
+    trackPanditFunnelEvent("booking_start", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
+    trackPanditSeoEvent("discovery_cta", { slug, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug, source: "storefront" }); navigate(bookingHref(pandit, service, packageId));
+  };
   const chat = () => requireAuth(() => navigate(bookingHref(pandit)), { title: "Sign in to continue", description: "Continue to booking to share your ceremony requirements." });
   const access = contactStatus.data;
   const openContact = () => {
-    if (access?.policy === "disabled" || access?.available === false) { toast({ title: "Direct contact is unavailable", description: "Please book through Vedic Tatva." }); return; }
-    const show = () => { setContactError(""); setContactOpen(true); };
-    if (access?.policy === "open") { show(); return; }
-    requireAuth(show, { title: "Login to view contact details", description: "Sign in to securely view this Panditji's contact details." });
+    trackPanditFunnelEvent("contact_cta", { slug, source: "storefront" });
+    setContactError("");
+    setContactOpen(true);
+    if (!access) return;
+    if (access.policy === "disabled") return;
+    if (access.available === false) { trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" }); return; }
+    if (access.policy === "login_required" && !access.authenticated) trackPanditFunnelEvent("contact_prompt", { slug, source: "storefront" });
+    if (access.quota?.remaining === 0) trackPanditFunnelEvent("contact_quota_exhausted", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
   };
+  const loginForContact = () => requireAuth(
+    () => { contactStatus.refetch(); },
+    { title: "Login to view contact details", description: "Sign in to securely view this Panditji's contact details." },
+  );
   const revealContact = async () => {
     if (!slug || revealBusy) return;
     setRevealBusy(true); setContactError("");
@@ -150,10 +172,19 @@ export default function PanditStorefrontPage() {
       const res = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/reveal`, { method: "POST", headers: { "Content-Type": "application/json" } });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 401) { setContactOpen(false); requireAuth(openContact, { title: "Login to view contact details" }); return; }
+        if (res.status === 401) { trackPanditFunnelEvent("contact_prompt", { slug, source: "storefront" }); loginForContact(); return; }
+        if (res.status === 429) trackPanditFunnelEvent("contact_quota_exhausted", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
+        if (res.status === 409) trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" });
         throw new Error(result.message || result.reason || "Contact could not be revealed. Please try again.");
       }
-      setRevealedContact(result.contact || {});
+      const contact = result.contact || {};
+      if (!contact.phone && !contact.whatsappNumber) {
+        trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" });
+        throw new Error("Contact details are unavailable. No reveal was completed.");
+      }
+      const wasAlreadyRevealed = access?.quota && result.quota && result.quota.used === access.quota.used;
+      trackPanditFunnelEvent(wasAlreadyRevealed ? "contact_repeat_reveal" : "contact_reveal", { slug, source: "storefront" });
+      setRevealedContact(contact);
       await contactStatus.refetch();
     } catch (error: any) { setContactError(error.message || "Contact could not be revealed. Please try again."); }
     finally { setRevealBusy(false); }
@@ -168,9 +199,9 @@ export default function PanditStorefrontPage() {
         <div className="grid gap-4 lg:grid-cols-[178px_1fr_250px] lg:gap-6">
           <div className="mx-auto w-[152px] lg:mx-0 lg:w-full"><div className="aspect-square overflow-hidden rounded-2xl bg-[#E8C9A5] shadow-[0_8px_20px_rgba(83,29,40,.12)]">{(storefront?.bannerImage || pandit.image) ? <img src={storefront?.bannerImage || pandit.image} alt={`${pandit.name}, ${pandit.title || "Vedic Pandit"}`} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-6xl font-semibold text-[#8D2830]">{pandit.name.slice(0, 1)}</div>}</div></div>
           <div className="text-center lg:text-left"><div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">{pandit.verified && <Badge className="bg-[#F8EBD7] text-[10px] text-[#6B4224] hover:bg-[#F8EBD7]"><CheckCircle2 className="mr-1 h-3 w-3" />Vedic Tatva Verified</Badge>}{pandit.registrationNo && <Badge className="bg-[#8D2830] text-[10px] text-[#FFF8E8] hover:bg-[#8D2830]">Registered member</Badge>}</div><h1 className="mt-2 text-[30px] font-semibold leading-none text-[#321A20] sm:text-4xl">{displayName}</h1>{storefront?.tagline && <p className="mt-1 text-sm text-[#76584B]">{storefront.tagline}</p>}<div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-[#4E3C36] lg:justify-start">{pandit.reviewCount && pandit.rating !== undefined ? <span className="inline-flex items-center gap-1 font-semibold"><Star className="h-4 w-4 fill-[#E6A91A] text-[#E6A91A]" />{pandit.rating.toFixed(1)}<span className="font-normal text-[#876F61]">({pandit.reviewCount} reviews)</span></span> : <span className="font-semibold text-[#876F61]">New</span>}{pandit.city && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4 text-[#8D2830]" />{pandit.city}{pandit.state ? `, ${pandit.state}` : ""}</span>}{pandit.experience && <span>{pandit.experience}+ years of experience</span>}{languages.length > 0 && <span className="inline-flex items-center gap-1"><Languages className="h-4 w-4 text-[#8D2830]" />{languages.join(", ")}</span>}</div><div data-lenis-prevent className="mt-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">{[...specializations, ...(storefront?.featuredPujas || [])].map(tag => <span key={tag} className="shrink-0 rounded-full border border-[#E3D2BA] bg-[#FFFDF9] px-3 py-1 text-[10px] text-[#624A40]">{tag}</span>)}</div><p className="mx-auto mt-3 max-w-2xl line-clamp-3 text-left text-xs leading-5 text-[#604B42] lg:mx-0">{storefront?.bio || pandit.bio}</p></div>
-          <aside className="hidden rounded-2xl border border-[#E9DCC6] bg-[#FFFDF9] p-4 lg:block"><div className="text-xs font-bold text-[#321A20]">Available for</div>{data.availability?.length ? <div className="mt-3 space-y-2 text-xs text-[#5E4B42]"><div className="flex items-start gap-2"><CheckCircle2 className="h-4 w-4 text-[#258653]" />Published booking times</div><div className="flex items-start gap-2"><Clock3 className="h-4 w-4 text-[#258653]" />{data.availability[0].timezone}</div><div className="flex items-start gap-2"><MapPin className="h-4 w-4 text-[#258653]" />{Array.from(new Set(data.availability.map(a => a.mode))).join(", ")}</div></div> : <p className="mt-3 text-xs text-[#876F61]">Confirm availability during booking.</p>}<Button onClick={() => book()} className="mt-4 w-full rounded-md bg-[#8D2830]">Book a Puja</Button></aside>
+          <aside className="hidden rounded-2xl border border-[#E9DCC6] bg-[#FFFDF9] p-4 lg:block"><div className="text-xs font-bold text-[#321A20]">Connect with {pandit.title || "Panditji"}</div><Button onClick={openContact} disabled={contactStatus.isLoading} className="mt-3 w-full rounded-md bg-[#258653] hover:bg-[#1d6c42]"><MessageCircle className="mr-2 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <p className="mt-3 rounded-md bg-[#FFF5E8] p-2 text-xs leading-5 text-[#735E54]">Managed booking is unavailable for this profile. Direct contact and profile details remain available.</p> : <Button onClick={() => book()} variant="outline" className="mt-3 w-full rounded-md">Book through Vedic Tatva</Button>}</aside>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-[760px]"><Button onClick={() => book()} className="h-11 rounded-md bg-[#8D2830] text-xs hover:bg-[#6D2028]"><CalendarDays className="mr-2 h-4 w-4" />Book a Puja</Button><Button onClick={openContact} disabled={contactStatus.isLoading || access?.available === false} variant="outline" className="h-11 rounded-md border-[#258653] bg-[#F2FAF4] text-xs text-[#216D45]"><MessageCircle className="mr-2 h-4 w-4" />{access?.policy === "disabled" || access?.available === false ? "Contact unavailable" : access?.policy === "open" ? "View contact" : user ? "View contact" : "Login to view contact"}</Button><Button onClick={() => setShareOpen(v => !v)} variant="outline" className="col-span-2 h-10 rounded-md border-[#E0CEB5] text-xs sm:col-span-1 lg:hidden"><Share2 className="mr-2 h-4 w-4" />Share profile</Button></div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-[760px]"><Button onClick={openContact} disabled={contactStatus.isLoading} className="h-11 rounded-md bg-[#258653] text-xs hover:bg-[#1d6c42]"><MessageCircle className="mr-2 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <div className="flex items-center rounded-md border border-[#E0CEB5] px-3 text-center text-[10px] leading-4 text-[#735E54]">Managed booking unavailable</div> : <Button onClick={() => book()} variant="outline" className="h-11 rounded-md text-xs"><CalendarDays className="mr-2 h-4 w-4" />Book a Puja</Button>}<Button onClick={() => setShareOpen(v => !v)} variant="outline" className="col-span-2 h-10 rounded-md border-[#E0CEB5] text-xs sm:col-span-1 lg:hidden"><Share2 className="mr-2 h-4 w-4" />Share profile</Button></div>
       </section>
       <TrustCards trust={data.trust} />
       <nav data-lenis-prevent className="sticky top-0 z-20 -mx-3 flex gap-6 overflow-x-auto border-b border-[#E9DCC6] bg-[#FCF8F0]/95 px-3 py-3 text-[11px] font-semibold text-[#725F56] backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" aria-label="Storefront sections">{[["Overview","overview"],["Services","services"],["Panditji Store","store"],["Reviews","reviews"],["Gallery","gallery"],["About","about"]].map(([label,id]) => <a key={id} href={`#${id}`} className={`shrink-0 ${id === "store" ? "text-[#8D2830]" : "hover:text-[#8D2830]"}`}>{label}</a>)}</nav>
@@ -185,14 +216,14 @@ export default function PanditStorefrontPage() {
       {storefront?.customPujaEnabled && <section className="mb-7 rounded-xl border border-[#E2CDA8] bg-[#F8EBD7] p-5 sm:flex sm:items-center sm:justify-between sm:gap-5"><div><div className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9A641F]">Have a particular sankalp?</div><h2 className="mt-1 text-xl font-semibold text-[#531D28]">Discuss a custom puja</h2><p className="mt-1 text-xs text-[#735E54]">Share your family’s needs privately inside Vedic Tatva.</p></div><Button onClick={chat} className="mt-4 rounded-md bg-[#8D2830] sm:mt-0">Start private chat <MessageCircle className="ml-2 h-4 w-4" /></Button></section>}
       <div className="pb-5"><KnowledgeGraphRelatedContent type="PANDIT" id={pandit.id} /></div>
     </main>
-    <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 p-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] md:hidden"><Button onClick={openContact} disabled={contactStatus.isLoading || access?.policy === "disabled" || access?.available === false} variant="outline" className="h-11 flex-1 rounded-md border-[#258653] text-[#216D45]"><MessageCircle className="mr-1.5 h-4 w-4" />Contact</Button><Button onClick={() => book()} className="h-11 flex-1 rounded-md bg-[#8D2830]"><CalendarDays className="mr-1.5 h-4 w-4" />Book</Button></div>
+    <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 p-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] md:hidden"><Button onClick={openContact} disabled={contactStatus.isLoading} className="h-11 flex-1 rounded-md bg-[#258653] hover:bg-[#1d6c42]"><MessageCircle className="mr-1.5 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <div className="flex flex-1 items-center justify-center text-center text-[10px] leading-4 text-[#735E54]">Managed booking unavailable</div> : <Button onClick={() => book()} variant="outline" className="h-11 flex-1 rounded-md"><CalendarDays className="mr-1.5 h-4 w-4" />Book</Button>}</div>
     {shareOpen && <div className="fixed right-3 top-16 z-50 w-64 rounded-xl border border-[#E0CEB5] bg-[#FFFDF9] p-4 shadow-xl"><div className="flex items-center justify-between text-sm font-semibold text-[#531D28]">Share storefront <button onClick={() => setShareOpen(false)} aria-label="Close share menu"><X className="h-4 w-4" /></button></div><p className="mt-2 break-all text-xs text-[#876F61]">{shareUrl}</p><Button onClick={copyLink} className="mt-3 w-full rounded-md bg-[#8D2830]"><Copy className="mr-2 h-3.5 w-3.5" />{copied ? "Copied" : "Copy link"}</Button></div>}
     {lightbox >= 0 && gallery[lightbox]?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Gallery preview" className="fixed inset-0 z-[60] grid place-items-center bg-[#2D1015]/90 p-5" onClick={() => setLightbox(-1)}><button onClick={() => setLightbox(-1)} aria-label="Close gallery" className="absolute right-5 top-5 text-[#FFF8E8]"><X /></button><img src={gallery[lightbox].mediaUrl} alt={gallery[lightbox].altText || "Gallery preview"} className="max-h-[85vh] max-w-full object-contain" onClick={e => e.stopPropagation()} /></div>}
     <Dialog open={contactOpen} onOpenChange={open => { setContactOpen(open); if (!open) { setContactError(""); setRevealedContact(null); } }}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{revealedContact ? `Contact ${displayName}` : "View contact details"}</DialogTitle><DialogDescription>{revealedContact ? "These details are available through Vedic Tatva's authorized contact flow." : access?.policy === "open" ? "Contact is available without signing in." : access?.quota?.remaining === 0 ? "You've used all 10 free Pandit contacts for this 12-month period." : `${access?.quota?.remaining ?? "—"} of 10 contact reveals remaining.`}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{revealedContact ? `Contact ${displayName}` : "Call Panditji"}</DialogTitle><DialogDescription>{revealedContact ? "This contact was authorized through Vedic Tatva. Use your phone’s native dialer to call." : !access ? "We could not verify direct-contact access. Please try again before requesting contact details." : access.policy === "disabled" ? "Direct contact is disabled for this profile by the current contact policy." : !access.available ? "This Panditji has no usable direct contact method at this time. No contact reveal has been used." : access.policy === "login_required" && !access.authenticated ? "Login to view contact details. Your contact allowance is applied only after an authorized reveal." : access.quota?.remaining === 0 ? "You've used all 10 free unique Pandit contacts for this 12-month period. Previously revealed contacts remain available without using another credit." : access.policy === "open" ? "Contact is available without signing in." : `${access.quota?.remaining ?? "—"} of 10 unique contact reveals remaining.`}</DialogDescription></DialogHeader>
         {contactError && <p role="alert" className="rounded-md bg-rose-50 p-3 text-sm text-rose-800">{contactError}</p>}
-        {revealedContact ? <div className="space-y-2 rounded-lg border border-[#E3D2BA] bg-[#FFF9F0] p-4 text-sm">{revealedContact.phone && <a href={`tel:${revealedContact.phone}`} className="block font-semibold text-[#531D28]">Call {revealedContact.phone}</a>}{revealedContact.whatsappNumber && <a href={`https://wa.me/${revealedContact.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block font-semibold text-[#216D45]">WhatsApp {revealedContact.whatsappNumber}</a>}{!revealedContact.phone && !revealedContact.whatsappNumber && <p>Contact details are not currently available. Please book through Vedic Tatva.</p>}</div> : access?.quota?.remaining === 0 ? <Button onClick={() => { setContactOpen(false); book(); }} className="w-full bg-[#8D2830]">Book through Vedic Tatva</Button> : <Button onClick={revealContact} disabled={revealBusy || contactStatus.isLoading} className="w-full bg-[#8D2830]">{revealBusy ? "Revealing…" : "Reveal contact"}</Button>}
+        {revealedContact ? <div className="space-y-2 rounded-lg border border-[#E3D2BA] bg-[#FFF9F0] p-4 text-sm">{revealedContact.phone && <a href={`tel:${revealedContact.phone}`} onClick={() => trackPanditFunnelEvent("click_to_call", { slug, source: "storefront" })} className="block font-semibold text-[#531D28]">Call Panditji</a>}{revealedContact.whatsappNumber && <a href={`https://wa.me/${revealedContact.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block font-semibold text-[#216D45]">Message on WhatsApp</a>}</div> : !access ? <Button onClick={() => contactStatus.refetch()} className="w-full bg-[#8D2830]">Check contact access</Button> : access.policy === "disabled" || !access.available ? <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">You can continue to explore this profile and its services.{bookingKnownUnavailable ? " Managed booking is also unavailable for this profile." : ""}</p> : access.policy === "login_required" && !access.authenticated ? <Button onClick={loginForContact} className="w-full bg-[#8D2830]">Login to view contact details</Button> : access.quota?.remaining === 0 ? bookingEligible ? <Button onClick={() => { setContactOpen(false); book(); }} className="w-full bg-[#8D2830]">Book through Vedic Tatva</Button> : <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Managed booking is not available for this profile. You can continue to view the profile and published services.</p> : <Button onClick={revealContact} disabled={revealBusy || contactStatus.isLoading} className="w-full bg-[#8D2830]">{revealBusy ? "Revealing…" : "Reveal contact"}</Button>}
       </DialogContent>
     </Dialog>
   </div>;
