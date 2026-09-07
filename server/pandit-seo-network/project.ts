@@ -3,7 +3,7 @@ import {
   publicPanditServiceDto,
   publicStorefrontPanditDto,
 } from "../pandit-public-access";
-import { isPanditPubliclyEligible } from "../pandit-public-eligibility";
+import { effectivePanditGovernance } from "../pandit-public-eligibility";
 import {
   PANDIT_CITY_INDEX_MIN_PROVIDERS,
   PANDIT_CITY_SERVICE_INDEX_MIN_PROVIDERS,
@@ -128,15 +128,15 @@ function profileFromCandidate(
   candidate: PanditNetworkCandidate,
   locations: ActiveLocationContext,
 ): PanditProfileProjection {
-  const eligible = isPanditPubliclyEligible(
+  const governance = effectivePanditGovernance(
     candidate.pandit,
     locations.activeStateIds,
     locations.activeCityById,
   );
   const activeServices = activeCanonicalServices(candidate);
   const bio = candidate.storefront?.bio || candidate.pandit.bio;
-  const indexability = evaluatePanditProfileIndexability({
-    eligible,
+  const evaluated = evaluatePanditProfileIndexability({
+    eligible: governance.directory,
     published: isPanditStorefrontPublished(candidate.storefront),
     name: candidate.pandit.name,
     slug: candidate.pandit.slug,
@@ -148,6 +148,11 @@ function profileFromCandidate(
     activeCanonicalServiceCount: activeServices.length,
     hasBookableMode: activeServices.some(({ service }) => BOOKABLE_MODES.has(String(service.mode || ""))),
   });
+  // Governance is authoritative: a noindex override is retained in the
+  // projection and therefore in metadata/sitemaps without exposing admin data.
+  const indexability = candidate.pandit.indexingMode === "noindex" && evaluated.status !== "not_found"
+    ? { status: "noindex_incomplete_profile" as const, indexable: false, reasons: [...evaluated.reasons, "governance_noindex"] }
+    : evaluated;
 
   if (indexability.status === "not_found") {
     return {

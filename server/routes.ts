@@ -80,6 +80,7 @@ import {
   isPanditEligibleForMembershipCardOrder,
 } from "./membership-card-route";
 import { isPanditPubliclyEligible, effectivePanditGovernance } from "./pandit-public-eligibility";
+import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 import {
   adminPanditDto,
   buildPanditDiscoverySummary,
@@ -4381,8 +4382,16 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         .find(row => row.service.id === serviceId);
       if (!offering) return res.status(400).json({ message: "This service is no longer available" });
       const { pandits: eligiblePandits } = await publicEligibility();
-       const pandit = eligiblePandits.find((candidate) => candidate.id === offering.service.panditId && candidate.bookingEnabled === true);
+      const pandit = eligiblePandits.find((candidate) => candidate.id === offering.service.panditId);
       if (!pandit) return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
+      const storefront = await storage.getPanditStorefrontByPanditId(pandit.id);
+      const eligibility = evaluatePanditBookingEligibility(pandit, {
+        published: isPanditStorefrontPublished(storefront),
+        canonicalLocation: true,
+        services: [{ mode: offering.service.mode, serviceAreas: offering.service.serviceAreas }],
+        pujaSupported: true,
+      });
+      if (!eligibility.result.passed) return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
       const contextError = validateCanonicalServiceBookingContext(req.body, {
         masterServiceId: offering.master.id,
         cityId: pandit.cityId,
@@ -4426,6 +4435,16 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return res.status(400).json({ message: "This package contains an unavailable service" });
       }
       const packageComponents = activeServices.filter(row => items.some(item => item.panditServiceId === row.service.id));
+      const { pandits: eligiblePandits } = await publicEligibility();
+      const pandit = eligiblePandits.find(candidate => candidate.id === pkg.panditId);
+      const storefront = pandit ? await storage.getPanditStorefrontByPanditId(pandit.id) : null;
+      const eligibility = pandit ? evaluatePanditBookingEligibility(pandit, {
+        published: isPanditStorefrontPublished(storefront),
+        canonicalLocation: true,
+        services: packageComponents.map(row => ({ mode: row.service.mode, serviceAreas: row.service.serviceAreas })),
+        pujaSupported: packageComponents.length === items.length,
+      }) : null;
+      if (!eligibility?.result.passed) return res.status(400).json({ message: "The selected Pandit is not currently available for public booking" });
       try {
         for (const row of packageComponents) {
           assertRateCompliant(row.service.price, row.master);

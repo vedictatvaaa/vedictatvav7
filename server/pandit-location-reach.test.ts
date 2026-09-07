@@ -168,6 +168,11 @@ test("public listing DTO rejects private and internal fields", () => {
     boostStartDate: "private",
     boostEndDate: "private",
     boostActive: true,
+    directoryVisible: true,
+    searchEligible: true,
+    bookingEnabled: true,
+    indexingMode: "auto",
+    archived: false,
     fees: 5100,
   }, true, 7.4);
   const forbidden = [
@@ -177,6 +182,7 @@ test("public listing DTO rejects private and internal fields", () => {
     "tier", "tierExpiresAt", "membershipNo", "cardIssued", "cardIssuedAt",
     "commissionPct", "productCommissionPct", "boostType", "boostStartDate", "boostEndDate", "boostActive",
     "originalCity", "originalState",
+    "directoryVisible", "searchEligible", "bookingEnabled", "indexingMode", "archived",
   ];
 
   for (const field of forbidden) assert.equal(field in dto, false, field);

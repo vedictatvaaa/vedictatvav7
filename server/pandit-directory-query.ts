@@ -62,7 +62,7 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
   const where: SQL[] = [];
   // This is the SQL equivalent of isPanditPubliclyEligible. Keep this predicate
   // aligned with that helper; inner joins also enforce active canonical locations.
-  if (!input.showAll) where.push(sql`p.verified = true and p.on_leave = false and p.directory_visible = true and p.search_eligible = true and p.location_review_status = 'resolved' and p.account_status <> 'banned' and (p.account_status <> 'suspended' or (p.suspended_until is not null and p.suspended_until <= now()))`);
+  if (!input.showAll) where.push(sql`p.verified = true and p.on_leave = false and p.archived = false and p.directory_visible = true and p.search_eligible = true and p.location_review_status = 'resolved' and p.account_status <> 'banned' and (p.account_status <> 'suspended' or (p.suspended_until is not null and p.suspended_until <= now()))`);
   if (input.q) where.push(sql`(p.name ilike ${`%${input.q}%`} or p.city ilike ${`%${input.q}%`} or p.specialization ilike ${`%${input.q}%`})`);
   if (input.stateId) where.push(sql`p.state_id = ${input.stateId}`);
   if (input.cityId) where.push(sql`p.city_id = ${input.cityId}`);
@@ -123,6 +123,7 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
       original_city, original_state, card_issued, card_issued_at, service_area,
       latitude, longitude, account_status, on_leave, tier, registration_no,
       state_id, city_id, regional_origin, created_at,
+      directory_visible, search_eligible, booking_enabled, indexing_mode, archived,
       ...pandit
     } = row;
     const dto = publicPanditDto({

@@ -142,6 +142,7 @@ export function publicPanditDto(
     documents, application, applicationId,
     cardIssued, cardIssuedAt, originalCity, originalState, locationReviewStatus, boostType,
     boostStartDate, boostEndDate, boostActive,
+    directoryVisible, searchEligible, bookingEnabled, indexingMode, archived,
     ...safe
   } = pandit;
   return {

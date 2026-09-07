@@ -362,6 +362,9 @@ export const pandits = pgTable("pandits", {
   searchEligible: boolean("search_eligible").notNull().default(false),
   bookingEnabled: boolean("booking_enabled").notNull().default(false),
   indexingMode: text("indexing_mode").notNull().default("auto"),
+  // Reversible administrative archive. Archived accounts are never public or
+  // bookable, but retain their account status and can be restored.
+  archived: boolean("archived").notNull().default(false),
 }, (t) => ({
   cityIdx: index("pandits_city_idx").on(t.city),
   stateIdx: index("pandits_state_idx").on(t.state),

@@ -10,6 +10,7 @@ type PublicPanditCandidate = {
   searchEligible?: boolean | null;
   bookingEnabled?: boolean | null;
   indexingMode?: string | null;
+  archived?: boolean | null;
 };
 
 type ActiveCity = {
@@ -23,7 +24,7 @@ export function isPanditPubliclyEligible(
   activeCityById: ReadonlyMap<number, ActiveCity>,
 ) {
   if (!pandit.verified || pandit.onLeave || pandit.locationReviewStatus !== "resolved") return false;
-  if (pandit.accountStatus === "banned") return false;
+  if (pandit.archived || pandit.accountStatus === "banned") return false;
   if (pandit.accountStatus === "suspended" && (!pandit.suspendedUntil || pandit.suspendedUntil.getTime() > Date.now())) return false;
   if (pandit.stateId == null || pandit.cityId == null || !activeStateIds.has(pandit.stateId)) return false;
   return activeCityById.get(pandit.cityId)?.stateId === pandit.stateId;
