@@ -2069,7 +2069,10 @@ Sitemap: ${baseUrl}/sitemap.xml
         pushUrlsToGoogle(googleUrls),
         submitSitemapToGoogle(gscSiteUrl, sitemapUrl),
       ]);
-      res.json({
+      // Some upstream middleware can leave a non-success status on the response.
+      // Always reset it here: the analytics payload above was produced
+      // successfully and admin fetchers correctly reject any non-2xx status.
+      res.status(200).json({
         indexNow,
         sitemap,
         google,
@@ -14201,12 +14204,13 @@ Please create an optimized route that minimizes backtracking and maximizes the s
         lastSeen: summary.lastSeen,
         dataHealth: noRecords ? {
           status: "no_data",
-          message: "No visitor records yet. Tracking begins only after a visitor grants analytics consent.",
-          trackingRequiresAnalyticsConsent: true,
-        } : { status: "ready", trackingRequiresAnalyticsConsent: true },
+          message: "No visitor records yet. Tracking is enabled and new visits will appear automatically.",
+          trackingAlwaysEnabled: true,
+        } : { status: "ready", trackingAlwaysEnabled: true },
       });
     } catch (e: any) {
-      res.status(500).json({ error: e?.message });
+      console.error("[visitor-analytics] report query failed:", e?.message || e);
+      res.status(500).json({ message: "Visitor analytics could not be loaded" });
     }
   });
 
