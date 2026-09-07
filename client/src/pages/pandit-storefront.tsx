@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, Copy, Languages,
   MapPin, MessageCircle, MessagesSquare, Navigation, Package, PhoneCall,
-  Share2, ShoppingBag, Star, UserRound, Video, Zap, X,
+  Share2, ShoppingBag, Star, Video, Zap, X,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { bookingContextParams } from "@/lib/puja-service-map";
 import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
 import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import templeFallbackImage from "@/assets/images/temple-hero.jpg";
 
 type Service = {
   id: number; masterServiceId: number; name: string; slug: string; category?: string; description?: string;
@@ -73,7 +74,16 @@ function PanditPortrait({ src, name }: { src?: string | null; name: string }) {
   return <div className="relative aspect-square overflow-hidden rounded-2xl border border-[#E2CDA8] bg-[radial-gradient(circle_at_30%_25%,#FFF9E8_0%,#F1D9B6_45%,#D8AA72_100%)] shadow-[0_8px_20px_rgba(83,29,40,.12)]">
     {src && !failed
       ? <img src={src} alt={`${name}, Vedic Pandit`} className="h-full w-full object-cover" onError={() => setFailed(true)} />
-      : <div className="grid h-full place-items-center text-center text-[#7B2930]"><div><UserRound className="mx-auto h-12 w-12 opacity-55" /><span className="mt-2 block font-serif text-3xl font-semibold">{initials}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[.18em] opacity-70">Vedic Pandit</span></div></div>}
+      : <div className="relative grid h-full place-items-center overflow-hidden text-center text-[#FFF8E8]" aria-label={`${name} illustrated temple placeholder`}>
+          <img src={templeFallbackImage} alt="" className="absolute inset-0 h-full w-full scale-105 object-cover" />
+          <span className="absolute inset-0 bg-gradient-to-t from-[#351017]/95 via-[#6D2B35]/70 to-[#A86235]/25" />
+          <span className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#F2D27A] to-transparent" />
+          <div className="relative">
+            <span className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-[#F2D27A]/70 bg-[#4B1720]/75 font-serif text-3xl font-semibold shadow-lg backdrop-blur-sm sm:h-20 sm:w-20 sm:text-4xl">{initials}</span>
+            <span className="mt-3 block text-[9px] font-bold uppercase tracking-[.2em] text-[#F8D982]">Vedic Pandit</span>
+            <span className="mt-1 block text-[8px] text-[#FFF8E8]/75">Profile image coming soon</span>
+          </div>
+        </div>}
   </div>;
 }
 
