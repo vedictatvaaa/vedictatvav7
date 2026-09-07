@@ -603,6 +603,91 @@ Wishing you a blessed spiritual journey,
   return { to: params.to, subject: "Welcome to Vedic Tatva", text, html };
 }
 
+export function buildPanditApplicationReceivedEmail(params: {
+  to: string;
+  fullName: string;
+  city?: string | null;
+}): EmailMessage {
+  const greeting = params.fullName ? `Namaste ${params.fullName} ji,` : "Namaste,";
+  const reviewUrl = `${siteUrl}/pandit-registration`;
+  const text = `${greeting}
+
+Thank you for applying to join Vedic Tatva as a verified Pandit. We have received your application${params.city ? ` for ${params.city}` : ""}.
+
+Our team will review your profile and contact you after the verification process. Please keep your phone and email available in case we need clarification.
+
+You can learn more about the Pandit programme here: ${reviewUrl}
+
+— Vedic Tatva Team`;
+  const html = wrapHtml("Your Pandit application has been received", `
+    <p style="margin:0 0 12px;font-size:15px;">${escapeHtml(greeting)}</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+      Thank you for applying to join <strong>Vedic Tatva</strong> as a verified Pandit.
+      We have received your application${params.city ? ` for <strong>${escapeHtml(params.city)}</strong>` : ""}.
+    </p>
+    <div style="margin:0 0 18px;padding:14px 16px;background:#faf7f0;border:1px solid #ead9b7;border-radius:6px;font-size:14px;line-height:1.6;">
+      <strong>What happens next?</strong><br/>
+      Our team will review your profile and contact you after verification. Please keep your phone and email available in case we need clarification.
+    </div>
+    <p style="margin:18px 0;text-align:center;">
+      <a href="${reviewUrl}" style="display:inline-block;background:#7a1f1f;color:#fff;padding:11px 22px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">Learn about the Pandit programme</a>
+    </p>
+    <p style="margin:8px 0 0;font-size:13px;color:#6b6b6b;">— Vedic Tatva Team</p>
+  `, PANDIT_FOOTER);
+  return { to: params.to, subject: "We received your Vedic Tatva Pandit application", text, html };
+}
+
+export function buildCustomerBookingStatusEmail(params: {
+  to: string;
+  customerName?: string | null;
+  panditName?: string | null;
+  pujaName: string;
+  pujaDate: string;
+  timeSlot: string;
+  mode: string;
+  status: "requested" | "accepted" | "declined" | "cancelled" | "completed" | "updated";
+  message?: string | null;
+}): EmailMessage {
+  const greeting = params.customerName ? `Namaste ${params.customerName} ji,` : "Namaste,";
+  const statusCopy: Record<typeof params.status, { title: string; body: string }> = {
+    requested: { title: "Your puja booking request is received", body: "We have received your request and will keep you updated as the Pandit confirms the details." },
+    accepted: { title: "Your puja booking is confirmed", body: `${params.panditName || "Your Pandit"} has accepted your booking. Please keep your phone available for coordination.` },
+    declined: { title: "Your booking needs reassignment", body: "The selected Pandit could not accept this request. Our team will arrange the next available option for you." },
+    cancelled: { title: "Your puja booking was cancelled", body: "This booking has been cancelled. Please contact our team if you need help arranging a new booking." },
+    completed: { title: "Your puja booking is complete", body: "Thank you for choosing Vedic Tatva. We hope the ceremony was meaningful for you and your family." },
+    updated: { title: "Your puja booking was updated", body: "The details of your Vedic Tatva booking have been updated. Please review the latest information below." },
+  };
+  const copy = statusCopy[params.status];
+  const modeLabel = params.mode === "online" ? "Online (video call)" : "Offline (in-person)";
+  const text = `${greeting}
+
+${copy.body}
+
+Puja: ${params.pujaName}
+Date: ${params.pujaDate}
+Time slot: ${params.timeSlot}
+Mode: ${modeLabel}
+${params.panditName ? `Pandit: ${params.panditName}\n` : ""}${params.message ? `\nMessage from the team:\n${params.message}\n` : ""}
+Open your Vedic Tatva account to view the latest booking details.
+
+— Vedic Tatva Team`;
+  const html = wrapHtml(copy.title, `
+    <p style="margin:0 0 12px;font-size:15px;">${escapeHtml(greeting)}</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">${escapeHtml(copy.body)}</p>
+    <table cellpadding="7" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 16px;border:1px solid #ece7da;">
+      <tr style="background:#faf7f0;"><td style="width:140px;color:#6b6b6b;">Puja</td><td style="font-weight:600;">${escapeHtml(params.pujaName)}</td></tr>
+      <tr><td style="color:#6b6b6b;">Date</td><td>${escapeHtml(params.pujaDate)}</td></tr>
+      <tr style="background:#faf7f0;"><td style="color:#6b6b6b;">Time slot</td><td>${escapeHtml(params.timeSlot)}</td></tr>
+      <tr><td style="color:#6b6b6b;">Mode</td><td>${escapeHtml(modeLabel)}</td></tr>
+      ${params.panditName ? `<tr style="background:#faf7f0;"><td style="color:#6b6b6b;">Pandit</td><td>${escapeHtml(params.panditName)}</td></tr>` : ""}
+    </table>
+    ${params.message ? `<div style="margin:0 0 16px;padding:12px 14px;background:#faf7f0;border:1px solid #ead9b7;border-radius:6px;font-size:14px;line-height:1.55;"><strong>Message:</strong><br/>${escapeHtml(params.message)}</div>` : ""}
+    <p style="margin:8px 0 0;font-size:13px;color:#6b6b6b;">Open your Vedic Tatva account to view the latest booking details.</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b6b6b;">— Vedic Tatva Team</p>
+  `);
+  return { to: params.to, subject: `Vedic Tatva: ${copy.title}`, text, html };
+}
+
 // ---- Order item rendering helpers ----
 type OrderItemLike = { name?: string; productName?: string; quantity?: number; price?: number };
 

@@ -116,6 +116,7 @@ import { assertPackagePriceCompliant, assertRateCompliant, authoritativeBookingP
 import { customerBookingProjection } from "./puja-booking/projections";
 import { enqueueBookingNotificationEvent } from "./puja-booking/notification-events";
 import { redirectTargetWithQuery, resolvePanditCityCanonicalization } from "./pandit-city-canonicalization";
+import { enqueueTransactionalEmail, getEmailOutboxSummary, listEmailOutbox, retryEmailOutbox } from "./email-outbox";
 
 // Lightweight HTML sanitizer used for product descriptions / A+ content before persistence.
 // Strips dangerous tags (script/style/iframe/object/embed/link/meta), all on*-event attributes,
@@ -618,14 +619,21 @@ export async function registerRoutes(
       const fresh = await storage.getUser(user.id);
       const { password: _, ...safeUser } = (fresh || user);
 
-      // Fire-and-forget welcome email
+      // Queue the welcome email durably; the worker delivers it through Hostinger.
       try {
-        const { buildWelcomeEmail, sendEmailAsync } = await import("./email");
-        sendEmailAsync(buildWelcomeEmail({
+        const { buildWelcomeEmail } = await import("./email");
+        await enqueueTransactionalEmail({
+          eventKey: `customer_signup:${safeUser.id}`,
+          kind: "customer_signup",
+          relatedType: "user",
+          relatedId: safeUser.id,
+          recipientName: safeUser.name,
+          message: buildWelcomeEmail({
           to: safeUser.email,
           name: safeUser.name,
           city: safeUser.city,
-        }), "welcome-email");
+          }),
+        });
       } catch (e: any) { console.warn("[welcome-email] failed:", e?.message); }
 
       setCustomerSession(res, safeUser.id);
@@ -773,16 +781,23 @@ export async function registerRoutes(
         const resetUrl = `${siteUrl}/reset-password?token=${rawToken}`;
 
         try {
-          const { buildPasswordResetEmail, sendEmail } = await import("./email");
+          const { buildPasswordResetEmail } = await import("./email");
           const msg = buildPasswordResetEmail({
             to: user.email,
             name: user.name,
             resetUrl,
             expiresInMinutes: 30,
           });
-          await sendEmail(msg);
+          await enqueueTransactionalEmail({
+            eventKey: `customer_password_reset:${user.id}:${tokenHash}`,
+            kind: "customer_password_reset",
+            relatedType: "user",
+            relatedId: user.id,
+            recipientName: user.name,
+            message: msg,
+          });
         } catch (e) {
-          console.error("[forgot-password] email send failed:", e);
+          console.error("[forgot-password] email queue failed:", e);
         }
       }
       // Always return the same response — don't leak whether the email exists
