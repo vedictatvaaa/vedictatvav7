@@ -3,7 +3,8 @@ import { Link, useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, Copy, Languages,
-  MapPin, MessageCircle, Package, Share2, ShoppingBag, Star, X,
+  MapPin, MessageCircle, MessagesSquare, Navigation, Package, PhoneCall,
+  Share2, ShoppingBag, Star, UserRound, Video, Zap, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,14 +50,8 @@ type StorefrontDto = {
   // Only an explicit true may be used for an exhaustion booking handoff.
   managedBookingEligible?: boolean;
 };
-type ContactStatus = {
-  policy: "open" | "login_required" | "disabled";
-  available: boolean;
-  authenticated: boolean;
-  quota: { used: number; remaining: number; resetsAt: string | null } | null;
-};
+type ContactStatus = { policy: "open" | "login_required" | "disabled"; available: boolean; authenticated: boolean; quota: { used: number; remaining: number; resetsAt: string | null } | null };
 type RevealedContact = { phone?: string | null; whatsappNumber?: string | null };
-
 const money = (n?: number) => typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : "Price on request";
 const listify = (value?: string[] | string) => Array.isArray(value) ? value : value ? value.split(",").map(x => x.trim()).filter(Boolean) : [];
 function bookingHref(pandit: StorefrontDto["pandit"], service?: Service, packageId?: number) {
@@ -69,6 +64,23 @@ function bookingHref(pandit: StorefrontDto["pandit"], service?: Service, package
 
 function SectionTitle({ kicker, title, detail }: { kicker: string; title: string; detail?: string }) {
   return <div className="mb-5"><div className="text-[10px] font-bold uppercase tracking-[.19em] text-[#9A641F]">{kicker}</div><h2 className="mt-1.5 text-[25px] font-semibold leading-tight text-[#531D28] sm:text-3xl">{title}</h2>{detail && <p className="mt-1.5 max-w-2xl text-xs leading-5 text-[#735E54]">{detail}</p>}</div>;
+}
+
+function PanditPortrait({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "VT";
+  return <div className="relative aspect-square overflow-hidden rounded-2xl border border-[#E2CDA8] bg-[radial-gradient(circle_at_30%_25%,#FFF9E8_0%,#F1D9B6_45%,#D8AA72_100%)] shadow-[0_8px_20px_rgba(83,29,40,.12)]">
+    {src && !failed
+      ? <img src={src} alt={`${name}, Vedic Pandit`} className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      : <div className="grid h-full place-items-center text-center text-[#7B2930]"><div><UserRound className="mx-auto h-12 w-12 opacity-55" /><span className="mt-2 block font-serif text-3xl font-semibold">{initials}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[.18em] opacity-70">Vedic Pandit</span></div></div>}
+  </div>;
+}
+
+function CapabilityItem({ icon: Icon, label, detail, href }: { icon: typeof MapPin; label: string; detail: string; href?: string }) {
+  const content = <><Icon className="mx-auto h-5 w-5 text-[#8D2830]" /><span className="mt-1.5 block text-[10px] font-bold text-[#531D28] sm:text-[11px]">{label}</span><span className="mt-0.5 block text-[9px] leading-4 text-[#80695E] sm:text-[10px]">{detail}</span></>;
+  return href
+    ? <a href={href} className="min-w-0 border-r border-[#EADDCB] px-2 py-3 text-center transition-colors last:border-r-0 hover:bg-[#FFF8EC]">{content}</a>
+    : <div className="min-w-0 border-r border-[#EADDCB] px-2 py-3 text-center last:border-r-0">{content}</div>;
 }
 
 function ProductCard({ product, add, referralSlug }: { product: CatalogProduct; add: () => void; referralSlug: string }) {
@@ -116,13 +128,9 @@ export default function PanditStorefrontPage() {
   const { slug: rawSlug } = useParams<{ slug: string }>(); const slug = (rawSlug || "").toLowerCase(); const [, navigate] = useLocation();
   const { requireAuth, user } = useAuth(); const { toast } = useToast(); const { addToCart } = useCart(); const consent = useConsentPreferences();
   const [category, setCategory] = useState("all"); const [lightbox, setLightbox] = useState(-1); const [shareOpen, setShareOpen] = useState(false); const [copied, setCopied] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false); const [revealedContact, setRevealedContact] = useState<RevealedContact | null>(null); const [revealBusy, setRevealBusy] = useState(false); const [contactError, setContactError] = useState("");
+  const [contactOpen, setContactOpen] = useState(false); const [contactAction, setContactAction] = useState<"call" | "whatsapp">("call"); const [revealedContact, setRevealedContact] = useState<RevealedContact | null>(null); const [revealBusy, setRevealBusy] = useState(false); const [contactError, setContactError] = useState("");
   const { data, isLoading, isError, refetch } = useQuery<StorefrontDto>({ queryKey: ["/api/storefront", slug], enabled: !!slug, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}`); if (!r.ok) throw new Error("Storefront unavailable"); return r.json(); } });
-  const contactStatus = useQuery<ContactStatus>({
-    queryKey: ["/api/storefront", slug, "contact/status", user?.id || "visitor"],
-    enabled: !!slug,
-    queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/status`); if (!r.ok) throw new Error("Contact access status is unavailable"); return r.json(); },
-  });
+  const contactStatus = useQuery<ContactStatus>({ queryKey: ["/api/storefront", slug, "contact/status", user?.id || "visitor"], enabled: !!slug && contactOpen, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/status`); if (!r.ok) throw new Error("Contact access status is unavailable"); return r.json(); } });
   const { data: bestsellers, isLoading: bestsellersLoading } = useQuery<CatalogProduct[]>({ queryKey: ["/api/bestsellers"], queryFn: async () => { const r = await fetch("/api/bestsellers"); if (!r.ok) throw new Error("Bestsellers unavailable"); return r.json(); } });
   useEffect(() => { const secure = window.location.protocol === "https:" ? "; Secure" : ""; document.cookie = consent?.marketing && slug ? `vt_ref=${encodeURIComponent(slug)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax${secure}` : `vt_ref=; Path=/; Max-Age=0; SameSite=Lax${secure}`; }, [consent?.marketing, slug]);
   useEffect(() => { if (data?.pandit) trackPanditSeoEvent("discovery_impression", { slug, source: "storefront" }); }, [data?.pandit, slug]);
@@ -140,6 +148,13 @@ export default function PanditStorefrontPage() {
   const shareUrl = typeof window !== "undefined" ? new URL(data.canonicalUrl || `/pandit/${slug}`, window.location.origin).toString() : `/pandit/${slug}`;
   const bookingEligible = data.managedBookingEligible === true;
   const bookingKnownUnavailable = data.managedBookingEligible === false;
+  const inPersonDetail = data.serviceCoverage?.inPersonAreas?.[0]
+    || data.serviceCoverage?.primaryLocation?.city
+    || pandit.city
+    || "Ask for coverage";
+  const serviceAreaDetail = data.serviceCoverage?.inPersonAreas?.length
+    ? `${data.serviceCoverage.inPersonAreas.length} area${data.serviceCoverage.inPersonAreas.length === 1 ? "" : "s"} listed`
+    : pandit.city || "View details";
   const book = (service?: Service, packageId?: number) => {
     if (bookingKnownUnavailable) {
       trackPanditFunnelEvent("booking_completion_error", { slug, source: "storefront", managed_booking_eligible: false });
@@ -149,22 +164,13 @@ export default function PanditStorefrontPage() {
     trackPanditFunnelEvent("booking_start", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
     trackPanditSeoEvent("discovery_cta", { slug, source: "storefront" }); trackPanditSeoEvent("booking_handoff", { slug, source: "storefront" }); navigate(bookingHref(pandit, service, packageId));
   };
-  const chat = () => requireAuth(() => navigate(bookingHref(pandit)), { title: "Sign in to continue", description: "Continue to booking to share your ceremony requirements." });
-  const access = contactStatus.data;
-  const openContact = () => {
-    trackPanditFunnelEvent("contact_cta", { slug, source: "storefront" });
-    setContactError("");
-    setContactOpen(true);
-    if (!access) return;
-    if (access.policy === "disabled") return;
-    if (access.available === false) { trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" }); return; }
-    if (access.policy === "login_required" && !access.authenticated) trackPanditFunnelEvent("contact_prompt", { slug, source: "storefront" });
-    if (access.quota?.remaining === 0) trackPanditFunnelEvent("contact_quota_exhausted", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
+  const chat = () => {
+    trackPanditFunnelEvent("contact_cta", { slug, source: "storefront", channel: "message" });
+    requireAuth(() => navigate(`/pandit-profile/${pandit.id}#messages`), { title: "Sign in to send a message", description: "Sign in to message this Panditji privately through Vedic Tatva." });
   };
-  const loginForContact = () => requireAuth(
-    () => { contactStatus.refetch(); },
-    { title: "Login to view contact details", description: "Sign in to securely view this Panditji's contact details." },
-  );
+  const access = contactStatus.data;
+  const openContact = (action: "call" | "whatsapp") => { setContactAction(action); setContactError(""); setRevealedContact(null); setContactOpen(true); trackPanditFunnelEvent("contact_cta", { slug, source: "storefront", channel: action }); };
+  const loginForContact = () => requireAuth(() => void contactStatus.refetch(), { title: "Login to view contact details", description: "Sign in to securely contact this Panditji." });
   const revealContact = async () => {
     if (!slug || revealBusy) return;
     setRevealBusy(true); setContactError("");
@@ -172,21 +178,13 @@ export default function PanditStorefrontPage() {
       const res = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/reveal`, { method: "POST", headers: { "Content-Type": "application/json" } });
       const result = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 401) { trackPanditFunnelEvent("contact_prompt", { slug, source: "storefront" }); loginForContact(); return; }
-        if (res.status === 429) trackPanditFunnelEvent("contact_quota_exhausted", { slug, source: "storefront", managed_booking_eligible: bookingEligible });
-        if (res.status === 409) trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" });
-        throw new Error(result.message || result.reason || "Contact could not be revealed. Please try again.");
+        if (res.status === 401) { loginForContact(); return; }
+        throw new Error(result.message || "Contact could not be revealed.");
       }
-      const contact = result.contact || {};
-      if (!contact.phone && !contact.whatsappNumber) {
-        trackPanditFunnelEvent("contact_unavailable", { slug, source: "storefront" });
-        throw new Error("Contact details are unavailable. No reveal was completed.");
-      }
-      const wasAlreadyRevealed = access?.quota && result.quota && result.quota.used === access.quota.used;
-      trackPanditFunnelEvent(wasAlreadyRevealed ? "contact_repeat_reveal" : "contact_reveal", { slug, source: "storefront" });
-      setRevealedContact(contact);
+      setRevealedContact(result.contact || {});
+      trackPanditFunnelEvent("contact_reveal", { slug, source: "storefront" });
       await contactStatus.refetch();
-    } catch (error: any) { setContactError(error.message || "Contact could not be revealed. Please try again."); }
+    } catch (error: any) { setContactError(error.message || "Contact could not be revealed."); }
     finally { setRevealBusy(false); }
   };
   const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); toast({ title: "Storefront link copied" }); setTimeout(() => setCopied(false), 1800); } catch { toast({ title: "Copy unavailable", description: shareUrl }); } };
@@ -197,14 +195,25 @@ export default function PanditStorefrontPage() {
       <div className="hidden items-center gap-2 py-3 text-[11px] text-[#876F61] md:flex">Home <span>/</span> Pandit <span>/</span> {pandit.city || "India"} <span>/</span> <strong className="text-[#531D28]">{pandit.name}</strong><button onClick={() => setShareOpen(v => !v)} className="ml-auto inline-flex items-center gap-1 text-[#531D28]" aria-label="Share storefront"><Share2 className="h-4 w-4" />Share</button></div>
       <section id="overview" className="scroll-mt-28 border-b border-[#E9DCC6] py-4 sm:py-6 lg:py-7">
         <div className="grid gap-4 lg:grid-cols-[178px_1fr_250px] lg:gap-6">
-          <div className="mx-auto w-[152px] lg:mx-0 lg:w-full"><div className="aspect-square overflow-hidden rounded-2xl bg-[#E8C9A5] shadow-[0_8px_20px_rgba(83,29,40,.12)]">{(storefront?.bannerImage || pandit.image) ? <img src={storefront?.bannerImage || pandit.image} alt={`${pandit.name}, ${pandit.title || "Vedic Pandit"}`} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-6xl font-semibold text-[#8D2830]">{pandit.name.slice(0, 1)}</div>}</div></div>
+          <div className="mx-auto w-[152px] lg:mx-0 lg:w-full"><PanditPortrait src={pandit.image || storefront?.bannerImage} name={pandit.name} /></div>
           <div className="text-center lg:text-left"><div className="flex flex-wrap justify-center gap-1.5 lg:justify-start">{pandit.verified && <Badge className="bg-[#F8EBD7] text-[10px] text-[#6B4224] hover:bg-[#F8EBD7]"><CheckCircle2 className="mr-1 h-3 w-3" />Vedic Tatva Verified</Badge>}{pandit.registrationNo && <Badge className="bg-[#8D2830] text-[10px] text-[#FFF8E8] hover:bg-[#8D2830]">Registered member</Badge>}</div><h1 className="mt-2 text-[30px] font-semibold leading-none text-[#321A20] sm:text-4xl">{displayName}</h1>{storefront?.tagline && <p className="mt-1 text-sm text-[#76584B]">{storefront.tagline}</p>}<div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-[#4E3C36] lg:justify-start">{pandit.reviewCount && pandit.rating !== undefined ? <span className="inline-flex items-center gap-1 font-semibold"><Star className="h-4 w-4 fill-[#E6A91A] text-[#E6A91A]" />{pandit.rating.toFixed(1)}<span className="font-normal text-[#876F61]">({pandit.reviewCount} reviews)</span></span> : <span className="font-semibold text-[#876F61]">New</span>}{pandit.city && <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4 text-[#8D2830]" />{pandit.city}{pandit.state ? `, ${pandit.state}` : ""}</span>}{pandit.experience && <span>{pandit.experience}+ years of experience</span>}{languages.length > 0 && <span className="inline-flex items-center gap-1"><Languages className="h-4 w-4 text-[#8D2830]" />{languages.join(", ")}</span>}</div><div data-lenis-prevent className="mt-3 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">{[...specializations, ...(storefront?.featuredPujas || [])].map(tag => <span key={tag} className="shrink-0 rounded-full border border-[#E3D2BA] bg-[#FFFDF9] px-3 py-1 text-[10px] text-[#624A40]">{tag}</span>)}</div><p className="mx-auto mt-3 max-w-2xl line-clamp-3 text-left text-xs leading-5 text-[#604B42] lg:mx-0">{storefront?.bio || pandit.bio}</p></div>
-          <aside className="hidden rounded-2xl border border-[#E9DCC6] bg-[#FFFDF9] p-4 lg:block"><div className="text-xs font-bold text-[#321A20]">Connect with {pandit.title || "Panditji"}</div><Button onClick={openContact} disabled={contactStatus.isLoading} className="mt-3 w-full rounded-md bg-[#258653] hover:bg-[#1d6c42]"><MessageCircle className="mr-2 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <p className="mt-3 rounded-md bg-[#FFF5E8] p-2 text-xs leading-5 text-[#735E54]">Managed booking is unavailable for this profile. Direct contact and profile details remain available.</p> : <Button onClick={() => book()} variant="outline" className="mt-3 w-full rounded-md">Book through Vedic Tatva</Button>}</aside>
+          <aside className="hidden rounded-2xl border border-[#E9DCC6] bg-[#FFFDF9] p-4 lg:block"><div className="text-xs font-bold text-[#321A20]">Connect with {pandit.title || "Panditji"}</div><Button onClick={whatsappPandit} disabled={!whatsappNumber} className="mt-3 w-full rounded-md bg-[#159957] hover:bg-[#128049]"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button><Button onClick={callPandit} disabled={!directPhone} variant="outline" className="mt-2 w-full rounded-md border-[#D8C4A8]"><PhoneCall className="mr-2 h-4 w-4" />Call Panditji</Button></aside>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-w-[760px]"><Button onClick={openContact} disabled={contactStatus.isLoading} className="h-11 rounded-md bg-[#258653] text-xs hover:bg-[#1d6c42]"><MessageCircle className="mr-2 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <div className="flex items-center rounded-md border border-[#E0CEB5] px-3 text-center text-[10px] leading-4 text-[#735E54]">Managed booking unavailable</div> : <Button onClick={() => book()} variant="outline" className="h-11 rounded-md text-xs"><CalendarDays className="mr-2 h-4 w-4" />Book a Puja</Button>}<Button onClick={() => setShareOpen(v => !v)} variant="outline" className="col-span-2 h-10 rounded-md border-[#E0CEB5] text-xs sm:col-span-1 lg:hidden"><Share2 className="mr-2 h-4 w-4" />Share profile</Button></div>
+        <div className="mx-auto mt-5 grid max-w-[820px] grid-cols-2 gap-2 lg:mx-0">
+          <Button onClick={() => book()} disabled={bookingKnownUnavailable} className="h-12 rounded-md bg-[#A6262E] text-xs font-bold text-white shadow-sm hover:bg-[#891E25]"><CalendarDays className="mr-2 h-4 w-4" />Book a Puja</Button>
+          <Button onClick={whatsappPandit} disabled={!whatsappNumber} className="h-12 rounded-md bg-[#159957] text-xs font-bold text-white shadow-sm hover:bg-[#128049]"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>
+          <Button onClick={callPandit} disabled={!directPhone} variant="outline" className="h-12 rounded-md border-[#E2CDA8] bg-[#FFF7EA] text-xs font-bold text-[#6D3A20] hover:bg-[#F9EBD7]"><PhoneCall className="mr-2 h-4 w-4" />Call Panditji</Button>
+          <Button onClick={chat} variant="outline" className="h-12 rounded-md border-[#B8767D] bg-[#FFFDF9] text-xs font-bold text-[#8D2830] hover:bg-[#FFF3F1]"><MessagesSquare className="mr-2 h-4 w-4" />Send Message</Button>
+        </div>
+        <div className="mx-auto mt-4 grid max-w-[820px] grid-cols-4 overflow-hidden rounded-xl border border-[#E6D7C1] bg-[#FFFDF9] shadow-[0_4px_14px_rgba(83,29,40,.05)] lg:mx-0">
+          <CapabilityItem icon={Navigation} label="In-person Puja" detail={inPersonDetail} href="#services" />
+          <CapabilityItem icon={Video} label="Online Puja" detail={data.serviceCoverage?.onlineAvailable ? "Available worldwide" : "Not listed"} href="#services" />
+          <CapabilityItem icon={Zap} label="Response time" detail="Ask Panditji" />
+          <CapabilityItem icon={MapPin} label="Service areas" detail={serviceAreaDetail} href="#services" />
+        </div>
       </section>
+      <nav data-lenis-prevent className="sticky top-0 z-20 -mx-3 flex gap-7 overflow-x-auto border-b border-[#E9DCC6] bg-[#FFFDF9]/95 px-3 py-3 text-[11px] font-semibold text-[#725F56] shadow-[0_3px_12px_rgba(83,29,40,.04)] backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" aria-label="Storefront sections">{[["Overview","overview"],["Services","services"],["Panditji Store","store"],["Reviews","reviews"],["Gallery","gallery"],["About","about"]].map(([label,id]) => <a key={id} href={`#${id}`} className={`relative shrink-0 py-1 transition-colors ${id === "store" ? "text-[#8D2830] after:absolute after:inset-x-0 after:-bottom-3 after:h-0.5 after:bg-[#8D2830]" : "hover:text-[#8D2830]"}`}>{label}</a>)}</nav>
       <TrustCards trust={data.trust} />
-      <nav data-lenis-prevent className="sticky top-0 z-20 -mx-3 flex gap-6 overflow-x-auto border-b border-[#E9DCC6] bg-[#FCF8F0]/95 px-3 py-3 text-[11px] font-semibold text-[#725F56] backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7" aria-label="Storefront sections">{[["Overview","overview"],["Services","services"],["Panditji Store","store"],["Reviews","reviews"],["Gallery","gallery"],["About","about"]].map(([label,id]) => <a key={id} href={`#${id}`} className={`shrink-0 ${id === "store" ? "text-[#8D2830]" : "hover:text-[#8D2830]"}`}>{label}</a>)}</nav>
 
       <section id="store" className="scroll-mt-16 py-6 sm:py-8"><div className="flex items-end justify-between gap-3"><SectionTitle kicker="Puja essentials" title="Panditji Store" detail="Vedic Tatva bestsellers for your spiritual journey." /><Link href={`/puja-samagri-online?ref=${encodeURIComponent(slug)}`} className="mb-5 shrink-0 text-[11px] font-semibold text-[#8D2830]">View more <ArrowRight className="inline h-3.5 w-3.5" /></Link></div>{bestsellersLoading ? <div className="flex gap-3 overflow-hidden">{[1,2,3,4].map(item => <div key={item} className="h-72 w-[158px] shrink-0 animate-pulse rounded-xl bg-[#EADCC7] sm:flex-1" />)}</div> : products.length ? <div data-lenis-prevent className="flex snap-x gap-3 overflow-x-auto pb-2 scrollbar-hide sm:grid sm:grid-cols-4">{products.map(product => <ProductCard key={product.id} product={product} referralSlug={slug} add={() => { addToCart({ ...product, price: product.salePrice ?? product.price } as any, 1); toast({ title: "Added to cart", description: product.name }); }} />)}</div> : <div className="rounded-xl border border-dashed border-[#D8C4A8] p-8 text-center text-sm text-[#876F61]">Bestsellers are temporarily unavailable.</div>}</section>
       <section id="services" className="border-t border-[#E9DCC6] py-7"><SectionTitle kicker="Published offerings" title="Services for your ceremony" detail="Choose a service, then confirm the details and availability inside booking." /><ServiceCoverageCard coverage={data.serviceCoverage} /><div data-lenis-prevent className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide"><button onClick={() => setCategory("all")} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${category === "all" ? "border-[#8D2830] bg-[#8D2830] text-[#FFF8E8]" : "border-[#E0CEB5] text-[#694D42]"}`}>All ({data.serviceCatalog?.totalActiveServices ?? services.length})</button>{categories.map(item => <button key={item.slug} onClick={() => setCategory(item.slug)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] ${category === item.slug ? "border-[#8D2830] bg-[#8D2830] text-[#FFF8E8]" : "border-[#E0CEB5] text-[#694D42]"}`}>{item.name} ({item.serviceCount})</button>)}</div>{filtered.length ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{filtered.map(service => <ServiceCard key={service.id} service={service} pandit={pandit} onBook={book} />)}</div> : <div className="rounded-xl border border-dashed border-[#D8C4A8] p-8 text-center text-sm text-[#876F61]">Services will appear here when published.</div>}</section>
@@ -216,15 +225,13 @@ export default function PanditStorefrontPage() {
       {storefront?.customPujaEnabled && <section className="mb-7 rounded-xl border border-[#E2CDA8] bg-[#F8EBD7] p-5 sm:flex sm:items-center sm:justify-between sm:gap-5"><div><div className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9A641F]">Have a particular sankalp?</div><h2 className="mt-1 text-xl font-semibold text-[#531D28]">Discuss a custom puja</h2><p className="mt-1 text-xs text-[#735E54]">Share your family’s needs privately inside Vedic Tatva.</p></div><Button onClick={chat} className="mt-4 rounded-md bg-[#8D2830] sm:mt-0">Start private chat <MessageCircle className="ml-2 h-4 w-4" /></Button></section>}
       <div className="pb-5"><KnowledgeGraphRelatedContent type="PANDIT" id={pandit.id} /></div>
     </main>
-    <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 p-2.5 pb-[calc(.625rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] md:hidden"><Button onClick={openContact} disabled={contactStatus.isLoading} className="h-11 flex-1 rounded-md bg-[#258653] hover:bg-[#1d6c42]"><MessageCircle className="mr-1.5 h-4 w-4" />Call Panditji</Button>{bookingKnownUnavailable ? <div className="flex flex-1 items-center justify-center text-center text-[10px] leading-4 text-[#735E54]">Managed booking unavailable</div> : <Button onClick={() => book()} variant="outline" className="h-11 flex-1 rounded-md"><CalendarDays className="mr-1.5 h-4 w-4" />Book</Button>}</div>
+    <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 px-1.5 pt-1.5 pb-[calc(.375rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] backdrop-blur md:hidden">
+      <button onClick={() => book()} disabled={bookingKnownUnavailable} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#8D2830] disabled:opacity-40"><CalendarDays className="h-4 w-4" />Book a Puja</button>
+      <button onClick={whatsappPandit} disabled={!whatsappNumber} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#168A51] disabled:opacity-40"><MessageCircle className="h-4 w-4" />WhatsApp</button>
+      <button onClick={callPandit} disabled={!directPhone} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#6D3A20] disabled:opacity-40"><PhoneCall className="h-4 w-4" />Call</button>
+      <button onClick={chat} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#8D2830]"><MessagesSquare className="h-4 w-4" />Message</button>
+    </div>
     {shareOpen && <div className="fixed right-3 top-16 z-50 w-64 rounded-xl border border-[#E0CEB5] bg-[#FFFDF9] p-4 shadow-xl"><div className="flex items-center justify-between text-sm font-semibold text-[#531D28]">Share storefront <button onClick={() => setShareOpen(false)} aria-label="Close share menu"><X className="h-4 w-4" /></button></div><p className="mt-2 break-all text-xs text-[#876F61]">{shareUrl}</p><Button onClick={copyLink} className="mt-3 w-full rounded-md bg-[#8D2830]"><Copy className="mr-2 h-3.5 w-3.5" />{copied ? "Copied" : "Copy link"}</Button></div>}
     {lightbox >= 0 && gallery[lightbox]?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Gallery preview" className="fixed inset-0 z-[60] grid place-items-center bg-[#2D1015]/90 p-5" onClick={() => setLightbox(-1)}><button onClick={() => setLightbox(-1)} aria-label="Close gallery" className="absolute right-5 top-5 text-[#FFF8E8]"><X /></button><img src={gallery[lightbox].mediaUrl} alt={gallery[lightbox].altText || "Gallery preview"} className="max-h-[85vh] max-w-full object-contain" onClick={e => e.stopPropagation()} /></div>}
-    <Dialog open={contactOpen} onOpenChange={open => { setContactOpen(open); if (!open) { setContactError(""); setRevealedContact(null); } }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{revealedContact ? `Contact ${displayName}` : "Call Panditji"}</DialogTitle><DialogDescription>{revealedContact ? "This contact was authorized through Vedic Tatva. Use your phone’s native dialer to call." : !access ? "We could not verify direct-contact access. Please try again before requesting contact details." : access.policy === "disabled" ? "Direct contact is disabled for this profile by the current contact policy." : !access.available ? "This Panditji has no usable direct contact method at this time. No contact reveal has been used." : access.policy === "login_required" && !access.authenticated ? "Login to view contact details. Your contact allowance is applied only after an authorized reveal." : access.quota?.remaining === 0 ? "You've used all 10 free unique Pandit contacts for this 12-month period. Previously revealed contacts remain available without using another credit." : access.policy === "open" ? "Contact is available without signing in." : `${access.quota?.remaining ?? "—"} of 10 unique contact reveals remaining.`}</DialogDescription></DialogHeader>
-        {contactError && <p role="alert" className="rounded-md bg-rose-50 p-3 text-sm text-rose-800">{contactError}</p>}
-        {revealedContact ? <div className="space-y-2 rounded-lg border border-[#E3D2BA] bg-[#FFF9F0] p-4 text-sm">{revealedContact.phone && <a href={`tel:${revealedContact.phone}`} onClick={() => trackPanditFunnelEvent("click_to_call", { slug, source: "storefront" })} className="block font-semibold text-[#531D28]">Call Panditji</a>}{revealedContact.whatsappNumber && <a href={`https://wa.me/${revealedContact.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="block font-semibold text-[#216D45]">Message on WhatsApp</a>}</div> : !access ? <Button onClick={() => contactStatus.refetch()} className="w-full bg-[#8D2830]">Check contact access</Button> : access.policy === "disabled" || !access.available ? <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">You can continue to explore this profile and its services.{bookingKnownUnavailable ? " Managed booking is also unavailable for this profile." : ""}</p> : access.policy === "login_required" && !access.authenticated ? <Button onClick={loginForContact} className="w-full bg-[#8D2830]">Login to view contact details</Button> : access.quota?.remaining === 0 ? bookingEligible ? <Button onClick={() => { setContactOpen(false); book(); }} className="w-full bg-[#8D2830]">Book through Vedic Tatva</Button> : <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Managed booking is not available for this profile. You can continue to view the profile and published services.</p> : <Button onClick={revealContact} disabled={revealBusy || contactStatus.isLoading} className="w-full bg-[#8D2830]">{revealBusy ? "Revealing…" : "Reveal contact"}</Button>}
-      </DialogContent>
-    </Dialog>
   </div>;
 }
