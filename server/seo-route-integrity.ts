@@ -127,6 +127,11 @@ function acceptsHtml(req: Request): boolean {
 export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDependencies = defaultDependencies) {
   return async function publicRouteIntegrity(req: Request, res: Response, next: NextFunction) {
     if (req.method !== "GET" || !acceptsHtml(req)) return next();
+    // This middleware governs public SPA navigations only. Browser fetch()
+    // defaults to Accept: */*, so API routes must be excluded by path rather
+    // than inferred from Accept headers. Otherwise an API registered later in
+    // the stack can return valid JSON with a poisoned 404 status.
+    if (req.path === "/api" || req.path.startsWith("/api/")) return next();
     if (req.path.includes(".") && !req.path.endsWith(".html") && !req.path.endsWith("/")) return next();
 
     try {
