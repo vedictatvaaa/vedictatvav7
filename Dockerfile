@@ -22,9 +22,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 # constrained Coolify builders; this project compiles multiple native modules.
 COPY package.json package-lock.json* ./
 RUN npm install --global npm@10.9.4 --no-audit --no-fund && \
-    npm cache verify
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    env NODE_ENV=development \
+    npm cache clean --force
+RUN env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
         npm ci --include=dev --ignore-scripts --maxsockets=1 --no-audit --no-fund && \
