@@ -150,6 +150,25 @@ test("disabled canonical city hard navigation is a noindex 404", async () => {
   }
 });
 
+test("public route integrity never poisons late API responses with an SEO 404", async () => {
+  const app = express();
+  app.use(publicRouteIntegrityMiddleware(baseDependencies));
+  app.get("/api/late-report", (_req, res) => res.json({ ok: true }));
+  const server = app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const response = await fetch(`${baseUrl}/api/late-report`, {
+      headers: { accept: "*/*" },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("x-robots-tag"), null);
+    assert.deepEqual(await response.json(), { ok: true });
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("disabled rollout rejects canonical and legacy city routes before projection lookup", async () => {
   let projectionRead = false;
   const dependencies = {
