@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Calendar, Heart, Users2, Bell, Music2,
-  Settings as SettingsIcon, Sparkles, ArrowRight, IndianRupee, MapPin, Receipt,
+  Settings as SettingsIcon, Sparkles, ArrowRight, IndianRupee, MapPin, Receipt, Contact,
 } from "lucide-react";
 import NotificationsInbox from "@/components/dashboard/NotificationsInbox";
 import FamilyProfiles from "@/components/dashboard/FamilyProfiles";
@@ -22,10 +22,11 @@ import JapCounter from "@/components/JapCounter";
 import PaymentRequestsTab from "@/components/dashboard/PaymentRequestsTab";
 import MyPanditMemoriesCard from "@/components/dashboard/MyPanditMemoriesCard";
 import { listNotifications } from "@/lib/dashboardApi";
+import MyPanditContacts from "@/components/dashboard/MyPanditContacts";
 
 type TabId =
   | "overview" | "bookings" | "wishlist" | "family" | "notifications" | "payments"
-  | "chanting" | "settings";
+  | "chanting" | "contacts" | "settings";
 
 const NAV: Array<{
   id: TabId; label: string; icon: any; section: "main" | "spiritual" | "account";
@@ -38,6 +39,7 @@ const NAV: Array<{
   { id: "family",        label: "Family",           icon: Users2,          section: "main" },
   { id: "notifications", label: "Notifications",    icon: Bell,            section: "main", badge: "unread" },
   { id: "chanting",      label: "Jap Counter",      icon: Music2,          section: "spiritual" },
+  { id: "contacts",      label: "My Panditji Contacts", icon: Contact,     section: "account" },
   { id: "settings",      label: "Settings",         icon: SettingsIcon,    section: "account" },
 ];
 
@@ -188,6 +190,7 @@ export default function DashboardPage() {
                 subtitle="Choose a mantra, tap the mala for each japa. Sound and vibration follow every count."
               />
             )}
+            {tab === "contacts" && <MyPanditContacts />}
             {tab === "settings" && <MyProfile />}
           </main>
         </SidebarInset>

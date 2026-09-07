@@ -39,6 +39,7 @@ type StorefrontRow = {
   viewCount: number; totalCommission: number; referralCount: number;
   cardIssued?: boolean; membershipNo?: string | null;
   trustBadges?: Array<{ key: string; detail?: string }>;
+  contactOverride?: "use_global" | "always_open" | "login_required" | "never_display";
 };
 const TRUST_BADGES = [
   { key: "vedic_scholar", label: "Vedic scholar", detailAllowed: false },
@@ -218,7 +219,7 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
   });
 
   const updateStorefront = useMutation({
-    mutationFn: (vars: { panditId: number; body: { productCommissionPct?: number; isPublished?: boolean; trustBadges?: Array<{ key: string; detail?: string }> } }) =>
+    mutationFn: (vars: { panditId: number; body: { productCommissionPct?: number; isPublished?: boolean; trustBadges?: Array<{ key: string; detail?: string }>; contactOverride?: string } }) =>
       apiRequest("PATCH", `/api/admin/storefronts/${vars.panditId}`, vars.body, headers),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/admin/storefronts"] }); toast({ title: "Saved" }); },
     onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
@@ -336,8 +337,8 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
                 <div className="text-sm text-stone-500">No pandits yet.</div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="text-left text-xs text-stone-500"><th className="py-2">Pandit</th><th>Membership</th><th>Tier</th><th>Published</th><th>Card</th><th>Trust badges</th><th>Curated</th><th>Views</th><th>Commission</th><th>Override %</th></tr></thead>
+                    <table className="w-full min-w-[1080px] text-sm">
+                     <thead><tr className="text-left text-xs text-stone-500"><th className="py-2">Pandit</th><th>Membership</th><th>Tier</th><th>Published</th><th>Contact access</th><th>Card</th><th>Trust badges</th><th>Curated</th><th>Views</th><th>Commission</th><th>Override %</th></tr></thead>
                     <tbody>
                       {(storefronts.data?.items || []).map((s) => (
                         <tr key={s.panditId} className="border-t" data-testid={`row-storefront-${s.panditId}`}>
@@ -345,6 +346,7 @@ export default function PanditAffiliateTab({ adminToken }: { adminToken?: string
                           <td className="text-xs font-mono text-stone-700">{s.membershipNo || `VT-PND-${String(s.panditId).padStart(5, "0")}`}</td>
                           <td><Badge variant="outline" className="capitalize">{s.tier || "free"}</Badge></td>
                           <td><Switch checked={s.isPublished} onCheckedChange={(v) => updateStorefront.mutate({ panditId: s.panditId, body: { isPublished: v } })} data-testid={`switch-published-${s.panditId}`} /></td>
+                           <td><select value={s.contactOverride || "use_global"} onChange={event => updateStorefront.mutate({ panditId: s.panditId, body: { contactOverride: event.target.value } })} className="h-8 max-w-[145px] rounded border border-stone-300 bg-white px-1 text-xs" data-testid={`select-contact-override-${s.panditId}`}><option value="use_global">Use global</option><option value="always_open">Always open</option><option value="login_required">Login required</option><option value="never_display">Never display</option></select></td>
                           <td>
                             <div className="flex items-center gap-2">
                               {s.cardIssued ? (

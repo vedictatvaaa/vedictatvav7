@@ -47,6 +47,7 @@ function SiteSettingsTab() {
     ribbonRotationMs: 5000,
     ribbonItems: [] as Array<{ id: string; iconName: string; eyebrow: string; title: string; detail: string; href: string; cta: string }>,
     maintenanceMode: false,
+    panditContactMode: "login_required",
   });
 
   useEffect(() => {
@@ -87,6 +88,7 @@ function SiteSettingsTab() {
         ribbonRotationMs: Number((settings as any).ribbonRotationMs) || 5000,
         ribbonItems: Array.isArray((settings as any).ribbonItems) ? (settings as any).ribbonItems : [],
         maintenanceMode: Boolean((settings as any).maintenanceMode),
+        panditContactMode: (settings as any).panditContactMode || "login_required",
       });
     }
   }, [settings]);
@@ -425,6 +427,21 @@ function SiteSettingsTab() {
       </Card>
 
       {/* Maintenance Mode */}
+      <Card className="bg-card border-border">
+        <CardHeader><CardTitle className="text-lg text-primary font-serif flex items-center gap-2"><Phone className="w-5 h-5" /> Pandit contact access</CardTitle><CardDescription>Controls direct contact across storefronts. Protected details are never included in public profile data.</CardDescription></CardHeader>
+        <CardContent>
+          <div className="max-w-md space-y-2">
+            <Label htmlFor="pandit-contact-mode">Global contact mode</Label>
+            <select id="pandit-contact-mode" value={form.panditContactMode} onChange={(event) => updateField("panditContactMode", event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-pandit-contact-mode">
+              <option value="open">Open — show only where the Pandit permits it</option>
+              <option value="login_required">Login required — use the rolling contact allowance</option>
+              <option value="disabled">Disabled — direct users to book through Vedic Tatva</option>
+            </select>
+            <p className="text-xs text-muted-foreground">A per-Pandit override in Storefronts takes precedence over this setting.</p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg text-primary font-serif flex items-center gap-2"><Sparkles className="w-5 h-5" /> Maintenance Mode</CardTitle>

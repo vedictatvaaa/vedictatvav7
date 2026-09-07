@@ -866,6 +866,9 @@ export const siteSettings = pgTable("site_settings", {
   heroSubheading: text("hero_subheading").notNull().default("Connecting you with divine wisdom and authentic spiritual practices."),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
+  // Controls whether direct Pandit contact details can be revealed. Individual
+  // storefronts may only tighten or explicitly override this policy.
+  panditContactMode: text("pandit_contact_mode").notNull().default("login_required"),
   whatsappNumber: text("whatsapp_number"),
   socialInstagram: text("social_instagram"),
   socialFacebook: text("social_facebook"),
@@ -1894,6 +1897,8 @@ export const panditStorefronts = pgTable("pandit_storefronts", {
   tagline: text("tagline"),
   // Optional social links the pandit chooses to display.
   whatsappNumber: text("whatsapp_number"),
+  // use_global | always_open | login_required | never_display
+  contactAccessOverride: text("contact_access_override").notNull().default("use_global"),
   youtubeUrl: text("youtube_url"),
   instagramUrl: text("instagram_url"),
   facebookUrl: text("facebook_url"),
@@ -1921,6 +1926,21 @@ export const panditStorefronts = pgTable("pandit_storefronts", {
 export const insertPanditStorefrontSchema = createInsertSchema(panditStorefronts).omit({ id: true, viewCount: true, createdAt: true, updatedAt: true });
 export type PanditStorefront = typeof panditStorefronts.$inferSelect;
 export type InsertPanditStorefront = z.infer<typeof insertPanditStorefrontSchema>;
+
+// An append-only record makes a Pandit's contact reveal idempotent for a
+// customer. The rolling allowance is calculated from revealedAt; the unique
+// pair ensures repeat visits can never consume another allowance slot.
+export const panditContactReveals = pgTable("pandit_contact_reveals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  revealedAt: timestamp("revealed_at").notNull().defaultNow(),
+}, (t) => ({
+  userPanditUnique: uniqueIndex("pandit_contact_reveals_user_pandit_unique").on(t.userId, t.panditId),
+  userRevealedIdx: index("pandit_contact_reveals_user_revealed_idx").on(t.userId, t.revealedAt),
+}));
+export const insertPanditContactRevealSchema = createInsertSchema(panditContactReveals).omit({ id: true, revealedAt: true });
+export type PanditContactReveal = typeof panditContactReveals.$inferSelect;
 
 // Admin-owned identity for a puja/service. Pandits can configure an offering
 // only after selecting an active master service; they cannot invent service

@@ -58,16 +58,17 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-  products, pandits, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
+  products, pandits, panditSessions, panditStorefronts, panditContactReveals, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
   pujaTypes, pujaMuhurats,
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
-import { eq, and, gt, lt, like, or, ilike, sql } from "drizzle-orm";
+import { eq, and, gt, gte, lt, like, or, ilike, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { normalizePanditPhone } from "./pandit-phone";
+import { PANDIT_CONTACT_ALLOWANCE, effectivePanditContactPolicy, contactQuotaMetadata } from "./pandit-contact-policy";
 import { panditVerificationDto } from "./pandit-verification";
 import { authorizePanditSession } from "./pandit-portal";
 import {
@@ -342,6 +343,110 @@ export async function registerRoutes(
       res.status(500).json({ message: "Authentication check failed" });
     }
   };
+
+  // Contact details deliberately have no relationship to the public storefront
+  // DTO. These routes are the sole contact disclosure boundary.
+  const CONTACT_ALLOWANCE = PANDIT_CONTACT_ALLOWANCE;
+  const contactStatusLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+  });
+  const contactRevealLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false,
+    keyGenerator: (req: any) => `${req.customerUserId || "anonymous"}:${ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown")}`,
+  });
+  const contactTarget = async (slug: string) => {
+    const rows = await db.select({
+      id: pandits.id, name: pandits.name, city: pandits.city, phone: pandits.phone,
+      whatsappNumber: panditStorefronts.whatsappNumber,
+      override: panditStorefronts.contactAccessOverride,
+      published: panditStorefronts.isPublished,
+    }).from(pandits).innerJoin(panditStorefronts, eq(panditStorefronts.panditId, pandits.id))
+      .where(eq(pandits.slug, slug)).limit(1);
+    return rows[0] || null;
+  };
+  const quota = async (executor: any, userId: number, now = new Date()) => {
+    const windowStart = new Date(now);
+    windowStart.setFullYear(windowStart.getFullYear() - 1);
+    const rows = await executor.select({ used: sql<number>`count(*)::int` }).from(panditContactReveals)
+      .where(and(eq(panditContactReveals.userId, userId), gte(panditContactReveals.revealedAt, windowStart)));
+    return { used: Number(rows[0]?.used || 0), windowStart };
+  };
+  const quotaDto = async (userId: number) => {
+    const state = await quota(db, userId);
+    const earliest = await db.select({ revealedAt: panditContactReveals.revealedAt }).from(panditContactReveals)
+      .where(and(eq(panditContactReveals.userId, userId), gte(panditContactReveals.revealedAt, state.windowStart)))
+      .orderBy(panditContactReveals.revealedAt).limit(1);
+    return contactQuotaMetadata(state.used, earliest[0]?.revealedAt);
+  };
+
+  app.get("/api/storefront/:slug/contact/status", contactStatusLimiter, async (req: any, res) => {
+    try {
+      const target = await contactTarget(String(req.params.slug));
+      if (!target || !target.published) return res.status(404).json({ message: "Pandit not found" });
+      const settings = await storage.getSiteSettings();
+      const policy = effectivePanditContactPolicy(settings?.panditContactMode, target.override);
+      const userId = readCustomerSession(req);
+      const authenticated = !!userId && !!await storage.getUser(userId);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ policy, authenticated, quota: authenticated && policy === "login_required" ? await quotaDto(userId!) : null });
+    } catch { res.status(500).json({ message: "Unable to get contact status" }); }
+  });
+
+  app.post("/api/storefront/:slug/contact/reveal", async (req: any, res, next) => {
+    const userId = readCustomerSession(req);
+    if (userId && await storage.getUser(userId)) req.customerUserId = userId;
+    next();
+  }, contactRevealLimiter, async (req: any, res) => {
+    try {
+      const target = await contactTarget(String(req.params.slug));
+      if (!target || !target.published) return res.status(404).json({ message: "Pandit not found" });
+      const policy = effectivePanditContactPolicy((await storage.getSiteSettings())?.panditContactMode, target.override);
+      if (policy === "disabled") return res.status(403).json({ message: "Direct contact is unavailable. Please book through Vedic Tatva.", policy });
+      if (policy === "login_required" && !req.customerUserId) return res.status(401).json({ message: "Login to view contact details", policy });
+      if (policy === "login_required") {
+        const outcome = await db.transaction(async (tx) => {
+          // Serializes all distinct-Pandit attempts for one customer. The
+          // database unique index remains the final duplicate-consumption guard.
+          await tx.execute(sql`select pg_advisory_xact_lock(${req.customerUserId})`);
+          const existing = await tx.select({ id: panditContactReveals.id }).from(panditContactReveals)
+            .where(and(eq(panditContactReveals.userId, req.customerUserId), eq(panditContactReveals.panditId, target.id))).limit(1);
+          if (existing.length) return { kind: "repeat" as const };
+          const state = await quota(tx, req.customerUserId);
+          if (state.used >= CONTACT_ALLOWANCE) return { kind: "exhausted" as const };
+          await tx.insert(panditContactReveals).values({ userId: req.customerUserId, panditId: target.id });
+          return { kind: "revealed" as const };
+        });
+        if (outcome.kind === "exhausted") return res.status(429).json({ message: "You've used all 10 free Pandit contacts for this 12-month period.", policy, quota: await quotaDto(req.customerUserId) });
+      }
+      res.setHeader("Cache-Control", "private, no-store");
+      // Explicit protected DTO: never spread Pandit/storefront DB rows.
+      res.json({ contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, policy,
+        quota: req.customerUserId && policy === "login_required" ? await quotaDto(req.customerUserId) : null });
+    } catch (error) { console.error("Contact reveal failed", error); res.status(500).json({ message: "Unable to reveal contact" }); }
+  });
+
+  app.get("/api/account/pandit-contacts", customerAuthMiddleware, async (req: any, res) => {
+    try {
+      const state = await quotaDto(req.customerUserId);
+      const items = await db.select({ panditId: pandits.id, name: pandits.name, city: pandits.city, revealedAt: panditContactReveals.revealedAt })
+        .from(panditContactReveals).innerJoin(pandits, eq(panditContactReveals.panditId, pandits.id))
+        .where(eq(panditContactReveals.userId, req.customerUserId)).orderBy(sql`${panditContactReveals.revealedAt} desc`);
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ items: items.map(item => ({ ...item, contactStatus: "revealed" })), quota: state });
+    } catch { res.status(500).json({ message: "Unable to get contact history" }); }
+  });
+
+  app.patch("/api/admin/settings/pandit-contact-mode", adminAuthMiddleware, async (req: any, res) => {
+    const parsed = z.object({ mode: z.enum(["open", "login_required", "disabled"]) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid contact mode" });
+    const existing = await storage.getSiteSettings();
+    const merged: any = { ...(existing || {}), panditContactMode: parsed.data.mode };
+    delete merged.id;
+    const updated = await storage.upsertSiteSettings(merged);
+    await storage.logAdminAction({ actor: `admin:${req.adminUserId}`, action: "pandit_contact_mode.updated", target: "site_settings:global", details: { mode: parsed.data.mode } });
+    res.json({ mode: updated.panditContactMode });
+  });
 
   // ---- SEO alias 301 redirects ----
   // Anchor URLs targeting the highest-intent commercial keyword clusters

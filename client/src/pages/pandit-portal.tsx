@@ -139,10 +139,27 @@ function MessagesAdapter({ bookings, go }: { bookings: any[]; go: (s: string) =>
   return <div className="min-w-0 space-y-5"><PanditSectionHeader title="Messages" description="Continue booking conversations without leaving your practice workspace." /><div className="grid min-w-0 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]"><div className="min-w-0 rounded-xl border border-[#d8c8ae] bg-[#fffdf8] p-2">{bookings.map(b => <button key={b.id} onClick={() => setSelected(b)} className={`w-full rounded-lg p-3 text-left text-sm ${selected?.id === b.id ? "bg-[#f2e6d2] font-semibold" : "hover:bg-[#f6f0e4]"}`}>{b.contactName}<span className="block truncate text-xs font-normal text-[#806f5e]">{b.pujaType}</span></button>)}{bookings.length === 0 && <p className="p-3 text-xs text-[#806f5e]">No booking conversations yet.</p>}</div><div className="min-w-0 rounded-xl border border-[#d8c8ae] bg-[#fffdf8] p-4"><MessageSquare className="h-5 w-5 text-[#946c16]" /><p className="mt-2 text-sm font-semibold">{selected ? selected.contactName : "Select a booking"}</p>{error && <p role="alert" className="mt-2 rounded-lg bg-rose-50 p-2 text-xs text-rose-800">{error}</p>}<div className="my-4 min-h-28 space-y-2">{messages.map(m => <p key={m.id} className={`break-words rounded-lg p-2 text-sm ${m.senderType === "pandit" ? "ml-8 bg-[#55252d] text-[#fff8e9]" : "mr-8 bg-[#f2e6d2]"}`}>{m.message}</p>)}{selected && messages.length === 0 && <p className="py-8 text-center text-xs text-[#806f5e]">No messages in this booking yet.</p>}</div>{selected && <div className="flex flex-col gap-2 sm:flex-row"><Input className="min-w-0" value={draft} onChange={e => setDraft(e.target.value)} placeholder="Write to yajamana" onKeyDown={e => { if (e.key === "Enter") void send(); }} /><Button onClick={() => void send()} className="bg-[#55252d] text-[#fff8e9]">Send</Button></div>}{!selected && <Button onClick={() => go("bookings")} variant="outline">Open bookings</Button>}</div></div></div>;
 }
 function SettingsPanel({ onLeave, note, refresh }: { onLeave: boolean; note: string; refresh: () => void }) {
+  const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [contactSettings, setContactSettings] = useState({ contactOverride: "use_global", showPhone: false, showWhatsapp: false, contactAvailable: true, directoryVisible: true, profilePublished: true });
+  const [contactLoading, setContactLoading] = useState(true);
+  const [contactError, setContactError] = useState("");
+  useEffect(() => {
+    let active = true;
+    panditApi("GET", "/api/pandit/contact-settings").then((result) => {
+      if (active) setContactSettings(current => ({ ...current, ...(result.settings || result) }));
+    }).catch((error: Error) => { if (active) setContactError(error.message || "Contact privacy settings could not be loaded."); }).finally(() => { if (active) setContactLoading(false); });
+    return () => { active = false; };
+  }, []);
   async function toggle() {
     setBusy(true);
     try { await panditApi("POST", "/api/pandit/availability/leave", { onLeave: !onLeave, leaveNote: !onLeave ? note : "" }); await refresh(); }
+    finally { setBusy(false); }
+  }
+  async function saveContactSettings() {
+    setBusy(true); setContactError("");
+    try { await panditApi("PATCH", "/api/pandit/contact-settings", contactSettings); toast({ title: "Contact privacy saved" }); }
+    catch (error: any) { setContactError(error.message || "Contact privacy settings could not be saved."); }
     finally { setBusy(false); }
   }
   return <div className="space-y-5"><PanditSectionHeader title="Settings" description="Control your availability and account preferences." /><div className="rounded-xl border border-[#d8c8ae] bg-[#fffdf8] p-5 md:p-6">
@@ -153,5 +170,12 @@ function SettingsPanel({ onLeave, note, refresh }: { onLeave: boolean; note: str
       <Button onClick={toggle} disabled={busy} className="bg-[#55252d] text-[#fff8e9] hover:bg-[#3e1b20]">{busy ? "Saving…" : onLeave ? "Resume bookings" : "Mark as on leave"}</Button>
       <Button onClick={refresh} variant="outline">Refresh status</Button>
     </div>
+  </div><div className="rounded-xl border border-[#d8c8ae] bg-[#fffdf8] p-5 md:p-6">
+    <p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#946c16]">Contact privacy</p><h2 className="mt-2 font-serif text-2xl">Control your contact visibility</h2><p className="mt-2 text-sm leading-6 text-[#806f5e]">Your phone number is only shared through Vedic Tatva’s authorized contact flow. Changes do not expose a number in your public profile.</p>
+    {contactError && <p role="alert" className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{contactError}</p>}
+    {contactLoading ? <div className="mt-5 h-24 animate-pulse rounded-lg bg-[#f2e6d2]" /> : <><div className="mt-5 space-y-4">
+      <label className="block text-sm font-semibold">Direct contact policy<select value={contactSettings.contactOverride} onChange={event => setContactSettings(current => ({ ...current, contactOverride: event.target.value }))} className="mt-1.5 block h-10 w-full rounded-md border border-[#d8c8ae] bg-white px-3 font-normal"><option value="use_global">Use Vedic Tatva global setting</option><option value="always_open">Always open</option><option value="login_required">Login required</option><option value="never_display">Never display</option></select></label>
+      {[["showPhone", "Allow phone calls after authorized reveal"], ["showWhatsapp", "Allow WhatsApp after authorized reveal"], ["contactAvailable", "Accept direct contact requests"], ["directoryVisible", "Show in the Pandit directory"], ["profilePublished", "Keep my public profile published"]] .map(([key, label]) => <label key={key} className="flex min-h-11 items-center justify-between gap-4 rounded-lg border border-[#eadfce] px-3 text-sm"><span>{label}</span><input type="checkbox" checked={Boolean(contactSettings[key as keyof typeof contactSettings])} onChange={event => setContactSettings(current => ({ ...current, [key]: event.target.checked }))} className="h-5 w-5 accent-[#55252d]" /></label>)}
+    </div><Button onClick={saveContactSettings} disabled={busy} className="mt-5 bg-[#55252d] text-[#fff8e9] hover:bg-[#3e1b20]">{busy ? "Saving…" : "Save contact privacy"}</Button></>}
   </div></div>;
 }
