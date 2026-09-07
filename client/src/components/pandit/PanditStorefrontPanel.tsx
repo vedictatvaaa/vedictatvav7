@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, EyeOff, RotateCcw, Wallet, CreditCard, Package, Image, CalendarDays, Trash2 } from "lucide-react";
+import { Download, ExternalLink, Plus, X, Loader2, Truck, BadgeCheck, ShieldAlert, BookOpen, Pencil, Wallet, CreditCard, Package, Image, CalendarDays, Trash2 } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import type { Product } from "@shared/schema";
 import { PanditEmptyState, PanditErrorState, PanditInlineLoading, PanditKpi, PanditKpiGrid, PanditLoadingState, PanditSectionHeader } from "@/components/pandit/PanditSection";
@@ -59,7 +59,11 @@ type MasterServiceLite = {
   id: number;
   name: string;
   category: string;
+  serviceType: string;
   supportedModes: Array<"in_person" | "online" | "hybrid">;
+  minRate: number | null;
+  maxRate: number | null;
+  defaultDurationMinutes: number | null;
 };
 
 type PanditServiceLite = {
@@ -81,7 +85,7 @@ type PanditServiceLite = {
 
 type ServiceForm = {
   masterServiceId: number;
-  price: number;
+  price: number | "";
   durationMinutes: number;
   mode: PanditServiceLite["mode"];
   description: string;
@@ -94,7 +98,7 @@ type ServiceForm = {
 
 const EMPTY_SERVICE_FORM: ServiceForm = {
   masterServiceId: 0,
-  price: 1100,
+  price: "",
   durationMinutes: 60,
   mode: "in_person" as const,
   description: "",
@@ -159,6 +163,11 @@ function PanditServicesEditor() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       api(`/api/pandit/services/${id}`, { method: "PATCH", body: JSON.stringify({ isActive }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pandit-services"] }),
+    onError: (error: unknown) => toast({
+      title: "Could not update service",
+      description: error instanceof Error ? error.message : "Please try again.",
+      variant: "destructive",
+    }),
   });
 
   const startEdit = (service: PanditServiceLite) => {
@@ -181,6 +190,18 @@ function PanditServicesEditor() {
     reset();
     setServiceDialogOpen(true);
   };
+  const startAddForMaster = (service: MasterServiceLite) => {
+    setEditingId(null);
+    // A price is deliberately never inferred on the client. Rate policy is
+    // server-enforced and the pandit must explicitly enter a rate.
+    setForm({
+      ...EMPTY_SERVICE_FORM,
+      masterServiceId: service.id,
+      mode: service.supportedModes[0] || "in_person",
+      durationMinutes: service.defaultDurationMinutes || EMPTY_SERVICE_FORM.durationMinutes,
+    });
+    setServiceDialogOpen(true);
+  };
   const closeServiceDialog = () => {
     setServiceDialogOpen(false);
     reset();
@@ -189,7 +210,7 @@ function PanditServicesEditor() {
   const master = (masters.data || []).find(item => item.id === form.masterServiceId);
   const usedMasterIds = new Set((offerings.data || []).filter(item => item.id !== editingId).map(item => item.masterServiceId));
   const availableMasters = (masters.data || []).filter(item => !usedMasterIds.has(item.id));
-  const canSave = form.masterServiceId > 0 && form.price >= 0 && form.durationMinutes >= 15 && !saveService.isPending;
+  const canSave = form.masterServiceId > 0 && form.price !== "" && form.price >= 0 && form.durationMinutes >= 15 && !saveService.isPending;
 
   return (
     <Card className="overflow-hidden border-[#D4AF37]/35">
@@ -201,34 +222,40 @@ function PanditServicesEditor() {
         <p className="mt-1 text-xs text-[#FFFAEC]/75">Choose approved ceremonies and set your own price, duration and service details.</p>
       </div>
       <CardContent className="space-y-5 p-5">
-        {offerings.isLoading ? (
+        {offerings.isLoading || masters.isLoading ? (
           <div className="py-4 text-center text-sm text-stone-500"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading services…</div>
-        ) : offerings.isError ? (
-          <PanditErrorState title="Services could not be loaded" onRetry={() => void offerings.refetch()} />
-        ) : (offerings.data || []).length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(offerings.data || []).map(service => (
-              <div key={service.id} className={`rounded-lg border p-4 ${service.isActive ? "border-stone-200 bg-white" : "border-stone-200 bg-stone-50 opacity-70"}`}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">{service.category}</div>
-                    <div className="font-bold text-[#4a1a22]">{service.name}</div>
-                    <div className="mt-1 text-sm text-stone-600">₹{service.price.toLocaleString("en-IN")} · {service.durationMinutes} min</div>
-                  </div>
-                  <Badge variant="outline">{service.mode === "in_person" ? "In person" : service.mode === "online" ? "Online" : "Hybrid"}</Badge>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => startEdit(service)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</Button>
-                  <Button size="sm" variant="ghost" onClick={() => visibility.mutate({ id: service.id, isActive: !service.isActive })}>
-                    {service.isActive ? <><EyeOff className="mr-1.5 h-3.5 w-3.5" />Hide</> : <><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Restore</>}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+        ) : offerings.isError || masters.isError ? (
+          <PanditErrorState title="Services could not be loaded" onRetry={() => { void offerings.refetch(); void masters.refetch(); }} />
         ) : (
-          <div className="rounded-lg border border-dashed border-[#D4AF37]/50 bg-[#FFFAEC]/60 p-5 text-sm text-stone-600">
-            Add your first service so devotees can compare clear prices and book the right ceremony.
+          <div className="space-y-2">
+            <p className="text-sm text-stone-600">Select the ceremonies you actively offer. A selected ceremony needs its own configured price and duration.</p>
+            {(masters.data || []).filter(masterService => ["puja", "katha", "ritual"].includes(masterService.serviceType)).map(masterService => {
+              const offering = (offerings.data || []).find(service => service.masterServiceId === masterService.id);
+              const isActive = Boolean(offering?.isActive);
+              const changing = visibility.isPending && visibility.variables?.id === offering?.id;
+              return (
+                <div key={masterService.id} className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 bg-white p-3">
+                  <label className="flex min-w-0 cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={isActive}
+                      disabled={changing}
+                      onChange={event => {
+                        if (offering) visibility.mutate({ id: offering.id, isActive: event.target.checked });
+                        else if (event.target.checked) startAddForMaster(masterService);
+                      }}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-stone-500">{masterService.category}</span>
+                      <span className="block font-bold text-[#4a1a22]">{masterService.name}</span>
+                      {(masterService.minRate != null || masterService.maxRate != null) && <span className="block text-xs text-stone-500">Allowed rate: ₹{masterService.minRate?.toLocaleString("en-IN") ?? "0"}–₹{masterService.maxRate?.toLocaleString("en-IN") ?? "∞"}</span>}
+                    </span>
+                  </label>
+                  {offering && <Button size="sm" variant="outline" onClick={() => startEdit(offering)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Configure</Button>}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -266,7 +293,7 @@ function PanditServicesEditor() {
                 {availableMasters.map(item => <option key={item.id} value={item.id}>{item.category} — {item.name}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="service-price">Price (₹)</Label><Input id="service-price" type="number" min={0} max={10000000} value={form.price} onChange={event => setForm(current => ({ ...current, price: Number(event.target.value) }))} /></div>
+            <div><Label htmlFor="service-price">Price (₹)</Label><Input id="service-price" type="number" min={master?.minRate ?? 0} max={master?.maxRate ?? 10000000} value={form.price} onChange={event => setForm(current => ({ ...current, price: event.target.value === "" ? "" : Number(event.target.value) }))} placeholder={master?.minRate != null ? `Minimum ₹${master.minRate}` : "Enter your price"} /></div>
             <div><Label htmlFor="service-duration">Duration (minutes)</Label><Input id="service-duration" type="number" min={15} max={1440} value={form.durationMinutes} onChange={event => setForm(current => ({ ...current, durationMinutes: Number(event.target.value) }))} /></div>
             <div>
               <Label htmlFor="service-mode">Mode</Label>

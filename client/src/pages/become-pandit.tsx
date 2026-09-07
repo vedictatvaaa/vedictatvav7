@@ -149,6 +149,7 @@ export default function BecomePandit() {
     regionalOrigin: "",
     membership: "free",
     agreeTerms: false,
+    masterServiceIds: [] as number[],
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -205,7 +206,7 @@ export default function BecomePandit() {
         title: "Application Submitted",
         description: "We'll review your details and reach out within 48 hours.",
       });
-      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false });
+      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false, masterServiceIds: [] });
       setPhotoPreview(null);
       setPhotoFile(null);
       setMissingCityMode(false);
@@ -1289,7 +1290,7 @@ type FormState = {
   fullName: string; phone: string; email: string; city: string; experience: string;
   stateId: string; cityId: string; proposedCityName: string;
   specializations: string; education: string; languages: string; bio: string;
-  regionalOrigin: string; membership: string; agreeTerms: boolean;
+  regionalOrigin: string; membership: string; agreeTerms: boolean; masterServiceIds: number[];
 };
 
 function RegistrationSection({
@@ -1311,6 +1312,20 @@ function RegistrationSection({
     queryKey: ["/api/locations"],
     queryFn: () => fetch("/api/locations").then(r => { if (!r.ok) throw new Error("Unable to load locations"); return r.json(); }),
   });
+  const { data: masterServices = [], isLoading: masterServicesLoading, isError: masterServicesError } = useQuery<Array<{ id: number; name: string; category: string; serviceType: string }>>({
+    queryKey: ["/api/public/master-services"],
+    queryFn: () => fetch("/api/public/master-services").then(r => {
+      if (!r.ok) throw new Error("Unable to load the canonical Puja catalogue");
+      return r.json();
+    }),
+  });
+  const serviceChecklistInitialized = useRef(false);
+  useEffect(() => {
+    if (!serviceChecklistInitialized.current && masterServices.length) {
+      serviceChecklistInitialized.current = true;
+      setForm(current => ({ ...current, masterServiceIds: masterServices.filter(service => ["puja", "katha", "ritual"].includes(service.serviceType)).map(service => service.id) }));
+    }
+  }, [masterServices, setForm]);
   const activeStates = locations.filter(s => s.isActive);
   const activeCities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
   return (
@@ -1408,6 +1423,33 @@ function RegistrationSection({
                     <Field label="Sevas You Perform" id="specializations">
                       <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder="Satyanarayan Katha, Griha Pravesh, Rudra Abhishek..." className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
+                    <fieldset>
+                      <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
+                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>All active Pujas are selected initially. Uncheck any that you do not offer.</p>
+                      {masterServicesLoading ? (
+                        <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
+                      ) : masterServicesError ? (
+                        <p className="mt-2 text-xs text-destructive" role="alert">The Puja catalogue could not be loaded. Please retry before submitting.</p>
+                      ) : (
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          {masterServices.filter(service => ["puja", "katha", "ritual"].includes(service.serviceType)).map(service => (
+                            <label key={service.id} className="flex cursor-pointer items-center gap-2 rounded-md border bg-[#FFFAEC]/40 px-3 py-2 text-sm" style={{ borderColor: `${C.maroon}20`, color: C.brown }}>
+                              <input
+                                type="checkbox"
+                                checked={form.masterServiceIds.includes(service.id)}
+                                onChange={event => setForm(current => ({
+                                  ...current,
+                                  masterServiceIds: event.target.checked
+                                    ? [...current.masterServiceIds, service.id]
+                                    : current.masterServiceIds.filter(id => id !== service.id),
+                                }))}
+                              />
+                              <span><span className="font-medium">{service.name}</span><span className="block text-[11px]" style={{ color: C.brownSoft }}>{service.category}</span></span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </fieldset>
                   </div>
                 </FieldGroup>
 

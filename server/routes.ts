@@ -3207,6 +3207,67 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     res.json(await storage.listAllMasterServices());
   });
 
+  app.get("/api/public/master-services", async (_req, res) => {
+    const services = await db.select({
+      id: masterServices.id,
+      name: masterServices.name,
+      slug: masterServices.slug,
+      category: masterServices.category,
+      serviceType: masterServices.serviceType,
+      supportedModes: masterServices.supportedModes,
+      onlineAvailable: masterServices.onlineAvailable,
+      physicalAvailable: masterServices.physicalAvailable,
+      minRate: masterServices.minRate,
+      maxRate: masterServices.maxRate,
+      defaultDurationMinutes: masterServices.defaultDurationMinutes,
+    }).from(masterServices).where(eq(masterServices.isActive, true));
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.json(services);
+  });
+
+  app.get("/api/puja-booking/pandit-matches", async (req, res) => {
+    const masterServiceId = Number(req.query.masterServiceId);
+    const requestedMode = req.query.mode === "offline" ? "in_person" : "online";
+    if (!Number.isInteger(masterServiceId) || masterServiceId < 1) {
+      return res.status(400).json({ message: "Choose a valid canonical Puja" });
+    }
+    const [master] = await db.select().from(masterServices).where(and(
+      eq(masterServices.id, masterServiceId),
+      eq(masterServices.isActive, true),
+      inArray(masterServices.serviceType, ["puja", "katha", "ritual"]),
+    ));
+    if (!master) return res.status(404).json({ message: "Puja is unavailable" });
+    const { pandits: eligiblePandits } = await publicEligibility();
+    const matches = (await Promise.all(eligiblePandits.map(async pandit => {
+      const offerings = await storage.listPanditServicesWithMaster(pandit.id, true);
+      const offering = offerings.find(row => row.master.id === masterServiceId);
+      if (!offering) return null;
+      const mode = String(offering.service.mode || "").toLowerCase();
+      const supportsMode = requestedMode === "online"
+        ? ["online", "virtual", "hybrid", "both"].includes(mode)
+        : ["in_person", "offline", "hybrid", "both"].includes(mode);
+      if (!supportsMode) return null;
+      const eligibility = evaluatePanditBookingEligibility(pandit, {
+        services: [{ mode: offering.service.mode, serviceAreas: offering.service.serviceAreas }],
+        pujaSupported: true,
+      });
+      if (!eligibility.result.passed) return null;
+      return {
+        pandit: publicPanditDto(pandit),
+        offering: {
+          id: offering.service.id,
+          masterServiceId: offering.master.id,
+          name: offering.master.name,
+          price: offering.service.price,
+          durationMinutes: offering.service.durationMinutes,
+          mode: offering.service.mode,
+        },
+      };
+    }))).filter(Boolean);
+    res.setHeader("Cache-Control", "public, max-age=60");
+    res.json({ masterService: { id: master.id, name: master.name, slug: master.slug }, items: matches });
+  });
+
   app.post("/api/admin/master-services", adminAuthMiddleware, async (req: any, res) => {
     const parsed = masterServiceWriteSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid master service", errors: parsed.error.flatten() });
@@ -9572,6 +9633,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         proposedCityName: z.string().trim().min(1).max(120).optional(),
         experience: z.string().min(1),
         specializations: z.string().optional(),
+        masterServiceIds: z.array(z.number().int().positive()).max(500).optional(),
         education: z.string().optional(),
         languages: z.string().optional(),
         bio: z.string().optional(),
@@ -9603,6 +9665,14 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const location = d.cityId ? await resolveLocation(d.stateId, d.cityId) : undefined;
       if (d.cityId && !location) return res.status(400).json({ message: "Invalid active state/city combination" });
       const expYears = Math.max(0, Math.min(80, parseInt(String(d.experience)) || 1));
+      const requestedMasterIds = Array.from(new Set(d.masterServiceIds || []));
+      const activePujas = await db.select({ id: masterServices.id, name: masterServices.name }).from(masterServices)
+        .where(and(eq(masterServices.isActive, true), inArray(masterServices.serviceType, ["puja", "katha", "ritual"])));
+      const activePujaIds = new Set(activePujas.map(service => service.id));
+      if (requestedMasterIds.some(id => !activePujaIds.has(id))) {
+        return res.status(400).json({ message: "One or more selected Puja services are invalid or inactive" });
+      }
+      const selectedMasterIds = d.masterServiceIds === undefined ? activePujas.map(service => service.id) : requestedMasterIds;
       let feeMin = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMin ?? "")) || 1100));
       let feeMax = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMax ?? "")) || 11000));
       if (feeMax < feeMin) feeMax = feeMin;
@@ -9626,6 +9696,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         vedaSpecialization: null,
         yearsExperience: expYears,
         pujaTypes: d.specializations || "General Puja",
+        masterServiceIds: selectedMasterIds,
         languages: d.languages || "Hindi",
         feeRangeMin: feeMin,
         feeRangeMax: feeMax,
@@ -9915,6 +9986,40 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           cardIssuedAt: createdPandit.cardIssuedAt ?? new Date(),
         }).where(eq(pandits.id, createdPandit.id)).returning();
         await tx.insert(panditStorefronts).values({ panditId: pandit.id }).onConflictDoNothing();
+        const selectedIds = pending.masterServiceIds?.length
+          ? pending.masterServiceIds
+          : (await tx.select({ id: masterServices.id }).from(masterServices)
+              .where(and(eq(masterServices.isActive, true), inArray(masterServices.serviceType, ["puja", "katha", "ritual"]))))
+              .map(service => service.id);
+        if (selectedIds.length) {
+          const selectedMasters = await tx.select().from(masterServices).where(and(
+            inArray(masterServices.id, selectedIds),
+            eq(masterServices.isActive, true),
+            inArray(masterServices.serviceType, ["puja", "katha", "ritual"]),
+          ));
+          if (selectedMasters.length) {
+            await tx.insert(panditServices).values(selectedMasters.map((master, index) => {
+              const modes = master.supportedModes || [];
+              const mode = modes.includes("online") && modes.includes("in_person")
+                ? "hybrid"
+                : modes.includes("online") ? "online" : "in_person";
+              const price = master.minRate ?? (master.maxRate != null ? Math.min(baseFee, master.maxRate) : Math.max(baseFee, 0));
+              return {
+                panditId: pandit.id,
+                masterServiceId: master.id,
+                price,
+                durationMinutes: master.defaultDurationMinutes || 60,
+                mode,
+                description: master.description || "",
+                preparation: "",
+                inclusions: [],
+                serviceAreas: master.physicalAvailable ? [location.city.name] : [],
+                isActive: true,
+                displayOrder: index,
+              };
+            })).onConflictDoNothing();
+          }
+        }
         const [application] = await tx.update(panditApplications).set({
           status: "approved", adminNote: note, reviewedAt: new Date(),
           state: location.state.name, city: location.city.name, panditId: pandit.id,

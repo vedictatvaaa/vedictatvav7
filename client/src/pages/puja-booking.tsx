@@ -22,6 +22,14 @@ import { STANDARD_PUJA_OPTIONS, resolveStandardPuja } from "@shared/standard-puj
 
 const PUJA_PARENT_H1 = "Book a Verified Pandit for Puja at Home";
 type BookingMode = "online" | "offline";
+type MasterService = { id: number; name: string; slug: string; serviceType: string };
+type PanditMatch = {
+  pandit: Pick<Pandit, "id" | "name" | "city" | "cityId" | "stateId" | "image">;
+  offering: { id: number; masterServiceId: number; name: string; price: number; durationMinutes: number; mode: string };
+};
+type PanditMatchesResponse = { masterService: Pick<MasterService, "id" | "name" | "slug">; items: PanditMatch[] };
+
+const normalizeServiceName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const PUJA_FAQS = [
   { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
@@ -86,6 +94,8 @@ export default function PujaBooking() {
 
   const [pujaType, setPujaType] = useState(initialPujaType);
   const [mode, setMode] = useState<BookingMode>(initialMode);
+  const [panditAssignment, setPanditAssignment] = useState<"best" | "candidate">("best");
+  const [candidateOfferingId, setCandidateOfferingId] = useState<number | null>(null);
   const selectedOffering = bookingPackageId
     ? selectedStorefront?.packages?.find(pkg => pkg.id === bookingPackageId)
     : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
@@ -132,6 +142,43 @@ export default function PujaBooking() {
 
   const selectedPuja = availablePujaOptions.find(p => p.value === pujaType);
   const serviceAmount = selectedPuja?.price || 0;
+  const { data: masterServices = [], isLoading: isMasterServicesLoading, isError: isMasterServicesError } = useQuery<MasterService[]>({
+    queryKey: ["/api/public/master-services"],
+    queryFn: async () => {
+      const response = await fetch("/api/public/master-services");
+      if (!response.ok) throw new Error("Unable to load canonical Pujas");
+      return response.json();
+    },
+  });
+  const selectedStandardPuja = resolveStandardPuja(pujaType);
+  const matchedMasterService = useMemo(() => {
+    if (!selectedStandardPuja) return undefined;
+    const requestedMaster = masterServiceId > 0
+      ? masterServices.find(service => service.id === masterServiceId && service.serviceType === "puja")
+      : undefined;
+    if (requestedMaster) return requestedMaster;
+    const selectedNames = [selectedStandardPuja.value, selectedStandardPuja.label].map(normalizeServiceName);
+    return masterServices.find(service => service.serviceType === "puja" && (
+      selectedNames.includes(normalizeServiceName(service.slug)) ||
+      selectedNames.includes(normalizeServiceName(service.name))
+    ));
+  }, [masterServiceId, masterServices, selectedStandardPuja]);
+  const preservesStorefrontSelection = panditId > 0 && (bookingServiceId > 0 || bookingPackageId > 0);
+  const { data: panditMatches, isLoading: isMatchesLoading, isError: isMatchesError } = useQuery<PanditMatchesResponse>({
+    queryKey: ["/api/puja-booking/pandit-matches", matchedMasterService?.id, mode],
+    queryFn: async () => {
+      const response = await fetch(`/api/puja-booking/pandit-matches?masterServiceId=${matchedMasterService!.id}&mode=${mode}`);
+      if (!response.ok) throw new Error("Unable to load available Pandits");
+      return response.json();
+    },
+    enabled: Boolean(matchedMasterService && !preservesStorefrontSelection),
+  });
+  const selectedCandidate = panditMatches?.items.find(item => item.offering.id === candidateOfferingId);
+
+  useEffect(() => {
+    setCandidateOfferingId(null);
+    setPanditAssignment("best");
+  }, [matchedMasterService?.id, mode]);
 
   const bookingMutation = useMutation({
     mutationFn: async () => {
@@ -152,8 +199,18 @@ export default function PujaBooking() {
           email,
           timezone,
           address: mode === "offline" ? address : undefined,
-          ...(panditId > 0 ? { panditId } : {}),
-          ...(bookingServiceId > 0 ? { panditServiceId: bookingServiceId } : {}),
+          ...(preservesStorefrontSelection
+            ? (panditId > 0 ? { panditId } : {})
+            : panditAssignment === "candidate" && selectedCandidate
+              ? {
+                  panditId: selectedCandidate.pandit.id,
+                  panditServiceId: selectedCandidate.offering.id,
+                  masterServiceId: selectedCandidate.offering.masterServiceId,
+                  cityId: selectedCandidate.pandit.cityId,
+                  stateId: selectedCandidate.pandit.stateId,
+                }
+              : {}),
+          ...(preservesStorefrontSelection && bookingServiceId > 0 ? { panditServiceId: bookingServiceId } : {}),
           ...(bookingServiceId > 0 ? {
             masterServiceId,
             cityId: canonicalCityId,
@@ -196,7 +253,10 @@ export default function PujaBooking() {
     },
   });
 
-  const canBook = pujaType && date && timeSlot && contactName && contactPhone && email && timezone && (mode === "online" || (address.locality && address.city && address.state && address.postalCode));
+  const hasValidPanditAssignment = preservesStorefrontSelection || (
+    Boolean(matchedMasterService) && panditAssignment === "best"
+  ) || (panditAssignment === "candidate" && Boolean(selectedCandidate));
+  const canBook = pujaType && date && timeSlot && contactName && contactPhone && email && timezone && hasValidPanditAssignment && (mode === "online" || (address.locality && address.city && address.state && address.postalCode));
   const hasBookingContext = Boolean(
     panditIdParam || bookingServiceId || masterServiceId || bookingPackageId || bookingService || requestedService || searchParams.get("start") === "booking"
   );
@@ -295,6 +355,74 @@ export default function PujaBooking() {
                      </div>
                   </div>
                 </div>
+                 <div className="rounded-md border border-[#D4AF37]/25 bg-[#FFFBF0] p-4 space-y-3" data-testid="pandit-assignment-choice">
+                   <div>
+                     <p className="text-sm font-semibold text-[#6D2B35]">Choose your Pandit</p>
+                     <p className="text-[12px] text-[#5a4a3a]/70">Select the best available match, or choose from eligible Pandits for this Puja and mode.</p>
+                   </div>
+                   {preservesStorefrontSelection ? (
+                     <p className="rounded border border-[#D4AF37]/25 bg-white px-3 py-2 text-sm text-[#5a4a3a]" data-testid="text-storefront-pandit-preserved">
+                       Your storefront Pandit and selected offering will be kept for this booking.
+                     </p>
+                   ) : !pujaType ? (
+                     <p className="text-sm text-muted-foreground">Select a standard Puja to see matching Pandits.</p>
+                   ) : isMasterServicesLoading ? (
+                     <p className="text-sm text-muted-foreground">Loading canonical Puja services…</p>
+                   ) : isMasterServicesError ? (
+                     <p className="text-sm text-destructive">We could not load canonical Puja services. Please try again.</p>
+                   ) : !selectedStandardPuja || !matchedMasterService ? (
+                     <p className="text-sm text-destructive">This Puja does not currently have a canonical service available for Pandit matching. Please choose another Puja.</p>
+                   ) : isMatchesLoading ? (
+                     <p className="text-sm text-muted-foreground">Finding eligible Pandits for this Puja…</p>
+                   ) : isMatchesError ? (
+                     <p className="text-sm text-destructive">We could not load Pandit matches. Please try changing the Puja or mode.</p>
+                   ) : (
+                     <>
+                       <div className="grid gap-2 sm:grid-cols-2">
+                         <button
+                           type="button"
+                           onClick={() => { setPanditAssignment("best"); setCandidateOfferingId(null); }}
+                           className={`rounded-md border p-3 text-left transition-colors ${panditAssignment === "best" ? "border-[#6D2B35] bg-white" : "border-[#D4AF37]/25 bg-white/60"}`}
+                           data-testid="button-assign-best-pandit"
+                         >
+                           <Sparkles className="mb-1 h-4 w-4 text-[#6D2B35]" />
+                           <span className="block text-sm font-semibold">Assign best available Pandit</span>
+                           <span className="block text-[11px] text-muted-foreground">We will confirm the best eligible match.</span>
+                         </button>
+                         <button
+                           type="button"
+                           onClick={() => setPanditAssignment("candidate")}
+                           className={`rounded-md border p-3 text-left transition-colors ${panditAssignment === "candidate" ? "border-[#6D2B35] bg-white" : "border-[#D4AF37]/25 bg-white/60"}`}
+                           data-testid="button-choose-pandit"
+                         >
+                           <Star className="mb-1 h-4 w-4 text-[#6D2B35]" />
+                           <span className="block text-sm font-semibold">Choose a candidate</span>
+                           <span className="block text-[11px] text-muted-foreground">Choose an eligible Pandit and offering.</span>
+                         </button>
+                       </div>
+                       {panditAssignment === "candidate" && (
+                         panditMatches?.items.length ? (
+                           <div className="space-y-2" data-testid="pandit-candidate-list">
+                             {panditMatches.items.map(item => (
+                               <button
+                                 type="button"
+                                 key={item.offering.id}
+                                 onClick={() => setCandidateOfferingId(item.offering.id)}
+                                 className={`w-full rounded-md border p-3 text-left transition-colors ${candidateOfferingId === item.offering.id ? "border-[#6D2B35] bg-white" : "border-[#D4AF37]/25 bg-white/60"}`}
+                                 data-testid={`button-pandit-candidate-${item.pandit.id}`}
+                               >
+                                 <span className="block text-sm font-semibold text-[#5a4a3a]">{item.pandit.name}</span>
+                                 <span className="block text-[12px] text-muted-foreground">{item.pandit.city || "Location confirmed after booking"} · {item.offering.name} · ₹{item.offering.price.toLocaleString()} · {item.offering.durationMinutes} min</span>
+                               </button>
+                             ))}
+                           </div>
+                         ) : (
+                           <p className="text-sm text-muted-foreground" data-testid="text-no-pandit-candidates">No eligible Pandits are available for this Puja and mode. Choose best available so we can review your request.</p>
+                         )
+                       )}
+                     </>
+                   )}
+                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Date</label>
@@ -362,10 +490,10 @@ export default function PujaBooking() {
                   <span className="text-[#5a4a3a]/60">Puja type</span>
                   <span className="font-semibold text-[#5a4a3a] text-right">{selectedPuja?.label || "Not selected"}</span>
                 </div>
-                {selectedPandit && (
+                 {(selectedPandit || selectedCandidate) && (
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-[#5a4a3a]/60">Pandit</span>
-                    <span className="font-semibold text-[#5a4a3a]" data-testid="text-summary-pandit">{selectedPandit.name}</span>
+                     <span className="font-semibold text-[#5a4a3a]" data-testid="text-summary-pandit">{selectedPandit?.name || selectedCandidate?.pandit.name}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-[13px]"><span className="text-[#5a4a3a]/60">Puja service</span><span className="font-semibold text-[#5a4a3a]">{selectedPuja ? `From ₹${serviceAmount.toLocaleString()}` : "Select a Puja"}</span></div>

@@ -414,6 +414,7 @@ export const panditApplications = pgTable("pandit_applications", {
   vedaSpecialization: text("veda_specialization"),
   yearsExperience: integer("years_experience").notNull(),
   pujaTypes: text("puja_types").notNull(),
+  masterServiceIds: integer("master_service_ids").array().notNull().default(sql`'{}'::integer[]`),
   languages: text("languages").notNull(),
   feeRangeMin: integer("fee_range_min").notNull(),
   feeRangeMax: integer("fee_range_max").notNull(),

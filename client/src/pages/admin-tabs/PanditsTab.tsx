@@ -59,8 +59,8 @@ function PanditsTab() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
 
   const { data: pandits, isLoading } = useQuery<Pandit[]>({
-    queryKey: ["/api/book-pandit-online", "admin"],
-    queryFn: () => fetcher("/api/book-pandit-online?all=true"),
+    queryKey: ["/api/admin/pandits"],
+    queryFn: () => fetcher("/api/admin/pandits"),
   });
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>fetcher("/api/admin/locations") });
   type DiscoveryHealth = { total:number; verified:number; active:number; publiclyDiscoverable:number; missingState:number; missingCity:number; locationIssues:number; missingProfileData:number; issuePanditIds:number[] };
@@ -108,7 +108,7 @@ function PanditsTab() {
       return { ...await res.json(), newVerified };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-discovery/health"] });
       toast({ title: data.newVerified ? "Pandit Approved" : "Pandit Delisted", description: data.newVerified ? "Pandit is now live and visible." : "Pandit has been delisted from public view." });
@@ -149,7 +149,7 @@ function PanditsTab() {
       return { body, action };
     },
     onSuccess: ({ action }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online"] });
       setModerationTarget(null);
       setModerationReason("");
@@ -173,7 +173,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       toast({ title: "Fees Updated", description: "Pandit fees updated successfully." });
       setEditingFeesId(null);
     },
@@ -190,7 +190,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
       toast({ title: "Pandit Removed", description: "Pandit has been removed." });
     },
@@ -207,7 +207,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       toast({ title: "Boost Activated", description: "Pandit profile is now boosted." });
     },
     onError: () => toast({ title: "Error", description: "Failed to activate boost.", variant: "destructive" }),
@@ -223,7 +223,7 @@ function PanditsTab() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       toast({ title: "Boost Deactivated", description: "Pandit boost has been removed." });
     },
     onError: () => toast({ title: "Error", description: "Failed to deactivate boost.", variant: "destructive" }),
@@ -245,7 +245,7 @@ function PanditsTab() {
       return { pandit: await res.json(), coords };
     },
     onSuccess: ({ coords }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       toast({
         title: "Location Set ✓",
         description: `Coordinates saved: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
@@ -277,7 +277,7 @@ function PanditsTab() {
       return { pandit: await res.json(), tier };
     },
     onSuccess: ({ tier }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
       const meta = TIER_META[tier] ?? { label: tier };
       toast({ title: `Tier Updated`, description: `Pandit upgraded to ${meta.label} tier.` });
     },
@@ -315,7 +315,7 @@ function PanditsTab() {
       // Nominatim rate limit: 1 req/sec
       await new Promise(r => setTimeout(r, 1100));
     }
-    await queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
     setBulkGeocoding(false);
     setBulkProgress(null);
     toast({
@@ -637,7 +637,7 @@ function PanditsTab() {
         pandit={editingPandit}
         onClose={() => setEditingPandit(null)}
         onSaved={() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online", "admin"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
           queryClient.invalidateQueries({ queryKey: ["/api/book-pandit-online"] });
           queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-discovery/health"] });
           setEditingPandit(null);
