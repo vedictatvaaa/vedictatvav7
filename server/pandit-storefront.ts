@@ -356,13 +356,17 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
     )).catch(() => [{ count: 0 }]),
   ]);
   const services = authoritativeProfile?.services || storedServices.map(publicPanditServiceDto);
+  const reviewCount = reviews.length;
+  const reviewRating = reviewCount
+    ? Math.round((reviews.reduce((total, review) => total + Number(review.rating || 0), 0) / reviewCount) * 10) / 10
+    : undefined;
   const enrichment = storefrontServiceEnrichment(services, publicStorefrontPanditDto(pandit));
   const trust = {
     verifiedFacts: storefrontVerifiedFacts({
       verified: pandit.verified === true,
       registrationNo: pandit.registrationNo,
       experience: pandit.experience,
-      reviewCount: reviews.length,
+      reviewCount,
       completedBookingCount: completedBookings[0]?.count || 0,
       activeMembership: membership.length > 0,
     }),
@@ -378,7 +382,11 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
       : null;
   }))).filter(Boolean);
   return {
-    pandit: publicStorefrontPanditDto(pandit),
+    pandit: {
+      ...publicStorefrontPanditDto(pandit),
+      rating: reviewRating,
+      reviewCount,
+    },
     storefront: sf
       ? {
           bio: sf.bio,

@@ -116,6 +116,7 @@ export interface IStorage {
   deletePandit(id: number): Promise<boolean>;
 
   getPanditReviews(panditId: number): Promise<PanditReview[]>;
+  getPanditReviewSummaries(panditIds: number[]): Promise<Array<{ panditId: number; rating: number; reviewCount: number }>>;
   getAllPanditReviews(): Promise<PanditReview[]>;
   createPanditReview(review: InsertPanditReview): Promise<PanditReview>;
   deletePanditReview(id: number): Promise<boolean>;
@@ -678,6 +679,23 @@ export class DatabaseStorage implements IStorage {
 
   async getPanditReviews(panditId: number): Promise<PanditReview[]> {
     return db.select().from(panditReviews).where(eq(panditReviews.panditId, panditId));
+  }
+
+  async getPanditReviewSummaries(panditIds: number[]): Promise<Array<{ panditId: number; rating: number; reviewCount: number }>> {
+    const ids = Array.from(new Set(panditIds.filter(Number.isInteger))).slice(0, 1000);
+    if (!ids.length) return [];
+    const rows = await db.select({
+      panditId: panditReviews.panditId,
+      rating: dsql<number>`avg(${panditReviews.rating})::float`,
+      reviewCount: dsql<number>`count(*)::int`,
+    }).from(panditReviews)
+      .where(inArray(panditReviews.panditId, ids))
+      .groupBy(panditReviews.panditId);
+    return rows.map(row => ({
+      panditId: row.panditId,
+      rating: Math.round(Number(row.rating) * 10) / 10,
+      reviewCount: Number(row.reviewCount),
+    }));
   }
 
   async getAllPanditReviews(): Promise<PanditReview[]> {

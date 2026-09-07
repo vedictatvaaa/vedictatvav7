@@ -397,13 +397,17 @@ function PanditCard({
 
             {/* Rating row */}
             <div className="flex items-center gap-2 mt-1 text-sm">
-              <div className="flex items-center gap-0.5">
-                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                <span className="font-semibold">{p.rating?.toFixed(1)}</span>
-              </div>
-              <span className="text-muted-foreground">
-                ({p.reviewCount || 0} review{p.reviewCount === 1 ? "" : "s"})
-              </span>
+              {p.reviewCount > 0 && p.rating !== undefined ? (
+                <>
+                  <div className="flex items-center gap-0.5">
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                    <span className="font-semibold">{p.rating.toFixed(1)}</span>
+                  </div>
+                  <span className="text-muted-foreground">
+                    ({p.reviewCount} review{p.reviewCount === 1 ? "" : "s"})
+                  </span>
+                </>
+              ) : <span className="font-medium text-muted-foreground">New</span>}
               {dist && (
                 <>
                   <span className="text-muted-foreground">·</span>
@@ -524,12 +528,12 @@ function CompareDialog({
   open, onClose, selected,
 }: { open: boolean; onClose: () => void; selected: PanditWithMeta[] }) {
   const rows: { label: string; render: (p: PanditWithMeta) => React.ReactNode }[] = [
-    { label: "Rating", render: (p) => (
+    { label: "Rating", render: (p) => p.reviewCount > 0 && p.rating !== undefined ? (
       <span className="flex items-center gap-1">
         <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-        {p.rating?.toFixed(1)} ({p.reviewCount})
+        {p.rating.toFixed(1)} ({p.reviewCount})
       </span>
-    )},
+    ) : "New" },
     { label: "Experience", render: (p) => `${p.experience}+ yrs` },
     { label: "Starting fee", render: (p) => `₹${p.fees.toLocaleString("en-IN")}` },
     { label: "Tradition", render: (p) => p.regionalOrigin || "—" },

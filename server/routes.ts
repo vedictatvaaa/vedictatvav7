@@ -3446,7 +3446,17 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           } : {}),
         };
       });
-    res.json(results);
+    if (showAll) return res.json(results);
+    const reviewSummaries = await storage.getPanditReviewSummaries(results.map(result => result.id));
+    const summaryByPandit = new Map(reviewSummaries.map(summary => [summary.panditId, summary]));
+    res.json(results.map(result => {
+      const summary = summaryByPandit.get(result.id);
+      return {
+        ...result,
+        rating: summary?.rating,
+        reviewCount: summary?.reviewCount ?? 0,
+      };
+    }));
   });
 
   app.get("/api/pandits/verify/:registrationNo", async (req, res, next) => {
