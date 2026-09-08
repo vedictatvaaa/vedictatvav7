@@ -59,7 +59,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-   products, pandits, panditReviews, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, panditContactReveals, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
+   products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, panditContactReveals, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
   pujaTypes, pujaMuhurats,
   type AbandonedCart,
 } from "@shared/schema";
@@ -10089,6 +10089,13 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       });
     } catch (error) {
       console.error("approve pandit-application error:", error);
+      const errorCode = (error as any)?.code;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorCode === "42P01" && errorMessage.includes("pandit_registration_no_seq")) {
+        return res.status(503).json({
+          message: "Pandit registration is temporarily unavailable because its database sequence is missing. Apply migrations/0030_repair_pandit_registration_sequence.sql, then retry approval.",
+        });
+      }
       res.status(500).json({ message: "Failed to approve application" });
     }
   });

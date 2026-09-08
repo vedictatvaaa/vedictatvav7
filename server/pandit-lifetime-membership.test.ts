@@ -6,6 +6,21 @@ import os from "node:os";
 import path from "node:path";
 import sharp from "sharp";
 import test from "node:test";
+import crypto from "node:crypto";
+import { and, eq, sql } from "drizzle-orm";
+import { db } from "./db";
+import { registerRoutes } from "./routes";
+import {
+  adminSessions,
+  indianCities,
+  indianStates,
+  panditApplications,
+  panditCityRequests,
+  panditServices,
+  panditStorefronts,
+  pandits,
+  users,
+} from "@shared/schema";
 import {
   createMembershipCardProductsHandler,
   type MembershipCardRouteProduct,
@@ -37,6 +52,9 @@ const panditPortal = readFileSync("server/pandit-portal.ts", "utf8");
 const membershipCardRoute = readFileSync("server/membership-card-route.ts", "utf8");
 const seed = readFileSync("server/seed.ts", "utf8");
 const photoValidator = readFileSync("server/profile-photo-validation.ts", "utf8");
+const approvalIntegration = process.env.RUN_PANDIT_APPROVAL_INTEGRATION === "1" && process.env.DATABASE_URL
+  ? test
+  : test.skip;
 
 async function requestMembershipCardProducts(
   overrides: Parameters<typeof createMembershipCardProductsHandler>[0],
@@ -58,6 +76,215 @@ async function requestMembershipCardProducts(
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 }
+
+approvalIntegration("Pandit application approval publishes one retry-safe profile", async () => {
+  const suffix = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+  const fullName = `Approval Integration ${suffix}`;
+  const email = `pandit-approval-${suffix}@example.invalid`;
+  const adminEmail = `pandit-approval-admin-${suffix}@example.invalid`;
+  const token = crypto.randomBytes(24).toString("hex");
+  const photoDirectory = mkdtempSync(path.join(process.cwd(), "uploads", "pandit-approval-"));
+  const photoPath = path.join(photoDirectory, "profile.png");
+  const photo = `/uploads/${path.basename(photoDirectory)}/profile.png`;
+  let httpServer: ReturnType<typeof createServer> | undefined;
+  let adminUserId: number | undefined;
+  let applicationId: number | undefined;
+  let missingLocationApplicationId: number | undefined;
+  let missingPhotoApplicationId: number | undefined;
+  let panditId: number | undefined;
+
+  try {
+    await sharp({
+      create: {
+        width: 32,
+        height: 32,
+        channels: 3,
+        background: { r: 156, g: 92, b: 54 },
+      },
+    }).png().toFile(photoPath);
+
+    const [location] = await db.select({
+      state: indianStates,
+      city: indianCities,
+    }).from(indianCities)
+      .innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
+      .where(and(eq(indianCities.isActive, true), eq(indianStates.isActive, true)))
+      .limit(1);
+    assert.ok(location, "approval integration requires an active canonical State and City");
+
+    const [admin] = await db.insert(users).values({
+      name: "Pandit Approval Integration Admin",
+      email: adminEmail,
+      role: "admin",
+    }).returning({ id: users.id });
+    adminUserId = admin.id;
+    await db.insert(adminSessions).values({
+      userId: adminUserId,
+      token,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    const app = express();
+    app.use(express.json());
+    httpServer = createServer(app);
+    const realSetTimeout = globalThis.setTimeout;
+    const realSetInterval = globalThis.setInterval;
+    globalThis.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: any[]) => {
+      const timer = realSetTimeout(handler, timeout, ...args);
+      timer.unref();
+      return timer;
+    }) as typeof setTimeout;
+    globalThis.setInterval = ((handler: TimerHandler, timeout?: number, ...args: any[]) => {
+      const timer = realSetInterval(handler, timeout, ...args);
+      timer.unref();
+      return timer;
+    }) as typeof setInterval;
+    try {
+      await registerRoutes(httpServer, app);
+    } finally {
+      globalThis.setTimeout = realSetTimeout;
+      globalThis.setInterval = realSetInterval;
+    }
+    await new Promise<void>((resolve) => httpServer!.listen(0, "127.0.0.1", resolve));
+    const address = httpServer.address();
+    assert.ok(address && typeof address === "object");
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const post = async (url: string, body: unknown, admin = false) => {
+      const response = await fetch(`${baseUrl}${url}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(admin ? { "x-admin-token": token } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, body: await response.json() };
+    };
+
+    const submitted = await post("/api/pandit-applications", {
+      fullName,
+      phone: "9876543210",
+      email,
+      stateId: location.state.id,
+      cityId: location.city.id,
+      experience: "12",
+      specializations: "Vedic ceremonies",
+      masterServiceIds: [],
+      languages: "Hindi, English",
+      bio: "Integration fixture profile",
+      photo,
+      termsAccepted: true,
+      regionalOrigin: "Test region",
+      serviceArea: location.city.name,
+      feeRangeMin: 1100,
+      feeRangeMax: 11000,
+    });
+    assert.equal(submitted.status, 201);
+    applicationId = submitted.body.id;
+    assert.ok(Number.isInteger(applicationId));
+
+    const approved = await post(`/api/admin/pandit-applications/${applicationId}/approve`, { note: "Integration approval" }, true);
+    assert.equal(approved.status, 200);
+    assert.equal(approved.body.success, true);
+    assert.equal(approved.body.idempotent, false);
+    assert.match(approved.body.registrationNo, /^\d{10}$/);
+    assert.equal(approved.body.application.panditId, approved.body.panditId);
+    panditId = approved.body.panditId;
+
+    const [publishedPandit] = await db.select().from(pandits).where(eq(pandits.id, panditId));
+    assert.equal(publishedPandit.verified, true);
+    assert.equal(publishedPandit.registrationNo, approved.body.registrationNo);
+    assert.equal(publishedPandit.stateId, location.state.id);
+    assert.equal(publishedPandit.cityId, location.city.id);
+    const [storefront] = await db.select().from(panditStorefronts).where(eq(panditStorefronts.panditId, panditId));
+    assert.equal(storefront.isPublished, true);
+    assert.equal(storefront.status, "published");
+
+    const publicProfile = await fetch(`${baseUrl}/api/storefront/${encodeURIComponent(publishedPandit.slug!)}`);
+    assert.equal(publicProfile.status, 200);
+    const publicBody = await publicProfile.json();
+    assert.equal(publicBody.pandit.id, panditId);
+    assert.equal(publicBody.pandit.verified, true);
+    assert.equal(publicBody.pandit.registrationNo, approved.body.registrationNo);
+
+    const retried = await post(`/api/admin/pandit-applications/${applicationId}/approve`, {}, true);
+    assert.equal(retried.status, 200);
+    assert.equal(retried.body.idempotent, true);
+    assert.equal(retried.body.panditId, panditId);
+    assert.equal(retried.body.registrationNo, approved.body.registrationNo);
+    const matchingPandits = await db.select({ id: pandits.id }).from(pandits)
+      .where(eq(pandits.slug, publishedPandit.slug));
+    assert.equal(matchingPandits.length, 1);
+
+    const missingLocation = await post("/api/pandit-applications", {
+      fullName: `Missing Location ${suffix}`,
+      phone: "9876543211",
+      email: `pandit-location-${suffix}@example.invalid`,
+      stateId: location.state.id,
+      proposedCityName: `Unresolved City ${suffix}`,
+      experience: "3",
+      masterServiceIds: [],
+      photo,
+      termsAccepted: true,
+    });
+    assert.equal(missingLocation.status, 201);
+    missingLocationApplicationId = missingLocation.body.id;
+    const locationApproval = await post(`/api/admin/pandit-applications/${missingLocationApplicationId}/approve`, {}, true);
+    assert.equal(locationApproval.status, 400);
+    assert.match(locationApproval.body.message, /Resolve.*active State and City/i);
+
+    const [missingPhoto] = await db.insert(panditApplications).values({
+      fullName: `Missing Photo ${suffix}`,
+      phone: "9876543212",
+      email: `pandit-photo-${suffix}@example.invalid`,
+      city: location.city.name,
+      state: location.state.name,
+      stateId: location.state.id,
+      cityId: location.city.id,
+      originalCity: location.city.name,
+      originalState: location.state.name,
+      locationReviewStatus: "resolved",
+      yearsExperience: 3,
+      pujaTypes: "General Puja",
+      masterServiceIds: [],
+      languages: "Hindi",
+      feeRangeMin: 1100,
+      feeRangeMax: 11000,
+      photo: `/uploads/missing-${suffix}.png`,
+      termsAcceptedAt: new Date(),
+    }).returning({ id: panditApplications.id });
+    missingPhotoApplicationId = missingPhoto.id;
+    const photoApproval = await post(`/api/admin/pandit-applications/${missingPhotoApplicationId}/approve`, {}, true);
+    assert.equal(photoApproval.status, 400);
+    assert.match(photoApproval.body.message, /valid successfully uploaded profile photo/i);
+  } finally {
+    if (httpServer) {
+      await new Promise<void>((resolve) => httpServer!.close(() => resolve()));
+    }
+    if (applicationId || missingLocationApplicationId || missingPhotoApplicationId) {
+      const applicationIds = [applicationId, missingLocationApplicationId, missingPhotoApplicationId]
+        .filter((id): id is number => Number.isInteger(id));
+      await db.delete(panditCityRequests).where(sql`${panditCityRequests.applicationId} in (${sql.join(
+        applicationIds.map(id => sql`${id}`),
+        sql`, `,
+      )})`);
+      await db.delete(panditApplications).where(sql`${panditApplications.id} in (${sql.join(
+        applicationIds.map(id => sql`${id}`),
+        sql`, `,
+      )})`);
+    }
+    if (panditId) {
+      await db.delete(panditServices).where(eq(panditServices.panditId, panditId));
+      await db.delete(panditStorefronts).where(eq(panditStorefronts.panditId, panditId));
+      await db.delete(pandits).where(eq(pandits.id, panditId));
+    }
+    if (adminUserId) {
+      await db.delete(adminSessions).where(eq(adminSessions.userId, adminUserId));
+      await db.delete(users).where(eq(users.id, adminUserId));
+    }
+    rmSync(photoDirectory, { recursive: true, force: true });
+  }
+});
 
 test("0010 is additive and preserves legacy membership and card-order systems", () => {
   assert.match(migration, /ADD COLUMN IF NOT EXISTS registration_no text/);
@@ -91,6 +318,14 @@ test("registration allocation is formatted, unique, immutable, retry-safe, and n
   assert.match(routes, /pending\.status === "approved" && pending\.panditId/);
   assert.match(routes, /registrationNo: sql`nextval\('pandit_registration_no_seq'\)::text`/);
   assert.doesNotMatch(routes, /VT-PAN/);
+});
+
+test("approval exposes actionable dependency failures", () => {
+  const repairMigration = readFileSync("migrations/0030_repair_pandit_registration_sequence.sql", "utf8");
+  assert.match(repairMigration, /CREATE SEQUENCE IF NOT EXISTS pandit_registration_no_seq/);
+  assert.match(routes, /database sequence is missing[\s\S]*0030_repair_pandit_registration_sequence\.sql/);
+  assert.match(routes, /A valid successfully uploaded profile photo is required before approval/);
+  assert.match(routes, /Resolve the application's active State and City request before approval/);
 });
 
 test("0011 safely upgrades either numeric 0010 or legacy prefixed 0010 state", () => {

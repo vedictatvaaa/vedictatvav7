@@ -7,4 +7,4 @@ The Pandit approval flow cannot complete unless the numeric registration sequenc
 
 **Why:** Approval failed with a generic 500 because the database had the registration columns but not the sequence used by `nextval`; focused contract tests did not exercise the live database dependency.
 
-**How to apply:** Keep sequence creation idempotent in migrations, initialize it from existing numeric registration values without casting legacy prefixed values, and verify `to_regclass(...)` plus one `nextval(...)` in development before release.
+**How to apply:** Keep sequence creation idempotent in migrations, initialize it from existing numeric registration values without casting legacy prefixed values, and verify `to_regclass(...)` plus one `nextval(...)` in development before release. Approval creates a published storefront, while directory/search/booking visibility remains a separate fail-closed governance rollout.
