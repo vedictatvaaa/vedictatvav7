@@ -952,6 +952,7 @@ export const siteSettings = pgTable("site_settings", {
   // Controls whether direct Pandit contact details can be revealed. Individual
   // storefronts may only tighten or explicitly override this policy.
   panditContactMode: text("pandit_contact_mode").notNull().default("login_required"),
+  panditContactUnlockPricePaise: integer("pandit_contact_unlock_price_paise").notNull().default(1000),
   whatsappNumber: text("whatsapp_number"),
   socialInstagram: text("social_instagram"),
   socialFacebook: text("social_facebook"),
@@ -2127,6 +2128,48 @@ export const panditContactReveals = pgTable("pandit_contact_reveals", {
 }));
 export const insertPanditContactRevealSchema = createInsertSchema(panditContactReveals).omit({ id: true, revealedAt: true });
 export type PanditContactReveal = typeof panditContactReveals.$inferSelect;
+
+export const panditContactEntitlementEvents = pgTable("pandit_contact_entitlement_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  panditId: integer("pandit_id").references(() => pandits.id),
+  eventType: text("event_type").notNull(),
+  sourceBookingId: integer("source_booking_id").references(() => pujaBookings.id),
+  sourcePurchaseId: integer("source_purchase_id"),
+  sourceRevealId: integer("source_reveal_id").references(() => panditContactReveals.id),
+  eventTime: timestamp("event_time").notNull().defaultNow(),
+  amountPaise: integer("amount_paise"),
+  currency: varchar("currency", { length: 3 }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userTimeIdx: index("pandit_contact_entitlement_events_user_time_idx").on(t.userId, t.eventTime),
+  userPanditTimeIdx: index("pandit_contact_entitlement_events_user_pandit_time_idx").on(t.userId, t.panditId, t.eventTime),
+  sourceBookingUnique: uniqueIndex("pandit_contact_entitlement_events_source_booking_unique").on(t.sourceBookingId),
+  sourceRevealUnique: uniqueIndex("pandit_contact_entitlement_events_source_reveal_unique").on(t.sourceRevealId),
+  sourcePurchaseUnique: uniqueIndex("pandit_contact_entitlement_events_source_purchase_unique").on(t.sourcePurchaseId),
+}));
+export type InsertPanditContactEntitlementEvent = typeof panditContactEntitlementEvents.$inferInsert;
+export type PanditContactEntitlementEvent = typeof panditContactEntitlementEvents.$inferSelect;
+
+export const panditContactUnlockPurchases = pgTable("pandit_contact_unlock_purchases", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  amountPaise: integer("amount_paise").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default("INR"),
+  razorpayOrderId: text("razorpay_order_id").notNull().unique(),
+  razorpayPaymentId: text("razorpay_payment_id").unique(),
+  status: text("status").notNull().default("pending"),
+  expiresAt: timestamp("expires_at").notNull(),
+  paidAt: timestamp("paid_at"),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  userPanditIdx: index("pandit_contact_unlock_purchases_user_pandit_idx").on(t.userId, t.panditId, t.createdAt),
+  statusExpiryIdx: index("pandit_contact_unlock_purchases_status_expiry_idx").on(t.status, t.expiresAt),
+}));
+export type InsertPanditContactUnlockPurchase = typeof panditContactUnlockPurchases.$inferInsert;
+export type PanditContactUnlockPurchase = typeof panditContactUnlockPurchases.$inferSelect;
 
 // Admin-owned identity for a puja/service. Pandits can configure an offering
 // only after selecting an active master service; they cannot invent service

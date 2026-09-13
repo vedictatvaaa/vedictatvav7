@@ -48,6 +48,7 @@ function SiteSettingsTab() {
     ribbonItems: [] as Array<{ id: string; iconName: string; eyebrow: string; title: string; detail: string; href: string; cta: string }>,
     maintenanceMode: false,
     panditContactMode: "login_required",
+    panditContactUnlockPricePaise: 1000,
   });
 
   useEffect(() => {
@@ -89,6 +90,7 @@ function SiteSettingsTab() {
         ribbonItems: Array.isArray((settings as any).ribbonItems) ? (settings as any).ribbonItems : [],
         maintenanceMode: Boolean((settings as any).maintenanceMode),
         panditContactMode: (settings as any).panditContactMode || "login_required",
+        panditContactUnlockPricePaise: Number((settings as any).panditContactUnlockPricePaise) || 1000,
       });
     }
   }, [settings]);
@@ -437,7 +439,13 @@ function SiteSettingsTab() {
               <option value="login_required">Login required — use the rolling contact allowance</option>
               <option value="disabled">Disabled — direct users to book through Vedic Tatva</option>
             </select>
-            <p className="text-xs text-muted-foreground">A per-Pandit override in Storefronts takes precedence over this setting.</p>
+            <p className="text-xs text-muted-foreground">Registration is always required. Per-Pandit never_display safety remains enforceable; always_open cannot make contact public.</p>
+            <Label htmlFor="pandit-contact-price">Additional Pandit contact price (₹)</Label>
+            <Input id="pandit-contact-price" type="number" min={1} max={10000} step="0.01"
+              value={(form.panditContactUnlockPricePaise / 100).toFixed(2)}
+              onChange={(event) => updateField("panditContactUnlockPricePaise", Math.round(Math.max(1, Math.min(10000, Number(event.target.value) || 1)) * 100))}
+              data-testid="input-pandit-contact-price" />
+            <p className="text-xs text-muted-foreground">Stored in paise; applies only to new paid unlock orders. Default ₹10.</p>
           </div>
         </CardContent>
       </Card>

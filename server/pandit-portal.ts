@@ -35,6 +35,7 @@ import { enqueueBookingNotificationEvent } from "./puja-booking/notification-eve
 import { assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
 import { canonicalBookingMode, samagriItemSchema } from "@shared/puja-booking";
 import { normalizePanditPhone } from "./pandit-phone";
+import { recordBookingContactReset } from "./pandit-contact-entitlements";
 
 const SESSION_TTL_DAYS = 30;
 const ACTIVATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -660,6 +661,12 @@ export function registerPanditPortalRoutes(app: Express) {
       const booking = await ensureMessagesAccessForBooking(id, req.panditId!);
       const slot = result.slot;
       const pandit = (await db.select().from(pandits).where(eq(pandits.id, req.panditId!)).limit(1))[0];
+      if (result.kind === "accepted" || result.kind === "idempotent") {
+        // Acceptance is the existing authoritative Vedic Tatva booking
+        // transition. The entitlement ledger makes this reset idempotent by
+        // booking id, and failures remain retryable without exposing contact.
+        if (booking?.userId) await recordBookingContactReset(booking.userId, id);
+      }
       if (result.kind === "accepted") {
       try {
         const { pushUserNotification } = await import("./dashboard-routes");

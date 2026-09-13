@@ -2,24 +2,15 @@
 // Pandit Directory — V2 redesign
 //
 // One self-contained component that powers the per-city listing. Replaces
-// the ~825-line monolith in pandit-directory.tsx with a denser, more
-// modern layout and the ten "advanced features" the operator picked:
+// the ~825-line monolith in pandit-directory.tsx with the directory controls
+// and the minimal public profile cards used by every listing surface:
 //
 //   1.  Smart filters     — search, tradition chips, online-only,
 //                           verified-only, price range, min-rating,
 //                           multi-language, specialization, sort
-//   2.  Live online dot   — green pulse on cards + sort online-first
-//   3.  Compare           — checkbox per card (max 3) → bottom drawer →
-//                           side-by-side dialog
-//   4.  Reviews           — rating + count featured prominently on card
-//   5.  Map view          — toggle list/map; Leaflet w/ OSM tiles, no key
-//   6.  Trust signals     — verified shield, years exp, education,
-//                           tier badge, languages count
-//   7.  Sticky Book Now   — bottom-of-card CTA + mobile sticky action
-//   8.  AI puja recommender — modal that calls /api/ai/puja-recommend,
+//   2.  AI puja recommender — modal that calls /api/ai/puja-recommend,
 //                             auto-applies the suggested specialization
-//   9.  Distance-aware    — "near me" sort + km display when GPS allowed
-//   10. Price transparency — fees rendered with from-price + dakshina note
+//   3.  Distance-aware    — "near me" sort + GPS permission when requested
 //
 // Data shape: /api/book-pandit-online returns sanitized Pandit + { isOnline, distance }
 //
@@ -30,13 +21,11 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation, useSearch } from "wouter";
-import { useAuth } from "@/lib/auth";
-import { bookingContextParams } from "@/lib/puja-service-map";
 import { trackDiscoveryEvent, trackPanditFunnelEvent } from "@/lib/analytics";
 import {
-  Search, MapPin, Star, ShieldCheck, Filter, X, Languages,
+  Search, Star, Filter, X,
   Sparkles, Loader2,
-  GraduationCap, Award, Check, MessageCircle, Calendar,
+  Check,
   Wand2, Navigation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,12 +36,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +50,12 @@ import type { Pandit } from "@shared/schema";
 type PanditWithMeta = Pandit & {
   distance: number | null;
   isOnline?: boolean;
+  // Directory APIs may provide the resolved catalogue names alongside the
+  // identifiers. These are preferred over submitted legacy location text.
+  canonicalCity?: string | null;
+  canonicalState?: string | null;
+  cityName?: string | null;
+  stateName?: string | null;
   matchReasons?: string[];
   requestedMuhurat?: { date: string; window?: string; reason?: string };
   calendarStatus?: "confirmation_required";
@@ -92,13 +86,6 @@ const SORT_OPTIONS = [
   { value: "nearest", label: "Nearest first", needsLocation: true },
   { value: "experience", label: "Most experienced" },
 ] as const;
-
-function formatDistance(d: number | null): string {
-  if (d === null || d === undefined) return "";
-  if (d < 1) return `${Math.round(d * 1000)} m`;
-  if (d < 10) return `${d.toFixed(1)} km`;
-  return `${Math.round(d)} km`;
-}
 
 function contextualProfileHref(p: PanditWithMeta) {
   const path = p.slug ? `/pandit/${p.slug}` : "/book-pandit-online";
@@ -369,263 +356,52 @@ function FilterPanel({ filters, setFilters, facetOptions }: { filters: Filters; 
 }
 
 // =====================================================================
-// Pandit Card v2
+// Minimal public Pandit card
 // =====================================================================
 function PanditCard({
-  p, compareSelected, onToggleCompare, compareDisabled,
+  p, cityLabel, stateLabel,
 }: {
   p: PanditWithMeta;
-  compareSelected: boolean;
-  onToggleCompare: () => void;
-  compareDisabled: boolean;
+  cityLabel?: string;
+  stateLabel?: string;
 }) {
-  const langCount = (p.languages || "").split(",").filter(Boolean).length;
-  const isOnline = !!p.isOnline && !p.onLeave;
-  const dist = formatDistance(p.distance);
-  const { requireAuth } = useAuth();
-  const managedBookingUnavailable = p.managedBookingEligible === false;
+  // API-provided resolved names are authoritative so a state-wide result
+  // keeps its own canonical location rather than inheriting the current
+  // browse scope. Scoped labels fill gaps for older response shapes.
+  const city = p.canonicalCity || p.cityName || p.city || cityLabel;
+  const state = p.canonicalState || p.stateName || p.state || stateLabel;
+  const profileHref = contextualProfileHref(p);
+  const location = [city, state].filter((value): value is string => Boolean(value?.trim())).join(", ");
 
   return (
-    <Card
-      data-testid={`card-pandit-${p.id}`}
-      className={`relative overflow-visible ${compareSelected ? "ring-2 ring-primary" : ""}`}
+    <Link
+      href={profileHref}
+      onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: p.id, source: "card" })}
+      className="group block h-full focus-visible:outline-none"
+      aria-label={`View ${p.name}'s profile`}
     >
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex gap-4">
-          {/* Photo + online dot */}
-          <div className="relative shrink-0">
-            <Avatar className="h-20 w-20 border border-amber-200">
-              <AvatarImage src={p.image || undefined} alt={p.name} />
-              <AvatarFallback className="bg-primary/10 text-primary font-serif text-xl">
-                {p.name.split(" ").map((s) => s[0]).slice(0, 2).join("")}
-              </AvatarFallback>
-            </Avatar>
-            {isOnline && (
-              <span
-                title="Available now"
-                data-testid={`dot-online-${p.id}`}
-                className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4"
-              >
-                <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-60" />
-                <span className="relative rounded-full h-4 w-4 bg-green-500 border-2 border-white" />
-              </span>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Name + verified + tier */}
-            <div className="flex flex-wrap items-start gap-2">
-              <h3 className="text-lg font-serif font-semibold text-foreground" data-testid={`text-pandit-name-${p.id}`}>
-                {p.name}
-              </h3>
-              {p.verified && (
-                <ShieldCheck className="h-4 w-4 text-primary mt-1.5 shrink-0" />
-              )}
-              {isOnline && (
-                <Badge className="bg-green-100 text-green-800 border-green-300 text-xs" data-testid={`badge-online-${p.id}`}>
-                  Available now
-                </Badge>
-              )}
-              {p.onLeave && (
-                <Badge variant="outline" className="text-xs text-muted-foreground">On leave</Badge>
-              )}
-            </div>
-
-            {/* Rating row */}
-            <div className="flex items-center gap-2 mt-1 text-sm">
-              {p.reviewCount > 0 && p.rating !== undefined ? (
-                <>
-                  <div className="flex items-center gap-0.5">
-                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                    <span className="font-semibold">{p.rating.toFixed(1)}</span>
-                  </div>
-                  <span className="text-muted-foreground">
-                    ({p.reviewCount} review{p.reviewCount === 1 ? "" : "s"})
-                  </span>
-                </>
-              ) : <span className="font-medium text-muted-foreground">New</span>}
-              {dist && (
-                <>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-3.5 w-3.5" /> {dist}
-                  </span>
-                </>
-              )}
-            </div>
-
-            {/* Trust pills */}
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              <Badge variant="outline" className="text-xs gap-1 font-normal">
-                <Award className="h-3 w-3" /> {p.experience}+ yrs
-              </Badge>
-              {p.education && (
-                <Badge variant="outline" className="text-xs gap-1 font-normal">
-                  <GraduationCap className="h-3 w-3" /> {p.education.split(",")[0]}
-                </Badge>
-              )}
-              <Badge variant="outline" className="text-xs gap-1 font-normal">
-                <Languages className="h-3 w-3" /> {langCount} lang
-              </Badge>
-              {p.regionalOrigin && (
-                <Badge variant="outline" className="text-xs font-normal">{p.regionalOrigin}</Badge>
-              )}
-            </div>
-
-            {/* Specializations preview */}
-            {p.specialization && (
-              <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
-                <strong className="text-foreground">Specializes in:</strong> {p.specialization}
-              </p>
-            )}
-            {p.matchReasons?.length ? (
-              <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-2.5 text-xs" data-testid={`match-reasons-${p.id}`}>
-                <p className="font-semibold text-foreground">Why this Pandit matches</p>
-                <p className="mt-1 text-muted-foreground">{p.matchReasons.join(" · ")}</p>
-                {p.requestedMuhurat ? <p className="mt-1 text-amber-800">Requested: {p.requestedMuhurat.date}{p.requestedMuhurat.window ? ` · ${p.requestedMuhurat.window}` : ""}{p.requestedMuhurat.reason ? ` · ${p.requestedMuhurat.reason}` : ""}. Final calendar availability is confirmed during booking.</p> : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Footer — price + actions */}
-        <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-border flex-wrap">
-          <div>
-            <div className="text-xs text-muted-foreground">Starts from</div>
-            <div className="text-xl font-serif text-primary font-semibold" data-testid={`text-fees-${p.id}`}>
-              ₹{p.fees.toLocaleString("en-IN")}
-            </div>
-            <div className="text-xs text-muted-foreground">+ dakshina (your choice)</div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <label className="flex items-center gap-1.5 text-xs cursor-pointer text-muted-foreground select-none">
-              <Checkbox
-                checked={compareSelected}
-                disabled={!compareSelected && compareDisabled}
-                onCheckedChange={onToggleCompare}
-                data-testid={`checkbox-compare-${p.id}`}
-              />
-              Compare
-            </label>
-            <Link href={contextualProfileHref(p)} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: p.id, source: "card" })}>
-              <Button variant="outline" size="sm" data-testid={`button-view-${p.id}`}>View Profile</Button>
-            </Link>
-            <Link href={`${contextualProfileHref(p)}#overview`} onClick={() => trackPanditFunnelEvent("contact_cta", { slug: p.slug || undefined, source: "directory" })}>
-              <Button size="sm" variant="outline" className="border-green-700 text-green-800" data-testid={`button-call-${p.id}`}><MessageCircle className="h-4 w-4 mr-1.5" /> Call Panditji</Button>
-            </Link>
-            {managedBookingUnavailable ? <span className="text-xs text-muted-foreground" aria-label="Managed booking unavailable">Managed booking unavailable</span> : <Button
-                size="sm"
-                data-testid={`button-book-${p.id}`}
-                onClick={() => requireAuth(
-                  () => { trackPanditFunnelEvent("booking_start", { slug: p.slug || undefined, source: "directory", managed_booking_eligible: p.managedBookingEligible === true }); trackDiscoveryEvent("booking_handoff", { pandit_id: p.id, source: "card" }); window.location.href = `/online-puja-booking?${bookingContextParams(window.location.search, p.id)}`; },
-                  { title: "Sign in to book", description: `Please sign in to book ${p.name}` }
-                )}
-              >
-                <Calendar className="h-4 w-4 mr-1.5" /> Book Now
-              </Button>}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// =====================================================================
-// Compare Drawer (sticky bottom bar) + Compare Dialog
-// =====================================================================
-function CompareBar({
-  selected, onClear, onOpen,
-}: { selected: PanditWithMeta[]; onClear: () => void; onOpen: () => void }) {
-  if (selected.length === 0) return null;
-  return (
-    <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background/95 backdrop-blur shadow-lg" data-testid="bar-compare">
-      <div className="container max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-medium">
-          {selected.length} of 3 selected on this page
-        </span>
-        <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
-          {selected.map((p) => (
-            <Badge key={p.id} variant="secondary" className="whitespace-nowrap">
+      <Card
+        data-testid={`card-pandit-${p.id}`}
+        className="h-full overflow-hidden transition-colors group-hover:border-primary/60 group-focus-visible:ring-2 group-focus-visible:ring-ring"
+      >
+        <CardContent className="flex h-full items-center gap-3 p-3 sm:gap-4 sm:p-5">
+          <Avatar className="h-16 w-16 shrink-0 border border-amber-200 sm:h-20 sm:w-20">
+            <AvatarImage src={p.image || undefined} alt={p.name} className="object-cover" />
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate font-serif text-base font-semibold text-foreground sm:text-lg" data-testid={`text-pandit-name-${p.id}`}>
               {p.name}
-            </Badge>
-          ))}
-        </div>
-        <Button variant="ghost" size="sm" onClick={onClear} data-testid="button-clear-compare">Clear</Button>
-        <Button
-          size="sm"
-          disabled={selected.length < 2}
-          onClick={onOpen}
-          data-testid="button-open-compare"
-        >Compare side-by-side</Button>
-      </div>
-    </div>
-  );
-}
-
-function CompareDialog({
-  open, onClose, selected,
-}: { open: boolean; onClose: () => void; selected: PanditWithMeta[] }) {
-  const rows: { label: string; render: (p: PanditWithMeta) => React.ReactNode }[] = [
-    { label: "Rating", render: (p) => p.reviewCount > 0 && p.rating !== undefined ? (
-      <span className="flex items-center gap-1">
-        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-        {p.rating.toFixed(1)} ({p.reviewCount})
-      </span>
-    ) : "New" },
-    { label: "Experience", render: (p) => `${p.experience}+ yrs` },
-    { label: "Starting fee", render: (p) => `₹${p.fees.toLocaleString("en-IN")}` },
-    { label: "Tradition", render: (p) => p.regionalOrigin || "—" },
-    { label: "Languages", render: (p) => p.languages },
-    { label: "Specialization", render: (p) => p.specialization },
-    { label: "Education", render: (p) => p.education || "—" },
-    { label: "Distance", render: (p) => formatDistance(p.distance) || "—" },
-    { label: "Status", render: (p) => p.isOnline ? "Online now" : p.onLeave ? "On leave" : "Offline" },
-    { label: "Verified", render: (p) => p.verified ? <Check className="h-4 w-4 text-green-600" /> : "—" },
-  ];
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-4xl" data-testid="dialog-compare">
-        <DialogHeader>
-          <DialogTitle>Compare pandits</DialogTitle>
-          <DialogDescription>Side-by-side details to help you choose.</DialogDescription>
-        </DialogHeader>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-2 text-xs uppercase text-muted-foreground font-semibold">Attribute</th>
-                {selected.map((p) => (
-                  <th key={p.id} className="text-left p-2">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8"><AvatarImage src={p.image || undefined} /><AvatarFallback>{p.name[0]}</AvatarFallback></Avatar>
-                      <span className="font-serif font-semibold">{p.name}</span>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.label} className="border-b last:border-0">
-                  <td className="p-2 text-muted-foreground font-medium">{row.label}</td>
-                  {selected.map((p) => (
-                    <td key={p.id} className="p-2">{row.render(p)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <DialogFooter className="gap-2">
-          {selected.map((p) => (
-            <Link key={p.id} href={contextualProfileHref(p)} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: p.id, source: "compare" })}>
-              <Button size="sm" variant="outline">View {p.name.split(" ")[0]}</Button>
-            </Link>
-          ))}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </h3>
+            <p className="mt-1 truncate text-sm text-muted-foreground" data-testid={`text-pandit-location-${p.id}`}>
+              {location}
+            </p>
+            <span className="mt-3 inline-flex items-center text-sm font-semibold text-primary" data-testid={`button-view-${p.id}`}>
+              View profile <span aria-hidden="true" className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -653,8 +429,6 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
   const lastUrlDirectoryState = useRef("");
   const isApplyingUrlState = useRef(false);
   const [, navigate] = useLocation();
-  const [compareIds, setCompareIds] = useState<number[]>([]);
-  const [compareOpen, setCompareOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
@@ -832,29 +606,11 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     availableSorts.includes(option.value) && (!("needsLocation" in option) || !!userLocation),
   );
 
-  // Compare is deliberately scoped to the loaded page. Selections that do
-  // not exist in the current response are removed as filters/pages change.
-  const compareSelected = useMemo(
-    () => pandits.filter((p) => compareIds.includes(p.id)),
-    [pandits, compareIds],
-  );
-  useEffect(() => {
-    const valid = new Set(pandits.map((p) => p.id));
-    setCompareIds((cur) => {
-      const next = cur.filter((id) => valid.has(id));
-      return next.length === cur.length ? cur : next;
-    });
-  }, [data]);
-
   useEffect(() => {
     if (availableSorts.length && !availableSorts.includes(sortBy)) {
       setSortBy(availableSorts.includes("best_match") ? "best_match" : availableSorts[0]);
     }
   }, [availableSorts, sortBy]);
-
-  const toggleCompare = (id: number) => {
-    setCompareIds((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
-  };
 
   const activeFilterCount = (filters.q ? 1 : 0)
     + (filters.tradition ? 1 : 0)
@@ -1121,14 +877,13 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {pandits.map((p) => (
                 <PanditCard
                   key={p.id}
                   p={p}
-                  compareSelected={compareIds.includes(p.id)}
-                  compareDisabled={compareIds.length >= 3}
-                  onToggleCompare={() => toggleCompare(p.id)}
+                  cityLabel={cityLabel}
+                  stateLabel={stateLabel}
                 />
               ))}
               {pagination && pagination.totalPages > 1 ? (
@@ -1148,34 +903,6 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
         </main>
       </div>
 
-      {/* Mobile sticky action bar — shows when compare empty so the
-          primary "book the top match" action is always one tap away. */}
-      {compareSelected.length === 0 && pandits.length > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 lg:hidden border-t bg-background/95 backdrop-blur shadow-lg" data-testid="bar-mobile-cta">
-          <div className="px-4 py-3 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-muted-foreground">Top result {cityLabel ? `in ${cityLabel}` : stateLabel ? `in ${stateLabel}` : "near you"}</div>
-              <div className="text-sm font-semibold truncate">{pandits[0].name} · ₹{pandits[0].fees.toLocaleString("en-IN")}</div>
-            </div>
-            <Link href={contextualProfileHref(pandits[0])} onClick={() => trackDiscoveryEvent("profile_opened", { pandit_id: pandits[0].id, source: "mobile_top" })}>
-              <Button size="sm" data-testid="button-mobile-book-top">
-                <MessageCircle className="h-4 w-4 mr-1.5" /> Book Now
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      <CompareBar
-        selected={compareSelected}
-        onClear={() => setCompareIds([])}
-        onOpen={() => setCompareOpen(true)}
-      />
-      <CompareDialog
-        open={compareOpen}
-        onClose={() => setCompareOpen(false)}
-        selected={compareSelected}
-      />
       <AiRecommender
         open={aiOpen}
         onClose={() => setAiOpen(false)}

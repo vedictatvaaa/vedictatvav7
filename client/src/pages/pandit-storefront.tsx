@@ -22,6 +22,18 @@ import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import templeFallbackImage from "@/assets/images/temple-hero.jpg";
 
+declare global { interface Window { Razorpay: any; } }
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise(resolve => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 type Service = {
   id: number; masterServiceId: number; name: string; slug: string; category?: string; description?: string;
   price?: number; durationMinutes?: number; mode?: string; preparation?: string; inclusions?: string[]; serviceAreas?: string[];
@@ -52,7 +64,7 @@ type StorefrontDto = {
   // Only an explicit true may be used for an exhaustion booking handoff.
   managedBookingEligible?: boolean;
 };
-type ContactStatus = { policy: "open" | "login_required" | "disabled"; available: boolean; authenticated: boolean; quota: { used: number; remaining: number; resetsAt: string | null } | null };
+type ContactStatus = { policy: "open" | "login_required" | "disabled"; available: boolean; authenticated: boolean; pricePaise?: number | null; paidUnlockAvailable?: boolean; state?: string; quota: { used: number; remaining: number; resetsAt: string | null; repeat?: boolean; entitled?: boolean } | null };
 type RevealedContact = { phone?: string | null; whatsappNumber?: string | null };
 const money = (n?: number) => typeof n === "number" ? `₹${n.toLocaleString("en-IN")}` : "Price on request";
 const listify = (value?: string[] | string) => Array.isArray(value) ? value : value ? value.split(",").map(x => x.trim()).filter(Boolean) : [];
@@ -171,7 +183,7 @@ export default function PanditStorefrontPage() {
   const { slug: rawSlug } = useParams<{ slug: string }>(); const slug = (rawSlug || "").toLowerCase(); const [, navigate] = useLocation();
   const { requireAuth, user } = useAuth(); const { toast } = useToast(); const { addToCart } = useCart(); const consent = useConsentPreferences();
   const [category, setCategory] = useState("all"); const [lightbox, setLightbox] = useState(-1); const [shareOpen, setShareOpen] = useState(false); const [copied, setCopied] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false); const [contactAction, setContactAction] = useState<"call" | "whatsapp">("call"); const [revealedContact, setRevealedContact] = useState<RevealedContact | null>(null); const [revealBusy, setRevealBusy] = useState(false); const [contactError, setContactError] = useState("");
+  const [contactOpen, setContactOpen] = useState(false); const [contactAction, setContactAction] = useState<"call" | "whatsapp">("call"); const [revealedContact, setRevealedContact] = useState<RevealedContact | null>(null); const [revealBusy, setRevealBusy] = useState(false); const [paymentBusy, setPaymentBusy] = useState(false); const [contactError, setContactError] = useState("");
   const { data, isLoading, isError, refetch } = useQuery<StorefrontDto>({ queryKey: ["/api/storefront", slug], enabled: !!slug, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}`); if (!r.ok) throw new Error("Storefront unavailable"); return r.json(); } });
   const contactStatus = useQuery<ContactStatus>({ queryKey: ["/api/storefront", slug, "contact/status", user?.id || "visitor"], enabled: !!slug && contactOpen, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/status`); if (!r.ok) throw new Error("Contact access status is unavailable"); return r.json(); } });
   const { data: bestsellers, isLoading: bestsellersLoading } = useQuery<CatalogProduct[]>({ queryKey: ["/api/bestsellers"], queryFn: async () => { const r = await fetch("/api/bestsellers"); if (!r.ok) throw new Error("Bestsellers unavailable"); return r.json(); } });
@@ -232,6 +244,48 @@ export default function PanditStorefrontPage() {
     } catch (error: any) { setContactError(error.message || "Contact could not be revealed."); }
     finally { setRevealBusy(false); }
   };
+  const verifyPaidUnlock = async (orderId: string, paymentId: string, signature: string) => {
+    const res = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/unlock/verify`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ razorpay_order_id: orderId, razorpay_payment_id: paymentId, razorpay_signature: signature }),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(result.message || "Payment could not be verified.");
+    const contact = result.contact || {};
+    if (!contact.phone && !contact.whatsappNumber) throw new Error("Contact details are unavailable for this Panditji.");
+    setRevealedContact(contact);
+    await contactStatus.refetch();
+  };
+  const unlockContact = async () => {
+    if (!slug || paymentBusy) return;
+    setPaymentBusy(true); setContactError("");
+    try {
+      const res = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/unlock/create-order`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      const order = await res.json().catch(() => ({}));
+      if (res.status === 401) { loginForContact(); return; }
+      if (!res.ok) throw new Error(order.message || "Paid unlock is temporarily unavailable.");
+      if (order.alreadyEntitled) {
+        setRevealedContact(order.contact || null);
+      } else if (order.mock) {
+        await verifyPaidUnlock(order.orderId, `pay_mock_contact_${Date.now()}`, "mock_contact");
+      } else {
+        if (!await loadRazorpayScript()) throw new Error("Payment checkout could not load. Please try again.");
+        await new Promise<void>((resolve, reject) => {
+          const checkout = new window.Razorpay({
+            key: order.key, amount: order.amount, currency: order.currency || "INR",
+            name: "Vedic Tatva", description: "Additional Pandit contact unlock", order_id: order.orderId,
+            handler: async (response: any) => {
+              try { await verifyPaidUnlock(response.razorpay_order_id, response.razorpay_payment_id, response.razorpay_signature); resolve(); }
+              catch (error) { reject(error); }
+            },
+            modal: { ondismiss: () => reject(new Error("Payment cancelled. No contact details were disclosed.")) },
+          });
+          checkout.open();
+        });
+      }
+    } catch (error: any) { setContactError(error.message || "Paid unlock failed. Please try again."); }
+    finally { setPaymentBusy(false); }
+  };
   const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); toast({ title: "Storefront link copied" }); setTimeout(() => setCopied(false), 1800); } catch { toast({ title: "Copy unavailable", description: shareUrl }); } };
 
   return <div className="min-h-[100dvh] overflow-x-hidden bg-[#FCF8F0] pb-20 text-[#422C29] md:pb-0">
@@ -282,13 +336,13 @@ export default function PanditStorefrontPage() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{revealedContact ? `Contact ${displayName}` : contactAction === "whatsapp" ? "WhatsApp Panditji" : "Call Panditji"}</DialogTitle>
-          <DialogDescription>{revealedContact ? "Authorized contact details from the Panditji profile." : access?.policy === "login_required" && !access.authenticated ? "Sign in to securely view the contact number." : access?.quota ? `${access.quota.remaining} of 10 unique contact reveals remaining.` : "Confirm access to view the Panditji contact number."}</DialogDescription>
+         <DialogDescription>{revealedContact ? "Authorized contact details from the Panditji profile." : access?.policy === "login_required" && !access.authenticated ? "Sign in to securely view the contact number." : access?.quota ? `${access.quota.remaining} of 3 unique contact reveals remaining${access.quota.resetsAt ? ` · resets ${new Date(access.quota.resetsAt).toLocaleDateString("en-IN")}` : ""}.` : "Confirm access to view the Panditji contact number."}</DialogDescription>
         </DialogHeader>
         {contactError && <p role="alert" className="rounded-md bg-rose-50 p-3 text-sm text-rose-800">{contactError}</p>}
         {revealedContact ? <div className="space-y-3 rounded-xl border border-[#E3D2BA] bg-[#FFF9F0] p-4">
           {revealedContact.phone && <div><span className="text-[10px] font-bold uppercase tracking-[.16em] text-[#876F61]">Phone number</span><a href={`tel:${revealedContact.phone}`} onClick={() => trackPanditFunnelEvent("click_to_call", { slug, source: "storefront" })} className="mt-1 flex items-center gap-2 text-lg font-bold text-[#531D28]"><PhoneCall className="h-4 w-4" />{revealedContact.phone}</a></div>}
           {(revealedContact.whatsappNumber || revealedContact.phone) && <a href={`https://wa.me/${String(revealedContact.whatsappNumber || revealedContact.phone).replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-md bg-[#159957] text-sm font-bold text-white"><MessageCircle className="mr-2 h-4 w-4" />Open WhatsApp</a>}
-        </div> : !access ? <Button onClick={() => contactStatus.refetch()} className="w-full bg-[#8D2830]">Check contact access</Button> : access.policy === "disabled" || !access.available ? <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Contact details are unavailable for this profile.</p> : access.policy === "login_required" && !access.authenticated ? <Button onClick={loginForContact} className="w-full bg-[#8D2830]">Login to view number</Button> : access.quota?.remaining === 0 ? <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Your unique contact allowance is exhausted. Previously revealed contacts remain available in your account.</p> : <Button onClick={revealContact} disabled={revealBusy} className="w-full bg-[#8D2830]">{revealBusy ? "Revealing…" : "Reveal contact number"}</Button>}
+         </div> : !access ? <Button onClick={() => contactStatus.refetch()} className="w-full bg-[#8D2830]">Check contact access</Button> : access.policy === "disabled" || !access.available ? <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Contact details are unavailable for this profile.</p> : access.policy === "login_required" && !access.authenticated ? <Button onClick={loginForContact} className="w-full bg-[#8D2830]">Login to view number</Button> : access.quota?.remaining === 0 && !access.quota.entitled ? <div className="space-y-3"><p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Your three free unique contacts are used for this rolling 30-day window.</p>{access.paidUnlockAvailable ? <Button onClick={unlockContact} disabled={paymentBusy} className="w-full bg-[#8D2830]">{paymentBusy ? "Processing…" : `Unlock this contact for ₹${((access.pricePaise || 1000) / 100).toLocaleString("en-IN")}`}</Button> : <p className="rounded-md bg-[#FFF9F0] p-3 text-sm text-[#735E54]">Paid unlock is temporarily unavailable. Please try again later.</p>}</div> : <Button onClick={revealContact} disabled={revealBusy} className="w-full bg-[#8D2830]">{revealBusy ? "Revealing…" : "Reveal contact number"}</Button>}
       </DialogContent>
     </Dialog>
   </div>;

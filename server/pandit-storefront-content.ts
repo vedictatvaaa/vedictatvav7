@@ -291,6 +291,61 @@ export function setPanditContentDraftGenerator(
   injectedDraftGenerator = generator;
 }
 
+/**
+ * Admin workflow seam for creating a source-grounded draft without going
+ * through HTTP.  It deliberately uses the same public-facts allow-list,
+ * validator, generator, snapshot hash, and generation provenance as the
+ * ordinary editorial workflow.  Callers must still treat the returned row as
+ * review-only; this helper never changes a content row to reviewed/published.
+ */
+export async function createPanditContentDraftForAdmin(
+  panditId: number,
+  actorLabel: string,
+) {
+  const { facts, hash } = await buildPanditPublicFacts(panditId);
+  const existing = await db.select().from(panditStorefrontContent)
+    .where(eq(panditStorefrontContent.panditId, panditId)).limit(1);
+  const current = existing[0];
+  if (current && current.sourceSnapshotHash === hash && !current.stale
+    && current.generatedProfileIntroduction && current.status !== "rejected") {
+    return { row: current, generated: false };
+  }
+  const generationKey = `${hash}:${PANDIT_CONTENT_PROMPT_VERSION}:governed`;
+  const { draft, modelIdentifier } = await (injectedDraftGenerator || generatePanditContentDraft)(facts);
+  const row = await db.transaction(async (tx) => {
+    let content = current;
+    if (!content) {
+      const [inserted] = await tx.insert(panditStorefrontContent).values({
+        panditId, canonicalUrl: facts.canonicalUrl, sourceSnapshotHash: hash,
+        sourceFields: facts, promptVersion: PANDIT_CONTENT_PROMPT_VERSION,
+        status: "draft", generationKey, createdBy: actorLabel,
+        updatedBy: actorLabel, updatedAt: new Date(),
+      }).onConflictDoNothing({ target: panditStorefrontContent.panditId }).returning();
+      content = inserted || (await tx.select().from(panditStorefrontContent)
+        .where(eq(panditStorefrontContent.panditId, panditId)).limit(1))[0];
+    }
+    if (!content) throw new Error("Unable to create storefront content draft");
+    await tx.insert(panditStorefrontContentGenerations).values({
+      panditId, contentId: content.id, generationKey, sourceSnapshotHash: hash,
+      sourceFields: facts, promptVersion: PANDIT_CONTENT_PROMPT_VERSION,
+      actor: actorLabel, status: "completed", completedAt: new Date(),
+    }).onConflictDoNothing({ target: panditStorefrontContentGenerations.generationKey });
+    const [updated] = await tx.update(panditStorefrontContent).set({
+      canonicalUrl: facts.canonicalUrl, sourceSnapshotHash: hash, sourceFields: facts,
+      promptVersion: PANDIT_CONTENT_PROMPT_VERSION, modelIdentifier,
+      ...draftColumns(draft), status: "draft", stale: false, staleReason: null,
+      updatedBy: actorLabel, updatedAt: new Date(), generatedAt: new Date(),
+      revision: sql`${panditStorefrontContent.revision} + 1`,
+    }).where(eq(panditStorefrontContent.id, content.id)).returning();
+    await tx.insert(adminAuditLogs).values({
+      actor: actorLabel, action: "pandit-storefront-content.generate.governed",
+      target: `pandit:${panditId}`, details: { sourceSnapshotHash: hash, generationKey },
+    });
+    return updated;
+  });
+  return { row, generated: true };
+}
+
 function rowDraft(row: PanditStorefrontContent): PanditContentDraft {
   return {
     profileIntroduction: row.generatedProfileIntroduction || "",

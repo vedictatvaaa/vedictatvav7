@@ -39,6 +39,7 @@ import { registerKnowledgeGraphPublicRoutes } from "./knowledge-graph/public-rou
 import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerPanditGovernanceRoutes } from "./pandit-governance";
 import { registerPanditLocationRectificationRoutes } from "./pandit-location-rectification-routes";
+import { registerPanditResolveValidatePublishRoutes } from "./pandit-resolve-validate-publish";
 import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
@@ -62,7 +63,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-   products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, panditContactReveals, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
+   products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
   pujaTypes, pujaMuhurats,
   type AbandonedCart,
 } from "@shared/schema";
@@ -74,7 +75,12 @@ import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { normalizePanditPhone } from "./pandit-phone";
 import { parseDirectoryQuery, queryPanditDirectory } from "./pandit-directory-query";
 import { effectivePanditContactPolicy } from "./pandit-contact-policy";
-import { claimPanditContactQuota, getPanditContactQuota, hasPanditContactReveal } from "./pandit-contact-quota";
+import {
+  claimPanditContactQuota, contactUnlockPrice, createContactUnlockPurchase,
+  getPanditContactQuota, hasPanditContactEntitlement, recordBookingContactReset,
+  revokeContactUnlockByPaymentId, verifyContactUnlockPurchase,
+} from "./pandit-contact-entitlements";
+import { panditContactUnlockPurchases, panditContactEntitlementEvents } from "@shared/schema";
 import { contactStatusDto, setPrivateContactResponse } from "./pandit-contact-response";
 import { panditVerificationDto } from "./pandit-verification";
 import { authorizePanditSession } from "./pandit-portal";
@@ -295,6 +301,7 @@ export async function registerRoutes(
   registerPanditStorefrontContentRoutes(app, adminAuthMiddleware);
   registerPanditGovernanceRoutes(app, adminAuthMiddleware);
   registerPanditLocationRectificationRoutes(app, adminAuthMiddleware);
+  registerPanditResolveValidatePublishRoutes(app, adminAuthMiddleware);
   registerKnowledgeGraphAdminRoutes(app, adminAuthMiddleware);
   registerDestinationAdminRoutes(app, adminAuthMiddleware);
   // These are destination compatibility reads, not the knowledge-graph public
@@ -418,10 +425,18 @@ export async function registerRoutes(
       const policy = effectivePanditContactPolicy(settings?.panditContactMode, target.override);
       const userId = readCustomerSession(req);
       const authenticated = !!userId && !!await storage.getUser(userId);
-       const quota = authenticated && policy === "login_required"
-         ? { ...await getPanditContactQuota(userId!), repeat: await hasPanditContactReveal(userId!, target.id) }
-         : null;
-       res.json(contactStatusDto(policy, target.contactAvailable, authenticated, quota));
+      const entitled = authenticated ? await hasPanditContactEntitlement(userId!, target.id) : false;
+      const quota = authenticated
+        ? { ...await getPanditContactQuota(userId!), repeat: entitled, entitled }
+        : null;
+      const dto = contactStatusDto(policy, target.contactAvailable, authenticated, quota);
+      res.json({
+        ...dto,
+        // Price is harmless public configuration; contact values remain
+        // exclusively behind the reveal endpoint.
+        pricePaise: contactUnlockPrice(settings?.panditContactUnlockPricePaise),
+        paidUnlockAvailable: contactUnlockPrice(settings?.panditContactUnlockPricePaise) !== null,
+      });
     } catch { res.status(500).json({ message: "Unable to get contact status" }); }
   });
 
@@ -437,15 +452,112 @@ export async function registerRoutes(
        if (!target.contactAvailable) return res.status(409).json({ message: "Contact details are unavailable.", state: "no_contact" });
       const policy = effectivePanditContactPolicy((await storage.getSiteSettings())?.panditContactMode, target.override);
        if (policy === "disabled") return res.status(403).json({ message: "Direct contact is unavailable.", policy, state: "disabled" });
-      if (policy === "login_required" && !req.customerUserId) return res.status(401).json({ message: "Login to view contact details", policy });
-      if (policy === "login_required") {
-        const outcome = await claimPanditContactQuota(req.customerUserId, target.id);
-         if (outcome.kind === "exhausted") return res.status(429).json({ message: "You've used all 10 free Pandit contacts for this 12-month period.", policy, state: "exhausted", quota: outcome.quota });
+       if (!req.customerUserId) return res.status(401).json({ message: "Login to view contact details", policy: "login_required" });
+      const outcome = await claimPanditContactQuota(req.customerUserId, target.id);
+      if (outcome.kind === "exhausted") {
+        await db.insert(panditFunnelEvents).values({ event: "quota_exhausted", panditId: target.id });
+        return res.status(402).json({ message: "Your free contact allowance is exhausted.", policy: "login_required", state: "exhausted", quota: outcome.quota });
       }
+      if (outcome.kind === "repeat") await db.insert(panditFunnelEvents).values({ event: "repeat_reveal", panditId: target.id });
       // Explicit protected DTO: never spread Pandit/storefront DB rows.
        res.json({ contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, policy, state: "revealed",
-        quota: req.customerUserId && policy === "login_required" ? await getPanditContactQuota(req.customerUserId) : null });
+       quota: await getPanditContactQuota(req.customerUserId) });
     } catch (error) { console.error("Contact reveal failed", error); res.status(500).json({ message: "Unable to reveal contact" }); }
+  });
+
+  app.post("/api/storefront/:slug/contact/unlock/create-order", customerAuthMiddleware, contactRevealLimiter, async (req: any, res) => {
+    setPrivateContactResponse(res);
+    try {
+      const target = await contactTarget(String(req.params.slug));
+      if (!target || !target.contactAvailable) return res.status(404).json({ message: "Contact details are unavailable." });
+      const policy = effectivePanditContactPolicy((await storage.getSiteSettings())?.panditContactMode, target.override);
+      if (policy === "disabled") return res.status(403).json({ message: "Direct contact is unavailable.", state: "disabled" });
+      const userId = req.customerUserId as number;
+      if (await hasPanditContactEntitlement(userId, target.id)) {
+        return res.json({ alreadyEntitled: true, contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, quota: await getPanditContactQuota(userId) });
+      }
+      const quota = await getPanditContactQuota(userId);
+      if (quota.remaining > 0) {
+        const outcome = await claimPanditContactQuota(userId, target.id);
+        if (outcome.kind !== "exhausted") {
+          return res.json({ alreadyEntitled: true, contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, quota: outcome.quota });
+        }
+      }
+      const settings = await storage.getSiteSettings();
+      const amountPaise = contactUnlockPrice(settings?.panditContactUnlockPricePaise);
+      if (amountPaise === null) return res.status(503).json({ message: "Paid contact unlock is temporarily unavailable." });
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      let orderId: string;
+      let gatewayAmount = amountPaise;
+      const mock = !keyId && !keySecret && process.env.NODE_ENV !== "production";
+      if (mock) {
+        orderId = `order_mock_contact_${crypto.randomUUID()}`;
+      } else {
+        if (!keyId || !keySecret) return res.status(503).json({ message: "Paid contact unlock is temporarily unavailable." });
+        const order: any = await new Razorpay({ key_id: keyId, key_secret: keySecret }).orders.create({
+          amount: amountPaise, currency: "INR", receipt: `contact_${userId}_${target.id}_${Date.now()}`,
+        });
+        orderId = String(order.id);
+        gatewayAmount = Number(order.amount);
+        if (gatewayAmount !== amountPaise) return res.status(502).json({ message: "Payment amount could not be verified." });
+      }
+      const created = await createContactUnlockPurchase(userId, target.id, amountPaise, orderId);
+      if (created.existingEntitlement) {
+        return res.json({ alreadyEntitled: true, contact: { phone: target.phone || null, whatsappNumber: target.whatsappNumber || null }, quota: await getPanditContactQuota(userId) });
+      }
+      const purchase = created.purchase!;
+      res.json({ orderId: purchase.razorpayOrderId, amount: purchase.amountPaise, currency: "INR", key: keyId || "rzp_test_mock", purchaseId: purchase.id, mock });
+    } catch (error: any) {
+      console.error("Contact unlock order failed", error);
+      res.status(500).json({ message: "Unable to start contact unlock." });
+    }
+  });
+
+  app.post("/api/storefront/:slug/contact/unlock/verify", customerAuthMiddleware, contactRevealLimiter, async (req: any, res) => {
+    setPrivateContactResponse(res);
+    try {
+      const parsed = z.object({
+        razorpay_order_id: z.string().min(1).max(200),
+        razorpay_payment_id: z.string().min(1).max(200),
+        razorpay_signature: z.string().min(1).max(200),
+      }).strict().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Payment verification failed." });
+      const [purchase] = await db.select().from(panditContactUnlockPurchases)
+        .where(eq(panditContactUnlockPurchases.razorpayOrderId, parsed.data.razorpay_order_id)).limit(1);
+      if (!purchase || purchase.userId !== req.customerUserId) return res.status(400).json({ message: "Payment verification failed." });
+      const target = await contactTarget(String(req.params.slug));
+      if (!target || target.id !== purchase.panditId || !target.contactAvailable) return res.status(400).json({ message: "Payment verification failed." });
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      const mock = parsed.data.razorpay_order_id.startsWith("order_mock_contact_")
+        && parsed.data.razorpay_payment_id.startsWith("pay_mock_contact_")
+        && parsed.data.razorpay_signature === "mock_contact";
+      if (mock) {
+        if (process.env.NODE_ENV === "production" || keyId || keySecret) return res.status(400).json({ message: "Payment verification failed." });
+      } else {
+        if (!keyId || !keySecret) return res.status(503).json({ message: "Payment verification unavailable." });
+        const expected = crypto.createHmac("sha256", keySecret).update(`${parsed.data.razorpay_order_id}|${parsed.data.razorpay_payment_id}`).digest("hex");
+        const supplied = parsed.data.razorpay_signature;
+        if (!/^[a-f0-9]{64}$/i.test(supplied) || !crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(supplied, "hex"))) {
+          return res.status(400).json({ message: "Payment verification failed." });
+        }
+        const gateway: any = await new Razorpay({ key_id: keyId, key_secret: keySecret }).orders.fetch(purchase.razorpayOrderId);
+        if (gateway.currency !== "INR" || Number(gateway.amount) !== purchase.amountPaise || Number(gateway.amount_paid || 0) < purchase.amountPaise || !["paid", "attempted"].includes(String(gateway.status))) {
+          return res.status(400).json({ message: "Payment verification failed." });
+        }
+      }
+      const verified = await verifyContactUnlockPurchase(purchase.id, req.customerUserId, parsed.data.razorpay_payment_id);
+      if (!verified) return res.status(400).json({ message: "Payment verification failed." });
+      // Fetch safety again after the entitlement commit. A hidden/contactless
+      // Pandit never receives a contact response, even after payment.
+      const safeTarget = await contactTarget(String(req.params.slug));
+      if (!safeTarget || safeTarget.id !== purchase.panditId || !safeTarget.contactAvailable) return res.status(409).json({ message: "Contact details are unavailable." });
+      res.json({ contact: { phone: safeTarget.phone || null, whatsappNumber: safeTarget.whatsappNumber || null }, state: "revealed", paid: true, quota: await getPanditContactQuota(req.customerUserId) });
+    } catch (error) {
+      console.error("Contact unlock verification failed", error);
+      res.status(500).json({ message: "Unable to verify contact unlock." });
+    }
   });
 
   app.get("/api/account/pandit-contacts", (req, res, next) => {
@@ -454,10 +566,26 @@ export async function registerRoutes(
   }, customerAuthMiddleware, async (req: any, res) => {
     try {
       const state = await getPanditContactQuota(req.customerUserId);
-      const items = await db.select({ panditId: pandits.id, name: pandits.name, city: pandits.city, revealedAt: panditContactReveals.revealedAt })
-        .from(panditContactReveals).innerJoin(pandits, eq(panditContactReveals.panditId, pandits.id))
-        .where(eq(panditContactReveals.userId, req.customerUserId)).orderBy(sql`${panditContactReveals.revealedAt} desc`);
-      res.json({ items: items.map(item => ({ ...item, contactStatus: "revealed" })), quota: state });
+      const events = await db.select({
+        panditId: panditContactEntitlementEvents.panditId,
+        name: pandits.name,
+        city: pandits.city,
+        eventType: panditContactEntitlementEvents.eventType,
+        revealedAt: panditContactEntitlementEvents.eventTime,
+        purchaseStatus: panditContactUnlockPurchases.status,
+      }).from(panditContactEntitlementEvents)
+        .innerJoin(pandits, eq(panditContactEntitlementEvents.panditId, pandits.id))
+        .leftJoin(panditContactUnlockPurchases, eq(panditContactUnlockPurchases.id, panditContactEntitlementEvents.sourcePurchaseId))
+        .where(and(eq(panditContactEntitlementEvents.userId, req.customerUserId), gte(panditContactEntitlementEvents.eventTime, new Date(state.windowStartedAt))))
+        .orderBy(sql`${panditContactEntitlementEvents.eventTime} desc`);
+      const seen = new Set<number>();
+      const items = events.filter(item => {
+        if (!item.panditId || seen.has(item.panditId)) return false;
+        if (item.eventType === "paid_reveal" && item.purchaseStatus !== "paid") return false;
+        seen.add(item.panditId);
+        return item.eventType === "free_reveal" || item.eventType === "paid_reveal";
+      });
+      res.json({ items: items.map(item => ({ panditId: item.panditId, name: item.name, city: item.city, revealedAt: item.revealedAt, contactStatus: item.eventType === "paid_reveal" ? "paid" : "free" })), quota: state });
     } catch { res.status(500).json({ message: "Unable to get contact history" }); }
   });
 
@@ -470,6 +598,42 @@ export async function registerRoutes(
     const updated = await storage.upsertSiteSettings(merged);
     await storage.logAdminAction({ actor: `admin:${req.adminUserId}`, action: "pandit_contact_mode.updated", target: "site_settings:global", details: { mode: parsed.data.mode } });
     res.json({ mode: updated.panditContactMode });
+  });
+
+  app.patch("/api/admin/settings/pandit-contact-price", adminAuthMiddleware, async (req: any, res) => {
+    const parsed = z.object({ pricePaise: z.number().int().min(100).max(1_000_000) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Price must be between ₹1 and ₹10,000, in paise." });
+    const existing = await storage.getSiteSettings();
+    const merged: any = { ...(existing || {}), panditContactUnlockPricePaise: parsed.data.pricePaise };
+    delete merged.id;
+    const updated = await storage.upsertSiteSettings(merged);
+    await storage.logAdminAction({ actor: `admin:${req.adminUserId}`, action: "pandit_contact_price.updated", target: "site_settings:global", details: { pricePaise: parsed.data.pricePaise } });
+    res.json({ pricePaise: updated.panditContactUnlockPricePaise });
+  });
+
+  app.get("/api/admin/analytics/pandit-contact", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const [free] = await db.select({ count: sql<number>`count(*)::int` }).from(panditContactEntitlementEvents).where(eq(panditContactEntitlementEvents.eventType, "free_reveal"));
+      const [paid] = await db.select({ count: sql<number>`count(*)::int`, revenuePaise: sql<number>`coalesce(sum(${panditContactUnlockPurchases.amountPaise}), 0)::int` })
+        .from(panditContactEntitlementEvents)
+        .innerJoin(panditContactUnlockPurchases, eq(panditContactUnlockPurchases.id, panditContactEntitlementEvents.sourcePurchaseId))
+        .where(and(eq(panditContactEntitlementEvents.eventType, "paid_reveal"), eq(panditContactUnlockPurchases.status, "paid")));
+      const [resets] = await db.select({ count: sql<number>`count(*)::int` }).from(panditContactEntitlementEvents).where(eq(panditContactEntitlementEvents.eventType, "booking_reset"));
+      const [repeat] = await db.select({ count: sql<number>`count(*)::int` }).from(panditFunnelEvents).where(eq(panditFunnelEvents.event, "repeat_reveal"));
+      const [exhausted] = await db.select({ count: sql<number>`count(*)::int` }).from(panditFunnelEvents).where(eq(panditFunnelEvents.event, "quota_exhausted"));
+      const orders = await db.select({ status: panditContactUnlockPurchases.status, count: sql<number>`count(*)::int` })
+        .from(panditContactUnlockPurchases).groupBy(panditContactUnlockPurchases.status);
+      res.json({
+        freeUniqueReveals: Number(free?.count || 0),
+        repeatReveals: Number(repeat?.count || 0),
+        allowanceExhaustedAttempts: Number(exhausted?.count || 0),
+        paidUnlockOrders: Object.fromEntries(orders.map(row => [row.status, Number(row.count)])),
+        verifiedPaidRevenuePaise: Number(paid?.revenuePaise || 0),
+        bookingResetEvents: Number(resets?.count || 0),
+      });
+    } catch {
+      res.status(500).json({ message: "Unable to load Pandit contact report." });
+    }
   });
 
   // ---- SEO alias 301 redirects ----
@@ -5131,7 +5295,13 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   app.post("/api/site-settings", adminAuthMiddleware, async (req, res) => {
     const parsed = validate(insertSiteSettingsSchema, req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error });
-    const settings = await storage.upsertSiteSettings(parsed.data);
+    if (parsed.data.panditContactUnlockPricePaise !== undefined
+      && (!Number.isInteger(parsed.data.panditContactUnlockPricePaise)
+        || parsed.data.panditContactUnlockPricePaise < 100
+        || parsed.data.panditContactUnlockPricePaise > 1_000_000)) {
+      return res.status(400).json({ message: "Additional Pandit contact price must be between ₹1 and ₹10,000." });
+    }
+    const settings = await storage.upsertSiteSettings(parsed.data as any);
     await auditAdmin(req, "site-settings.save", "siteSettings", { keys: Object.keys(parsed.data) });
     res.json(settings);
   });
@@ -13794,6 +13964,10 @@ Please create an optimized route that minimizes backtracking and maximizes the s
         const refundEntity = req.body?.payload?.refund?.entity;
         const refundId = refundEntity?.id as string | undefined;
         if (!refundId) return res.json({ ok: true, ignored: true });
+        if (event === "refund.processed" || event === "refund.created") {
+          const contactPaymentId = refundEntity?.payment_id as string | undefined;
+          if (contactPaymentId) await revokeContactUnlockByPaymentId(contactPaymentId);
+        }
         let ticket = await storage.getReturnTicketByRefundId(refundId);
 
         // Ghost-ticket: dashboard-initiated refunds (admin used Razorpay dashboard
