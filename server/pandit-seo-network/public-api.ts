@@ -19,6 +19,7 @@ import {
   getPublishedLocationEditorial,
   locationEditorialIsIndexable,
 } from "./editorial";
+import { resolveActiveCatalogueLocation } from "../pandit-location-catalogue";
 
 export function isPanditSeoNetworkEnabled(settings: { panditSeoNetworkEnabled?: boolean } | undefined) {
   return settings?.panditSeoNetworkEnabled === true;
@@ -221,7 +222,12 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
   // selectors, so tests and internal coverage evaluation remain available.
   app.use("/api/pandit-seo-network", async (_req, res, next) => {
     try {
-      if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) {
+      // Hierarchical location pages back the public directory, not only the
+      // optional editorial SEO rollout.  Keep these resolvable so discovery
+      // cards can always reach a known active city (including useful zero
+      // supply/noindex pages); the profile/editorial endpoints remain gated.
+      const isLocation = _req.path.startsWith("/locations/");
+      if (!isLocation && !isPanditSeoNetworkEnabled(await storage.getSiteSettings())) {
         return res.status(404).json({ message: "Not found" });
       }
       return next();
@@ -287,7 +293,35 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
         routeParam(req.params.citySlug),
       );
       if (!location || location.kind !== "city") {
-        return res.status(404).json({ message: "City not found" });
+        const catalogue = await resolveActiveCatalogueLocation(
+          routeParam(req.params.stateSlug),
+          routeParam(req.params.citySlug),
+        );
+        if (!catalogue) return res.status(404).json({ message: "City not found" });
+        cachePublicProjection(res);
+        return res.json({
+          kind: "city",
+          state: {
+            id: catalogue.state.id,
+            name: catalogue.state.name,
+            code: catalogue.state.code,
+          },
+          city: {
+            id: catalogue.city.id,
+            stateId: catalogue.city.stateId,
+            name: catalogue.city.name,
+            slug: catalogue.city.slug,
+          },
+          canonicalUrl: `/book-pandit-online/${cleanLocationSlug(catalogue.state.name)}/${cleanLocationSlug(catalogue.city.name)}`,
+          providers: [],
+          services: [],
+          indexability: {
+            status: "noindex_projection_pending",
+            indexable: false,
+            reasons: ["seo_projection_pending"],
+          },
+          editorial: null,
+        });
       }
       const editorial = await getPublishedLocationEditorial(location);
       cachePublicProjection(res);
@@ -330,41 +364,6 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
         providers: location.providers,
         indexability: location.indexability,
         editorial: editorial
-          ? { introduction: editorial.introduction, faqs: editorial.faqs }
-          : null,
-      });
-    } catch (error) {
-      return next(error);
-    }
-  });
-
-  app.get("/api/pandit-seo-network/locations/:stateSlug/:citySlug", async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) => {
-    try {
-      const location = selectHierarchicalPanditLocation(
-        await getPanditSeoNetworkProjection(),
-        routeParam(req.params.stateSlug),
-        routeParam(req.params.citySlug),
-      );
-      if (!location || location.kind !== "city") {
-        return res.status(404).json({ message: "City not found" });
-      }
-      const editorial = await storage.getPanditSeoEditorial(
-        "city",
-        location.city!.entityId,
-      );
-      cachePublicProjection(res);
-      return res.json({
-        kind: location.kind,
-        state: location.state,
-        city: location.city?.city,
-        canonicalUrl: location.canonicalUrl,
-        providers: location.providers,
-        indexability: location.indexability,
-        editorial: editorial?.status === "published"
           ? { introduction: editorial.introduction, faqs: editorial.faqs }
           : null,
       });

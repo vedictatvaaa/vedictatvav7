@@ -29,7 +29,7 @@
 // =====================================================================
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { bookingContextParams } from "@/lib/puja-service-map";
 import { trackDiscoveryEvent, trackPanditFunnelEvent } from "@/lib/analytics";
@@ -634,6 +634,7 @@ function CompareDialog({
 // =====================================================================
 export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, pujaSlug, language, tradition, date, muhurat, facetOptions, embedded = false }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; pujaSlug?: string; language?: string; tradition?: string; date?: string; muhurat?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean }) {
   const initialQuery = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
+  const directorySearch = useSearch();
   const [filters, setFilters] = useState<Filters>(() => ({
     ...DEFAULT_FILTERS,
     q: initialQuery.get("q") || "",
@@ -649,6 +650,8 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
   const [sortBy, setSortBy] = useState(initialQuery.get("sort") || (mode === "nearMe" ? "nearest" : "best_match"));
   const [page, setPage] = useState(Math.max(1, Number(initialQuery.get("page")) || 1));
   const hasAppliedInitialDirectoryState = useRef(false);
+  const lastUrlDirectoryState = useRef("");
+  const isApplyingUrlState = useRef(false);
   const [, navigate] = useLocation();
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -685,6 +688,73 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     const timer = window.setTimeout(() => setDebouncedSearch(filters.q.trim()), 300);
     return () => window.clearTimeout(timer);
   }, [filters.q]);
+
+  // Keep the public directory deep-linkable. Only non-default controls are
+  // serialized, so copied URLs stay compact and browser back/forward restores
+  // the exact server query without a second source of truth.
+  useEffect(() => {
+    // A changed URL that was not written by this component is browser
+    // back/forward navigation. Let the parser effect below hydrate state
+    // before serializing, otherwise stale controls would overwrite history.
+    if (lastUrlDirectoryState.current && directorySearch !== lastUrlDirectoryState.current) {
+      isApplyingUrlState.current = true;
+      return;
+    }
+    if (isApplyingUrlState.current) {
+      isApplyingUrlState.current = false;
+      return;
+    }
+    const url = new URLSearchParams(directorySearch);
+    const defaultSort = mode === "nearMe" ? "nearest" : "best_match";
+    const next = new URLSearchParams(url);
+    const setOrDelete = (key: string, value: string, include: boolean) => {
+      if (include) next.set(key, value);
+      else next.delete(key);
+    };
+    setOrDelete("q", debouncedSearch, !!debouncedSearch);
+    setOrDelete("service", filters.specialization || service || "", !!(filters.specialization || service));
+    setOrDelete("language", filters.languages.join(","), filters.languages.length > 0);
+    setOrDelete("region", filters.tradition || tradition || "", !!(filters.tradition || tradition));
+    setOrDelete("maxPrice", String(filters.priceMax), filters.priceMax !== DEFAULT_FILTERS.priceMax);
+    setOrDelete("minRating", String(filters.minRating), filters.minRating > 0);
+    setOrDelete("verified", "true", filters.verified);
+    setOrDelete("mode", "online", filters.onlineOnly);
+    next.delete("onlineOnly");
+    setOrDelete("sort", sortBy, sortBy !== defaultSort);
+    setOrDelete("page", String(page), page > 1);
+    next.delete("pageSize");
+    const signature = next.toString();
+    if (signature === lastUrlDirectoryState.current) return;
+    lastUrlDirectoryState.current = signature;
+    if (signature !== directorySearch) navigate(`${window.location.pathname}${signature ? `?${signature}` : ""}`, { replace: true });
+  }, [directorySearch, debouncedSearch, filters.specialization, filters.languages, filters.tradition, filters.priceMax, filters.minRating, filters.verified, filters.onlineOnly, sortBy, page, mode, service, tradition, navigate]);
+
+  // A browser back/forward event changes the URL first. Apply only actual
+  // differences to avoid clobbering text while a user is typing quickly.
+  useEffect(() => {
+    const url = new URLSearchParams(directorySearch);
+    const nextFilters: Filters = {
+      ...filters,
+      q: url.get("q") || "",
+      specialization: url.get("service") || "",
+      tradition: url.get("region") || tradition || "",
+      languages: (url.get("language") || language || "").split(",").filter(Boolean),
+      priceMax: Number(url.get("maxPrice")) || DEFAULT_FILTERS.priceMax,
+      minRating: Number(url.get("minRating")) || 0,
+      verified: url.get("verified") === "true",
+      onlineOnly: url.get("mode") === "online" || url.get("onlineOnly") === "true",
+    };
+    const nextSort = url.get("sort") || (mode === "nearMe" ? "nearest" : "best_match");
+    const nextPage = Math.max(1, Number(url.get("page")) || 1);
+    const currentSignature = JSON.stringify({ filters, sortBy, page });
+    const nextSignature = JSON.stringify({ filters: nextFilters, sortBy: nextSort, page: nextPage });
+    if (currentSignature !== nextSignature) {
+      isApplyingUrlState.current = true;
+      setFilters(nextFilters);
+      setSortBy(nextSort);
+      setPage(nextPage);
+    }
+  }, [directorySearch]); // URL is the input for browser navigation; do not include mutable snapshots.
 
   // A changed directory constraint always starts a fresh server-side page.
   useEffect(() => {

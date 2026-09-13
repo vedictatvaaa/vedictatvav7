@@ -16,6 +16,7 @@ import {
   invalidatePanditSeoNetworkCache,
 } from "./pandit-seo-network/cache";
 import { getPanditSeoNetworkSitemapPages } from "./pandit-seo-network/public-api";
+import { getHierarchicalLocation } from "./pandit-seo-network/state-city-seo";
 
 const baseDependencies = {
   getProductBySlug: async (_slug: string) => undefined,
@@ -131,11 +132,43 @@ test("canonical city routes distinguish useful noindex pages from missing entiti
   );
 });
 
-test("disabled canonical city hard navigation is a noindex 404", async () => {
+test("every approved metro card href resolves through the public resolver and location query", async () => {
+  const metros = [
+    ["new-delhi", "new-delhi"], ["noida", "noida"], ["gurugram", "gurugram"],
+    ["chandigarh", "chandigarh"], ["mumbai", "mumbai"], ["bengaluru", "bengaluru"],
+    ["kolkata", "kolkata"], ["pune", "pune"], ["guwahati", "guwahati"],
+    ["chennai", "chennai"], ["hyderabad", "hyderabad"], ["ahmedabad", "ahmedabad"],
+  ] as const;
+  const cities = metros.map(([stateSlug, citySlug], index) => ({
+    entityId: `city:${index + 1}`,
+    canonicalUrl: `/book-pandit-online/${stateSlug}/${citySlug}`,
+    city: { id: index + 1, stateId: index + 1, name: citySlug.replace(/-/g, " "), slug: `in-${citySlug}` },
+    state: { id: index + 1, name: stateSlug.replace(/-/g, " "), code: `S${index + 1}` },
+    providers: [],
+    services: [],
+    indexability: { status: "noindex_insufficient_supply" as const, indexable: false, reasons: ["insufficient_supply"] },
+  }));
+  const dependencies = {
+    ...baseDependencies,
+    getPanditNetwork: async () => ({ profiles: [], cities }),
+  };
+  for (const [index, [stateSlug, citySlug]] of metros.entries()) {
+    const href = `/book-pandit-online/${stateSlug}/${citySlug}`;
+    const decision = await resolvePublicRouteDecision(href, dependencies);
+    assert.deepEqual(decision, { kind: "pandit-network", found: true, indexable: false }, href);
+    const location = getHierarchicalLocation(await dependencies.getPanditNetwork(), stateSlug, citySlug);
+    assert.equal(location?.kind, "city", href);
+    assert.equal(location?.city?.city.id, index + 1);
+  }
+});
+
+test("disabled canonical city hard navigation stays useful for known locations and rejects unknowns", async () => {
   const app = express();
   app.use(publicRouteIntegrityMiddleware({
     ...baseDependencies,
     getPanditNetworkEnabled: async () => false,
+    getKnownPanditLocation: async (stateSlug, citySlug) =>
+      stateSlug === "uttar-pradesh" && citySlug === "varanasi",
   }));
   app.use(seoHeadMiddleware());
   app.use((_req, res) => res.type("html").send("<html><head><title>Vedic Tatva</title></head><body></body></html>"));
@@ -143,11 +176,20 @@ test("disabled canonical city hard navigation is a noindex 404", async () => {
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   try {
-    for (const path of ["/book-pandit-online/uttar-pradesh/varanasi"]) {
+    for (const path of [
+      "/book-pandit-online/uttar-pradesh/varanasi",
+      "/book-pandit-online/uttar-pradesh/unknown-city",
+    ]) {
       const response = await fetch(`${baseUrl}${path}`, { headers: { accept: "text/html" } });
-      assert.equal(response.status, 404);
-      assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
-      assert.match(await response.text(), /<meta name="robots" content="noindex, nofollow"/);
+      if (path.endsWith("unknown-city")) {
+        assert.equal(response.status, 404);
+        assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
+        assert.match(await response.text(), /<meta name="robots" content="noindex, nofollow"/);
+      } else {
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get("x-robots-tag"), "noindex, follow");
+        assert.match(await response.text(), /<meta name="robots" content="noindex, follow"/);
+      }
     }
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
@@ -311,6 +353,13 @@ test("resolver failures stay errors instead of becoming false 404 decisions", as
       getProductBySlug: async () => { throw new Error("database unavailable"); },
     }),
     /database unavailable/,
+  );
+});
+
+test("all-Pandits directory is a useful noindex route, not a state lookup", async () => {
+  assert.deepEqual(
+    await resolvePublicRouteDecision("/book-pandit-online/all", baseDependencies),
+    { kind: "pandit-network", found: true, indexable: false },
   );
 });
 

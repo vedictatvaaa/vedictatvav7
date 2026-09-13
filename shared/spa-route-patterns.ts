@@ -69,6 +69,7 @@ export const REGISTERED_SPA_ROUTE_PATTERNS = [
   "/puja-kit",
   "/category/:slug",
   "/book-pandit-online",
+  "/book-pandit-online/all",
   "/book-pandit-online/:stateSlug/:citySlug",
   "/book-pandit-online/:stateSlug",
   "/pandits/:citySlug/:serviceSlug",

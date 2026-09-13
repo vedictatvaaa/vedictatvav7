@@ -50,11 +50,21 @@ const cleanSlug = (name: string) => name.trim().toLowerCase()
 const linkFor = (state: State, city?: City, service?: string, mode?: "online" | "offline", context = "") => {
   const q = new URLSearchParams(context);
   q.set("stateId", String(state.id));
-  q.set("state", cleanSlug(state.name));
-  if (city) { q.set("cityId", String(city.id)); q.set("city", cleanSlug(city.name)); }
+  // Discovery's slugs come from the active location catalogue.  Do not
+  // manufacture a second city identity from the display name (catalogue
+  // slugs are often state-prefixed, e.g. mh-pune).
+  const stateSlug = state.slug || cleanSlug(state.name);
+  q.set("state", stateSlug);
+  if (city) {
+    const citySlug = city.slug || cleanSlug(city.name);
+    q.set("cityId", String(city.id));
+    q.set("city", citySlug);
+  }
   if (service) q.set("service", service);
   if (mode) q.set("mode", mode);
-  const base = city ? `/book-pandit-online/${cleanSlug(state.name)}/${cleanSlug(city.name)}` : `/book-pandit-online/${cleanSlug(state.name)}`;
+  const base = city
+    ? `/book-pandit-online/${stateSlug}/${city.slug || cleanSlug(city.name)}`
+    : `/book-pandit-online/${stateSlug}`;
   return q.toString() ? `${base}?${q}` : base;
 };
 
@@ -272,7 +282,6 @@ function DiscoveryHome({ data, liveMetrics, selectedService, preferredMode, date
     const indexed = new Map((data?.states || []).flatMap((state) => state.cities.map((city) => [city.name.toLowerCase(), { state, city }] as const)));
     return APPROVED_METROS.map((name) => indexed.get(name) || null);
   }, [data]);
-  const [browseAll, setBrowseAll] = useState(false);
   return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
     <PageSeo title="Find a Vedic Pandit | Vedic Tatva" description="Find an eligible Vedic pandit by service, state, city, or your location." canonical="/book-pandit-online" />
     <section className="relative overflow-hidden bg-[#6D2B35] text-[#FBF7EE]">
@@ -306,10 +315,9 @@ function DiscoveryHome({ data, liveMetrics, selectedService, preferredMode, date
       isError ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center"><p className="font-serif text-xl text-[#6D2B35]">The directory is taking a moment.</p><Button onClick={retry} className="mt-4 bg-[#6D2B35]">Try again</Button></div> :
       data?.states.length === 0 ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center">No eligible locations are available yet.</div> :
       data?.states.length ? <div>
-        <button type="button" aria-expanded={browseAll} aria-controls="all-locations-browser" onClick={() => setBrowseAll((open) => !open)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#9A7218]/35 px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F2E8D5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9A7218]">
-          {browseAll ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{browseAll ? "Hide all locations" : "Browse all locations"}
-        </button>
-        {browseAll && <div id="all-locations-browser"><CityBrowser states={data.states} selectedService={selectedService} preferredMode={preferredMode} context={context} onNavigate={onNavigate} /></div>}
+         <Link href={`/book-pandit-online/all${context ? `?${context}` : ""}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#9A7218]/35 bg-[#FBF7EE] px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F2E8D5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9A7218]">
+           <Search className="h-4 w-4" /> Browse all Pandits
+         </Link>
       </div> : null}
       {data?.facets.services.length ? <div className="mt-12 rounded-md bg-[#6D2B35] p-6 text-[#FBF7EE]"><p className="text-[11px] uppercase tracking-[.24em] text-[#E9C96A]">Start with a service</p><h2 className="mt-1 text-2xl font-semibold">What brings you here?</h2><div className="mt-4 flex flex-wrap gap-2">{data.facets.services.slice(0, showAllServices ? undefined : 8).map(s => <button key={s} onClick={() => { trackDiscoveryEvent("service_selected", { service: s }); onNavigate(`/book-pandit-online?service=${encodeURIComponent(s)}`); }} className="rounded-full border border-[#E9C96A]/45 px-3 py-1.5 text-sm hover:bg-[#E9C96A] hover:text-[#6D2B35]">{s}</button>)}</div>{data.facets.services.length > 8 ? <button className="mt-4 text-sm font-semibold text-[#E9C96A] underline underline-offset-4" onClick={() => setShowAllServices(value => !value)}>{showAllServices ? "Show fewer services" : `View all ${data.facets.services.length} services`}</button> : null}</div> : null}
       <div className="mt-8 grid gap-3 sm:grid-cols-2"><Link href="/online-puja-booking?mode=online" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><Video className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Need a ritual from anywhere?</b><small className="text-[#5a4a3a]/65">Explore online Puja guides</small></span></Link><Link href="/pind-daan-booking" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><MapPin className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Sacred ancestor rites</b><small className="text-[#5a4a3a]/65">Pind daan and tarpan services</small></span></Link></div>
@@ -327,11 +335,17 @@ function LiveActivityStrip({ metrics }: { metrics?: LiveMetrics }) {
     ["Bookable", metrics.metrics.availableToBook],
     ["Online now · this server", metrics.metrics.onlineNow],
   ] as const : [];
-  return <section className="mb-8 rounded-xl border border-[#D4AF37]/25 bg-[#FBF7EE] px-4 py-4 shadow-sm" aria-label="Pandit network activity" data-testid="pandit-live-metrics">
-    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 sm:justify-between">
-      {entries.map(([label, value]) => <div key={label} className="min-w-[74px] text-center">
-        <div className={`font-serif text-xl font-semibold ${value.health === "available" ? "text-[#6D2B35]" : "text-[#806a61]"}`} data-testid={`metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{value.health === "available" ? value.value : "—"}</div>
-        <div className="text-[10px] font-semibold uppercase tracking-[.13em] text-[#806a61]">{label}</div>
+  return <section className="mb-8 overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-[#FBF7EE] py-4 shadow-sm" aria-label="Pandit network activity" data-testid="pandit-live-metrics">
+    <div className="mb-3 flex items-center justify-between px-4 sm:hidden">
+      <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#9A7218]">Live network</span>
+      <span className="text-[10px] text-[#806a61]">Swipe to explore →</span>
+    </div>
+    <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-7" data-lenis-prevent>
+      {entries.map(([label, value], index) => <div key={label} className="group relative min-w-[132px] snap-start rounded-xl border border-[#D4AF37]/20 bg-[#F5F0E6] px-4 py-3 text-left transition duration-300 motion-safe:hover:-translate-y-1 sm:min-w-0 sm:text-center">
+        <span className={`absolute right-3 top-3 h-2 w-2 rounded-full ${value.health === "available" ? "bg-emerald-500 motion-safe:animate-pulse" : "bg-[#B8AA9F]"}`} aria-hidden="true" />
+        <div className={`font-serif text-2xl font-semibold tabular-nums transition-transform duration-300 motion-safe:group-hover:scale-105 ${value.health === "available" ? "text-[#6D2B35]" : "text-[#806a61]"}`} data-testid={`metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{value.health === "available" ? value.value : "—"}</div>
+        <div className="mt-1 pr-3 text-[10px] font-semibold uppercase leading-4 tracking-[.11em] text-[#806a61]">{label}</div>
+        {index === 0 && value.health === "available" ? <div className="mt-1 text-[10px] text-emerald-700">Updated live</div> : null}
       </div>)}
       {!metrics && <p className="w-full text-center text-xs text-[#806a61]">Network activity is temporarily unavailable.</p>}
     </div>

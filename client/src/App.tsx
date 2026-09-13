@@ -137,6 +137,7 @@ function lazyAdminEntry<T extends React.ComponentType<any>>(
 const AdminLogin = lazyAdminEntry(() => import("@/pages/admin-login"));
 const Shop = lazy(() => import("@/pages/shop"));
 const PanditDirectory = lazy(() => import("@/pages/pandit-directory"));
+const AllPanditsDirectory = lazy(() => import("@/pages/pandit-directory-all"));
 const PanditCanonicalLocation = lazy(() => import("@/pages/pandit-canonical-location"));
 const PujaBooking = lazy(() => import("@/pages/puja-booking"));
 const Astrology = lazy(() => import("@/pages/astrology"));
@@ -782,6 +783,7 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/book-pandit-online" component={PanditDirectory} />
+          <Route path="/book-pandit-online/all" component={AllPanditsDirectory} />
           <Route path="/book-pandit-online/:stateSlug/:citySlug" component={PanditCanonicalLocation} />
           <Route path="/book-pandit-online/:stateSlug" component={PanditDirectory} />
           {/* Legacy /pandits/* kept as inert fallbacks; server 301s redirect hard nav. */}

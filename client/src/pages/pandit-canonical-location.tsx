@@ -57,6 +57,30 @@ type ProjectedCity = {
   editorial?: Editorial | null;
 };
 
+type DiscoverySummary = {
+  states: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    cities: Array<{ id: number; name: string; slug: string; count: number }>;
+  }>;
+};
+
+const cleanLocationSlug = (value: string) => value.trim().toLowerCase()
+  .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function discoveryLocation(data: DiscoverySummary | undefined, stateSlug: string, citySlug: string) {
+  const state = data?.states.find((candidate) =>
+    candidate.slug === stateSlug || cleanLocationSlug(candidate.name) === cleanLocationSlug(stateSlug),
+  );
+  if (!state) return null;
+  const city = state.cities.find((candidate) =>
+    candidate.slug === citySlug || cleanLocationSlug(candidate.name) === cleanLocationSlug(citySlug),
+  );
+  return city ? { state, city } : null;
+}
+
 export default function PanditCanonicalLocation() {
   const { stateSlug = "", citySlug: nestedCitySlug, serviceSlug } = useParams<{ stateSlug?: string; citySlug?: string; serviceSlug?: string }>();
   const citySlug = nestedCitySlug || stateSlug;
@@ -77,6 +101,18 @@ export default function PanditCanonicalLocation() {
     },
     retry: false,
   });
+  // The SEO projection is optional rollout infrastructure. Discovery remains
+  // the authoritative availability source for a useful city results page.
+  const discoveryQuery = useQuery<DiscoverySummary>({
+    queryKey: ["/api/pandit-discovery", "canonical-location"],
+    queryFn: async () => {
+      const response = await fetch("/api/pandit-discovery");
+      if (!response.ok) throw new Error("Unable to load this location");
+      return response.json();
+    },
+    enabled: cityQuery.isError,
+    retry: false,
+  });
   const serviceQuery = useQuery<ProjectedCityService>({
     queryKey: ["/api/pandit-seo-network/cities", citySlug, "services", serviceSlug],
     enabled: Boolean(serviceSlug),
@@ -91,8 +127,44 @@ export default function PanditCanonicalLocation() {
   });
   const selectedService = serviceSlug ? serviceQuery.data : undefined;
 
-  if (cityQuery.isLoading || (serviceSlug && serviceQuery.isLoading)) {
+  const discoveryCity = discoveryLocation(discoveryQuery.data, stateSlug, citySlug);
+  if (
+    cityQuery.isLoading
+    || (serviceSlug && serviceQuery.isLoading)
+    || (cityQuery.isError && discoveryQuery.isLoading)
+  ) {
     return <main className="min-h-[70vh] bg-[#F5F0E6] px-5 py-20"><Skeleton className="mx-auto h-72 max-w-5xl bg-[#E9DEC9]" /></main>;
+  }
+  if (cityQuery.isError && discoveryCity) {
+    const city = discoveryCity.city;
+    const state = discoveryCity.state;
+    const canonical = `/book-pandit-online/${state.slug}/${city.slug}`;
+    return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
+      <PageSeo
+        title={`Pandits in ${city.name} | Vedic Tatva`}
+        description={`Browse eligible Vedic Pandits in ${city.name}, ${state.name}.`}
+        canonical={canonical}
+        noindex
+      />
+      <section className="border-b border-[#D4AF37]/25 bg-[#6D2B35] text-[#FBF7EE]">
+        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+          <Badge className="mb-3 bg-[#E9C96A] text-[#6D2B35]"><MapPin className="mr-1 h-3 w-3" />{city.name}, {state.name}</Badge>
+          <h1 className="font-serif text-4xl font-semibold sm:text-5xl">Pandits in {city.name}</h1>
+          <p className="mt-4 max-w-2xl text-[#FBF7EE]/75">Browse eligible Pandits in this active catalogue city. This page is not indexed while local profile publishing is being completed.</p>
+        </div>
+      </section>
+      <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+        <PanditDirectoryView
+          cityId={city.id}
+          stateId={state.id}
+          cityLabel={city.name}
+          stateLabel={state.name}
+          stateSlug={state.slug}
+          mode="city"
+          embedded
+        />
+      </section>
+    </main>;
   }
   if (cityQuery.isError || (serviceSlug && serviceQuery.isError) || !cityQuery.data || (serviceSlug && !selectedService)) {
     return <main className="min-h-[70vh] bg-[#F5F0E6] px-5 py-20 text-center">
@@ -104,9 +176,7 @@ export default function PanditCanonicalLocation() {
   }
 
   const city = cityQuery.data;
-  const routeCanonical = stateSlug && nestedCitySlug
-    ? `/book-pandit-online/${stateSlug}/${nestedCitySlug}`
-    : city.canonicalUrl;
+  const routeCanonical = city.canonicalUrl;
   const providers = selectedService?.providers || city.providers;
   const editorial = selectedService?.editorial || city.editorial;
   const seo = buildPanditCitySeo({

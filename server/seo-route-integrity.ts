@@ -21,6 +21,7 @@ import {
   getPublishedLocationEditorial,
   locationEditorialIsIndexable,
 } from "./pandit-seo-network/editorial";
+import { resolveActiveCatalogueLocation } from "./pandit-location-catalogue";
 
 export type PublicRouteDecision =
   | { kind: "registered" }
@@ -42,6 +43,8 @@ const defaultDependencies: PublicEntityDependencies = {
   getPanditNetwork: () => getPanditSeoNetworkProjection(),
   getPanditNetworkEnabled: async () =>
     isPanditSeoNetworkEnabled(await storage.getSiteSettings()),
+  getKnownPanditLocation: async (stateSlug, citySlug) =>
+    Boolean(citySlug && await resolveActiveCatalogueLocation(stateSlug, citySlug)),
 };
 
 function normalisePath(path: string): string {
@@ -81,6 +84,10 @@ export async function resolvePublicRouteDecision(
 ): Promise<PublicRouteDecision> {
   const cleanPath = normalisePath(path);
 
+  if (cleanPath === "/book-pandit-online/all") {
+    return { kind: "pandit-network", found: true, indexable: false };
+  }
+
   const networkMatch = cleanPath.match(/^\/(?:book-pandit-online|pandits)\/([^/]+)(?:\/([^/]+))?$/);
   if (networkMatch) {
     const first = decodeRouteSegment(networkMatch[1]);
@@ -89,6 +96,17 @@ export async function resolvePublicRouteDecision(
       return { kind: "pandit-network", found: false, indexable: false };
     }
     if (!await dependencies.getPanditNetworkEnabled()) {
+      // The directory is authoritative for active city availability.  A
+      // location route must still resolve while the optional SEO projection
+      // rollout is off; the client will render a noindex results page from
+      // discovery.  Unknown locations remain real 404s.
+      if (
+        cleanPath.startsWith("/book-pandit-online/")
+        && second
+        && await dependencies.getKnownPanditLocation?.(first, second)
+      ) {
+        return { kind: "pandit-network", found: true, indexable: false };
+      }
       return { kind: "pandit-network", found: false, indexable: false, disabled: true };
     }
     const projection = await dependencies.getPanditNetwork();
@@ -97,6 +115,9 @@ export async function resolvePublicRouteDecision(
     const entity = hierarchical || (second
       ? selectCityService(projection, first, second)
       : selectCityHub(projection, first));
+    if (!entity && second && await dependencies.getKnownPanditLocation?.(first, second)) {
+      return { kind: "pandit-network", found: true, indexable: false };
+    }
     // Before the hierarchy rollout, a known city/service route was a useful
     // noindex landing even when its provider supply was empty. Preserve that
     // hard-navigation contract while keeping unknown locations as 404s.
@@ -306,4 +327,5 @@ type PublicEntityDependencies = {
   getBlogPostBySlug: (slug: string) => Promise<{ isPublished?: boolean } | undefined>;
   getPanditNetwork: () => Promise<PanditSeoNetworkProjection>;
   getPanditNetworkEnabled: () => Promise<boolean>;
+  getKnownPanditLocation?: (stateSlug: string, citySlug?: string) => Promise<boolean>;
 };

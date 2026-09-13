@@ -681,6 +681,14 @@ export function seoHeadMiddleware() {
       }
     }
     if (!head) head = fallbackHead(path);
+    const routeRobots = String(res.getHeader("X-Robots-Tag") || "").toLowerCase();
+    if (routeRobots.includes("noindex")) {
+      head = {
+        ...head,
+        noindex: true,
+        robotsFollow: !routeRobots.includes("nofollow"),
+      };
+    }
 
     const headHtml = buildHeadHtml(head, baseUrl, path);
 
