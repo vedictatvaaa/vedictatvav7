@@ -381,12 +381,19 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
     adminBadges: publicAdminTrustBadges(sf?.trustBadges),
   };
   const activeServiceIds = new Set(services.map(service => service.id));
+  const serviceById = new Map(services.map(service => [service.id, service]));
   const packageDtos = (await Promise.all(packages.map(async pkg => {
     const items = await storage.listPanditPackageItems(pkg.id);
     // A stale package is not public if an included offering was subsequently
     // disabled; this prevents public bundles from advertising unbookable items.
     return items.length && items.every(item => activeServiceIds.has(item.panditServiceId))
-      ? publicPanditPackageDto(pkg, items)
+      ? publicPanditPackageDto(pkg, items.map(item => ({
+          ...item,
+          // The package item stores the Pandit-owned service ID. Include the
+          // active master identity in the public handoff so booking never has
+          // to infer a canonical service from package display text.
+          masterServiceId: serviceById.get(item.panditServiceId)?.masterServiceId,
+        })))
       : null;
   }))).filter(Boolean);
   const editorial = await getPublishedPanditContent(pandit.id).catch(() => null);

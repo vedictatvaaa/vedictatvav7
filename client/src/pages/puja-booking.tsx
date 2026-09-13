@@ -30,6 +30,8 @@ type PanditMatch = {
 type PanditMatchesResponse = { masterService: Pick<MasterService, "id" | "name" | "slug">; items: PanditMatch[] };
 
 const normalizeServiceName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+const isBookableMasterService = (service: MasterService) =>
+  ["puja", "katha", "ritual"].includes(String(service.serviceType || "").toLowerCase());
 
 const PUJA_FAQS = [
   { q: "How do I book a pandit online for puja at home?", a: "Choose your puja, pick a date with shubh muhurat, select a verified pandit by language and tradition, and pay securely. The pandit confirms within 2 hours and arrives at your home with full vidhi prepared." },
@@ -75,7 +77,7 @@ export default function PujaBooking() {
   });
   const { data: selectedStorefront } = useQuery<{
     services?: Array<{ id: number; name: string; slug?: string; price: number }>;
-    packages?: Array<{ id: number; name: string; price: number }>;
+    packages?: Array<{ id: number; name: string; price: number; masterServiceIds?: number[] }>;
   }>({
     queryKey: ["/api/storefront", selectedPandit?.slug, "booking-pricing"],
     queryFn: async () => {
@@ -99,6 +101,10 @@ export default function PujaBooking() {
   const selectedOffering = bookingPackageId
     ? selectedStorefront?.packages?.find(pkg => pkg.id === bookingPackageId)
     : selectedStorefront?.services?.find(service => service.id === bookingServiceId);
+  const selectedPackageMasterServiceId = bookingPackageId && selectedOffering && "masterServiceIds" in selectedOffering
+    && selectedOffering.masterServiceIds?.length === 1
+    ? selectedOffering.masterServiceIds[0]
+    : 0;
   const analyticsSlug = selectedPandit?.slug
     || (bookingServiceId ? selectedStorefront?.services?.find(service => service.id === bookingServiceId)?.slug : undefined)
     || (resolveStandardPuja(pujaType) ? pujaType : undefined);
@@ -152,13 +158,13 @@ export default function PujaBooking() {
   });
   const selectedStandardPuja = resolveStandardPuja(pujaType);
   const matchedMasterService = useMemo(() => {
-    if (!selectedStandardPuja) return undefined;
     const requestedMaster = masterServiceId > 0
-      ? masterServices.find(service => service.id === masterServiceId && service.serviceType === "puja")
+      ? masterServices.find(service => service.id === masterServiceId && isBookableMasterService(service))
       : undefined;
     if (requestedMaster) return requestedMaster;
+    if (!selectedStandardPuja) return undefined;
     const selectedNames = [selectedStandardPuja.value, selectedStandardPuja.label].map(normalizeServiceName);
-    return masterServices.find(service => service.serviceType === "puja" && (
+    return masterServices.find(service => isBookableMasterService(service) && (
       selectedNames.includes(normalizeServiceName(service.slug)) ||
       selectedNames.includes(normalizeServiceName(service.name))
     ));
@@ -216,7 +222,12 @@ export default function PujaBooking() {
             cityId: canonicalCityId,
             stateId: canonicalStateId,
           } : {}),
-          ...(bookingPackageId > 0 ? { panditPackageId: bookingPackageId } : {}),
+           ...(bookingPackageId > 0
+             ? {
+                 panditPackageId: bookingPackageId,
+                 ...(selectedPackageMasterServiceId > 0 ? { masterServiceId: selectedPackageMasterServiceId } : {}),
+               }
+             : {}),
         }),
       });
       if (!res.ok) throw new Error("Failed to create booking");

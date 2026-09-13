@@ -3217,7 +3217,11 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const [all, states, cities] = await Promise.all([storage.getPandits(), db.select().from(indianStates).where(eq(indianStates.isActive, true)), db.select().from(indianCities).where(eq(indianCities.isActive, true))]);
     const stateIds = new Set(states.map(s => s.id));
     const cityById = new Map(cities.map(c => [c.id, c]));
-    return { states, cities, pandits: all.filter(p => effectivePanditGovernance(p, stateIds, cityById).directory) };
+    // Discovery and the public directory must advertise the same population.
+    // `directoryVisible` is an independent governance switch used for
+    // catalogue/admin surfaces; the searchable public endpoint additionally
+    // requires `searchEligible`, matching queryPanditDirectory's predicate.
+    return { states, cities, pandits: all.filter(p => effectivePanditGovernance(p, stateIds, cityById).search) };
   }
 
   // Backfill the presentation row for existing eligible Pandits. The unique
@@ -4583,6 +4587,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           version: 1,
           source: "pandit_service",
           sourceId: offering.service.id,
+           masterServiceId: offering.master.id,
+           masterServiceSlug: offering.master.slug,
           name: offering.master.name,
           baseAmount,
           samagriAmount,
@@ -4634,6 +4640,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
           sourceId: pkg.id,
           name: pkg.name,
           serviceIds: items.map(item => item.panditServiceId),
+           masterServiceIds: packageComponents.map(row => row.master.id),
+           masterServiceSlugs: packageComponents.map(row => row.master.slug),
           baseAmount,
           samagriAmount,
           totalAmount: baseAmount + samagriAmount,
@@ -4674,6 +4682,8 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         pricingSnapshot: {
           version: 1,
           source: "standard_puja",
+           masterServiceId: masterPolicy.id,
+           masterServiceSlug: masterPolicy.slug,
           name: standardPuja.label,
           baseAmount,
           samagriAmount,

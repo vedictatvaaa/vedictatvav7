@@ -195,6 +195,10 @@ test("location resolver preserves rollout-off behavior and propagates projection
     getSettings: async () => ({ panditSeoNetworkEnabled: true }),
     getProjection: async () => projection,
   })).location, null);
+  assert.equal((await resolvePublicPanditLocation({ citySlug: "" }, {
+    getSettings: async () => ({ panditSeoNetworkEnabled: true }),
+    getProjection: async () => projection,
+  })).location, null);
   await assert.rejects(resolvePublicPanditLocation({ citySlug: "varanasi" }, {
     getSettings: async () => ({ panditSeoNetworkEnabled: true }),
     getProjection: async () => { throw new Error("projection unavailable"); },

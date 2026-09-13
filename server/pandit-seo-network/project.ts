@@ -137,7 +137,10 @@ function profileFromCandidate(
   const activeServices = activeCanonicalServices(candidate);
   const bio = candidate.storefront?.bio || candidate.pandit.bio;
   const evaluated = evaluatePanditProfileIndexability({
-    eligible: governance.directory,
+    // Public location pages are backed by the searchable directory query.
+    // Keep profiles with search disabled out of the public projection rather
+    // than advertising a provider that the actual results endpoint rejects.
+    eligible: governance.search,
     published: isPanditStorefrontPublished(candidate.storefront),
     name: candidate.pandit.name,
     slug: candidate.pandit.slug,

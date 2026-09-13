@@ -20,4 +20,6 @@ test("canonical location client uses exact service editorial and renders publish
   assert.match(source, /const editorial = selectedService\?\.editorial \|\| city\.editorial/);
   assert.match(source, /\{editorial\?\.introduction &&/);
   assert.match(source, /editorial\.faqs\.map/);
+  assert.match(source, /pandit-seo-network\/locations\/\$\{encodeURIComponent\(stateSlug\)\}/);
+  assert.match(source, /<PanditDirectoryView[\s\S]*cityId=\{city\.city\.id\}[\s\S]*stateId=\{city\.state\.id\}[\s\S]*embedded/);
 });

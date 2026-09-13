@@ -159,10 +159,20 @@ export function publicStorefrontPanditDto(pandit: any) {
 }
 
 export function publicPanditPackageDto(pkg: any, items: any[]) {
+  const masterServiceIds = Array.from(new Set(
+    items.map(item => Number(item.masterServiceId)).filter(id => Number.isInteger(id) && id > 0),
+  ));
   return {
     id: pkg.id, name: pkg.name, slug: pkg.slug, description: pkg.description,
     price: pkg.price, compareAtPrice: pkg.compareAtPrice, displayOrder: pkg.displayOrder,
-    items: items.map(item => ({ panditServiceId: item.panditServiceId, displayOrder: item.displayOrder })),
+    masterServiceIds,
+    items: items.map(item => ({
+      panditServiceId: item.panditServiceId,
+      ...(Number.isInteger(Number(item.masterServiceId)) && Number(item.masterServiceId) > 0
+        ? { masterServiceId: Number(item.masterServiceId) }
+        : {}),
+      displayOrder: item.displayOrder,
+    })),
   };
 }
 export function publicPanditGalleryItemDto(item: any) {

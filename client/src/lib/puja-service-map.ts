@@ -1,10 +1,13 @@
 const PUJA_TYPE_BY_SERVICE: Record<string, string> = {
   "satyanarayan": "satyanarayan",
+  "satyanarayan puja": "satyanarayan",
   "satyanarayan katha": "satyanarayan",
   "griha pravesh": "grihapravesh",
   "rudrabhishek": "rudrabhishek",
   "mahamrityunjay jaap": "mahamrityunjay",
+  "mahamrityunjaya jaap": "mahamrityunjay",
   "navgraha shanti": "navgraha",
+  "navagraha shanti": "navgraha",
   "navagraha homam": "navgraha",
   "ganesh puja": "ganesh",
   "pitru paksha shradh": "pind-daan-yearly-remote",
@@ -24,8 +27,12 @@ const DISCOVERY_SERVICE_BY_PUJA_SLUG: Record<string, string> = {
   "tarpan": "Tarpan",
 };
 
+function normalizedServiceKey(value: string) {
+  return value.trim().toLocaleLowerCase("en-IN").replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+}
+
 export function pujaTypeForService(service?: string | null) {
-  return service ? PUJA_TYPE_BY_SERVICE[service.trim().toLocaleLowerCase("en-IN")] : undefined;
+  return service ? PUJA_TYPE_BY_SERVICE[normalizedServiceKey(service)] : undefined;
 }
 
 export function discoveryServiceForPujaSlug(slug?: string | null) {

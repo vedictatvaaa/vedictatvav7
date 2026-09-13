@@ -15,6 +15,15 @@ test("booking handoff preserves canonical discovery context and sets the selecte
   assert.equal(params.get("pujaType"), "satyanarayan");
 });
 
+test("published storefront aliases resolve to the same canonical Puja", () => {
+  for (const alias of ["Satyanarayan", "Satyanarayan Puja", "Satyanarayan Katha", "satyanarayan-katha"]) {
+    const params = bookingContextParams(`?service=${encodeURIComponent(alias)}`, 42);
+    assert.equal(params.get("pujaType"), "satyanarayan", alias);
+    assert.equal(params.get("service"), alias);
+    assert.equal(params.get("requestedService"), null);
+  }
+});
+
 test("booking handoff keeps an unpriced ritual as context but drops hostile and private parameters", () => {
   const params = bookingContextParams(
     "?city=New%20York&service=arbitrary-value&mode=telepathy&source=attacker&token=secret&email=user%40example.com&serviceId=7&packageId=9",

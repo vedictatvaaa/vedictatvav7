@@ -47,7 +47,7 @@ test("rollout gate and editorial route payloads follow the admin contract", asyn
     dependencies: {
       getPandits: async () => [],
       getStates: async () => [{ id: 1, name: "Maharashtra", code: "MH" }],
-      getCities: async () => [{ id: 10, stateId: 1, name: "Pune", slug: "pune" }],
+       getCities: async () => [{ id: 10, stateId: 1, name: "Pune", slug: "mh-pune" }],
       getStorefront: async () => null,
       getServices: async () => [],
     },
@@ -100,13 +100,25 @@ test("rollout gate and editorial route payloads follow the admin contract", asyn
       dependencies: {
         getPandits: async () => [],
         getStates: async () => [{ id: 1, name: "Maharashtra", code: "MH" }],
-        getCities: async () => [{ id: 10, stateId: 1, name: "Pune", slug: "pune" }],
+         getCities: async () => [{ id: 10, stateId: 1, name: "Pune", slug: "mh-pune" }],
         getStorefront: async () => null,
         getServices: async () => [],
       },
     });
     response = await fetch(`${baseUrl}/api/pandit-seo-network/cities/pune`);
     assert.equal(response.status, 200);
+
+    // Discovery uses the hierarchical state/city spelling. The location
+    // endpoint must resolve that route even though the catalogue city slug
+    // may be state-prefixed, and must keep an active zero-supply city useful.
+    response = await fetch(`${baseUrl}/api/pandit-seo-network/locations/maharashtra/pune`);
+    assert.equal(response.status, 200);
+    const location = await response.json();
+    assert.equal(location.city.id, 10);
+    assert.equal(location.canonicalUrl, "/book-pandit-online/maharashtra/pune");
+    assert.deepEqual(location.providers, []);
+    response = await fetch(`${baseUrl}/api/pandit-seo-network/locations/maharashtra/unknown-city`);
+    assert.equal(response.status, 404);
 
     response = await fetch(`${baseUrl}/api/admin/pandit-seo-editorial/city/${encodeURIComponent("city:10")}`, {
       method: "PUT",

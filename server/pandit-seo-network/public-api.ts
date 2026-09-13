@@ -11,6 +11,7 @@ import {
 } from "./cache";
 import { storage } from "../storage";
 import {
+  cleanLocationSlug,
   getHierarchicalLocation,
   resolveLegacyCityLocation,
 } from "./state-city-seo";
@@ -126,7 +127,19 @@ export function selectCityHub(
   projection: PanditSeoNetworkProjection,
   citySlug: string,
 ): CityHubProjection | null {
-  return projection.cities.find((city) => city.city.slug === citySlug) || null;
+  const wanted = cleanLocationSlug(citySlug);
+  if (!wanted) return null;
+  return projection.cities.find((city) => {
+    const candidates = [
+      city.city.slug,
+      city.city.name,
+      ...(city.city.aliases || []),
+    ]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      .map(cleanLocationSlug)
+      .filter(Boolean);
+    return candidates.includes(wanted);
+  }) || null;
 }
 
 export function selectCityService(
@@ -249,6 +262,43 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
       cachePublicProjection(res);
       return res.json({
         ...city,
+        editorial: editorial?.status === "published"
+          ? { introduction: editorial.introduction, faqs: editorial.faqs }
+          : null,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  // The discovery links carry a state and city identity. Resolve those
+  // together so a catalogue slug such as "mh-mumbai" and the public spelling
+  // "mumbai" address the same active city (and duplicate city names in
+  // different states cannot collide).
+  app.get("/api/pandit-seo-network/locations/:stateSlug/:citySlug", async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const location = selectHierarchicalPanditLocation(
+        await getPanditSeoNetworkProjection(),
+        routeParam(req.params.stateSlug),
+        routeParam(req.params.citySlug),
+      );
+      if (!location || location.kind !== "city") {
+        return res.status(404).json({ message: "City not found" });
+      }
+      const editorial = await getPublishedLocationEditorial(location);
+      cachePublicProjection(res);
+      return res.json({
+        kind: location.kind,
+        state: location.state,
+        city: location.city?.city,
+        canonicalUrl: location.canonicalUrl,
+        providers: location.providers,
+        services: location.city?.services || [],
+        indexability: location.indexability,
         editorial: editorial?.status === "published"
           ? { introduction: editorial.introduction, faqs: editorial.faqs }
           : null,

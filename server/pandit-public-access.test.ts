@@ -4,6 +4,7 @@ import {
   isPanditStorefrontPublished,
   publicPanditReviewDto,
   publicPanditServiceDto,
+  publicPanditPackageDto,
   publicStorefrontPanditDto,
   adminTrustBadgesSchema,
   publicAdminTrustBadges,
@@ -107,6 +108,18 @@ test("public service DTO exposes catalogue identity and offering fields only", (
   assert.equal(dto.price, 5100);
   assert.equal("panditId" in dto, false);
   assert.equal("internalNote" in dto, false);
+});
+
+test("public package DTO carries canonical master identities for booking handoff", () => {
+  const dto = publicPanditPackageDto(
+    { id: 21, name: "Satyanarayan Katha", slug: "satyanarayan-katha", price: 5100, compareAtPrice: 6000, displayOrder: 0 },
+    [
+      { panditServiceId: 14, masterServiceId: 3, displayOrder: 0 },
+      { panditServiceId: 15, masterServiceId: 4, displayOrder: 1 },
+    ],
+  );
+  assert.deepEqual(dto.masterServiceIds, [3, 4]);
+  assert.deepEqual(dto.items.map(item => [item.panditServiceId, item.masterServiceId]), [[14, 3], [15, 4]]);
 });
 
 test("storefront service facets and coverage derive only from active public DTOs", () => {

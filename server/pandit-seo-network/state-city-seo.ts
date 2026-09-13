@@ -23,7 +23,7 @@ export type LocationEditorial = {
   status?: string | null;
 };
 
-export const cleanLocationSlug = (value: string) => value
+export const cleanLocationSlug = (value: string | null | undefined) => String(value || "")
   .normalize("NFKD")
   .replace(/[\u0300-\u036f]/g, "")
   .toLowerCase()
@@ -44,6 +44,7 @@ function stateSlug(state: NetworkState) {
 
 function cityMatches(city: CityHubProjection, value: string) {
   const wanted = cleanLocationSlug(value);
+  if (!wanted) return false;
   const candidates = [
     city.city.slug,
     city.city.name,
@@ -51,11 +52,12 @@ function cityMatches(city: CityHubProjection, value: string) {
   ].flatMap((item) => [cleanLocationSlug(String(item)), ...aliases(String(item))]);
   // Canonical spellings required by the location design.  These are aliases,
   // not extra catalogue records.
-  if (wanted === "gurgaon" && city.city.name.toLowerCase() === "gurugram") return true;
-  if (wanted === "bangalore" && city.city.name.toLowerCase() === "bengaluru") return true;
+  const cityName = typeof city.city.name === "string" ? city.city.name.toLowerCase() : "";
+  if (wanted === "gurgaon" && cityName === "gurugram") return true;
+  if (wanted === "bangalore" && cityName === "bengaluru") return true;
   if (
-    (wanted === "new-delhi" && city.city.name.toLowerCase() === "delhi")
-    || (wanted === "delhi" && city.city.name.toLowerCase() === "new delhi")
+    (wanted === "new-delhi" && cityName === "delhi")
+    || (wanted === "delhi" && cityName === "new delhi")
   ) return true;
   return candidates.includes(wanted);
 }

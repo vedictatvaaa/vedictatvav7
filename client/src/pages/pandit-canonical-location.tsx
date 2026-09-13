@@ -1,12 +1,11 @@
 import { useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ChevronRight, MapPin, ShieldCheck } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPanditCitySeo, panditCitySeoOrigin } from "@shared/pandit-city-seo";
 
@@ -58,22 +57,6 @@ type ProjectedCity = {
   editorial?: Editorial | null;
 };
 
-function bookingHref(
-  city: ProjectedCity,
-  provider: ProjectedProvider,
-  service: ProjectedService,
-) {
-  const params = new URLSearchParams({
-    cityId: String(city.city.id),
-    stateId: String(city.state.id),
-    masterServiceId: String(service.masterServiceId),
-    mode: service.mode,
-    pandit: String(provider.pandit.id),
-    serviceId: String(service.id),
-  });
-  return `/online-puja-booking?${params}`;
-}
-
 export default function PanditCanonicalLocation() {
   const { stateSlug = "", citySlug: nestedCitySlug, serviceSlug } = useParams<{ stateSlug?: string; citySlug?: string; serviceSlug?: string }>();
   const citySlug = nestedCitySlug || stateSlug;
@@ -85,7 +68,10 @@ export default function PanditCanonicalLocation() {
   const cityQuery = useQuery<ProjectedCity>({
     queryKey: ["/api/pandit-seo-network/cities", citySlug, stateSlug],
     queryFn: async () => {
-      const response = await fetch(`/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}`);
+      const endpoint = stateSlug && nestedCitySlug
+        ? `/api/pandit-seo-network/locations/${encodeURIComponent(stateSlug)}/${encodeURIComponent(citySlug)}`
+        : `/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}`;
+      const response = await fetch(endpoint);
       if (!response.ok) throw new Error(response.status === 404 ? "City not found" : "Unable to load this city");
       return response.json();
     },
@@ -172,43 +158,22 @@ export default function PanditCanonicalLocation() {
 
     <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
       <h2 className="font-serif text-2xl font-semibold text-[#6D2B35]">
-        {providers.length} published {providers.length === 1 ? "Pandit" : "Pandits"} available
+        Browse eligible Pandits in {city.city.name}
       </h2>
-      {providers.length === 0 && <Card className="mt-5 border-[#D4AF37]/35 bg-white">
-        <CardContent className="p-6">
-          <h3 className="font-serif text-xl font-semibold text-[#6D2B35]">Find the next available verified Pandit</h3>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            No published Pandit currently matches this exact page. Browse active locations and services while the local network grows.
-          </p>
-          <Link href="/book-pandit-online"><Button className="mt-5">Browse available Pandits</Button></Link>
-        </CardContent>
-      </Card>}
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        {providers.map((provider) => {
-          const exactServices = selectedService
-            ? provider.services.filter((item) => item.masterServiceId === selectedService.service.id)
-            : provider.services;
-          const bookingService = exactServices[0];
-          return <Card key={provider.pandit.id}>
-            <CardContent className="p-5">
-              <div className="flex gap-4">
-                <Avatar className="h-16 w-16"><AvatarImage src={provider.pandit.image || undefined} /><AvatarFallback>{provider.pandit.name[0]}</AvatarFallback></Avatar>
-                <div>
-                  <h3 className="flex items-center gap-1 font-serif text-xl font-semibold">{provider.pandit.name}{provider.pandit.verified && <ShieldCheck className="h-4 w-4 text-green-700" />}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{provider.pandit.experience || 0}+ years · {provider.pandit.rating || 0} ({provider.pandit.reviewCount || 0} reviews)</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{provider.pandit.languages}</p>
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {exactServices.map((service) => <Badge key={service.id} variant="secondary">{service.name} · {service.mode.replace("_", " ")}</Badge>)}
-              </div>
-              <div className="mt-5 flex gap-2">
-                {provider.canonicalUrl && <Link href={provider.canonicalUrl}><Button variant="outline">View profile</Button></Link>}
-                {bookingService && <a href={bookingHref(city, provider, bookingService)}><Button><Calendar className="mr-1.5 h-4 w-4" />Book exact service</Button></a>}
-              </div>
-            </CardContent>
-          </Card>;
-        })}
+      <p className="mt-2 text-sm text-muted-foreground">
+        Results below come from the same public directory query used by discovery. Profile catalogue quality controls indexability, not whether an active city browse page is useful.
+      </p>
+      <div className="mt-5 -mx-5 sm:-mx-8">
+        <PanditDirectoryView
+          cityId={city.city.id}
+          stateId={city.state.id}
+          cityLabel={city.city.name}
+          stateLabel={city.state.name}
+          stateSlug={stateSlug || city.state.name.toLowerCase().replace(/\s+/g, "-")}
+          service={selectedService?.service.name}
+          mode="city"
+          embedded
+        />
       </div>
     </section>
 
