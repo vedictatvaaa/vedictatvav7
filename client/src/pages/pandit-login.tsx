@@ -91,7 +91,7 @@ export default function PanditLoginPage() {
             <div className="bg-[#FBF7EE] border border-[#D4AF37]/25 rounded-md p-3 text-xs text-[#5a4a3a] flex items-start gap-2">
               <Info className="h-4 w-4 text-[#6D2B35] shrink-0 mt-0.5" />
               <div>
-                <strong className="text-[#4a1a22]">First-time login?</strong> Use the temporary password in your approval email. You will be prompted to create a new password immediately after signing in.
+                <strong className="text-[#4a1a22]">First-time login?</strong> Use the secure Create Password link in your approval email, then sign in with the private password you choose.
               </div>
             </div>
           </form>

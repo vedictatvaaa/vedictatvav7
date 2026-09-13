@@ -24,7 +24,7 @@ import { registerSearchSuggestRoutes } from "./seo-search";
 import { registerBacklinkRoutes } from "./seo-backlinks";
 import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords";
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
-import { registerPanditPortalRoutes } from "./pandit-portal";
+import { createPanditPasswordResetUrl, registerPanditPortalRoutes } from "./pandit-portal";
 import { registerPanditLiveMetricsRoutes } from "./pandit-live-metrics";
 import { registerAstroRealtimeRoutes } from "./astro-realtime";
 import { registerSpiritualTrackerRoutes } from "./spiritual-tracker";
@@ -113,7 +113,7 @@ import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
 import { sendEmail, sendEmailAsync, buildPanditRejectionEmail, buildPanditApplicationReceivedEmail, sendAbandonedCartNudge } from "./email";
-import { buildPanditApprovalEmail, buildPanditTemporaryPasswordEmail } from "./pandit-account-emails";
+import { buildPanditApprovalEmail, buildPanditPasswordResetEmail } from "./pandit-account-emails";
 import {
   enqueueWelcomeSeries, dispatchBroadcast, recordUnsubscribe, verifyUnsubscribeToken,
 } from "./email-marketing";
@@ -9953,9 +9953,9 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const id = parsePositiveId(req.params.id);
       if (!id) return res.status(400).json({ message: "Invalid id" });
       const note = typeof req.body?.note === "string" ? req.body.note : null;
-      const temporaryPassword = crypto.randomBytes(9).toString("base64url");
+      const setupSecret = crypto.randomBytes(32).toString("base64url");
       const bcrypt = await import("bcryptjs");
-      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+      const passwordHash = await bcrypt.hash(setupSecret, 10);
       const outcome = await db.transaction(async (tx) => {
         const [pending] = await tx.select().from(panditApplications)
           .where(eq(panditApplications.id, id)).for("update");
@@ -10020,11 +10020,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           cardIssuedAt: createdPandit.cardIssuedAt ?? new Date(),
         }).where(eq(pandits.id, createdPandit.id)).returning();
         await tx.insert(panditStorefronts).values({ panditId: pandit.id }).onConflictDoNothing();
-        const selectedIds = pending.masterServiceIds?.length
-          ? pending.masterServiceIds
-          : (await tx.select({ id: masterServices.id }).from(masterServices)
-              .where(and(eq(masterServices.isActive, true), inArray(masterServices.serviceType, ["puja", "katha", "ritual"]))))
-              .map(service => service.id);
+        const selectedIds = pending.masterServiceIds?.length ? pending.masterServiceIds : [];
         if (selectedIds.length) {
           const selectedMasters = await tx.select().from(masterServices).where(and(
             inArray(masterServices.id, selectedIds),
@@ -10079,11 +10075,16 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       let approvalEmailSent = false;
       if (outcome.kind === "created" && claimed.email) {
         try {
+           const setupUrl = createPanditPasswordResetUrl(pandit.id, claimed.email, pandit.passwordHash);
+           const siteUrl = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
            const msg = buildPanditApprovalEmail({
             to: claimed.email,
             fullName: claimed.fullName,
             city: claimed.city,
-            temporaryPassword,
+             registrationNo: pandit.registrationNo!,
+             setupUrl,
+             storefrontUrl: pandit.slug ? `${siteUrl}/pandit/${encodeURIComponent(pandit.slug)}` : null,
+             storefrontPublished: false,
             adminNote: note,
           });
            const queued = await enqueueTransactionalEmail({
@@ -10108,7 +10109,6 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         panditId: pandit.id,
         registrationNo: pandit.registrationNo,
         approvalEmailSent,
-        ...(outcome.kind === "created" && !approvalEmailSent ? { temporaryPassword } : {}),
       });
     } catch (error) {
       console.error("approve pandit-application error:", error);
@@ -10129,34 +10129,34 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       if (!id) return res.status(400).json({ message: "Invalid id" });
       const [pandit] = await db.select().from(pandits).where(eq(pandits.id, id)).limit(1);
       if (!pandit) return res.status(404).json({ message: "Pandit not found" });
-      const temporaryPassword = crypto.randomBytes(9).toString("base64url");
+      if (!pandit.email) return res.status(400).json({ message: "Add a registered email before sending a password reset link" });
+      const resetSecret = crypto.randomBytes(32).toString("base64url");
       const bcrypt = await import("bcryptjs");
-      const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+      const passwordHash = await bcrypt.hash(resetSecret, 10);
       await db.transaction(async (tx) => {
-        await tx.update(pandits).set({ passwordHash, mustChangePassword: true }).where(eq(pandits.id, id));
+        await tx.update(pandits).set({ passwordHash, mustChangePassword: false }).where(eq(pandits.id, id));
         await tx.delete(panditSessions).where(eq(panditSessions.panditId, id));
       });
-      await auditAdmin(req, "pandit.password_regenerated", `pandit:${id}`, { sessionsRevoked: true });
+      const resetUrl = createPanditPasswordResetUrl(pandit.id, pandit.email, passwordHash);
+      await auditAdmin(req, "pandit.password_reset_link_requested", `pandit:${id}`, { sessionsRevoked: true });
       let emailSent = false;
-      if (pandit.email) {
-        const queued = await enqueueTransactionalEmail({
-          eventKey: `pandit_password_regenerated:${pandit.id}:${passwordHash}`,
-          kind: "pandit_password_regenerated",
-          relatedType: "pandit",
-          relatedId: pandit.id,
-          recipientName: pandit.name,
-          message: buildPanditTemporaryPasswordEmail({
-            to: pandit.email,
-            fullName: pandit.name,
-            temporaryPassword,
-          }),
-        });
-        emailSent = queued.created || ["queued", "retrying"].includes(queued.row.status);
-      }
-      res.json({ ok: true, temporaryPassword, emailQueued: emailSent });
+      const queued = await enqueueTransactionalEmail({
+        eventKey: `pandit_password_reset_admin:${pandit.id}:${passwordHash}`,
+        kind: "pandit_password_reset",
+        relatedType: "pandit",
+        relatedId: pandit.id,
+        recipientName: pandit.name,
+        message: buildPanditPasswordResetEmail({
+          to: pandit.email,
+          fullName: pandit.name,
+          resetUrl,
+        }),
+      });
+      emailSent = queued.created || ["queued", "retrying"].includes(queued.row.status);
+      res.json({ ok: true, emailQueued: emailSent });
     } catch (error) {
-      console.error("pandit password regeneration failed:", error);
-      res.status(500).json({ message: "Failed to regenerate Pandit password" });
+      console.error("pandit password reset link failed:", error);
+      res.status(500).json({ message: "Failed to send Pandit password reset link" });
     }
   });
 

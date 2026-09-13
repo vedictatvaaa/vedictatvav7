@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown, KeyRound, Copy, Ban, PauseCircle } from "lucide-react";
+import { Edit, Eye, CheckCircle, XCircle, Image, Upload, MapPin, MapPinOff, LocateFixed, Crown, KeyRound, Ban, PauseCircle } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -47,7 +47,6 @@ function PanditsTab() {
   const [editFees, setEditFees] = useState<number>(0);
   const [editingPandit, setEditingPandit] = useState<Pandit | null>(null);
   const [viewingPandit, setViewingPandit] = useState<Pandit | null>(null);
-  const [regeneratedPassword, setRegeneratedPassword] = useState<{ name: string; password: string; emailSent: boolean } | null>(null);
   const [moderationTarget, setModerationTarget] = useState<Pandit | null>(null);
   const [moderationAction, setModerationAction] = useState<"suspend" | "ban">("suspend");
   const [moderationReason, setModerationReason] = useState("");
@@ -125,13 +124,12 @@ function PanditsTab() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.message || "Password regeneration failed");
-      return { ...body, name: pandit.name } as { temporaryPassword: string; emailSent: boolean; name: string };
+      return { ...body, name: pandit.name } as { emailQueued: boolean; name: string };
     },
     onSuccess: data => {
-      setRegeneratedPassword({ name: data.name, password: data.temporaryPassword, emailSent: data.emailSent });
-      toast({ title: "Temporary password generated", description: data.emailSent ? "It was also emailed to the Pandit." : "Copy it and share it securely with the Pandit." });
+      toast({ title: "Password reset link requested", description: data.emailQueued ? `A secure one-time link was queued for ${data.name}. Existing sessions were revoked.` : "The account was secured, but email delivery could not be queued." });
     },
-    onError: (error: Error) => toast({ title: "Could not regenerate password", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: "Could not send reset link", description: error.message, variant: "destructive" }),
   });
 
   const moderationMutation = useMutation({
@@ -588,8 +586,10 @@ function PanditsTab() {
                       <Button size="sm" variant="outline" onClick={() => setEditingPandit(pandit)} className="min-h-11 text-primary border-primary/30 text-xs gap-1 sm:min-h-9" data-testid={`btn-edit-pandit-${pandit.id}`}>
                           <Edit className="w-3 h-3" /> Edit
                         </Button>
-                      <Button size="sm" variant="outline" disabled={regeneratePasswordMutation.isPending} onClick={() => regeneratePasswordMutation.mutate(pandit)} className="min-h-11 text-xs gap-1 sm:min-h-9" data-testid={`btn-regenerate-pandit-password-${pandit.id}`}>
-                        <KeyRound className="w-3 h-3" /> Regenerate password
+                      <Button size="sm" variant="outline" disabled={regeneratePasswordMutation.isPending} onClick={() => {
+                        if (window.confirm(`Revoke active sessions and send a secure password reset link to ${pandit.name}?`)) regeneratePasswordMutation.mutate(pandit);
+                      }} className="min-h-11 text-xs gap-1 sm:min-h-9" data-testid={`btn-regenerate-pandit-password-${pandit.id}`}>
+                        <KeyRound className="w-3 h-3" /> Send password reset
                       </Button>
 
                       {(pandit as any).accountStatus === "suspended" || (pandit as any).accountStatus === "banned" ? (
@@ -646,16 +646,6 @@ function PanditsTab() {
         }}
       />
       <Dialog open={!!viewingPandit} onOpenChange={o=>!o&&setViewingPandit(null)}><DialogContent><DialogHeader><DialogTitle>{viewingPandit?.name}</DialogTitle><DialogDescription>Read-only profile details</DialogDescription></DialogHeader>{viewingPandit && <div className="space-y-2 text-sm"><p>{(viewingPandit as any).state} · {viewingPandit.city}</p><p>{viewingPandit.specialization}</p><p>{viewingPandit.experience} years experience · {viewingPandit.availability}</p><p>{viewingPandit.bio}</p></div>}</DialogContent></Dialog>
-      <Dialog open={!!regeneratedPassword} onOpenChange={open => !open && setRegeneratedPassword(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Temporary password for {regeneratedPassword?.name}</DialogTitle><DialogDescription>The old password and all active sessions have been invalidated. This password must be changed after login.</DialogDescription></DialogHeader>
-          <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
-            <code className="flex-1 break-all text-base font-semibold">{regeneratedPassword?.password}</code>
-            <Button type="button" size="icon" variant="outline" onClick={() => { if (regeneratedPassword) void navigator.clipboard.writeText(regeneratedPassword.password); }} aria-label="Copy temporary password"><Copy className="h-4 w-4" /></Button>
-          </div>
-          <p className="text-xs text-muted-foreground">{regeneratedPassword?.emailSent ? "A copy was sent to the registered email address." : "No email was sent. Share this password securely; it will not be shown again."}</p>
-        </DialogContent>
-      </Dialog>
       <Dialog open={!!moderationTarget} onOpenChange={open => !open && setModerationTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{moderationAction === "ban" ? "Ban" : "Temporarily suspend"} {moderationTarget?.name}?</DialogTitle><DialogDescription>{moderationAction === "ban" ? "The profile will be removed from public discovery and portal access will be blocked until an admin reactivates it." : "The profile and portal access will be disabled until the selected date."}</DialogDescription></DialogHeader>
