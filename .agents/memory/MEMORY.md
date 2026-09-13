@@ -17,3 +17,4 @@
 - [GitHub push reconciliation](github-push-reconciliation.md) — reconcile the watched remote before UI Push; connector uploads may hit payload-specific Cloudflare blocks even with healthy OAuth.
 - [Pandit approval registration dependency](pandit-approval-registration-dependency.md) — approval allocates numeric registration IDs via a database sequence; schema repair must restore it before testing approvals.
 - [Pandit city availability authority](pandit-city-availability-authority.md) — active catalogue cities must remain browseable from discovery even when their optional SEO projection is absent.
+- [Pandit contact/publication boundary](pandit-contact-publication-boundary.md) — protected contact access requires a currently eligible, published storefront; booking resets and reviewed content must be atomic/current.
