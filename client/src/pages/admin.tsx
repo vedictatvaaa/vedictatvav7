@@ -127,6 +127,8 @@ const PanditPayoutsTab      = safeLazy(() => import("./admin-tabs/PanditPayoutsT
 const PanditAffiliateTab    = safeLazy(() => import("./admin-tabs/PanditAffiliateTab"));
 const PanditMembershipsTab  = safeLazy(() => import("./admin-tabs/PanditMembershipsTab"));
 const PanditGovernanceTab   = safeLazy(() => import("./admin-tabs/PanditGovernanceTab"));
+const PanditNetworkActivityTab = safeLazy(() => import("./admin-tabs/PanditNetworkActivityTab"));
+const PanditStorefrontContentTab = safeLazy(() => import("./admin-tabs/PanditStorefrontContentTab"));
 const MantrasTab            = safeLazy(() => import("./admin-tabs/MantrasTab"));
 const BlogAiQueueTab        = safeLazy(() => import("./admin-tabs/BlogAiQueueTab"));
 const PujaLibraryTab        = safeLazy(() => import("./admin-tabs/PujaLibraryTab"));
@@ -187,6 +189,8 @@ const TAB_COMPONENTS: Partial<Record<TabId, { preload: () => Promise<unknown> }>
   "pandit-affiliate": PanditAffiliateTab,
   "pandit-memberships": PanditMembershipsTab,
   "pandit-governance": PanditGovernanceTab,
+  "pandit-network-activity": PanditNetworkActivityTab,
+  "pandit-storefront-content": PanditStorefrontContentTab,
   mantras: MantrasTab,
   "blog-ai": BlogAiQueueTab,
   "puja-library": PujaLibraryTab,
@@ -793,6 +797,8 @@ export default function Admin({ adminToken, onLogout }: AdminProps) {
               {activeTab === "pandit-affiliate" && <PanditAffiliateTab adminToken={adminToken} />}
               {activeTab === "pandit-memberships" && <PanditMembershipsTab adminToken={adminToken} />}
               {activeTab === "pandit-governance" && <PanditGovernanceTab adminToken={adminToken} onNavigate={setActiveTab} />}
+              {activeTab === "pandit-network-activity" && <PanditNetworkActivityTab />}
+              {activeTab === "pandit-storefront-content" && <PanditStorefrontContentTab />}
               {activeTab === "mantras" && <MantrasTab adminToken={adminToken} />}
               {activeTab === "blog-ai" && <BlogAiQueueTab adminToken={adminToken} />}
               {activeTab === "puja-library" && <PujaLibraryTab adminToken={adminToken} />}

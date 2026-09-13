@@ -189,10 +189,11 @@ export function buildPanditDiscoverySummary(
 
   return {
     states: states
+      .filter((state) => state.isActive !== false)
       .map((state) => {
         const statePandits = visible.filter((pandit) => pandit.stateId === state.id);
         const stateCities = cities.filter(
-          (city) => city.stateId === state.id && statePandits.some((pandit) => pandit.cityId === city.id),
+          (city) => city.stateId === state.id && city.isActive !== false,
         );
         const stateWideCount = visible.filter((pandit) =>
           matchesPanditDiscoveryReach(pandit, undefined, state.id, now),
@@ -215,7 +216,6 @@ export function buildPanditDiscoverySummary(
             })),
         };
       })
-      .filter((state) => state.count > 0)
       .sort((a, b) => a.name.localeCompare(b.name, "en-IN")),
     facets: {
       services: Array.from(facets.services).sort(),

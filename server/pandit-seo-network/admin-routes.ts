@@ -7,6 +7,7 @@ import {
   panditSeoEditorialStatusSchema,
 } from "@shared/schema";
 import { getPanditSeoNetworkProjection, invalidatePanditSeoNetworkCache } from "./cache";
+import { generateLocationEditorialDrafts } from "./editorial-drafts";
 
 const safeText = (max: number) => z.string().trim().max(max).refine(
   (value) => !/<[^>]*>/.test(value),
@@ -158,7 +159,7 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
       const existing = await storage.getPanditSeoEditorial(type.data, key.data);
       // Editing approved copy puts it back in draft; an editor must review it again.
       const editorial = await storage.upsertPanditSeoEditorial({
-        entityType: type.data,
+        entityType: type.data as any,
         entityKey: key.data,
         ...parsed.data,
         status: "draft",
@@ -190,7 +191,7 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
       }
       if (existing.status === body.data.status) return res.json(existing);
       const editorial = await storage.upsertPanditSeoEditorial({
-        entityType: existing.entityType as z.infer<typeof panditSeoEditorialEntityTypeSchema>,
+        entityType: existing.entityType as any,
         entityKey: existing.entityKey,
         introduction: existing.introduction,
         faqs: existing.faqs as z.infer<typeof panditSeoEditorialFaqSchema>[],
@@ -204,6 +205,34 @@ export function registerPanditSeoNetworkAdminRoutes(app: Express, adminAuthMiddl
         ipAddress: auditDetails(req),
       });
       return res.json(editorial);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  if (typeof (app as any).post === "function") app.post("/api/admin/pandit-seo-editorial/generate-drafts", adminAuthMiddleware, async (req, res, next) => {
+    try {
+      const stateSlug = typeof req.body?.stateSlug === "string" ? req.body.stateSlug : undefined;
+      const citySlug = typeof req.body?.citySlug === "string" ? req.body.citySlug : undefined;
+      let location;
+      if (stateSlug) {
+        const projection = await getPanditSeoNetworkProjection();
+        const { getHierarchicalLocation } = await import("./state-city-seo");
+        location = getHierarchicalLocation(projection, stateSlug, citySlug);
+        if (!location) return res.status(404).json({ message: "Location not found" });
+      }
+      const result = await generateLocationEditorialDrafts({
+        location,
+        actor: actorFor(req),
+      });
+      await storage.logAdminAction({
+        actor: actorFor(req),
+        action: "pandit-seo-editorial.generate-drafts",
+        target: location?.canonicalUrl || "all-locations",
+        details: result,
+        ipAddress: auditDetails(req),
+      });
+      return res.json(result);
     } catch (error) {
       return next(error);
     }

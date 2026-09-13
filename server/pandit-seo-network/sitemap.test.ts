@@ -14,12 +14,14 @@ test("people sitemap includes only projection-approved profile slugs", () => {
   assert.deepEqual([...slugs], ["indexable-pandit"]);
 });
 
-test("location sitemap uses central city and service indexability decisions", () => {
+test("location sitemap uses hierarchy candidates and never emits flat services", () => {
   const paths = indexablePanditLocationPaths({
     profiles: [],
     cities: [
       {
         canonicalUrl: "/book-pandit-online/varanasi",
+        city: { name: "Varanasi" },
+        state: { name: "Uttar Pradesh" },
         indexability: { indexable: true },
         services: [
           { canonicalUrl: "/book-pandit-online/varanasi/rudrabhishek-puja", indexability: { indexable: true } },
@@ -34,7 +36,7 @@ test("location sitemap uses central city and service indexability decisions", ()
     ],
   } as any);
   assert.deepEqual([...paths], [
-    "/book-pandit-online/varanasi",
-    "/book-pandit-online/varanasi/rudrabhishek-puja",
+    "/book-pandit-online/uttar-pradesh",
+    "/book-pandit-online/uttar-pradesh/varanasi",
   ]);
 });

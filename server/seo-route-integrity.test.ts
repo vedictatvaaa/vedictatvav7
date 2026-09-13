@@ -125,6 +125,10 @@ test("canonical city routes distinguish useful noindex pages from missing entiti
     await resolvePublicRouteDecision("/book-pandit-online/missing", baseDependencies),
     { kind: "pandit-network", found: false, indexable: false },
   );
+  assert.deepEqual(
+    await resolvePublicRouteDecision("/book-pandit-online/uttar-pradesh/varanasi", baseDependencies),
+    { kind: "pandit-network", found: true, indexable: false },
+  );
 });
 
 test("disabled canonical city hard navigation is a noindex 404", async () => {
@@ -139,7 +143,7 @@ test("disabled canonical city hard navigation is a noindex 404", async () => {
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   try {
-    for (const path of ["/book-pandit-online/varanasi", "/book-pandit-online/varanasi/rudrabhishek-puja"]) {
+    for (const path of ["/book-pandit-online/uttar-pradesh/varanasi"]) {
       const response = await fetch(`${baseUrl}${path}`, { headers: { accept: "text/html" } });
       assert.equal(response.status, 404);
       assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
@@ -201,6 +205,7 @@ test("enabled canonical city and service hard navigations retain noindex-follow 
         image: "/images/pandit-one.webp",
         bio: "A reviewed public biography with enough meaningful information for visitors to understand this Pandit's professional background and services.",
         languages: "Hindi", verified: true, onLeave: false, locationReviewStatus: "resolved",
+        directoryVisible: true, searchEligible: true, bookingEnabled: true,
       }],
       getStates: async () => [{ id: 1, name: "Uttar Pradesh", code: "UP" }],
       getCities: async () => [{ id: 10, stateId: 1, name: "Varanasi", slug: "varanasi" }],
@@ -219,7 +224,7 @@ test("enabled canonical city and service hard navigations retain noindex-follow 
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   try {
-    for (const path of ["/book-pandit-online/varanasi", "/book-pandit-online/varanasi/rudrabhishek-puja"]) {
+    for (const path of ["/book-pandit-online/uttar-pradesh/varanasi"]) {
       const response = await fetch(`${baseUrl}${path}`, { headers: { accept: "text/html" } });
       const html = await response.text();
       assert.equal(response.status, 200);
@@ -236,8 +241,16 @@ test("enabled canonical city and service hard navigations retain noindex-follow 
 
 test("HTTP sitemap emission follows the persisted Pandit SEO rollout setting", async () => {
   const originalSettings = storage.getSiteSettings;
+  const originalEditorial = storage.getPanditSeoEditorial;
   let enabled = false;
   (storage as any).getSiteSettings = async () => ({ panditSeoNetworkEnabled: enabled });
+  (storage as any).getPanditSeoEditorial = async (type: string, key: string) => ({
+    entityType: type,
+    entityKey: key,
+    introduction: `Reviewed facts for ${type}:${key}.`,
+    faqs: [],
+    status: "published",
+  });
   invalidatePanditSeoNetworkCache();
   const bio = "A reviewed public biography with enough meaningful information for visitors to understand this Pandit's professional background and services.";
   await getPanditSeoNetworkProjection({
@@ -246,6 +259,7 @@ test("HTTP sitemap emission follows the persisted Pandit SEO rollout setting", a
         id, name: `Pandit ${id}`, slug: `pandit-${id}`, cityId: 10, stateId: 1, bio,
         image: `/images/pandit-${id}.webp`,
         languages: "Hindi", verified: true, onLeave: false, locationReviewStatus: "resolved",
+        directoryVisible: true, searchEligible: true, bookingEnabled: true,
       })),
       getStates: async () => [{ id: 1, name: "Uttar Pradesh", code: "UP" }],
       getCities: async () => [{ id: 10, stateId: 1, name: "Varanasi", slug: "varanasi" }],
@@ -272,18 +286,20 @@ test("HTTP sitemap emission follows the persisted Pandit SEO rollout setting", a
     for (const path of ["/sitemap-pages.xml", "/sitemap-puja-cities.xml"]) {
       const body = await (await fetch(`${baseUrl}${path}`)).text();
       assert.doesNotMatch(body, /\/(?:hi\/)?puja\/[^<]+/);
-      assert.doesNotMatch(body, /book-pandit-online\/varanasi/);
+      assert.doesNotMatch(body, /book-pandit-online\/(?:varanasi|uttar-pradesh\/varanasi)/);
     }
     enabled = true;
     for (const path of ["/sitemap-pages.xml", "/sitemap-puja-cities.xml"]) {
       const body = await (await fetch(`${baseUrl}${path}`)).text();
       assert.doesNotMatch(body, /\/(?:hi\/)?puja\/[^<]+/);
-      assert.match(body, /book-pandit-online\/varanasi/);
-      assert.match(body, /book-pandit-online\/varanasi\/rudrabhishek-puja/);
+      assert.match(body, /book-pandit-online\/uttar-pradesh\/varanasi/);
+      assert.doesNotMatch(body, /book-pandit-online\/varanasi(?:\/|<)/);
+      assert.doesNotMatch(body, /rudrabhishek-puja/);
     }
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     (storage as any).getSiteSettings = originalSettings;
+    (storage as any).getPanditSeoEditorial = originalEditorial;
     invalidatePanditSeoNetworkCache();
   }
 });

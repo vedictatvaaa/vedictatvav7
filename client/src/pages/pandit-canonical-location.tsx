@@ -75,14 +75,15 @@ function bookingHref(
 }
 
 export default function PanditCanonicalLocation() {
-  const { citySlug = "", serviceSlug } = useParams<{ citySlug: string; serviceSlug?: string }>();
+  const { stateSlug = "", citySlug: nestedCitySlug, serviceSlug } = useParams<{ stateSlug?: string; citySlug?: string; serviceSlug?: string }>();
+  const citySlug = nestedCitySlug || stateSlug;
   useEffect(() => {
     if (!window.location.pathname.startsWith("/pandits/")) return;
     const suffix = window.location.pathname.slice("/pandits".length);
     window.location.replace(`/book-pandit-online${suffix}${window.location.search}`);
   }, []);
   const cityQuery = useQuery<ProjectedCity>({
-    queryKey: ["/api/pandit-seo-network/cities", citySlug],
+    queryKey: ["/api/pandit-seo-network/cities", citySlug, stateSlug],
     queryFn: async () => {
       const response = await fetch(`/api/pandit-seo-network/cities/${encodeURIComponent(citySlug)}`);
       if (!response.ok) throw new Error(response.status === 404 ? "City not found" : "Unable to load this city");
@@ -117,11 +118,14 @@ export default function PanditCanonicalLocation() {
   }
 
   const city = cityQuery.data;
+  const routeCanonical = stateSlug && nestedCitySlug
+    ? `/book-pandit-online/${stateSlug}/${nestedCitySlug}`
+    : city.canonicalUrl;
   const providers = selectedService?.providers || city.providers;
   const editorial = selectedService?.editorial || city.editorial;
   const seo = buildPanditCitySeo({
-    canonicalUrl: selectedService?.canonicalUrl || city.canonicalUrl,
-    city: { name: city.city.name, canonicalUrl: city.canonicalUrl },
+    canonicalUrl: selectedService?.canonicalUrl || routeCanonical,
+    city: { name: city.city.name, canonicalUrl: routeCanonical },
     state: { name: city.state.name },
     providers,
     indexable: selectedService?.indexability.indexable ?? city.indexability.indexable,
@@ -132,7 +136,7 @@ export default function PanditCanonicalLocation() {
   const { title, description, indexable } = seo;
 
   return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
-    <PageSeo
+       <PageSeo
       title={title}
       description={description}
       canonical={seo.canonical}
@@ -143,8 +147,9 @@ export default function PanditCanonicalLocation() {
       <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
         <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-1 text-xs text-[#FBF7EE]/70">
           <Link href="/">Home</Link><ChevronRight className="h-3 w-3" />
-          <Link href="/book-pandit-online">Pandits</Link><ChevronRight className="h-3 w-3" />
-          {selectedService ? <><Link href={city.canonicalUrl}>{city.city.name}</Link><ChevronRight className="h-3 w-3" /><span>{selectedService.service.name}</span></> : <span>{city.city.name}</span>}
+           <Link href="/book-pandit-online">Pandits</Link><ChevronRight className="h-3 w-3" />
+           {stateSlug && <><Link href={`/book-pandit-online/${stateSlug}`}>{city.state.name}</Link><ChevronRight className="h-3 w-3" /></>}
+           {selectedService ? <><Link href={routeCanonical}>{city.city.name}</Link><ChevronRight className="h-3 w-3" /><span>{selectedService.service.name}</span></> : <span>{city.city.name}</span>}
         </nav>
         <Badge className="mb-3 bg-[#E9C96A] text-[#6D2B35]"><MapPin className="mr-1 h-3 w-3" />{city.city.name}, {city.state.name}</Badge>
         <h1 className="font-serif text-4xl font-semibold sm:text-5xl">

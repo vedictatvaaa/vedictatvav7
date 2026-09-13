@@ -25,17 +25,20 @@ import { registerBacklinkRoutes } from "./seo-backlinks";
 import { registerKeywordTargetRoutes, seedKeywordTargets } from "./seo-keywords";
 import { registerYatraPilgrimageRoutes, seedTirthYatraTours } from "./yatra-pilgrimage";
 import { registerPanditPortalRoutes } from "./pandit-portal";
+import { registerPanditLiveMetricsRoutes } from "./pandit-live-metrics";
 import { registerAstroRealtimeRoutes } from "./astro-realtime";
 import { registerSpiritualTrackerRoutes } from "./spiritual-tracker";
 import { registerAiCoderRoutes } from "./ai-coder";
 import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
 import { registerPanditSeoNetworkAdminRoutes } from "./pandit-seo-network/admin-routes";
+import { registerPanditStorefrontContentRoutes, buildPanditPublicFacts, getPublishedPanditContent, authoritativePanditLastmod } from "./pandit-storefront-content";
 import { registerKnowledgeGraphAdminRoutes } from "./knowledge-graph/admin-routes";
 import { registerDestinationAdminRoutes, registerDestinationPublicRoutes } from "./knowledge-graph/destination-routes";
 import { registerKnowledgeGraphPublicRoutes } from "./knowledge-graph/public-routes";
 import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerPanditGovernanceRoutes } from "./pandit-governance";
+import { registerPanditLocationRectificationRoutes } from "./pandit-location-rectification-routes";
 import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
 import { registerSeoEngineRoutes, startSeoEngine } from "./seo-engine";
@@ -289,7 +292,9 @@ export async function registerRoutes(
 
   const adminAuthMiddleware = sharedAdminAuth;
   registerPanditSeoNetworkAdminRoutes(app, adminAuthMiddleware);
+  registerPanditStorefrontContentRoutes(app, adminAuthMiddleware);
   registerPanditGovernanceRoutes(app, adminAuthMiddleware);
+  registerPanditLocationRectificationRoutes(app, adminAuthMiddleware);
   registerKnowledgeGraphAdminRoutes(app, adminAuthMiddleware);
   registerDestinationAdminRoutes(app, adminAuthMiddleware);
   // These are destination compatibility reads, not the knowledge-graph public
@@ -1165,6 +1170,7 @@ export async function registerRoutes(
   registerYatraPilgrimageRoutes(app);
   registerPanditSeoNetworkRoutes(app);
   registerPanditPortalRoutes(app);
+  registerPanditLiveMetricsRoutes(app, adminAuthMiddleware);
   registerAstroRealtimeRoutes(app);
   registerSpiritualTrackerRoutes(app);
   registerAiCoderRoutes(app, adminAuthMiddleware);
@@ -1676,6 +1682,11 @@ Sitemap: ${baseUrl}/sitemap.xml
       const sf = p.slug ? await storage.getPanditStorefrontByPanditId(p.id).catch(() => null) : null;
       if (!isPanditStorefrontPublished(sf) || !p.slug) continue;
       if (approvedProfileSlugs && !approvedProfileSlugs.has(p.slug)) continue;
+      try { await buildPanditPublicFacts(p.id); } catch { continue; }
+      const content = await getPublishedPanditContent(p.id).catch(() => null);
+      // A stale editorial remains safe on the storefront but is withheld
+      // from discovery until an Admin reviews its replacement.
+      if (content?.stale) continue;
       const pPath = `/pandit/${encodeURIComponent(p.slug)}`;
       const seo = seoMap.get(pPath);
       if (seo && !seo.robotsIndex) continue;
@@ -1684,7 +1695,9 @@ Sitemap: ${baseUrl}/sitemap.xml
       const imageBlock = p.image
         ? `    <image:image>\n      <image:loc>${escapeXml(sitemapAbsImg(baseUrl, p.image))}</image:loc>\n      <image:title>${escapeXml(`Pandit ${p.name}`)}</image:title>\n      <image:caption>${escapeXml(cleanText(p.bio) || `${p.name} — ${pSpec} pandit in ${pCity}`)}</image:caption>\n      <image:license>${escapeXml(imageLicenseUrl)}</image:license>\n    </image:image>\n`
         : "";
-      xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${pPath}`)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n${imageBlock}  </url>\n`;
+      const lastmod = authoritativePanditLastmod(p, sf, content);
+      if (!lastmod) continue;
+      xml += `  <url>\n    <loc>${escapeXml(`${baseUrl}${pPath}`)}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n${imageBlock}  </url>\n`;
     }
     for (const a of astrologers as any[]) {
       const aPath = `/astrologer/${a.id}`;

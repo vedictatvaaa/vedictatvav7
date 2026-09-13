@@ -316,6 +316,9 @@ export const pandits = pgTable("pandits", {
   slug: text("slug").unique(),
   latitude: real("latitude"),
   longitude: real("longitude"),
+  coordinateSource: text("coordinate_source"),
+  coordinateConfidence: real("coordinate_confidence"),
+  coordinateVerifiedAt: timestamp("coordinate_verified_at"),
   serviceArea: text("service_area"),
   regionalOrigin: text("regional_origin"),
   availability: text("availability").default("available"),
@@ -385,6 +388,39 @@ export const pandits = pgTable("pandits", {
   boostActiveIdx: index("pandits_boost_active_idx").on(t.boostActive),
   governanceEligibilityIdx: index("pandits_governance_eligibility_idx").on(t.directoryVisible, t.searchEligible, t.bookingEnabled),
   indexingModeCheck: check("pandits_indexing_mode_check", sql`${t.indexingMode} in ('auto', 'noindex')`),
+}));
+
+/**
+ * A location correction proposal is deliberately separate from the Pandit
+ * row. Dry-run audits can therefore be repeated without changing discovery
+ * governance, while an approved proposal retains the complete before/after
+ * evidence needed for review. The JSON fields contain location/catalogue
+ * values only; contact and credential data must never be copied here.
+ */
+export const panditLocationRectificationProposals = pgTable("pandit_location_rectification_proposals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  dedupeKey: text("dedupe_key").notNull(),
+  batchId: text("batch_id"),
+  status: text("status").notNull().default("pending"),
+  issueCategories: text("issue_categories").array().notNull().default(sql`'{}'::text[]`),
+  before: jsonb("before").notNull().default(sql`'{}'::jsonb`),
+  proposed: jsonb("proposed").notNull().default(sql`'{}'::jsonb`),
+  candidates: jsonb("candidates").notNull().default(sql`'[]'::jsonb`),
+  source: text("source").notNull(),
+  confidence: real("confidence").notNull().default(0),
+  reason: text("reason").notNull(),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  appliedAt: timestamp("applied_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  dedupeUnique: uniqueIndex("pandit_location_rectification_dedupe_unique").on(t.dedupeKey),
+  panditStatusIdx: index("pandit_location_rectification_pandit_status_idx").on(t.panditId, t.status),
+  statusCreatedIdx: index("pandit_location_rectification_status_created_idx").on(t.status, t.createdAt),
+  statusCheck: check("pandit_location_rectification_status_check", sql`${t.status} IN ('pending', 'approved', 'rejected', 'applied')`),
+  confidenceCheck: check("pandit_location_rectification_confidence_check", sql`${t.confidence} BETWEEN 0 AND 1`),
 }));
 
 export const panditSessions = pgTable("pandit_sessions", {
@@ -1005,6 +1041,84 @@ export const panditSeoEditorials = pgTable("pandit_seo_editorials", {
   entityUnique: uniqueIndex("pandit_seo_editorials_entity_unique").on(t.entityType, t.entityKey),
 }));
 
+/**
+ * Admin-reviewed storefront prose for one publicly eligible Pandit.
+ *
+ * This is intentionally separate from pandit_seo_editorials (which owns the
+ * location network) and from pandit_storefronts (which owns Pandit-entered
+ * copy).  Draft and published values live side by side so a stale or rejected
+ * draft can never replace the last safe published copy.
+ */
+export const panditStorefrontContent = pgTable("pandit_storefront_content", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  canonicalUrl: text("canonical_url").notNull(),
+  sourceSnapshotHash: text("source_snapshot_hash").notNull(),
+  publishedSourceSnapshotHash: text("published_source_snapshot_hash"),
+  sourceFields: jsonb("source_fields").notNull().default(sql`'{}'::jsonb`),
+  promptVersion: text("prompt_version").notNull(),
+  modelIdentifier: text("model_identifier"),
+  generatedProfileIntroduction: text("generated_profile_introduction"),
+  generatedTagline: text("generated_tagline"),
+  generatedServiceOverview: text("generated_service_overview"),
+  generatedSeoTitle: text("generated_seo_title"),
+  generatedMetaDescription: text("generated_meta_description"),
+  generatedFaqs: jsonb("generated_faqs").notNull().default(sql`'[]'::jsonb`),
+  generatedAiSummary: text("generated_ai_summary"),
+  publishedProfileIntroduction: text("published_profile_introduction"),
+  publishedTagline: text("published_tagline"),
+  publishedServiceOverview: text("published_service_overview"),
+  publishedSeoTitle: text("published_seo_title"),
+  publishedMetaDescription: text("published_meta_description"),
+  publishedFaqs: jsonb("published_faqs").notNull().default(sql`'[]'::jsonb`),
+  publishedAiSummary: text("published_ai_summary"),
+  status: text("status").notNull().default("draft"),
+  stale: boolean("stale").notNull().default(false),
+  staleReason: text("stale_reason"),
+  revision: integer("revision").notNull().default(1),
+  generationKey: text("generation_key"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  generatedAt: timestamp("generated_at"),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  publishedBy: text("published_by"),
+  publishedAt: timestamp("published_at"),
+  rejectedBy: text("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+}, (t) => ({
+  panditUnique: uniqueIndex("pandit_storefront_content_pandit_unique").on(t.panditId),
+  statusIdx: index("pandit_storefront_content_status_idx").on(t.status, t.stale),
+  hashIdx: index("pandit_storefront_content_source_hash_idx").on(t.sourceSnapshotHash),
+  statusCheck: check("pandit_storefront_content_status_check", sql`${t.status} in ('draft', 'reviewed', 'published', 'rejected')`),
+}));
+
+/** Append-only provenance for every attempted generation, including retries. */
+export const panditStorefrontContentGenerations = pgTable("pandit_storefront_content_generations", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  contentId: integer("content_id").references(() => panditStorefrontContent.id),
+  generationKey: text("generation_key").notNull(),
+  sourceSnapshotHash: text("source_snapshot_hash").notNull(),
+  sourceFields: jsonb("source_fields").notNull().default(sql`'{}'::jsonb`),
+  promptVersion: text("prompt_version").notNull(),
+  modelIdentifier: text("model_identifier"),
+  draft: jsonb("draft"),
+  revision: integer("revision"),
+  status: text("status").notNull().default("pending"),
+  error: text("error"),
+  reservedAt: timestamp("reserved_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  actor: text("actor"),
+}, (t) => ({
+  generationKeyUnique: uniqueIndex("pandit_storefront_content_generations_key_unique").on(t.generationKey),
+  panditCreatedIdx: index("pandit_storefront_content_generations_pandit_idx").on(t.panditId, t.reservedAt),
+  statusCheck: check("pandit_storefront_content_generations_status_check", sql`${t.status} in ('pending', 'completed', 'failed')`),
+}));
+
 // Abandoned cart capture. The frontend POSTs here when a shopper enters
 // their email at checkout but does not complete the order. A background
 // scheduler emails them a recovery nudge after a configurable delay.
@@ -1513,7 +1627,7 @@ export const insertSiteSettingsSchema = createInsertSchema(siteSettings, {
   blogFestivalAware: z.boolean().optional(),
   panditSeoNetworkEnabled: z.boolean().optional(),
 });
-export const panditSeoEditorialEntityTypeSchema = z.enum(["profile", "city", "city_service"]);
+export const panditSeoEditorialEntityTypeSchema = z.enum(["profile", "state", "city", "city_service"]);
 export const panditSeoEditorialStatusSchema = z.enum(["draft", "reviewed", "published"]);
 export const panditSeoEditorialFaqSchema = z.object({
   question: z.string().trim().min(1).max(240),
@@ -1532,6 +1646,28 @@ export const insertPanditSeoEditorialSchema = createInsertSchema(panditSeoEditor
   reviewedBy: true, reviewedAt: true,
   publishedBy: true, publishedAt: true,
 });
+export const panditStorefrontContentStatusSchema = z.enum(["draft", "reviewed", "published", "rejected"]);
+export const panditStorefrontContentFaqSchema = z.object({
+  question: z.string().trim().min(1).max(240),
+  answer: z.string().trim().min(1).max(1600),
+}).strict();
+export const panditStorefrontContentDraftSchema = z.object({
+  profileIntroduction: z.string().trim().max(8000),
+  tagline: z.string().trim().max(240),
+  serviceOverview: z.string().trim().max(3000),
+  seoTitle: z.string().trim().max(180),
+  metaDescription: z.string().trim().max(320),
+  faqs: z.array(panditStorefrontContentFaqSchema).max(12),
+  aiSummary: z.string().trim().max(1200),
+}).strict();
+export const insertPanditStorefrontContentSchema = z.object({
+  panditId: z.number().int().positive(),
+  canonicalUrl: z.string().trim().min(1).max(300),
+  sourceSnapshotHash: z.string().length(64),
+  sourceFields: z.record(z.unknown()).default({}),
+  promptVersion: z.string().trim().min(1).max(100),
+  status: panditStorefrontContentStatusSchema.default("draft"),
+}).passthrough();
 export const insertAstrologerSchema = createInsertSchema(astrologers);
 export const insertCouponSchema = createInsertSchema(coupons);
 export const insertSubscriptionSchema = createInsertSchema(subscriptions);
@@ -1586,6 +1722,9 @@ export type SiteSettings = typeof siteSettings.$inferSelect;
 export type InsertSiteSettings = z.infer<typeof insertSiteSettingsSchema>;
 export type PanditSeoEditorial = typeof panditSeoEditorials.$inferSelect;
 export type InsertPanditSeoEditorial = z.infer<typeof insertPanditSeoEditorialSchema>;
+export type PanditStorefrontContent = typeof panditStorefrontContent.$inferSelect;
+export type InsertPanditStorefrontContent = z.infer<typeof insertPanditStorefrontContentSchema>;
+export type PanditStorefrontContentGeneration = typeof panditStorefrontContentGenerations.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type InsertCoupon = z.infer<typeof insertCouponSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;

@@ -1,4 +1,5 @@
 import type { PanditSeoNetworkProjection } from "./project";
+import { cleanLocationSlug } from "./state-city-seo";
 
 export function indexableProfileSlugs(projection: PanditSeoNetworkProjection): Set<string> {
   return new Set(
@@ -8,14 +9,16 @@ export function indexableProfileSlugs(projection: PanditSeoNetworkProjection): S
   );
 }
 
-/** The sole selector used by sitemaps and public internal recommendations. */
+/** Returns hierarchy candidates only; editorial publication is applied by the
+ * async public sitemap selector before these are emitted. */
 export function indexablePanditLocationPaths(projection: PanditSeoNetworkProjection): Set<string> {
   const paths = new Set<string>();
   projection.cities.forEach((city) => {
-    if (city.indexability.indexable && city.canonicalUrl) paths.add(city.canonicalUrl);
-    city.services.forEach((service) => {
-      if (service.indexability.indexable && service.canonicalUrl) paths.add(service.canonicalUrl);
-    });
+    if (!city.indexability.indexable) return;
+    const stateSlug = cleanLocationSlug(city.state?.name || "");
+    const citySlug = cleanLocationSlug(city.city?.name || "");
+    if (stateSlug) paths.add(`/book-pandit-online/${stateSlug}`);
+    if (stateSlug && citySlug) paths.add(`/book-pandit-online/${stateSlug}/${citySlug}`);
   });
   return paths;
 }

@@ -151,10 +151,15 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
       change = { stateId: input.stateId, cityId: input.cityId, state: state[0].name, city: city[0].name, locationReviewStatus: "resolved" };
     }
     await db.transaction(async tx => {
+      const [currentStorefront] = await tx.select({
+        isPublished: panditStorefronts.isPublished,
+        status: panditStorefronts.status,
+      }).from(panditStorefronts).where(eq(panditStorefronts.panditId, id)).limit(1);
+      const storefrontPublished = !!currentStorefront?.isPublished && currentStorefront.status === "published";
       if (input.action === "publish" || input.action === "unpublish") await tx.insert(panditStorefronts).values({ panditId: id, isPublished: input.action === "publish", status: input.action === "publish" ? "published" : "draft" }).onConflictDoUpdate({ target: panditStorefronts.panditId, set: { isPublished: input.action === "publish", status: input.action === "publish" ? "published" : "draft", updatedAt: new Date() } });
       else if (input.action === "set_contact_override") { if (!input.contactAccessOverride) throw new Error("contactAccessOverride is required"); await tx.insert(panditStorefronts).values({ panditId: id, contactAccessOverride: input.contactAccessOverride }).onConflictDoUpdate({ target: panditStorefronts.panditId, set: { contactAccessOverride: input.contactAccessOverride, updatedAt: new Date() } }); }
       else await tx.update(pandits).set(change).where(eq(pandits.id, id));
-       await tx.insert(adminAuditLogs).values({ actor: `admin:${req.adminUserId || "authenticated"}`, action: `pandit_governance.${input.action}`, target: `pandit:${id}`, ipAddress: req.ip, details: { reason: input.reason || null, batchId: batchId || null, before: safeGovernanceAuditState(p), after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: input.action === "publish" ? true : input.action === "unpublish" ? false : undefined }) } });
+       await tx.insert(adminAuditLogs).values({ actor: `admin:${req.adminUserId || "authenticated"}`, action: `pandit_governance.${input.action}`, target: `pandit:${id}`, ipAddress: req.ip, details: { reason: input.reason || null, batchId: batchId || null, before: safeGovernanceAuditState({ ...p, storefrontPublished }), after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: input.action === "publish" ? true : input.action === "unpublish" ? false : storefrontPublished }) } });
     }); return { id, ok: true };
   }
   app.patch("/api/admin/pandit-governance/:id", adminAuthMiddleware, async (req: any, res) => { const parsed = write.safeParse(req.body); if (!parsed.success || !Number.isInteger(Number(req.params.id))) return res.status(400).json({ message: "Invalid governance request" }); try { res.json(await mutate(req, Number(req.params.id), parsed.data)); } catch (e: any) { res.status(e.message === "Pandit not found" ? 404 : 400).json({ message: e.message }); } });
@@ -168,9 +173,19 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
     const batchId = `pgov-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     try {
       await db.transaction(async tx => {
+        const storefrontRows = await tx.select({
+          panditId: panditStorefronts.panditId,
+          isPublished: panditStorefronts.isPublished,
+          status: panditStorefronts.status,
+        }).from(panditStorefronts).where(inArray(panditStorefronts.panditId, ids));
+        const storefrontPublishedById = new Map(storefrontRows.map(storefront => [
+          storefront.panditId,
+          !!storefront.isPublished && storefront.status === "published",
+        ]));
         for (const id of ids) {
           const p = byId.get(id)!;
           const action = parsed.data.action;
+          const storefrontPublished = storefrontPublishedById.get(id) === true;
           const change =
             action === "directory_show" ? { directoryVisible: true } :
             action === "directory_hide" ? { directoryVisible: false } :
@@ -198,8 +213,8 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
             details: {
               reason: parsed.data.reason,
               batchId,
-              before: safeGovernanceAuditState(p),
-              after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: action === "publish" ? true : action === "unpublish" ? false : undefined }),
+              before: safeGovernanceAuditState({ ...p, storefrontPublished }),
+              after: safeGovernanceAuditState({ ...p, ...change, storefrontPublished: action === "publish" ? true : action === "unpublish" ? false : storefrontPublished }),
             },
           });
         }

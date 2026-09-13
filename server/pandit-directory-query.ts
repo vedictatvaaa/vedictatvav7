@@ -4,6 +4,7 @@ import { adminPanditDto, publicPanditDto } from "./pandit-discovery-policy";
 import { onlinePanditIds } from "./pandit-portal";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 import { storage } from "./storage";
+import { resolveActiveCityState } from "./pandit-location-rectification";
 
 export const DIRECTORY_SORTS = ["best_match", "highest_rated", "most_reviewed", "price_low", "price_high", "nearest", "experience"] as const;
 type DirectorySort = typeof DIRECTORY_SORTS[number];
@@ -62,11 +63,20 @@ const distanceExpression = (lat?: number, lng?: number) => lat === undefined || 
 
 export async function queryPanditDirectory(input: DirectoryQuery) {
   const where: SQL[] = [];
+  // City-only requests must inherit the catalogue city's state before
+  // service-area reach is evaluated. Previously the gold-tier branch compared
+  // state_id with an undefined value, so city-only and state+city requests
+  // returned different populations.
+  const resolvedCityStateId = input.cityId && !input.stateId
+    ? await resolveActiveCityState(input.cityId)
+    : undefined;
+  const effectiveStateId = input.stateId || resolvedCityStateId;
+  if (input.cityId && !effectiveStateId) where.push(sql`false`);
   // This is the SQL equivalent of isPanditPubliclyEligible. Keep this predicate
   // aligned with that helper; inner joins also enforce active canonical locations.
   if (!input.showAll) where.push(sql`p.verified = true and p.on_leave = false and p.archived = false and p.directory_visible = true and p.search_eligible = true and p.location_review_status = 'resolved' and p.account_status <> 'banned' and (p.account_status <> 'suspended' or (p.suspended_until is not null and p.suspended_until <= now()))`);
   if (input.q) where.push(sql`(p.name ilike ${`%${input.q}%`} or p.city ilike ${`%${input.q}%`} or p.specialization ilike ${`%${input.q}%`})`);
-  if (input.stateId) where.push(sql`p.state_id = ${input.stateId}`);
+  if (effectiveStateId) where.push(sql`p.state_id = ${effectiveStateId}`);
   if (input.cityId) where.push(sql`p.city_id = ${input.cityId}`);
   if (input.region) where.push(sql`p.regional_origin ilike ${`%${input.region}%`}`);
   if (input.maxPrice !== undefined) where.push(sql`p.fees <= ${input.maxPrice}`);
@@ -78,8 +88,8 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
     // The legacy specialization fallback applies only to pandits with none.
     where.push(sql`(exists (select 1 from pandit_services ps join master_services ms on ms.id = ps.master_service_id and ms.is_active = true where ps.pandit_id = p.id and ps.is_active = true and (ms.name ilike ${wanted} or ms.slug ilike ${wanted})) or (not exists (select 1 from pandit_services any_ps where any_ps.pandit_id = p.id) and p.specialization ilike ${wanted}))`);
   }
-  if (!input.nearMe && input.cityId) where.push(sql`((lower(coalesce(p.tier, 'free')) in ('platinum', 'guru_elite') and (p.tier_expires_at is null or p.tier_expires_at >= now())) or (lower(coalesce(p.tier, 'free')) = 'gold' and (p.tier_expires_at is null or p.tier_expires_at >= now()) and p.state_id = ${input.stateId!}) or p.city_id = ${input.cityId})`);
-  else if (!input.nearMe && input.stateId) where.push(sql`((lower(coalesce(p.tier, 'free')) in ('platinum', 'guru_elite') and (p.tier_expires_at is null or p.tier_expires_at >= now())) or (lower(coalesce(p.tier, 'free')) = 'gold' and (p.tier_expires_at is null or p.tier_expires_at >= now()) and p.state_id = ${input.stateId}))`);
+  if (!input.nearMe && input.cityId) where.push(sql`((lower(coalesce(p.tier, 'free')) in ('platinum', 'guru_elite') and (p.tier_expires_at is null or p.tier_expires_at >= now())) or (lower(coalesce(p.tier, 'free')) = 'gold' and (p.tier_expires_at is null or p.tier_expires_at >= now()) and p.state_id = ${effectiveStateId!}) or p.city_id = ${input.cityId})`);
+  else if (!input.nearMe && effectiveStateId) where.push(sql`((lower(coalesce(p.tier, 'free')) in ('platinum', 'guru_elite') and (p.tier_expires_at is null or p.tier_expires_at >= now())) or (lower(coalesce(p.tier, 'free')) = 'gold' and (p.tier_expires_at is null or p.tier_expires_at >= now()) and p.state_id = ${effectiveStateId}))`);
 
   // Heartbeats are runtime-only, so take one complete snapshot before SQL;
   // do not paginate before this predicate and do not look up each row.

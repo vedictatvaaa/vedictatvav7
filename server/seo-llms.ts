@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import rateLimit from "express-rate-limit";
-import { getPubliclyEligiblePandits } from "./pandit-public-access";
+import { getPanditDiscoveryFeed } from "./pandit-storefront-content";
 
 // llms.txt — convention for AI crawlers (ChatGPT/Claude/Perplexity) to discover
 // site structure and authoritative content.
@@ -31,7 +31,7 @@ const aiCrawlerLimiter = rateLimit({
 
 export async function buildLlmsTxt(siteUrl: string): Promise<string> {
   const products = (await storage.getProducts()).slice(0, 50);
-  const pandits = (await getPubliclyEligiblePandits()).slice(0, 20);
+  const pandits = (await getPanditDiscoveryFeed(siteUrl)).slice(0, 20);
   const lines: string[] = [];
   lines.push(`# Vedic Tatva`);
   lines.push("");
@@ -62,9 +62,10 @@ export async function buildLlmsTxt(siteUrl: string): Promise<string> {
   lines.push("");
   lines.push("## Verified Pandits");
   for (const pa of pandits) {
-    const path = pa.slug ? `/pandit/${pa.slug}` : `/pandit/${pa.id}`;
-    lines.push(`- [${pa.name}](${siteUrl}${path}): ${pa.specialization || "Vedic Pandit"}`);
+    const summary = pa.summary || `${pa.name} offers published Vedic puja services${pa.location.city ? ` in ${pa.location.city}` : ""}.`;
+    lines.push(`- [${pa.name}](${pa.url}): ${summary}`);
   }
+  lines.push(`\n- [Factual Pandit discovery feed](${siteUrl}/api/ai/pandit-feed)`);
   lines.push("");
   lines.push("## Optional");
   lines.push(`- [Sitemap](${siteUrl}/sitemap.xml)`);
@@ -88,7 +89,7 @@ export function registerLlmsRoutes(app: Express) {
   // AI-friendly product summary — clean JSON LLMs can consume reliably
   app.get("/api/ai/product-summary/:slug", aiCrawlerLimiter, async (req, res) => {
     try {
-      const slug = req.params.slug;
+    const slug = String(req.params.slug || "");
       const product = (await storage.getProductBySlug(slug)) ||
         (Number.isFinite(Number(slug)) ? await storage.getProduct(Number(slug)) : undefined);
       if (!product) return res.status(404).json({ message: "Product not found" });
@@ -118,6 +119,19 @@ export function registerLlmsRoutes(app: Express) {
       });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  // Factual AI-discovery feed. It is deliberately assembled from allow-listed
+  // public DTOs and never serializes a Pandit/storefront database row.
+  app.get("/api/ai/pandit-feed", aiCrawlerLimiter, async (req, res) => {
+    try {
+      const siteUrl = (process.env.PUBLIC_SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
+      const profiles = await getPanditDiscoveryFeed(siteUrl);
+      res.set("Cache-Control", "public, max-age=300, s-maxage=900");
+      res.json({ generatedAt: new Date().toISOString(), profiles });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to generate Pandit feed" });
     }
   });
 }

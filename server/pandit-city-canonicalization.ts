@@ -1,6 +1,23 @@
 type Service = { canonicalUrl: string | null; service: { slug: string; name: string } };
-type City = { canonicalUrl: string | null; city: { slug: string }; services: Service[] };
+type City = {
+  canonicalUrl: string | null;
+  city: { slug: string; name?: string; aliases?: string[] | null };
+  state?: { name?: string; code?: string };
+  services: Service[];
+};
 type Projection = { cities: City[] };
+
+const cleanSlug = (value: string) => value
+  .normalize("NFKD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toLowerCase()
+  .trim()
+  .replace(/[^a-z0-9]+/g, "-")
+  .replace(/^-+|-+$/g, "");
+
+const canonicalCityPath = (city: City) => city.state?.name && city.city.name
+  ? `/book-pandit-online/${encodeURIComponent(cleanSlug(city.state.name))}/${encodeURIComponent(cleanSlug(city.city.name))}`
+  : city.canonicalUrl;
 
 const LEGACY_SERVICE_SLUGS: Record<string, string[]> = {
   "satyanarayan-puja": ["satyanarayan-puja", "satyanarayan"],
@@ -35,18 +52,32 @@ export function resolvePanditCityCanonicalization(
   citySlug: string,
   serviceSlug?: string,
 ): string | null {
-  const city = projection.cities.find((item) => item.city.slug === citySlug);
+  const wanted = cleanSlug(citySlug);
+  // A two-segment hierarchy route is handled by the canonical location
+  // projection, not this legacy city/service compatibility resolver.
+  if (projection.cities.some((item) =>
+    item.state?.name && cleanSlug(item.state.name) === wanted,
+  )) return null;
+  const city = projection.cities.find((item) => [
+    item.city.slug,
+    item.city.name,
+    ...(item.city.aliases || []),
+  ].filter((value): value is string => Boolean(value)).map(cleanSlug).includes(wanted));
   if (!city?.canonicalUrl) return null;
-  if (!serviceSlug) return family === "legacy" ? city.canonicalUrl : null;
+  const canonical = canonicalCityPath(city);
+  if (!canonical) return null;
+  if (!serviceSlug) return family === "legacy" ? canonical : null;
   const exact = city.services.find((service) => service.service.slug === serviceSlug && service.canonicalUrl);
-  if (exact) return family === "legacy" ? exact.canonicalUrl : null;
+  // Location pages no longer have a flat city/service canonical. All legacy
+  // service URLs consolidate into the state/city page.
+  if (exact) return canonical;
   const mapped = LEGACY_SERVICE_SLUGS[serviceSlug] || [];
   const target = city.services.find((service) =>
     (mapped.includes(service.service.slug)
       || normaliseServiceName(service.service.name) === LEGACY_SERVICE_NAMES[serviceSlug])
     && service.canonicalUrl,
   );
-  return target?.canonicalUrl || city.canonicalUrl;
+  return canonical;
 }
 
 export function redirectTargetWithQuery(path: string, originalUrl: string) {

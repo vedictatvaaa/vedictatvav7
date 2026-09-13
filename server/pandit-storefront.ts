@@ -46,6 +46,7 @@ import { canonicalPanditRedirectTarget } from "./pandit-route-context";
 import { assertPackagePriceCompliant, assertRateCompliant, modeAllowed } from "./puja-booking/pricing";
 import { canonicalBookingMode } from "@shared/puja-booking";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
+import { getPublishedPanditContent } from "./pandit-storefront-content";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -388,6 +389,11 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
       ? publicPanditPackageDto(pkg, items)
       : null;
   }))).filter(Boolean);
+  const editorial = await getPublishedPanditContent(pandit.id).catch(() => null);
+  const editorialStorefront = editorial && {
+    bio: editorial.publishedProfileIntroduction || null,
+    tagline: editorial.publishedTagline || null,
+  };
   return {
     pandit: {
       ...publicStorefrontPanditDto(pandit),
@@ -396,8 +402,8 @@ async function buildStorefrontDto(slug: string, authoritativeProfile?: PanditPro
     },
     storefront: sf
       ? {
-          bio: sf.bio,
-          tagline: sf.tagline,
+          bio: editorialStorefront?.bio || sf.bio,
+          tagline: editorialStorefront?.tagline || sf.tagline,
           themeColor: sf.themeColor,
           bannerImage: sf.bannerImage,
           featuredPujas: sf.featuredPujas || [],
@@ -672,8 +678,40 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       }
       const dto = await buildStorefrontDto(slug, profile || undefined);
       if (!dto) return res.status(404).json({ message: "Storefront not found" });
+      const editorial = profile?.pandit?.id
+        ? await getPublishedPanditContent(profile.pandit.id).catch(() => null)
+        : null;
       const responseDto = profile
-        ? { ...dto, seo: buildPanditProfileSeoHead(profile, siteUrl(req)) }
+        ? (() => {
+            const seo = buildPanditProfileSeoHead(
+              editorial?.publishedProfileIntroduction
+                ? { ...profile, pandit: { ...profile.pandit!, bio: editorial.publishedProfileIntroduction } }
+                : profile,
+              siteUrl(req),
+            );
+            if (editorial?.publishedSeoTitle) seo.title = editorial.publishedSeoTitle;
+            if (editorial?.stale) seo.robotsIndex = false;
+            if (editorial?.publishedMetaDescription) {
+              seo.description = editorial.publishedMetaDescription;
+              const person = seo.jsonLd.find((item) => item.id === "pandit-person");
+              if (person) person.payload.description = editorial.publishedMetaDescription;
+            }
+            if (Array.isArray(editorial?.publishedFaqs) && editorial!.publishedFaqs.length) {
+              seo.jsonLd.push({
+                id: "pandit-faq",
+                payload: {
+                  "@context": "https://schema.org",
+                  "@type": "FAQPage",
+                  mainEntity: (editorial!.publishedFaqs as Array<{ question: string; answer: string }>).map((faq) => ({
+                    "@type": "Question",
+                    name: faq.question,
+                    acceptedAnswer: { "@type": "Answer", text: faq.answer },
+                  })),
+                },
+              });
+            }
+            return { ...dto, seo };
+          })()
         : dto;
       // Server-side attribution: any visit to /p/<slug> (which the SPA loads
       // by hitting this endpoint) stamps the vt_ref cookie for 30 days, so

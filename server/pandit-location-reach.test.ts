@@ -128,6 +128,19 @@ test("service-filtered State and City counts match the filtered eligible records
   );
 });
 
+test("discovery exposes active catalogue states and cities with zero eligible counts", () => {
+  const summary = buildPanditDiscoverySummary(
+    eligiblePandits,
+    [...states, { id: 99, name: "Zero State", code: "ZS", isActive: true }],
+    [...cities, { id: 999, stateId: 99, name: "Zero City", slug: "zero-city", isActive: true }],
+  );
+  const zero = summary.states.find(state => state.id === 99);
+  assert.ok(zero);
+  assert.equal(zero.count, 0);
+  assert.equal(zero.cities.length, 1);
+  assert.equal(zero.cities[0].count, 0);
+});
+
 test("catalogue Puja suffixes and Navagraha spelling variants match Pandit offerings", () => {
   assert.equal(
     matchesPanditListingFilters(

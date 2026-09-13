@@ -10,6 +10,14 @@ import {
   invalidatePanditSeoNetworkCache,
 } from "./cache";
 import { storage } from "../storage";
+import {
+  getHierarchicalLocation,
+  resolveLegacyCityLocation,
+} from "./state-city-seo";
+import {
+  getPublishedLocationEditorial,
+  locationEditorialIsIndexable,
+} from "./editorial";
 
 export function isPanditSeoNetworkEnabled(settings: { panditSeoNetworkEnabled?: boolean } | undefined) {
   return settings?.panditSeoNetworkEnabled === true;
@@ -18,14 +26,30 @@ export function isPanditSeoNetworkEnabled(settings: { panditSeoNetworkEnabled?: 
 export async function getPanditSeoNetworkSitemapPages() {
   if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return [];
   const projection = await getPanditSeoNetworkProjection();
-  return projection.cities.flatMap((city) => [
-    ...(city.indexability.indexable && city.canonicalUrl
-      ? [{ loc: city.canonicalUrl, priority: "0.9", changefreq: "weekly" }]
-      : []),
-    ...city.services
-      .filter((service) => service.indexability.indexable && service.canonicalUrl)
-      .map((service) => ({ loc: service.canonicalUrl!, priority: "0.75", changefreq: "weekly" })),
-  ]);
+  const locations = new Map<string, ReturnType<typeof getHierarchicalLocation>>();
+  for (const city of projection.cities) {
+    const state = getHierarchicalLocation(projection, city.state.name);
+    const location = getHierarchicalLocation(projection, city.state.name, city.city.name);
+    if (state) locations.set(state.canonicalUrl, state);
+    if (location) locations.set(location.canonicalUrl, location);
+  }
+  const pages = [];
+  for (const location of Array.from(locations.values())) {
+    if (!location) continue;
+    let editorial = null;
+    try {
+      editorial = await getPublishedLocationEditorial(location);
+    } catch {
+      continue;
+    }
+    if (!locationEditorialIsIndexable(location, editorial)) continue;
+    pages.push({
+      loc: location.canonicalUrl,
+      priority: location.kind === "state" ? "0.9" : "0.85",
+      changefreq: "weekly",
+    });
+  }
+  return pages;
 }
 export function selectPublicProfile(
   projection: PanditSeoNetworkProjection,
@@ -113,6 +137,21 @@ export function selectCityService(
   return selectCityHub(projection, citySlug)?.services.find(
     (service) => service.service.slug === serviceSlug,
   ) || null;
+}
+
+export function selectHierarchicalPanditLocation(
+  projection: PanditSeoNetworkProjection,
+  stateSlug: string,
+  citySlug?: string,
+) {
+  return getHierarchicalLocation(projection, stateSlug, citySlug);
+}
+
+export function selectLegacyPanditCityLocation(
+  projection: PanditSeoNetworkProjection,
+  citySlug: string,
+) {
+  return resolveLegacyCityLocation(projection, citySlug);
 }
 
 export async function resolvePublicPanditLocation(
@@ -210,6 +249,71 @@ export function registerPanditSeoNetworkRoutes(app: Express) {
       cachePublicProjection(res);
       return res.json({
         ...city,
+        editorial: editorial?.status === "published"
+          ? { introduction: editorial.introduction, faqs: editorial.faqs }
+          : null,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/api/pandit-seo-network/states/:stateSlug", async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const location = selectHierarchicalPanditLocation(
+        await getPanditSeoNetworkProjection(),
+        routeParam(req.params.stateSlug),
+      );
+      if (!location || location.kind !== "state") {
+        return res.status(404).json({ message: "State not found" });
+      }
+      const editorial = await getPublishedLocationEditorial(location);
+      cachePublicProjection(res);
+      return res.json({
+        kind: location.kind,
+        state: location.state,
+        canonicalUrl: location.canonicalUrl,
+        providers: location.providers,
+        indexability: location.indexability,
+        editorial: editorial
+          ? { introduction: editorial.introduction, faqs: editorial.faqs }
+          : null,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get("/api/pandit-seo-network/locations/:stateSlug/:citySlug", async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const location = selectHierarchicalPanditLocation(
+        await getPanditSeoNetworkProjection(),
+        routeParam(req.params.stateSlug),
+        routeParam(req.params.citySlug),
+      );
+      if (!location || location.kind !== "city") {
+        return res.status(404).json({ message: "City not found" });
+      }
+      const editorial = await storage.getPanditSeoEditorial(
+        "city",
+        location.city!.entityId,
+      );
+      cachePublicProjection(res);
+      return res.json({
+        kind: location.kind,
+        state: location.state,
+        city: location.city?.city,
+        canonicalUrl: location.canonicalUrl,
+        providers: location.providers,
+        indexability: location.indexability,
         editorial: editorial?.status === "published"
           ? { introduction: editorial.introduction, faqs: editorial.faqs }
           : null,

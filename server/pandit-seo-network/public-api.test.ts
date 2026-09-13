@@ -36,6 +36,9 @@ const pandit = {
   verified: true,
   onLeave: false,
   locationReviewStatus: "resolved",
+  directoryVisible: true,
+  searchEligible: true,
+  bookingEnabled: true,
 };
 
 function dependencies(calls: { count: number }): PanditSeoNetworkDependencies {

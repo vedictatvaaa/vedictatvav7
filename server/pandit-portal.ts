@@ -149,11 +149,19 @@ function verifyPasswordLinkToken(token: string): PasswordLinkPayload | null {
 // ---------------------------------------------------------------------------
 const HEARTBEAT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const heartbeats = new Map<number, number>();
+// Heartbeats are intentionally process-local. Until this process has received
+// at least one portal heartbeat, an empty map is not evidence that nobody is
+// online (it is also the state immediately after a restart).
+let presenceViewInitialized = false;
+export function isPresenceViewInitialized(): boolean {
+  return presenceViewInitialized;
+}
 export function isPanditOnline(panditId: number): boolean {
   const ts = heartbeats.get(panditId);
   return !!ts && Date.now() - ts < HEARTBEAT_TTL_MS;
 }
-/** A complete active snapshot for bulk directory filtering; never query this per row. */
+/** A complete active snapshot for this process; never query this per row.
+ * It is not a cross-instance/global presence source. */
 export function onlinePanditIds(): number[] {
   const now = Date.now();
   const ids: number[] = [];
@@ -477,6 +485,7 @@ export function registerPanditPortalRoutes(app: Express) {
 
   // Live heartbeat — called from the pandit portal every ~60s.
   app.post("/api/pandit/heartbeat", panditAuthMiddleware, (req: PanditRequest, res) => {
+    presenceViewInitialized = true;
     heartbeats.set(req.panditId!, Date.now());
     res.json({ ok: true, ttlMs: HEARTBEAT_TTL_MS });
   });

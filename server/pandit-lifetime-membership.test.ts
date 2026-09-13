@@ -160,6 +160,17 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       });
       return { status: response.status, body: await response.json() };
     };
+    const adminRequest = async (method: "GET" | "PATCH", url: string, body?: unknown) => {
+      const response = await fetch(`${baseUrl}${url}`, {
+        method,
+        headers: {
+          "content-type": "application/json",
+          "x-admin-token": token,
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      return { status: response.status, body: await response.json() };
+    };
 
     const submitted = await post("/api/pandit-applications", {
       fullName,
@@ -206,6 +217,50 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
     assert.equal(publicBody.pandit.id, panditId);
     assert.equal(publicBody.pandit.verified, true);
     assert.equal(publicBody.pandit.registrationNo, approved.body.registrationNo);
+
+    const governanceBefore = await adminRequest("GET", `/api/admin/pandit-governance?q=${encodeURIComponent(fullName)}`);
+    assert.equal(governanceBefore.status, 200);
+    const governanceRow = governanceBefore.body.items.find((item: any) => item.id === panditId);
+    assert.ok(governanceRow);
+    assert.equal(governanceRow.publication.published, true);
+    assert.equal(governanceRow.publication.directoryVisible, false);
+    assert.equal(governanceRow.publication.searchEligible, false);
+    assert.equal(governanceRow.bookingEnabled, false);
+
+    const applyGovernance = async (action: string) => {
+      const result = await adminRequest("PATCH", `/api/admin/pandit-governance/${panditId}`, {
+        action,
+        reason: `HTTP governance contract: ${action}`,
+        confirmed: true,
+      });
+      assert.equal(result.status, 200);
+    };
+    await applyGovernance("directory_show");
+    const directoryOnly = await adminRequest("GET", `/api/admin/pandit-governance?q=${encodeURIComponent(fullName)}`);
+    const directoryOnlyRow = directoryOnly.body.items.find((item: any) => item.id === panditId);
+    assert.equal(directoryOnlyRow.publication.published, true);
+    assert.equal(directoryOnlyRow.publication.directoryVisible, true);
+    assert.equal(directoryOnlyRow.publication.searchEligible, false);
+    assert.equal(directoryOnlyRow.bookingEnabled, false);
+
+    await applyGovernance("search_enable");
+    const searchEnabled = await adminRequest("GET", `/api/admin/pandit-governance?q=${encodeURIComponent(fullName)}`);
+    const searchEnabledRow = searchEnabled.body.items.find((item: any) => item.id === panditId);
+    assert.equal(searchEnabledRow.publication.directoryVisible, true);
+    assert.equal(searchEnabledRow.publication.searchEligible, true);
+    assert.equal(searchEnabledRow.bookingEnabled, false);
+
+    await applyGovernance("booking_enable");
+    const governanceAfter = await adminRequest("GET", `/api/admin/pandit-governance?q=${encodeURIComponent(fullName)}`);
+    const governanceAfterRow = governanceAfter.body.items.find((item: any) => item.id === panditId);
+    assert.equal(governanceAfterRow.publication.published, true);
+    assert.equal(governanceAfterRow.publication.directoryVisible, true);
+    assert.equal(governanceAfterRow.publication.searchEligible, true);
+    assert.equal(governanceAfterRow.bookingEnabled, true);
+    for (const action of ["pandit_governance.directory_show", "pandit_governance.search_enable", "pandit_governance.booking_enable"]) {
+      assert.ok(governanceAfterRow.auditHistory.some((entry: any) => entry.action === action && entry.details.reason.includes("HTTP governance contract")));
+    }
+    assert.equal(governanceAfterRow.auditHistory.find((entry: any) => entry.action === "pandit_governance.directory_show").details.after.storefrontPublished, true);
 
     const retried = await post(`/api/admin/pandit-applications/${applicationId}/approve`, {}, true);
     assert.equal(retried.status, 200);

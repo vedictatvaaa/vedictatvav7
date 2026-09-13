@@ -31,6 +31,8 @@ export const TABS: TabDef[] = [
   { id: "pandit-affiliate", label: "Pandit Affiliate", icon: Share2,       section: "People" },
   { id: "pandit-memberships", label: "Pandit Memberships", icon: Crown,    section: "People" },
   { id: "pandit-governance", label: "Pandit Governance", icon: ShieldCheck, section: "People" },
+  { id: "pandit-network-activity", label: "Pandit Network Activity", icon: Activity, section: "People" },
+  { id: "pandit-storefront-content", label: "Pandit Storefront Content", icon: FileText, section: "People" },
   { id: "astrologers",     label: "Astrologers",      icon: Star,          section: "People" },
   { id: "matrimony",       label: "Matrimony",        icon: Heart,         section: "People" },
   { id: "reviews",         label: "Reviews",          icon: Star,          section: "Marketing" },

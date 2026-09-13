@@ -13,6 +13,14 @@ import {
   selectPublicProfile,
 } from "./pandit-seo-network/public-api";
 import type { PanditSeoNetworkProjection } from "./pandit-seo-network/project";
+import {
+  getHierarchicalLocation,
+  resolveLegacyCityLocation,
+} from "./pandit-seo-network/state-city-seo";
+import {
+  getPublishedLocationEditorial,
+  locationEditorialIsIndexable,
+} from "./pandit-seo-network/editorial";
 
 export type PublicRouteDecision =
   | { kind: "registered" }
@@ -75,18 +83,26 @@ export async function resolvePublicRouteDecision(
 
   const networkMatch = cleanPath.match(/^\/(?:book-pandit-online|pandits)\/([^/]+)(?:\/([^/]+))?$/);
   if (networkMatch) {
-    const citySlug = decodeRouteSegment(networkMatch[1]);
-    const serviceSlug = networkMatch[2] ? decodeRouteSegment(networkMatch[2]) : null;
-    if (!citySlug || (networkMatch[2] && !serviceSlug)) {
+    const first = decodeRouteSegment(networkMatch[1]);
+    const second = networkMatch[2] ? decodeRouteSegment(networkMatch[2]) : null;
+    if (!first || (networkMatch[2] && !second)) {
       return { kind: "pandit-network", found: false, indexable: false };
     }
     if (!await dependencies.getPanditNetworkEnabled()) {
       return { kind: "pandit-network", found: false, indexable: false, disabled: true };
     }
     const projection = await dependencies.getPanditNetwork();
-    const entity = serviceSlug
-      ? selectCityService(projection, citySlug, serviceSlug)
-      : selectCityHub(projection, citySlug);
+    const hierarchical = getHierarchicalLocation(projection, first, second || undefined);
+    const legacyCity = second ? selectCityHub(projection, first) : null;
+    const entity = hierarchical || (second
+      ? selectCityService(projection, first, second)
+      : selectCityHub(projection, first));
+    // Before the hierarchy rollout, a known city/service route was a useful
+    // noindex landing even when its provider supply was empty. Preserve that
+    // hard-navigation contract while keeping unknown locations as 404s.
+    if (!entity && second && legacyCity) {
+      return { kind: "pandit-network", found: true, indexable: false };
+    }
     return {
       kind: "pandit-network",
       found: Boolean(entity),
@@ -129,7 +145,7 @@ function acceptsHtml(req: Request): boolean {
 
 export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDependencies = defaultDependencies) {
   return async function publicRouteIntegrity(req: Request, res: Response, next: NextFunction) {
-    if (req.method !== "GET" || !acceptsHtml(req)) return next();
+    if (!["GET", "HEAD"].includes(req.method) || !acceptsHtml(req)) return next();
     // This middleware governs public SPA navigations only. Browser fetch()
     // defaults to Accept: */*, so API routes must be excluded by path rather
     // than inferred from Accept headers. Otherwise an API registered later in
@@ -138,6 +154,97 @@ export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDepende
     if (req.path.includes(".") && !req.path.endsWith(".html") && !req.path.endsWith("/")) return next();
 
     try {
+      // Optional nested profile-like URLs never become duplicate documents.
+      // Redirect only after the authoritative public resolver confirms the
+      // profile, so a private/suspended slug cannot be enumerated.
+      const nestedProfile = req.path.match(
+        /^\/book-pandit-online\/[^/]+\/[^/]+\/([^/]+)\/?$/,
+      );
+      if (nestedProfile && await dependencies.getPanditNetworkEnabled()) {
+        const slug = decodeRouteSegment(nestedProfile[1]);
+        const profile = slug ? await dependencies.getPublishedPanditBySlug(slug) : null;
+        if (profile) {
+          const query = req.originalUrl.includes("?")
+            ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+            : "";
+          return res.redirect(301, `/pandit/${encodeURIComponent(slug!)}${query}`);
+        }
+      }
+
+      // /pandits is the retired alias family. Resolve both state/city aliases
+      // and old flat city spellings to the one canonical hierarchy.
+      const legacy = req.path.match(/^\/pandits\/([^/]+)(?:\/([^/]+))?\/?$/);
+      if (legacy && await dependencies.getPanditNetworkEnabled()) {
+        const projection = await dependencies.getPanditNetwork();
+        const first = decodeRouteSegment(legacy[1]);
+        const second = legacy[2] ? decodeRouteSegment(legacy[2]) : null;
+        const location = first
+          ? getHierarchicalLocation(projection, first, second || undefined)
+            || (!second ? resolveLegacyCityLocation(projection, first) : null)
+          : null;
+        if (location) {
+          const query = req.originalUrl.includes("?")
+            ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+            : "";
+          return res.redirect(301, `${location.canonicalUrl}${query}`);
+        }
+      }
+
+      const flatLocation = req.path.match(/^\/book-pandit-online\/([^/]+)\/?$/);
+      if (flatLocation && await dependencies.getPanditNetworkEnabled()) {
+        const value = decodeRouteSegment(flatLocation[1]);
+        if (value) {
+          const projection = await dependencies.getPanditNetwork();
+          const location = resolveLegacyCityLocation(projection, value);
+          // Flat city URLs are all legacy inputs now, including the clean
+          // city-name spelling. They must never remain alternate canonicals.
+          if (location) {
+            const query = req.originalUrl.includes("?")
+              ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+              : "";
+            return res.redirect(301, `${location.canonicalUrl}${query}`);
+          }
+        }
+      }
+
+      const hierarchicalPath = req.path.match(
+        /^\/book-pandit-online\/([^/]+)(?:\/([^/]+))?\/?$/,
+      );
+      if (hierarchicalPath && await dependencies.getPanditNetworkEnabled()) {
+        const first = decodeRouteSegment(hierarchicalPath[1]);
+        const second = hierarchicalPath[2] ? decodeRouteSegment(hierarchicalPath[2]) : null;
+        if (first) {
+          const projection = await dependencies.getPanditNetwork();
+          const location = getHierarchicalLocation(projection, first, second || undefined);
+          if (location && normalisePath(req.path) !== normalisePath(location.canonicalUrl)) {
+            const query = req.originalUrl.includes("?")
+              ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+              : "";
+            return res.redirect(301, `${location.canonicalUrl}${query}`);
+          }
+        }
+      }
+
+      // A retired flat city/service URL can use either the catalogue slug
+      // (for example up-noida) or the clean city name (noida). Resolve it
+      // before the generic network decision and consolidate to hierarchy.
+      const flatService = req.path.match(
+        /^\/book-pandit-online\/([^/]+)\/([^/]+)\/?$/,
+      );
+      if (flatService && await dependencies.getPanditNetworkEnabled()) {
+        const cityValue = decodeRouteSegment(flatService[1]);
+        if (cityValue) {
+          const projection = await dependencies.getPanditNetwork();
+          const location = resolveLegacyCityLocation(projection, cityValue);
+          if (location) {
+            const query = req.originalUrl.includes("?")
+              ? req.originalUrl.slice(req.originalUrl.indexOf("?"))
+              : "";
+            return res.redirect(301, `${location.canonicalUrl}${query}`);
+          }
+        }
+      }
+
       // A retired slug is never reassigned. Redirect only when its current
       // profile remains public, so a later suspension cannot leak existence.
       const oldSlug = req.path.match(/^\/pandit\/([^/]+)\/?$/)?.[1];
@@ -152,7 +259,26 @@ export function publicRouteIntegrityMiddleware(dependencies: PublicEntityDepende
       }
       const decision = await resolvePublicRouteDecision(req.path, dependencies);
       if (decision.kind === "pandit-network" && decision.found) {
-        if (!decision.indexable) res.setHeader("X-Robots-Tag", "noindex, follow");
+        let indexable = decision.indexable;
+        const hierarchy = req.path.match(
+          /^\/book-pandit-online\/([^/]+)(?:\/([^/]+))?\/?$/,
+        );
+        if (indexable && hierarchy) {
+          try {
+            const location = getHierarchicalLocation(
+              await dependencies.getPanditNetwork(),
+              decodeRouteSegment(hierarchy[1]) || "",
+              hierarchy[2] ? decodeRouteSegment(hierarchy[2]) || undefined : undefined,
+            );
+            if (location) {
+              const editorial = await getPublishedLocationEditorial(location);
+              indexable = locationEditorialIsIndexable(location, editorial);
+            }
+          } catch {
+            indexable = false;
+          }
+        }
+        if (!indexable) res.setHeader("X-Robots-Tag", "noindex, follow");
         return next();
       }
       if (decision.kind === "registered" || (decision.kind === "entity" && decision.found)) {

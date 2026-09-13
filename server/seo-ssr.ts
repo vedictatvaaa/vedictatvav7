@@ -43,6 +43,16 @@ import {
   type ResolvedSeoMetadata,
 } from "../shared/seo-metadata";
 import { buildPanditCitySeo } from "../shared/pandit-city-seo";
+import {
+  buildHierarchicalLocationSeo,
+  getHierarchicalLocation,
+  parsePanditLocationPath,
+  type LocationEditorial,
+} from "./pandit-seo-network/state-city-seo";
+import {
+  getPublishedLocationEditorial,
+  locationEditorialIsIndexable,
+} from "./pandit-seo-network/editorial";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
@@ -237,6 +247,41 @@ export async function resolvePanditNetworkHead(
     jsonLd: seo.schemas,
   };
 }
+
+/** SSR metadata for the canonical state → city location hierarchy. */
+export async function resolvePanditHierarchicalHead(
+  reqPath: string,
+  baseUrl: string,
+): Promise<Head | null> {
+  const parsed = parsePanditLocationPath(reqPath);
+  if (!parsed || parsed.cityValue === undefined && !parsed.stateValue) return null;
+  if (!isPanditSeoNetworkEnabled(await storage.getSiteSettings())) return null;
+  // Two-segment paths are only hierarchical when the first segment is a
+  // catalogue state. Existing city/service routes continue through the
+  // legacy projection resolver below.
+  const projection = await getPanditSeoNetworkProjection();
+  const location = getHierarchicalLocation(
+    projection,
+    parsed.stateValue,
+    parsed.cityValue,
+  );
+  if (!location) return null;
+  let editorial: LocationEditorial | null = null;
+  try {
+    editorial = await getPublishedLocationEditorial(location);
+  } catch {
+    // Editorial is an indexing input, not a page availability dependency.
+  }
+  const seo = buildHierarchicalLocationSeo(location, baseUrl, editorial);
+  return {
+    title: seo.title,
+    description: seo.description,
+    canonical: seo.canonical,
+    robotsIndex: locationEditorialIsIndexable(location, editorial),
+    robotsFollow: true,
+    jsonLd: seo.schemas,
+  };
+}
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
   const staticHeads: Record<string, Head> = {
     "/qa": {
@@ -285,6 +330,9 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
     },
   };
   if (staticHeads[reqPath]) return staticHeads[reqPath];
+
+  const hierarchicalHead = await resolvePanditHierarchicalHead(reqPath, baseUrl);
+  if (hierarchicalHead) return hierarchicalHead;
 
   const panditNetworkHead = await resolvePanditNetworkHead(reqPath, baseUrl);
   if (panditNetworkHead) return panditNetworkHead;
@@ -597,7 +645,7 @@ function fallbackHead(reqPath: string): Head {
 
 export function seoHeadMiddleware() {
   return async function seoHead(req: Request, res: Response, next: NextFunction) {
-    if (req.method !== "GET") return next();
+    if (!["GET", "HEAD"].includes(req.method)) return next();
     // Many bots and link unfurlers send `*/*` or no Accept header at all.
     // Skip only when Accept clearly opts out of HTML (e.g. application/json
     // for XHR-style requests). The body-side `<head` check in tryInject is

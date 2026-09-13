@@ -782,8 +782,8 @@ function Router() {
           <Route path="/puja-kit" component={PujaKitPage} />
           <Route path="/category/:slug" component={CategoryComingSoon} />
           <Route path="/book-pandit-online" component={PanditDirectory} />
-          <Route path="/book-pandit-online/:citySlug/:serviceSlug" component={PanditCanonicalLocation} />
-          <Route path="/book-pandit-online/:citySlug" component={PanditCanonicalLocation} />
+          <Route path="/book-pandit-online/:stateSlug/:citySlug" component={PanditCanonicalLocation} />
+          <Route path="/book-pandit-online/:stateSlug" component={PanditDirectory} />
           {/* Legacy /pandits/* kept as inert fallbacks; server 301s redirect hard nav. */}
           <Route path="/pandits/:citySlug/:serviceSlug" component={PanditCanonicalLocation} />
           <Route path="/pandits/:citySlug" component={PanditCanonicalLocation} />

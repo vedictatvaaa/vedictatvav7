@@ -23,14 +23,24 @@ const LOCATION_SEED: StateSeed[] = [
   ["Tripura","TR",false,["Agartala"]],["Uttar Pradesh","UP",false,["Lucknow","Varanasi","Ayodhya","Gonda","Basti","Siddharthnagar","Gorakhpur","Kanpur","Prayagraj","Agra","Noida"]],
   ["Uttarakhand","UK",false,["Dehradun","Haridwar","Rishikesh","Haldwani"]],["West Bengal","WB",false,["Kolkata","Siliguri","Howrah"]],
   ["Andaman and Nicobar Islands","AN",true,["Port Blair"]],["Chandigarh","CH",true,["Chandigarh"]],
-  ["Dadra and Nagar Haveli and Daman and Diu","DH",true,["Daman","Silvassa"]],["Delhi","DL",true,["Delhi","New Delhi"]],
+  ["Dadra and Nagar Haveli and Daman and Diu","DH",true,["Daman","Silvassa"]],["Delhi","DL",true,["New Delhi"]],
   ["Jammu and Kashmir","JK",true,["Srinagar","Jammu"]],["Ladakh","LA",true,["Leh","Kargil"]],
   ["Lakshadweep","LD",true,["Kavaratti"]],["Puducherry","PY",true,["Puducherry","Karaikal"]],
 ];
 const ALIASES: Record<string, string[]> = {
-  Bengaluru: ["Bangalore", "Banglore"], Mysuru: ["Mysore"], "Chhatrapati Sambhajinagar": ["Aurangabad"],
-  Delhi: ["Delhi NCR"], Mumbai: ["Bombay"], Kolkata: ["Calcutta"], Prayagraj: ["Allahabad"], Gurugram: ["Gurgaon"],
+  // These are search/matching aliases only. The left-hand value is the sole
+  // canonical city name persisted to a Pandit or emitted by public APIs.
+  Bengaluru: ["Bangalore", "Banglore"],
+  Mysuru: ["Mysore"],
+  "Chhatrapati Sambhajinagar": ["Aurangabad"],
+  "New Delhi": ["Delhi", "Delhi NCR"],
+  Mumbai: ["Bombay"],
+  Kolkata: ["Calcutta"],
+  Prayagraj: ["Allahabad"],
+  Gurugram: ["Gurgaon"],
+  Guwahati: ["Guwahatii", "Gauhati", "Guwahati "],
 };
+export const CANONICAL_LOCATION_ALIASES: Readonly<Record<string, readonly string[]>> = ALIASES;
 export const locationSlug = (name: string) => name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const normalized = (value: string) => value.trim().toLocaleLowerCase("en-IN").replace(/\s+/g, " ");
 

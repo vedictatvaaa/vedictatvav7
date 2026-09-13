@@ -62,6 +62,7 @@ export type NetworkCity = {
   stateId: number;
   name: string;
   slug: string;
+  aliases?: string[] | null;
   isActive?: boolean;
 };
 

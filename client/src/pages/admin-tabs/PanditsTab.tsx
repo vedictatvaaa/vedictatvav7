@@ -14,6 +14,7 @@ import type { Pandit } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { createFetcher } from "../admin-shared";
+import PanditLocationRectification from "./PanditLocationRectification";
 
 // ============================================================
 // Geocode helper — uses OpenStreetMap Nominatim (free, no key)
@@ -365,6 +366,7 @@ function PanditsTab() {
           ].map(([label, value]) => <div key={String(label)} className="rounded-lg border bg-muted/20 p-3"><div className="text-xl font-semibold text-primary">{value}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}
         </div>
       </CardContent></Card>}
+      <PanditLocationRectification />
       <form onSubmit={submitRegistrationLookup} className="rounded-lg border bg-muted/20 p-3 sm:p-4" aria-label="Registration number lookup">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">

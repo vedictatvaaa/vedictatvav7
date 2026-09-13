@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
+import { useQuery } from "@tanstack/react-query";
 
 const complianceBadges = [
   { label: "PCI-DSS", sub: "Level 1 secure" },
@@ -59,6 +60,18 @@ const popularSearches = [
 
 export default function Footer() {
   const settings = useSiteSettings();
+  const { data: liveMetrics } = useQuery<{
+    health: "available" | "unavailable";
+    metrics: Record<string, { value: number | null; state: "available" | "unavailable"; health: "available" | "unavailable"; scope?: "global" | "this_instance" }>;
+  }>({
+    queryKey: ["/api/pandit-metrics"],
+    queryFn: async () => {
+      const response = await fetch("/api/pandit-metrics");
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
   const dynamicSocials = [
     settings?.socialInstagram ? { Icon: SiInstagram, href: settings.socialInstagram, label: "Instagram" } : null,
     settings?.socialFacebook ? { Icon: SiFacebook, href: settings.socialFacebook, label: "Facebook" } : null,
@@ -181,17 +194,21 @@ export default function Footer() {
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-2.5 text-center">
             {[
-              { value: "500+", label: "Pandits" },
-              { value: "10k+", label: "Families" },
-              { value: "50+", label: "Pujas" },
-              { value: "100%", label: "Authentic" },
-            ].map((s, idx, arr) => (
-              <span key={s.label} className="inline-flex items-center gap-1.5 text-[11px]" data-testid={`footer-stat-${s.label.toLowerCase()}`}>
-                <span className="text-[#D4AF37] font-serif font-semibold">{s.value}</span>
+              { key: "totalEnrolledPandits", label: "Pandits", testid: "footer-stat-pandits" },
+              { key: "servedLast24h", label: "Served · 24h", testid: "footer-stat-served-24h" },
+              { key: "pujasBooked", label: "Pujas booked", testid: "footer-stat-pujas" },
+              { key: "onlineNow", label: "Online now · this server", testid: "footer-stat-online-now" },
+            ].map((s, idx, arr) => {
+              const value = liveMetrics?.metrics[s.key];
+              const display = value?.health === "available" ? String(value.value) : "—";
+              return (
+              <span key={s.label} className="inline-flex items-center gap-1.5 text-[11px]" data-testid={s.testid}>
+                <span className="text-[#D4AF37] font-serif font-semibold">{display}</span>
                 <span className="uppercase tracking-[0.18em] text-white/65 font-semibold">{s.label}</span>
                 {idx < arr.length - 1 && <span className="text-white/30 ml-1.5">·</span>}
               </span>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

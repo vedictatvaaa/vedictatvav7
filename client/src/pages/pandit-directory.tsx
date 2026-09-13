@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useLocation, useSearch } from "wouter";
+import { Link, useLocation, useParams, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ChevronDown, ChevronUp, Compass, MapPin, Search, Sparkles, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,23 @@ import yatraPilgrimsImage from "@/assets/images/yatra-pilgrims.jpg";
 type City = { id: number; name: string; slug: string; count: number };
 type State = { id: number; name: string; code: string; slug: string; count: number; stateWideCount: number; cityCount: number; cities: City[] };
 type Summary = { states: State[]; facets: { services: string[]; languages: string[]; traditions: string[] } };
+type MetricValue = { value: number | null; state: "available" | "unavailable"; health: "available" | "unavailable"; scope?: "global" | "this_instance"; reason?: string };
+type LiveMetrics = {
+  health: "available" | "unavailable";
+  updatedAt: string | null;
+  metrics: {
+    servingNow: MetricValue;
+    servedLast24h: MetricValue;
+    pujasBooked: MetricValue;
+    totalEnrolledPandits: MetricValue;
+    discoverablePandits: MetricValue;
+    availableToBook: MetricValue;
+    onlineNow: MetricValue;
+  };
+};
 
-const METRO_CITIES = new Set([
-  "new delhi", "mumbai", "bengaluru", "bangalore", "kolkata", "chennai",
-  "hyderabad", "pune", "ahmedabad", "jaipur", "lucknow", "surat",
-]);
+const APPROVED_METROS = ["new delhi", "noida", "gurugram", "chandigarh", "mumbai", "bengaluru", "kolkata", "pune", "guwahati", "chennai", "hyderabad", "ahmedabad"];
+const METRO_CITIES = new Set(APPROVED_METROS);
 
 const STATE_PRESENTATION: Record<string, { localName: string; image: string; position?: string }> = {
   "andhra pradesh": { localName: "ఆంధ్ర ప్రదేశ్", image: southTempleImage },
@@ -56,17 +68,23 @@ const presentationFor = (state: State) => STATE_PRESENTATION[state.name.toLowerC
   image: templeHeroImage,
 };
 
+const cleanSlug = (name: string) => name.trim().toLowerCase()
+  .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
 const linkFor = (state: State, city?: City, service?: string, mode?: "online" | "offline", context = "") => {
   const q = new URLSearchParams(context);
   q.set("stateId", String(state.id));
-  q.set("state", state.slug);
-  if (city) { q.set("cityId", String(city.id)); q.set("city", city.slug); }
+  q.set("state", cleanSlug(state.name));
+  if (city) { q.set("cityId", String(city.id)); q.set("city", cleanSlug(city.name)); }
   if (service) q.set("service", service);
   if (mode) q.set("mode", mode);
-  return `/book-pandit-online?${q}`;
+  const base = city ? `/book-pandit-online/${cleanSlug(state.name)}/${cleanSlug(city.name)}` : `/book-pandit-online/${cleanSlug(state.name)}`;
+  return q.toString() ? `${base}?${q}` : base;
 };
 
 export default function PanditDirectory() {
+  const routeParams = useParams<{ stateSlug?: string }>();
   const search = new URLSearchParams(useSearch());
   const stateId = search.get("stateId") || "";
   const cityId = search.get("cityId") || "";
@@ -90,7 +108,16 @@ export default function PanditDirectory() {
     queryKey: ["/api/pandit-discovery", service],
     queryFn: async () => { const r = await fetch(`/api/pandit-discovery${service ? `?service=${encodeURIComponent(service)}` : ""}`); if (!r.ok) throw new Error("Unable to load discovery"); return r.json(); },
   });
-  const state = data?.states.find((s) => String(s.id) === stateId || s.slug === search.get("state"));
+  const { data: liveMetrics } = useQuery<LiveMetrics>({
+    queryKey: ["/api/pandit-metrics"],
+    queryFn: async () => {
+      const response = await fetch("/api/pandit-metrics");
+      return response.json();
+    },
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+  const state = data?.states.find((s) => String(s.id) === stateId || cleanSlug(s.name) === (routeParams.stateSlug || search.get("state")) || s.slug === (routeParams.stateSlug || search.get("state")));
   const city = state?.cities.find((c) => String(c.id) === cityId || c.slug === search.get("city"));
   if (isLoading && (stateId || cityId)) {
     return <div className="min-h-[60vh] bg-[#F5F0E6] px-5 py-20"><Skeleton className="mx-auto h-72 max-w-5xl bg-[#E9DEC9]" /></div>;
@@ -104,7 +131,7 @@ export default function PanditDirectory() {
   if (state) {
     return <StateChooser state={state} service={service} preferredMode={preferredMode} context={contextQuery} onNavigate={setLocation} />;
   }
-  return <DiscoveryHome data={data} selectedService={service} preferredMode={preferredMode} date={date} muhurat={muhurat} context={contextQuery} isLoading={isLoading} isError={isError} retry={refetch} onNavigate={setLocation} />;
+  return <DiscoveryHome data={data} liveMetrics={liveMetrics} selectedService={service} preferredMode={preferredMode} date={date} muhurat={muhurat} context={contextQuery} isLoading={isLoading} isError={isError} retry={refetch} onNavigate={setLocation} />;
 }
 
 function StateChooser({ state, service, preferredMode, context, onNavigate }: { state: State; service?: string; preferredMode?: "online" | "offline"; context: string; onNavigate: (path: string) => void }) {
@@ -125,6 +152,7 @@ function StateChooser({ state, service, preferredMode, context, onNavigate }: { 
   if (service) stateWide.set("service", service);
   if (preferredMode) stateWide.set("mode", preferredMode);
   return <main className="min-h-screen bg-[#F5F0E6] px-5 py-10 text-[#2B1115] sm:px-8">
+    <PageSeo title={`Find a Pandit in ${state.name} | Vedic Tatva`} description={`Browse genuine, discoverable Vedic Pandits by city in ${state.name}. Counts reflect the public directory.`} canonical={`/book-pandit-online/${cleanSlug(state.name)}`} noindex />
     <div className="mx-auto max-w-5xl">
       <button onClick={() => onNavigate("/book-pandit-online")} className="text-sm font-semibold text-[#6D2B35]">← All States</button>
       <p className="mt-8 text-[11px] uppercase tracking-[.24em] text-[#9A7218]">{state.code} · {state.count} Pandits based here</p>
@@ -151,7 +179,7 @@ function StateChooser({ state, service, preferredMode, context, onNavigate }: { 
   </main>;
 }
 
-function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, context, isLoading, isError, retry, onNavigate }: { data?: Summary; selectedService?: string; preferredMode?: "online" | "offline"; date?: string; muhurat?: string; context: string; isLoading: boolean; isError: boolean; retry: () => void; onNavigate: (path: string) => void }) {
+function DiscoveryHome({ data, liveMetrics, selectedService, preferredMode, date, muhurat, context, isLoading, isError, retry, onNavigate }: { data?: Summary; liveMetrics?: LiveMetrics; selectedService?: string; preferredMode?: "online" | "offline"; date?: string; muhurat?: string; context: string; isLoading: boolean; isError: boolean; retry: () => void; onNavigate: (path: string) => void }) {
   const [term, setTerm] = useState("");
   const [showAllServices, setShowAllServices] = useState(false);
   const results = useMemo(() => {
@@ -163,9 +191,14 @@ function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, co
     ]).slice(0, 6);
   }, [data, term, selectedService, preferredMode, context]);
   const nearby = () => { const params = new URLSearchParams(context); params.set("mode", "nearMe"); trackDiscoveryEvent("near_me_selected"); onNavigate(`/book-pandit-online?${params}`); };
-  const popularMetros = useMemo(() => data?.states.flatMap((state) =>
-    state.cities.filter((city) => METRO_CITIES.has(city.name.toLowerCase())).map((city) => ({ state, city }))
-  ).slice(0, 12) ?? [], [data]);
+  const popularMetros = useMemo(() => {
+    const indexed = new Map((data?.states || []).flatMap((state) => state.cities.map((city) => [city.name.toLowerCase(), { state, city }] as const)));
+    return APPROVED_METROS.map((name) => indexed.get(name) || null);
+  }, [data]);
+  const allCities = useMemo(() => (data?.states || []).flatMap((state) => state.cities.map((city) => ({ city, state }))).sort((a, b) => a.city.name.localeCompare(b.city.name, "en-IN")), [data]);
+  const [cityTerm, setCityTerm] = useState("");
+  const [showAllCities, setShowAllCities] = useState(false);
+  const visibleCities = allCities.filter(({ city }) => city.name.toLowerCase().includes(cityTerm.trim().toLowerCase()));
   return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
     <PageSeo title="Find a Vedic Pandit | Vedic Tatva" description="Find an eligible Vedic pandit by service, state, city, or your location." canonical="/book-pandit-online" />
     <section className="relative overflow-hidden bg-[#6D2B35] text-[#FBF7EE]">
@@ -184,14 +217,25 @@ function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, co
       </div>
     </section>
     <section className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+      <LiveActivityStrip metrics={liveMetrics} />
       {date ? <div className="mb-6 rounded-md border border-[#D4AF37]/40 bg-[#FBF7EE] p-4 text-sm text-[#6D2B35]" data-testid="muhurat-location-prompt"><strong>Selected auspicious window:</strong> {date}{muhurat ? ` · ${muhurat}` : ""}. Choose a location to find Pandits eligible for this ritual. Calendar availability will be confirmed during booking.</div> : null}
       {popularMetros.length ? <section className="mb-10">
         <p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">Begin with a major city</p>
         <h2 className="mt-1 text-2xl font-semibold text-[#6D2B35]">Popular metro cities</h2>
         <div className="mt-4 flex gap-2 overflow-x-auto pb-2" data-lenis-prevent>
-          {popularMetros.map(({ state, city }) => <button key={city.id} onClick={() => onNavigate(linkFor(state, city, selectedService, preferredMode, context))} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#FBF7EE] px-4 text-sm font-semibold text-[#6D2B35] shadow-sm hover:border-[#9A7218] hover:bg-[#F2E8D5]"><MapPin className="h-4 w-4 text-[#9A7218]" />{city.name}</button>)}
+           {popularMetros.map((item, index) => item ? <button key={item.city.id} onClick={() => onNavigate(linkFor(item.state, item.city, selectedService, preferredMode, context))} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-[#D4AF37]/35 bg-[#FBF7EE] px-4 text-sm font-semibold text-[#6D2B35] shadow-sm hover:border-[#9A7218] hover:bg-[#F2E8D5]"><MapPin className="h-4 w-4 text-[#9A7218]" /><span>{item.city.name}</span><span className="text-xs font-normal">{item.city.count} {item.city.count === 1 ? "Pandit" : "Pandits"}</span></button> : <span key={APPROVED_METROS[index]} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-dashed border-[#D4AF37]/35 bg-[#FBF7EE]/60 px-4 text-sm font-semibold text-[#806a61]" aria-label={`${APPROVED_METROS[index]} limited availability`}><MapPin className="h-4 w-4 text-[#9A7218]" /><span>{APPROVED_METROS[index]}</span><span className="text-xs font-normal">Limited</span></span>)}
         </div>
       </section> : null}
+      <section className="mb-12 rounded-2xl border border-[#D4AF37]/25 bg-[#FBF7EE] p-5 shadow-sm sm:p-7" aria-labelledby="all-cities-heading">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">Search the full directory</p><h2 id="all-cities-heading" className="mt-1 text-2xl font-semibold text-[#6D2B35]">All cities</h2><p className="mt-1 text-sm text-[#5a4a3a]/70">Counts are current discoverable Pandits, not promises of availability.</p></div>
+          <div className="relative w-full sm:max-w-xs"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A7218]" /><Input value={cityTerm} onChange={(event) => setCityTerm(event.target.value)} placeholder="Search cities" aria-label="Search all cities" className="h-11 border-[#D4AF37]/35 bg-[#F5F0E6] pl-9" /></div>
+        </div>
+        <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {(showAllCities ? visibleCities : visibleCities.slice(0, 12)).map(({ city, state }) => <button key={`${state.id}-${city.id}`} onClick={() => onNavigate(linkFor(state, city, selectedService, preferredMode, context))} className="group flex min-h-12 items-center justify-between rounded-lg border border-[#D4AF37]/20 bg-[#F5F0E6] px-4 text-left transition hover:-translate-y-0.5 hover:border-[#9A7218]/60 hover:bg-[#F2E8D5]"><span><strong className="block text-sm text-[#6D2B35]">{city.name}</strong><span className="text-xs text-[#806a61]">{state.name}</span></span><span className={`text-xs ${city.count ? "font-semibold text-[#9A7218]" : "text-[#806a61]"}`}>{city.count ? `${city.count} ${city.count === 1 ? "Pandit" : "Pandits"}` : "Limited availability"}</span></button>)}
+        </div>
+        {visibleCities.length > 12 && <button type="button" onClick={() => setShowAllCities((open) => !open)} aria-expanded={showAllCities} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-[#9A7218]/35 px-4 text-sm font-semibold text-[#6D2B35] hover:bg-[#F2E8D5]">{showAllCities ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{showAllCities ? "Show fewer cities" : `Show all ${visibleCities.length} cities`}</button>}
+      </section>
       <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[11px] uppercase tracking-[.24em] text-[#9A7218]">Sacred traditions across India</p><h2 className="mt-1 text-3xl font-semibold text-[#6D2B35]">Browse by State</h2>{selectedService ? <p className="mt-2 text-sm text-[#5a4a3a]/70">Showing locations for <strong>{selectedService}</strong> <button className="ml-2 underline" onClick={() => onNavigate("/book-pandit-online")}>Clear</button></p> : null}</div><span className="hidden text-sm text-[#5a4a3a]/60 sm:block">Counts reflect eligible pandits</span></div>
       {isLoading ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-32 bg-[#E9DEC9]" />)}</div> :
       isError ? <div className="rounded-md border border-[#D4AF37]/35 bg-[#FBF7EE] p-8 text-center"><p className="font-serif text-xl text-[#6D2B35]">The directory is taking a moment.</p><Button onClick={retry} className="mt-4 bg-[#6D2B35]">Try again</Button></div> :
@@ -213,5 +257,27 @@ function DiscoveryHome({ data, selectedService, preferredMode, date, muhurat, co
       <div className="mt-8 grid gap-3 sm:grid-cols-2"><Link href="/online-puja-booking?mode=online" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><Video className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Need a ritual from anywhere?</b><small className="text-[#5a4a3a]/65">Explore online Puja guides</small></span></Link><Link href="/pind-daan-booking" className="flex min-h-11 items-center gap-4 rounded-md border border-[#D4AF37]/25 bg-[#FBF7EE] p-5"><MapPin className="h-6 w-6 text-[#6D2B35]" /><span><b className="block text-[#6D2B35]">Sacred ancestor rites</b><small className="text-[#5a4a3a]/65">Pind daan and tarpan services</small></span></Link></div>
     </section><BecomePanditBanner />
   </main>;
+}
+
+function LiveActivityStrip({ metrics }: { metrics?: LiveMetrics }) {
+  const entries = metrics ? [
+    ["Serving now", metrics.metrics.servingNow],
+    ["Served · 24h", metrics.metrics.servedLast24h],
+    ["Pujas booked", metrics.metrics.pujasBooked],
+    ["Pandits", metrics.metrics.totalEnrolledPandits],
+    ["Discoverable", metrics.metrics.discoverablePandits],
+    ["Bookable", metrics.metrics.availableToBook],
+    ["Online now · this server", metrics.metrics.onlineNow],
+  ] as const : [];
+  return <section className="mb-8 rounded-xl border border-[#D4AF37]/25 bg-[#FBF7EE] px-4 py-4 shadow-sm" aria-label="Pandit network activity" data-testid="pandit-live-metrics">
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 sm:justify-between">
+      {entries.map(([label, value]) => <div key={label} className="min-w-[74px] text-center">
+        <div className={`font-serif text-xl font-semibold ${value.health === "available" ? "text-[#6D2B35]" : "text-[#806a61]"}`} data-testid={`metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{value.health === "available" ? value.value : "—"}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[.13em] text-[#806a61]">{label}</div>
+      </div>)}
+      {!metrics && <p className="w-full text-center text-xs text-[#806a61]">Network activity is temporarily unavailable.</p>}
+    </div>
+    {metrics?.health === "unavailable" && <p className="mt-3 text-center text-xs text-[#806a61]">Network activity is temporarily unavailable.</p>}
+  </section>;
 }
 export { BecomePanditBanner, BecomePanditStrip };
