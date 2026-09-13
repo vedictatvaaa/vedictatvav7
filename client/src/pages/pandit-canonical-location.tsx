@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, MapPin } from "lucide-react";
+import { ArrowRight, ChevronRight, MapPin, ShoppingBag, Sparkles, UserPlus } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
 import { PanditDirectoryView } from "@/components/pandit/PanditDirectoryView";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,123 @@ type DiscoverySummary = {
   }>;
 };
 
+type PublicProduct = { id: number; category?: string | null };
+
+const STORE_CATEGORIES = [
+  { name: "Puja Samagri", description: "Daily worship and ritual essentials" },
+  { name: "Havan Samagri", description: "Ingredients and supplies for homa and yajna" },
+  { name: "Brass & Copperware", description: "Diyas, bells, lotas and puja thalis" },
+  { name: "Idols", description: "Deity murtis for home and ritual spaces" },
+];
+
+function CityEnrichment({
+  cityName,
+  stateName,
+  stateSlug,
+  citySlug,
+  services = [],
+  editorial,
+  discovery,
+}: {
+  cityName: string;
+  stateName: string;
+  stateSlug: string;
+  citySlug: string;
+  services?: ProjectedCityService[];
+  editorial?: Editorial | null;
+  discovery?: DiscoverySummary;
+}) {
+  const productsQuery = useQuery<PublicProduct[]>({
+    queryKey: ["/api/products", "city-enrichment"],
+    queryFn: async () => {
+      const response = await fetch("/api/products");
+      if (!response.ok) throw new Error("Unable to load store categories");
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const state = discovery?.states.find((item) => item.slug === stateSlug);
+  const nearby = state?.cities.filter((item) => item.slug !== citySlug).slice(0, 6) || [];
+  const categories = STORE_CATEGORIES.map((category) => ({
+    ...category,
+    count: productsQuery.data?.filter((product) => product.category === category.name).length || 0,
+  })).filter((category) => category.count > 0);
+  const localServices = services.filter((service) => service.providers.length > 0).slice(0, 8);
+
+  return <div className="border-t border-[#D4AF37]/20 bg-[#FBF7EE]">
+    {editorial?.introduction && <section className="mx-auto max-w-4xl px-5 py-14 sm:px-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9A6F19]">Local booking guide</p>
+      <h2 className="mt-3 font-serif text-3xl font-semibold text-[#6D2B35]">Planning a Vedic ceremony in {cityName}</h2>
+      <p className="mt-5 whitespace-pre-line leading-8 text-[#594A43]">{editorial.introduction}</p>
+    </section>}
+
+    {!!localServices.length && <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9A6F19]">Verified local supply</p>
+      <h2 className="mt-3 font-serif text-3xl font-semibold text-[#6D2B35]">Vedic services available in {cityName}</h2>
+      <p className="mt-3 max-w-3xl text-[#6F5A50]">These links appear only when an eligible published Pandit offers the canonical service locally. Exact timing and availability are confirmed during booking.</p>
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {localServices.map((service) => <Link key={service.service.id} href={service.canonicalUrl}>
+          <article className="group h-full rounded-2xl border border-[#DCCBAA] bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#B68B32] hover:shadow-md">
+            <Sparkles className="h-5 w-5 text-[#B68B32]" />
+            <h3 className="mt-4 font-semibold text-[#3B2025]">{service.service.name}</h3>
+            <p className="mt-2 text-sm text-[#705E55]">{service.providers.length} eligible {service.providers.length === 1 ? "Pandit" : "Pandits"} listed</p>
+            <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#6D2B35]">View service <ArrowRight className="h-4 w-4" /></span>
+          </article>
+        </Link>)}
+      </div>
+    </section>}
+
+    {!!categories.length && <section className="bg-[#F1E8D7]">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9A6F19]">Vedic Tatva store</p>
+        <h2 className="mt-3 font-serif text-3xl font-semibold text-[#6D2B35]">Prepare for your puja</h2>
+        <p className="mt-3 max-w-3xl text-[#6F5A50]">Browse currently listed store categories. Store availability is nationwide and is not a claim of local stock in {cityName}.</p>
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {categories.map((category) => <Link key={category.name} href={`/puja-samagri-online?category=${encodeURIComponent(category.name)}`}>
+            <article className="h-full rounded-2xl border border-[#D8C6A5] bg-[#FFFDF8] p-5">
+              <ShoppingBag className="h-5 w-5 text-[#8D343D]" />
+              <h3 className="mt-4 font-semibold text-[#3B2025]">{category.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-[#705E55]">{category.description}</p>
+              <span className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[#8D343D]">{category.count} listed items</span>
+            </article>
+          </Link>)}
+        </div>
+      </div>
+    </section>}
+
+    <section className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+      <div className="grid gap-6 rounded-3xl bg-[#6D2B35] p-7 text-[#FBF7EE] sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div>
+          <UserPlus className="h-7 w-7 text-[#E9C96A]" />
+          <h2 className="mt-4 font-serif text-3xl font-semibold">Are you a qualified Pandit serving {cityName}?</h2>
+          <p className="mt-3 max-w-2xl text-[#FBF7EE]/75">Apply to join Vedic Tatva. Every application is reviewed, and registration does not guarantee approval, publication, or bookings.</p>
+        </div>
+        <Link href="/become-a-pandit"><Button className="bg-[#E9C96A] text-[#5A2029] hover:bg-[#F2D989]">Start Pandit registration <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+      </div>
+    </section>
+
+    {!!nearby.length && <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8">
+      <h2 className="font-serif text-2xl font-semibold text-[#6D2B35]">Browse Pandits in other {stateName} cities</h2>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {nearby.map((item) => <Link key={item.id} href={`/book-pandit-online/${stateSlug}/${item.slug}`}>
+          <Badge variant="outline" className="bg-white px-4 py-2 text-sm">{item.name} · {item.count}</Badge>
+        </Link>)}
+      </div>
+    </section>}
+
+    {!!editorial?.faqs?.length && <section className="mx-auto max-w-4xl px-5 pb-16 sm:px-8">
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9A6F19]">Helpful answers</p>
+      <h2 className="mt-3 font-serif text-3xl font-semibold text-[#6D2B35]">Booking a Pandit in {cityName}: FAQs</h2>
+      <div className="mt-7 space-y-3">
+        {editorial.faqs.map((faq) => <details key={faq.question} className="group rounded-xl border border-[#DCCBAA] bg-white p-5">
+          <summary className="cursor-pointer list-none font-semibold text-[#3B2025]">{faq.question}</summary>
+          <p className="mt-3 leading-7 text-[#66544C]">{faq.answer}</p>
+        </details>)}
+      </div>
+    </section>}
+  </div>;
+}
+
 const cleanLocationSlug = (value: string) => value.trim().toLowerCase()
   .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
   .replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -110,7 +227,7 @@ export default function PanditCanonicalLocation() {
       if (!response.ok) throw new Error("Unable to load this location");
       return response.json();
     },
-    enabled: cityQuery.isError,
+    enabled: true,
     retry: false,
   });
   const serviceQuery = useQuery<ProjectedCityService>({
@@ -164,6 +281,13 @@ export default function PanditCanonicalLocation() {
           embedded
         />
       </section>
+       <CityEnrichment
+         cityName={city.name}
+         stateName={state.name}
+         stateSlug={state.slug}
+         citySlug={city.slug}
+         discovery={discoveryQuery.data}
+       />
     </main>;
   }
   if (cityQuery.isError || (serviceSlug && serviceQuery.isError) || !cityQuery.data || (serviceSlug && !selectedService)) {
@@ -247,21 +371,14 @@ export default function PanditCanonicalLocation() {
       </div>
     </section>
 
-    {editorial?.introduction && <section className="mx-auto max-w-3xl px-5 py-12 sm:px-8">
-      <h2 className="font-serif text-3xl font-semibold text-[#6D2B35]">
-        {selectedService ? `About ${selectedService.service.name} in ${city.city.name}` : `About booking a Pandit in ${city.city.name}`}
-      </h2>
-      <p className="mt-5 whitespace-pre-line leading-8 text-[#594A43]">{editorial.introduction}</p>
-    </section>}
-
-    {!!editorial?.faqs?.length && <section className="mx-auto max-w-3xl px-5 pb-16 sm:px-8">
-      <h2 className="font-serif text-3xl font-semibold text-[#6D2B35]">Questions and answers</h2>
-      <div className="mt-6 space-y-5">
-        {editorial.faqs.map((faq) => <article key={faq.question} className="border-t border-[#D4AF37]/30 pt-5">
-          <h3 className="font-semibold text-[#2B1115]">{faq.question}</h3>
-          <p className="mt-2 leading-7 text-[#594A43]">{faq.answer}</p>
-        </article>)}
-      </div>
-    </section>}
+    <CityEnrichment
+      cityName={city.city.name}
+      stateName={city.state.name}
+      stateSlug={stateSlug || cleanLocationSlug(city.state.name)}
+      citySlug={city.city.slug}
+      services={selectedService ? [selectedService] : city.services}
+      editorial={editorial}
+      discovery={discoveryQuery.data}
+    />
   </main>;
 }
