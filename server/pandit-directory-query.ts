@@ -74,7 +74,7 @@ export async function queryPanditDirectory(input: DirectoryQuery) {
   if (input.cityId && !effectiveStateId) where.push(sql`false`);
   // This is the SQL equivalent of isPanditPubliclyEligible. Keep this predicate
   // aligned with that helper; inner joins also enforce active canonical locations.
-  if (!input.showAll) where.push(sql`p.verified = true and p.on_leave = false and p.archived = false and p.directory_visible = true and p.search_eligible = true and p.location_review_status = 'resolved' and p.account_status <> 'banned' and (p.account_status <> 'suspended' or (p.suspended_until is not null and p.suspended_until <= now()))`);
+  if (!input.showAll) where.push(sql`p.verified = true and p.on_leave = false and p.archived = false and p.directory_visible = true and p.search_eligible = true and p.location_review_status = 'resolved' and p.account_status <> 'banned' and (p.account_status <> 'suspended' or (p.account_status = 'suspended' and p.suspended_until is not null and p.suspended_until <= now())) and exists (select 1 from pandit_storefronts public_sf where public_sf.pandit_id = p.id and public_sf.is_published = true and public_sf.status = 'published')`);
   if (input.q) where.push(sql`(p.name ilike ${`%${input.q}%`} or p.city ilike ${`%${input.q}%`} or p.specialization ilike ${`%${input.q}%`})`);
   if (effectiveStateId) where.push(sql`p.state_id = ${effectiveStateId}`);
   if (input.cityId) where.push(sql`p.city_id = ${input.cityId}`);

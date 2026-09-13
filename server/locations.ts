@@ -71,8 +71,12 @@ export async function resolveCityLocation(cityId: number, activeOnly = true) {
 
 export async function resolveLocationName(cityName: string, stateName?: string | null) {
   const wanted = normalized(cityName);
-  const rows = await db.select({ state: indianStates, city: indianCities }).from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id));
-  const found = rows.filter(r => (!stateName || normalized(r.state.name) === normalized(stateName)) &&
-    (normalized(r.city.name) === wanted || r.city.aliases.some(a => normalized(a) === wanted)));
-  return found.length === 1 ? found[0] : undefined;
+  const rows = await db.select({ state: indianStates, city: indianCities }).from(indianCities)
+    .innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
+    .where(and(eq(indianCities.isActive, true), eq(indianStates.isActive, true)));
+  const inState = rows.filter(r => !stateName || normalized(r.state.name) === normalized(stateName));
+  const exact = inState.filter(r => normalized(r.city.name) === wanted);
+  if (exact.length === 1) return exact[0];
+  const alias = inState.filter(r => r.city.aliases.some(a => normalized(a) === wanted));
+  return alias.length === 1 ? alias[0] : undefined;
 }

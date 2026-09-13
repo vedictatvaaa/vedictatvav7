@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { DIRECTORY_SORTS, parseDirectoryQuery } from "./pandit-directory-query";
 
 test("directory parser applies bounded pagination and repeatable language filters", () => {
@@ -24,4 +25,9 @@ test("near-me requests default to nearest and all advertised UI sorts parse", ()
     const coordinates = sort === "nearest" ? { lat: "30.3165", lng: "78.0322" } : {};
     assert.equal(parseDirectoryQuery({ sort, ...coordinates }).sort, sort);
   }
+});
+
+test("public directory cannot advertise an unpublished storefront", () => {
+  const source = readFileSync(new URL("./pandit-directory-query.ts", import.meta.url), "utf8");
+  assert.match(source, /public_sf\.is_published = true and public_sf\.status = 'published'/);
 });
