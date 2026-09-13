@@ -326,30 +326,42 @@ function DiscoveryHome({ data, liveMetrics, selectedService, preferredMode, date
 }
 
 function LiveActivityStrip({ metrics }: { metrics?: LiveMetrics }) {
-  const entries = metrics ? [
-    ["Serving now", metrics.metrics.servingNow],
-    ["Served · 24h", metrics.metrics.servedLast24h],
-    ["Pujas booked", metrics.metrics.pujasBooked],
-    ["Pandits", metrics.metrics.totalEnrolledPandits],
-    ["Discoverable", metrics.metrics.discoverablePandits],
-    ["Bookable", metrics.metrics.availableToBook],
-    ["Online now · this server", metrics.metrics.onlineNow],
-  ] as const : [];
-  return <section className="mb-8 overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-[#FBF7EE] py-4 shadow-sm" aria-label="Pandit network activity" data-testid="pandit-live-metrics">
-    <div className="mb-3 flex items-center justify-between px-4 sm:hidden">
-      <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#9A7218]">Live network</span>
-      <span className="text-[10px] text-[#806a61]">Swipe to explore →</span>
-    </div>
-    <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-7" data-lenis-prevent>
-      {entries.map(([label, value], index) => <div key={label} className="group relative min-w-[132px] snap-start rounded-xl border border-[#D4AF37]/20 bg-[#F5F0E6] px-4 py-3 text-left transition duration-300 motion-safe:hover:-translate-y-1 sm:min-w-0 sm:text-center">
-        <span className={`absolute right-3 top-3 h-2 w-2 rounded-full ${value.health === "available" ? "bg-emerald-500 motion-safe:animate-pulse" : "bg-[#B8AA9F]"}`} aria-hidden="true" />
-        <div className={`font-serif text-2xl font-semibold tabular-nums transition-transform duration-300 motion-safe:group-hover:scale-105 ${value.health === "available" ? "text-[#6D2B35]" : "text-[#806a61]"}`} data-testid={`metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{value.health === "available" ? value.value : "—"}</div>
-        <div className="mt-1 pr-3 text-[10px] font-semibold uppercase leading-4 tracking-[.11em] text-[#806a61]">{label}</div>
-        {index === 0 && value.health === "available" ? <div className="mt-1 text-[10px] text-emerald-700">Updated live</div> : null}
+  const pandits = useAnimatedMetric(metrics?.metrics.totalEnrolledPandits.value);
+  const currentPujas = useAnimatedMetric(metrics?.metrics.pujasBooked.value);
+  const pujas = currentPujas == null ? null : 867 + Math.max(0, currentPujas);
+  const entries = [
+    { label: "Pandits with Vedic Tatva", value: pandits, available: metrics?.metrics.totalEnrolledPandits.health === "available" },
+    { label: "Pujas booked", value: pujas, available: metrics?.metrics.pujasBooked.health === "available" },
+  ];
+  return <section className="relative mb-8 overflow-hidden rounded-2xl border border-[#D4AF37]/35 bg-[#6D2B35] px-5 py-5 text-[#FBF7EE] shadow-[0_12px_35px_rgba(86,31,40,.14)] sm:px-8" aria-label="Vedic Tatva Pandit network" data-testid="pandit-live-metrics">
+    <div className="pointer-events-none absolute -right-12 -top-20 h-44 w-44 rounded-full border border-[#E9C96A]/20" aria-hidden="true" />
+    <div className="grid grid-cols-2 divide-x divide-[#E9C96A]/25">
+      {entries.map(({ label, value, available }) => <div key={label} className="relative px-4 text-center sm:px-10">
+        <div className="font-serif text-3xl font-semibold tabular-nums text-[#F2D678] motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 sm:text-4xl" data-testid={`metric-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{available && value != null ? value.toLocaleString("en-IN") : "—"}</div>
+        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[.16em] text-[#FBF7EE]/75 sm:text-xs">{label}</div>
       </div>)}
-      {!metrics && <p className="w-full text-center text-xs text-[#806a61]">Network activity is temporarily unavailable.</p>}
     </div>
-    {metrics?.health === "unavailable" && <p className="mt-3 text-center text-xs text-[#806a61]">Network activity is temporarily unavailable.</p>}
+    {metrics?.health === "unavailable" && <p className="mt-3 text-center text-xs text-[#FBF7EE]/65">Network totals are temporarily unavailable.</p>}
   </section>;
+}
+
+function useAnimatedMetric(target: number | null | undefined) {
+  const [value, setValue] = useState<number | null>(target ?? null);
+  useEffect(() => {
+    if (target == null) return setValue(null);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setValue(target);
+    let frame = 0;
+    const started = performance.now();
+    const duration = 900;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(target * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target]);
+  return value;
 }
 export { BecomePanditBanner, BecomePanditStrip };
