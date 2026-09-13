@@ -98,6 +98,33 @@ Reports contain customer/Pandit IDs and operational status only where Admin inve
 
 ## Customer interface
 
+### Directory cards
+
+All Pandit directory surfaces use one balanced, storefront-first card:
+
+- Overall directory
+- Full directory
+- State results
+- City results
+- Search and filtered results
+
+The card displays only:
+
+- Approved Pandit profile photo
+- Public name
+- Canonical city and state
+- `View profile` action
+
+The complete card and the explicit action open the canonical `/pandit/:slug` storefront. Cards contain no direct contact action, phone/WhatsApp value, services, fees, ratings, reviews, availability, booking control, messaging control, or paid-unlock control.
+
+On mobile, the card uses a compact horizontal layout: circular photo on the left, identity/location and a full-width minimum-44-pixel action on the right. Tablet and desktop use the same information in a balanced, compact grid card. Long names truncate safely without hiding the action. Keyboard focus, card semantics, and the explicit button must not create nested or duplicate interactive controls.
+
+The storefront owns every interaction after discovery: full profile, services, prices, reviews, availability, contact entitlement, paid contact unlock, booking, and messaging.
+
+If a Pandit does not have a currently public storefront, no public directory surface may advertise or link that Pandit.
+
+### Storefront contact dialog
+
 The storefront contact dialog has these states:
 
 1. **Signed out:** explain that a registered account is required and link to login/registration with a safe return URL.
