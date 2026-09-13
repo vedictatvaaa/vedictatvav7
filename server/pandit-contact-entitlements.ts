@@ -162,14 +162,21 @@ export async function verifyContactUnlockPurchase(
   });
 }
 
+export async function recordBookingContactResetInTransaction(
+  executor: any,
+  userId: number,
+  bookingId: number,
+  now = new Date(),
+) {
+  await executor.execute(sql`select pg_advisory_xact_lock(${userId})`);
+  const [row] = await executor.insert(panditContactEntitlementEvents).values({
+    userId, eventType: "booking_reset", sourceBookingId: bookingId, eventTime: now,
+  }).onConflictDoNothing().returning();
+  return row || null;
+}
+
 export async function recordBookingContactReset(userId: number, bookingId: number, now = new Date()) {
-  return db.transaction(async tx => {
-    await tx.execute(sql`select pg_advisory_xact_lock(${userId})`);
-    const [row] = await tx.insert(panditContactEntitlementEvents).values({
-      userId, eventType: "booking_reset", sourceBookingId: bookingId, eventTime: now,
-    }).onConflictDoNothing().returning();
-    return row || null;
-  });
+  return db.transaction((tx) => recordBookingContactResetInTransaction(tx, userId, bookingId, now));
 }
 
 export async function revokeContactUnlockByPaymentId(paymentId: string, now = new Date()) {

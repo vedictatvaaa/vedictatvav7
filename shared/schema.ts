@@ -2135,7 +2135,7 @@ export const panditContactEntitlementEvents = pgTable("pandit_contact_entitlemen
   panditId: integer("pandit_id").references(() => pandits.id),
   eventType: text("event_type").notNull(),
   sourceBookingId: integer("source_booking_id").references(() => pujaBookings.id),
-  sourcePurchaseId: integer("source_purchase_id"),
+  sourcePurchaseId: integer("source_purchase_id").references(() => panditContactUnlockPurchases.id),
   sourceRevealId: integer("source_reveal_id").references(() => panditContactReveals.id),
   eventTime: timestamp("event_time").notNull().defaultNow(),
   amountPaise: integer("amount_paise"),

@@ -19,7 +19,7 @@ import {
 import { effectivePanditGovernance, isPanditPubliclyEligible } from "./pandit-public-eligibility";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 import { isPanditStorefrontPublished } from "./pandit-public-access";
-import { createPanditContentDraftForAdmin } from "./pandit-storefront-content";
+import { buildPanditPublicFacts, createPanditContentDraftForAdmin } from "./pandit-storefront-content";
 import { notifyPublish } from "./publish-notify";
 import { evaluatePanditProfileIndexability } from "./pandit-seo-network/quality";
 
@@ -255,6 +255,17 @@ export async function runResolveValidatePublish(req: Request, batchId = `prvp-${
     }
 
     let content = currentContent;
+    let currentFactsHash: string | null = null;
+    if (content && currentStorefront && validation.publicEligible) {
+      try {
+        currentFactsHash = (await buildPanditPublicFacts(row.id)).hash;
+      } catch {
+        reasons.add("public_facts_unavailable");
+      }
+      if (currentFactsHash && content.sourceSnapshotHash !== currentFactsHash) {
+        reasons.add("content_source_changed");
+      }
+    }
     if (validation.publicEligible && validation.storefrontPublished && !content) {
       try {
         const draft = await createPanditContentDraftForAdmin(row.id, actor(req));
@@ -278,7 +289,9 @@ export async function runResolveValidatePublish(req: Request, batchId = `prvp-${
       || !validation.indexable || !currentStorefront;
     const contentReady = Boolean(content
       && (content.status === "reviewed" || content.status === "published")
-      && !content.stale && content.generatedProfileIntroduction?.trim());
+      && !content.stale && !reasons.has("content_source_changed")
+      && !reasons.has("public_facts_unavailable")
+      && content.generatedProfileIntroduction?.trim());
     if (!authoritativeBlocked && reasons.size === 0 && contentReady) {
       await db.transaction(async tx => {
         await tx.insert(panditStorefronts).values({

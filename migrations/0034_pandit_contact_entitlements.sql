@@ -52,6 +52,11 @@ CREATE INDEX IF NOT EXISTS pandit_contact_unlock_purchases_user_pandit_idx
   ON pandit_contact_unlock_purchases(user_id, pandit_id, created_at);
 CREATE INDEX IF NOT EXISTS pandit_contact_unlock_purchases_status_expiry_idx
   ON pandit_contact_unlock_purchases(status, expires_at);
+ALTER TABLE pandit_contact_entitlement_events
+  DROP CONSTRAINT IF EXISTS pandit_contact_entitlement_events_source_purchase_fk;
+ALTER TABLE pandit_contact_entitlement_events
+  ADD CONSTRAINT pandit_contact_entitlement_events_source_purchase_fk
+  FOREIGN KEY (source_purchase_id) REFERENCES pandit_contact_unlock_purchases(id);
 
 -- Existing protected reveals are the initial free-reveal history. The
 -- source-row unique key makes this safe to run repeatedly.

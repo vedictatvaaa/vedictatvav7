@@ -402,10 +402,10 @@ export async function registerRoutes(
     res.status(204).end();
   });
   const contactTarget = async (slug: string) => {
-    // Contact follows the directory/public-profile safety gate, never booking
-    // or storefront publication. A storefront only supplies an optional policy
-    // override and WhatsApp number.
-    const pandit = await getPubliclySafePanditBySlug(slug);
+    // Contact is available only for the same published storefronts that may
+    // appear in public discovery. Knowing a hidden slug must not bypass
+    // directory, search, or storefront publication governance.
+    const pandit = await getPubliclyPublishedPanditBySlug(slug);
     if (!pandit) return null;
     const storefront = await storage.getPanditStorefrontByPanditId(pandit.id);
     const phone = normalizePanditPhone(pandit.phone);
