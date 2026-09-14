@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { createAiClient, isAiProviderConfigured } from "./ai-provider";
 import { db } from "./db";
 import { blogPosts, qaQuestions, qaAnswers } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -187,10 +188,8 @@ function slugify(s: string): string {
 }
 
 function getOpenAI(): OpenAI | null {
-  const key = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  if (!key) return null;
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
-  return new OpenAI({ apiKey: key, baseURL });
+  if (!isAiProviderConfigured()) return null;
+  try { return createAiClient({ task: "blog_generation" }); } catch { return null; }
 }
 
 /**

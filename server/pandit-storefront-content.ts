@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import OpenAI from "openai";
 import type { Express, Request } from "express";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import {
@@ -25,6 +24,7 @@ import {
 } from "./pandit-public-access";
 import { notifyPublish } from "./publish-notify";
 import { effectivePanditGovernance } from "./pandit-public-eligibility";
+import { createAiClient, getAiProviderConfig } from "./ai-provider";
 
 export const PANDIT_CONTENT_PROMPT_VERSION = "pandit-storefront-factual-v1";
 
@@ -248,16 +248,14 @@ export function validatePanditContentDraft(value: unknown, facts?: PublicFacts):
 }
 
 function openAiClient() {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OpenAI is not configured");
-  return new OpenAI({ apiKey, baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL });
+  return createAiClient({ task: "pandit_storefront_content" });
 }
 
 export async function generatePanditContentDraft(facts: PublicFacts): Promise<{
   draft: PanditContentDraft;
   modelIdentifier: string;
 }> {
-  const modelIdentifier = process.env.PANDIT_STOREFRONT_AI_MODEL || "gpt-4o-mini";
+  const modelIdentifier = process.env.PANDIT_STOREFRONT_AI_MODEL || getAiProviderConfig().model;
   const response = await openAiClient().chat.completions.create({
     model: modelIdentifier,
     messages: [

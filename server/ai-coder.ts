@@ -20,7 +20,7 @@
 import type { Express } from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
-import OpenAI from "openai";
+import { createAiClient, getAiProviderConfig, isAiProviderConfigured } from "./ai-provider";
 import { db } from "./db";
 import { aiCoderSessions } from "@shared/schema";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
@@ -262,7 +262,8 @@ export function registerAiCoderRoutes(app: Express, adminAuthMiddleware: any) {
     let summary = "";
     let usage: any = null;
     try {
-      const openai = new OpenAI();
+      if (!isAiProviderConfigured()) return res.status(503).json({ message: "AI provider is not configured" });
+      const openai = createAiClient({ task: "ai_coder", timeoutMs: 90_000, model: process.env.AI_CODER_MODEL || getAiProviderConfig().model });
       const completion = await openai.chat.completions.create({
         model: MODEL,
         messages: [

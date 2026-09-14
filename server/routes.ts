@@ -33,6 +33,7 @@ import { registerDashboardRoutes } from "./dashboard-routes";
 import { registerPanditEarningsRoutes } from "./pandit-earnings";
 import { registerPanditSeoNetworkAdminRoutes } from "./pandit-seo-network/admin-routes";
 import { registerPanditStorefrontContentRoutes, buildPanditPublicFacts, getPublishedPanditContent, authoritativePanditLastmod } from "./pandit-storefront-content";
+import { getAiProviderStatus } from "./ai-provider";
 import { registerKnowledgeGraphAdminRoutes } from "./knowledge-graph/admin-routes";
 import { registerDestinationAdminRoutes, registerDestinationPublicRoutes } from "./knowledge-graph/destination-routes";
 import { registerKnowledgeGraphPublicRoutes } from "./knowledge-graph/public-routes";
@@ -3555,39 +3556,55 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   app.get("/api/admin/pandit-discovery/health", adminAuthMiddleware, async (_req, res) => {
-    const [all, states, cities] = await Promise.all([
-      storage.getPandits(),
-      db.select().from(indianStates),
-      db.select().from(indianCities),
-    ]);
-    const stateById = new Map(states.map(state => [state.id, state]));
-    const cityById = new Map(cities.map(city => [city.id, city]));
-    const issueFor = (pandit: any) => {
-      const issues: string[] = [];
-      const state = pandit.stateId == null ? undefined : stateById.get(pandit.stateId);
-      const city = pandit.cityId == null ? undefined : cityById.get(pandit.cityId);
-      if (!state) issues.push("missing_state");
-      if (!city) issues.push("missing_city");
-      if (state && !state.isActive) issues.push("inactive_state");
-      if (city && !city.isActive) issues.push("inactive_city");
-      if (city && state && city.stateId !== state.id) issues.push("invalid_state_city");
-      if (pandit.locationReviewStatus !== "resolved") issues.push("location_review");
-      if (!pandit.name?.trim() || !pandit.specialization?.trim() || !pandit.languages?.trim() || !pandit.bio?.trim()) issues.push("missing_profile_data");
-      return issues;
-    };
-    const rows = all.map(pandit => ({ pandit, issues: issueFor(pandit) }));
-    const publiclyDiscoverable = rows.filter(({ pandit, issues }) => pandit.verified && !pandit.onLeave && !issues.some(issue => issue !== "missing_profile_data")).length;
-    res.json({
-      total: all.length,
-      verified: all.filter(pandit => pandit.verified).length,
-      active: all.filter(pandit => !pandit.onLeave).length,
-      publiclyDiscoverable,
-      missingState: rows.filter(row => row.issues.includes("missing_state")).length,
-      missingCity: rows.filter(row => row.issues.includes("missing_city")).length,
-      locationIssues: rows.filter(row => row.issues.some(issue => ["inactive_state", "inactive_city", "invalid_state_city", "location_review"].includes(issue))).length,
-      missingProfileData: rows.filter(row => row.issues.includes("missing_profile_data")).length,
-      issuePanditIds: rows.filter(row => row.issues.length > 0).map(row => row.pandit.id),
-    });
+    try {
+      const [all, states, cities] = await Promise.all([
+        storage.getPandits(),
+        db.select().from(indianStates),
+        db.select().from(indianCities),
+      ]);
+      const stateById = new Map(states.map(state => [state.id, state]));
+      const cityById = new Map(cities.map(city => [city.id, city]));
+      const issueFor = (pandit: any) => {
+        const issues: string[] = [];
+        const state = pandit.stateId == null ? undefined : stateById.get(pandit.stateId);
+        const city = pandit.cityId == null ? undefined : cityById.get(pandit.cityId);
+        if (!state) issues.push("missing_state");
+        if (!city) issues.push("missing_city");
+        if (state && !state.isActive) issues.push("inactive_state");
+        if (city && !city.isActive) issues.push("inactive_city");
+        if (city && state && city.stateId !== state.id) issues.push("invalid_state_city");
+        if (pandit.locationReviewStatus !== "resolved") issues.push("location_review");
+        if (pandit.latitude == null || pandit.longitude == null) issues.push("coordinates_missing");
+        if (!pandit.name?.trim() || !pandit.specialization?.trim() || !pandit.languages?.trim() || !pandit.bio?.trim()) issues.push("missing_profile_data");
+        return issues;
+      };
+      const rows = all.map(pandit => ({ pandit, issues: issueFor(pandit) }));
+      const publiclyDiscoverable = rows.filter(({ pandit, issues }) =>
+        pandit.verified && !pandit.onLeave && !issues.some(issue =>
+          ["missing_state", "missing_city", "inactive_state", "inactive_city", "invalid_state_city", "location_review"].includes(issue),
+        ),
+      ).length;
+      res.json({
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        total: all.length,
+        verified: all.filter(pandit => pandit.verified).length,
+        active: all.filter(pandit => !pandit.onLeave).length,
+        publiclyDiscoverable,
+        missingState: rows.filter(row => row.issues.includes("missing_state")).length,
+        missingCity: rows.filter(row => row.issues.includes("missing_city")).length,
+        locationIssues: rows.filter(row => row.issues.some(issue => ["inactive_state", "inactive_city", "invalid_state_city", "location_review", "coordinates_missing"].includes(issue))).length,
+        missingProfileData: rows.filter(row => row.issues.includes("missing_profile_data")).length,
+        issuePanditIds: rows.filter(row => row.issues.length > 0).map(row => row.pandit.id),
+      });
+    } catch (error) {
+      console.error("pandit discovery health error:", error);
+      res.status(503).json({ ok: false, message: "Discovery health is temporarily unavailable", code: "discovery_health_unavailable" });
+    }
+  });
+
+  app.get("/api/admin/ai/provider-status", adminAuthMiddleware, async (_req, res) => {
+    res.json({ ok: true, ...getAiProviderStatus() });
   });
 
   app.get("/api/pandit-discovery", async (req, res) => {

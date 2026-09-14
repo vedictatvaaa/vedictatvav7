@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import { z } from "zod";
 import { db } from "./db";
 import { sacredTexts, insertSacredTextSchema } from "@shared/schema";
@@ -12,6 +12,7 @@ import { adminAuthMiddleware } from "./admin-auth";
 import { sanitizeRichHtml } from "./html-sanitizer";
 import { notifyPublish } from "./publish-notify";
 import { hasAnalyticsConsent } from "./consent";
+import { createAiClient, isAiProviderConfigured } from "./ai-provider";
 
 const TEXT_TYPES = ["chalisa", "mantra", "katha", "aarti", "stotra", "book"] as const;
 type TextType = typeof TEXT_TYPES[number];
@@ -146,8 +147,8 @@ Return JSON with this exact shape (use Devanagari for lyrics; IAST roman for tra
 let openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!openai) {
-    if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    if (!isAiProviderConfigured()) throw new Error("AI provider is not configured");
+    openai = createAiClient({ task: "sacred_library_generation" });
   }
   return openai;
 }

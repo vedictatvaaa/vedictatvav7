@@ -1,10 +1,8 @@
-import OpenAI from "openai";
 import type { LocationAiInterpreter } from "./pandit-location-rectification";
-
-const apiKey = () => process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+import { createStructuredCompletion, isAiProviderConfigured } from "./ai-provider";
 
 export function isOpenAILocationInterpreterConfigured() {
-  return Boolean(apiKey());
+  return isAiProviderConfigured();
 }
 
 /**
@@ -15,50 +13,64 @@ export function isOpenAILocationInterpreterConfigured() {
 export function createOpenAILocationInterpreter(options: {
   client?: any; model?: string; timeoutMs?: number;
 } = {}): LocationAiInterpreter {
-  const client = options.client || new OpenAI({
-    apiKey: apiKey(),
-    baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-    timeout: options.timeoutMs ?? 8_000,
-  });
-  const model = options.model || process.env.OPENAI_LOCATION_MODEL || "gpt-4o-mini";
   return async ({ stateText, cityText, candidates }) => {
     if (!candidates.length) return null;
-    const completion = await client.chat.completions.create({
-      model,
-      temperature: 0,
-      max_tokens: 180,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "pandit_location_interpretation",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              stateId: { type: "integer" }, cityId: { type: "integer" },
-              confidence: { type: "number", minimum: 0, maximum: 1 },
-              reason: { type: "string", maxLength: 300 },
+    const parsed = options.client
+      ? await options.client.chat.completions.create({
+        model: options.model || process.env.OPENAI_LOCATION_MODEL || "gpt-4o-mini",
+        temperature: 0,
+        max_tokens: 180,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "pandit_location_interpretation",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                stateId: { type: "integer" }, cityId: { type: "integer" },
+                confidence: { type: "number", minimum: 0, maximum: 1 },
+                reason: { type: "string", maxLength: 300 },
+              },
+              required: ["stateId", "cityId", "confidence", "reason"],
             },
-            required: ["stateId", "cityId", "confidence", "reason"],
           },
         },
-      },
-      messages: [
-        {
-          role: "system",
-          content: "Interpret only the location spelling. Select exactly one active candidate ID. Never infer coordinates or any other Pandit information. Your confidence is advisory only and this result always requires human review.",
+        messages: [
+          {
+            role: "system",
+            content: "Interpret only the location spelling. Select exactly one active candidate ID. Never infer coordinates or any other Pandit information. Your confidence is advisory only and this result always requires human review.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({ stateText: stateText || null, cityText: cityText || null, candidates }),
+          },
+        ],
+      }).then((response: any) => {
+        const content = response.choices?.[0]?.message?.content;
+        if (typeof content !== "string") return null;
+        try { return JSON.parse(content); } catch { return null; }
+      })
+      : await createStructuredCompletion({
+        task: "pandit_location_interpretation",
+        model: options.model,
+        timeoutMs: options.timeoutMs ?? 8_000,
+        maxTokens: 180,
+        schemaName: "pandit_location_interpretation",
+        system: "Interpret only the location spelling. Select exactly one active candidate ID. Never infer coordinates or any other Pandit information. Your confidence is advisory only and this result always requires human review.",
+        user: { stateText: stateText || null, cityText: cityText || null, candidates },
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            stateId: { type: "integer" }, cityId: { type: "integer" },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
+            reason: { type: "string", maxLength: 300 },
+          },
+          required: ["stateId", "cityId", "confidence", "reason"],
         },
-        {
-          role: "user",
-          content: JSON.stringify({ stateText: stateText || null, cityText: cityText || null, candidates }),
-        },
-      ],
-    });
-    const content = completion.choices?.[0]?.message?.content;
-    if (typeof content !== "string") return null;
-    let parsed: any;
-    try { parsed = JSON.parse(content); } catch { return null; }
+      });
     const candidate = candidates.find(item => item.stateId === parsed?.stateId && item.cityId === parsed?.cityId);
     if (!candidate || !Number.isFinite(parsed.confidence)) return null;
     // Keep all model suggestions below the engine's automatic threshold.

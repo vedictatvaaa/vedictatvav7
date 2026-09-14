@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
-import OpenAI from "openai";
+import { createAiClient, isAiProviderConfigured } from "./ai-provider";
 import * as jyotish from "./jyotish";
 import type { PdfKundliOrder } from "@shared/schema";
 import type { BirthChart } from "./jyotish/kundli";
@@ -599,9 +599,9 @@ function closingReflection(key: PredictionKey): string {
 }
 
 async function generateAIPredictions(chart: BirthChart, order: PdfKundliOrder): Promise<Predictions> {
-  if (!process.env.OPENAI_API_KEY) return fallbackPredictions(chart, order);
+  if (!isAiProviderConfigured()) return fallbackPredictions(chart, order);
   try {
-    const openai = new OpenAI();
+    const openai = createAiClient({ task: "kundli_predictions" });
     const planetSummary = chart.planets.map(p => `${p.name} in ${p.sign} (house ${p.house}, ${p.dignity}${p.retrograde ? ", retrograde" : ""}${p.combust ? ", combust" : ""}, nakshatra ${p.nakshatra})`).join("; ");
     const houseSummary = chart.houses.map(h => `H${h.number}=${h.sign}(L:${h.signLord})${h.planets.length ? "[" + h.planets.join(",") + "]" : ""}`).join(" | ");
     const prompt = `You are a senior Jyotish acharya in the Parashari tradition writing a premium birth-chart report for a paying customer. Speak warmly and directly to the native, weaving classical Vedic concepts (graha, bhava, dasha, nakshatra) with modern relevance. NO Sanskrit-only sentences — translate. NO disclaimers about "this is general advice". NO emojis.

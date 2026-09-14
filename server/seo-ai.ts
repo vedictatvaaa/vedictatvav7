@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { createAiClient, isAiProviderConfigured } from "./ai-provider";
 import { storage } from "./storage";
 import type { Product } from "@shared/schema";
 
@@ -70,8 +71,9 @@ const PAGE_HINTS: Record<string, { topic: string; intent: string; primaryKw: str
 };
 
 function getOpenAI(): OpenAI | null {
+  if (!isAiProviderConfigured()) return null;
   try {
-    return new OpenAI();
+    return createAiClient({ task: "seo_generation" });
   } catch {
     return null;
   }

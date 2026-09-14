@@ -74,6 +74,71 @@ export function registerPanditLocationRectificationRoutes(app: Express, adminAut
     }
   });
 
+  // Applies only deterministic catalogue matches. This operation deliberately
+  // does not geocode or write coordinates: a city match is not evidence for a
+  // Pandit's exact position.
+  app.post("/api/admin/pandit-location-rectification/resolve-safe", adminAuthMiddleware, async (req: any, res) => {
+    const parsed = z.object({
+      confirmed: z.literal(true),
+      reason: z.string().trim().min(1).max(500).default("Admin requested deterministic location resolution"),
+    }).strict().safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ message: "Confirmation and reason are required" });
+    try {
+      const report = await runPanditLocationAudit({ persist: false, batchId: `plr-safe-${Date.now()}` });
+      const candidates = report.results.filter(result => result.autoApply && result.proposed);
+      const result = await db.transaction(async tx => {
+        const applied: number[] = [];
+        const skipped: Array<{ panditId: number; reason: string }> = [];
+        for (const candidate of candidates) {
+          const proposed = candidate.proposed!;
+          const [current] = await tx.select().from(pandits).where(eq(pandits.id, candidate.panditId)).for("update").limit(1);
+          if (!current || !sameLocationSnapshot(locationSnapshot(current), candidate.before)) {
+            skipped.push({ panditId: candidate.panditId, reason: "source_changed_since_scan" });
+            continue;
+          }
+          const stateId = Number(proposed.stateId);
+          const cityId = Number(proposed.cityId);
+          if (!Number.isInteger(stateId) || !Number.isInteger(cityId) || stateId < 1 || cityId < 1) {
+            skipped.push({ panditId: candidate.panditId, reason: "missing_canonical_location" });
+            continue;
+          }
+          const [location] = await tx.select({ state: indianStates, city: indianCities })
+            .from(indianCities).innerJoin(indianStates, eq(indianCities.stateId, indianStates.id))
+            .where(and(
+              eq(indianCities.id, cityId),
+              eq(indianCities.stateId, stateId),
+              eq(indianCities.isActive, true),
+              eq(indianStates.isActive, true),
+            )).limit(1);
+          if (!location) {
+            skipped.push({ panditId: candidate.panditId, reason: "catalogue_location_inactive" });
+            continue;
+          }
+          await tx.update(pandits).set({
+            stateId: location.state.id,
+            cityId: location.city.id,
+            state: location.state.name,
+            city: location.city.name,
+            locationReviewStatus: "resolved",
+          } as any).where(eq(pandits.id, candidate.panditId));
+          await tx.insert(adminAuditLogs).values({
+            actor: `admin:${req.adminUserId || "authenticated"}`,
+            action: "pandit_location_rectification.safe_applied",
+            target: `pandit:${candidate.panditId}`,
+            ipAddress: req.ip,
+            details: { reason: parsed.data.reason, before: candidate.before, after: proposed, coordinatesPreserved: true },
+          });
+          applied.push(candidate.panditId);
+        }
+        return { applied, skipped };
+      });
+      res.json({ ok: true, scanned: report.results.length, ...result });
+    } catch (error: any) {
+      console.error("safe location resolution error:", error);
+      res.status(500).json({ ok: false, message: "Safe location resolution failed", code: "safe_location_resolution_failed" });
+    }
+  });
+
   // Applies only proposals that the deterministic engine marked high
   // confidence. Ambiguous rows remain in the review queue; they cannot be
   // smuggled through a bulk request by changing a client-side confidence.

@@ -10,7 +10,8 @@
 //        + booking-spike framing). Always falls back to a static template
 //        if OpenAI errors so reminders never silently disappear.
 // =====================================================================
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { createAiClient, isAiProviderConfigured } from "./ai-provider";
 
 type FestivalLite = {
   id?: number;
@@ -50,8 +51,8 @@ function esc(s: string | null | undefined): string {
 }
 
 function client(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
-  try { return new OpenAI(); } catch { return null; }
+  if (!isAiProviderConfigured()) return null;
+  try { return createAiClient({ task: "festival_content" }); } catch { return null; }
 }
 
 // --- B: enrich festival content (admin one-click) ----------------------

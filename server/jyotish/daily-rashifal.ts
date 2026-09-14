@@ -1,5 +1,5 @@
-import OpenAI from "openai";
 import { computeDailyPanchang } from "./panchang";
+import { createAiClient, getAiProviderConfig, isAiProviderConfigured } from "../ai-provider";
 
 export type RashifalSystem = "vedic" | "western";
 
@@ -160,11 +160,10 @@ async function generateWithAI(
   system: RashifalSystem,
   dateISO: string,
 ): Promise<{ prediction: DailyRashifal["prediction"]; surprise: DailyRashifal["surprise"]; source: "ai" | "fallback" }> {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
-  if (!apiKey) return { ...fallbackPrediction(sign, astro, dateISO), source: "fallback" };
+  if (!isAiProviderConfigured()) return { ...fallbackPrediction(sign, astro, dateISO), source: "fallback" };
 
   try {
-    const openai = new OpenAI({ apiKey, baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL });
+    const openai = createAiClient({ task: "daily_rashifal", model: process.env.RASHIFAL_AI_MODEL || getAiProviderConfig().model });
     const sysPrompt = system === "vedic"
       ? `You are a learned Vedic Jyotishi writing today's rashifal for ${sign.name} (${sign.english}) rashi natives. Ground every line in the live panchang context provided. Be specific, warm, and uplifting — no doom. Reference the day's tithi, nakshatra, weekday lord, and the sign's ruling planet to justify guidance. Avoid generic horoscope cliches. Write in clear, polished English that an Indian audience will love. Return STRICT JSON only — no markdown, no code fences.`
       : `You are an expert Western astrologer writing today's daily horoscope for ${sign.name}. Be specific and warm — no doom. Reference the day's planetary ruler, the sign's element and ruler, and the date to justify guidance. Avoid generic horoscope cliches. Return STRICT JSON only — no markdown, no code fences.`;

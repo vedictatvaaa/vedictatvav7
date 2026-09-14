@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { createAiClient } from "../ai-provider";
 import { storage } from "../storage";
 import { getPanditSeoNetworkProjection } from "./cache";
 import { getHierarchicalLocation, type HierarchicalLocation } from "./state-city-seo";
@@ -37,7 +38,7 @@ export async function generateLocationEditorialDraft(
 ): Promise<LocationEditorialDraft | null> {
   let openai: OpenAI;
   try {
-    openai = new OpenAI();
+    openai = createAiClient({ task: "location_editorial_draft" });
   } catch {
     return null;
   }

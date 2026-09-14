@@ -17,25 +17,6 @@ import { createFetcher } from "../admin-shared";
 import PanditLocationRectification from "./PanditLocationRectification";
 
 // ============================================================
-// Geocode helper — uses OpenStreetMap Nominatim (free, no key)
-// ============================================================
-async function geocodeCity(city: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const q = encodeURIComponent(`${city}, India`);
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=0`,
-      { headers: { "Accept-Language": "en" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data?.length) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch {
-    return null;
-  }
-}
-
-// ============================================================
 // Pandits Tab
 // ============================================================
 function PanditsTab() {
@@ -54,9 +35,7 @@ function PanditsTab() {
   const [search, setSearch] = useState(""); const [stateFilter, setStateFilter] = useState(""); const [cityFilter, setCityFilter] = useState(""); const [verificationFilter, setVerificationFilter] = useState("all"); const [availabilityFilter, setAvailabilityFilter] = useState("all"); const [activeFilter, setActiveFilter] = useState("all"); const [qualityFilter, setQualityFilter] = useState("all");
   const [registrationLookup, setRegistrationLookup] = useState("");
   const [submittedRegistrationNo, setSubmittedRegistrationNo] = useState("");
-  const [geocodingId, setGeocodingId] = useState<number | null>(null);
-  const [bulkGeocoding, setBulkGeocoding] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const [resolvingLocationId, setResolvingLocationId] = useState<number | null>(null);
 
   const { data: pandits, isLoading } = useQuery<Pandit[]>({
     queryKey: ["/api/admin/pandits"],
@@ -161,7 +140,7 @@ function PanditsTab() {
   const updateFeesMutation = useMutation({
     mutationFn: async ({ id, fees }: { id: number; fees: number }) => {
       const res = await fetch(`/api/pandits/${id}`, {
-        method: "PATCH",
+        method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
         body: JSON.stringify({ fees }),
       });
@@ -230,30 +209,25 @@ function PanditsTab() {
 
   const setLocationMutation = useMutation({
     mutationFn: async (id: number) => {
-      const pandit = (pandits || []).find(p => p.id === id);
-      if (!pandit) throw new Error("Pandit not found");
-      setGeocodingId(id);
-      const coords = await geocodeCity(pandit.city);
-      if (!coords) throw new Error(`Could not find coordinates for "${pandit.city}"`);
-      const res = await fetch(`/api/pandits/${id}`, {
-        method: "PATCH",
+      setResolvingLocationId(id);
+      const res = await fetch("/api/admin/pandit-location-rectification/resolve-safe", {
+        method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
-        body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
+        body: JSON.stringify({ confirmed: true, reason: `Admin requested safe location resolution for Pandit #${id}` }),
       });
-      if (!res.ok) throw new Error("Save failed");
-      return { pandit: await res.json(), coords };
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "Safe location resolution failed");
+      return body;
     },
-    onSuccess: ({ coords }) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
-      toast({
-        title: "Location Set ✓",
-        description: `Coordinates saved: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`,
-      });
-      setGeocodingId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-discovery/health"] });
+      toast({ title: "Safe location resolution complete", description: `${result.applied?.length || 0} canonical locations applied. Existing coordinates were preserved.` });
+      setResolvingLocationId(null);
     },
     onError: (e: Error) => {
-      toast({ title: "Location Failed", description: e.message, variant: "destructive" });
-      setGeocodingId(null);
+      toast({ title: "Location resolution failed", description: e.message, variant: "destructive" });
+      setResolvingLocationId(null);
     },
   });
 
@@ -284,47 +258,11 @@ function PanditsTab() {
   });
 
   const handleBulkSetLocations = async () => {
-    const missing = (pandits || []).filter(p => p.latitude == null || p.longitude == null);
-    if (!missing.length) {
-      toast({ title: "All set!", description: "Every pandit already has GPS coordinates." });
-      return;
-    }
-    setBulkGeocoding(true);
-    setBulkProgress({ done: 0, total: missing.length, failed: 0 });
-    let done = 0;
-    let failed = 0;
-    for (const pandit of missing) {
-      const coords = await geocodeCity(pandit.city);
-      if (coords) {
-        try {
-           const response = await fetch(`/api/pandits/${pandit.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
-            body: JSON.stringify({ latitude: coords.lat, longitude: coords.lng }),
-          });
-           if (!response.ok) throw new Error("Location update failed");
-          done++;
-        } catch {
-          failed++;
-        }
-      } else {
-        failed++;
-      }
-      setBulkProgress({ done: done + failed, total: missing.length, failed });
-      // Nominatim rate limit: 1 req/sec
-      await new Promise(r => setTimeout(r, 1100));
-    }
-    await queryClient.invalidateQueries({ queryKey: ["/api/admin/pandits"] });
-    setBulkGeocoding(false);
-    setBulkProgress(null);
-    toast({
-      title: `Bulk Location Done`,
-      description: `${done} pandits located${failed ? `, ${failed} could not be found` : ""}.`,
-      variant: failed && !done ? "destructive" : "default",
-    });
+    if (!window.confirm("Resolve only exact canonical state/city matches? Existing Pandit coordinates will not be changed.")) return;
+    setLocationMutation.mutate(-1);
   };
 
-  const noGpsCount = (pandits || []).filter(p => p.latitude == null || p.longitude == null).length;
+  const unresolvedLocationCount = (pandits || []).filter(p => p.locationReviewStatus !== "resolved" || p.stateId == null || p.cityId == null).length;
 
   return (
     <div className="space-y-6">
@@ -333,19 +271,17 @@ function PanditsTab() {
           <h1 className="text-3xl font-serif text-primary" data-testid="page-title-pandits">Pandits</h1>
           <p className="text-sm text-muted-foreground">Manage profiles, publishing eligibility, locations and discovery health.</p>
         </div>
-        {noGpsCount > 0 && (
+        {unresolvedLocationCount > 0 && (
           <Button
             variant="outline"
             size="sm"
-            disabled={bulkGeocoding}
+            disabled={setLocationMutation.isPending}
             onClick={handleBulkSetLocations}
               className="w-full sm:w-auto min-h-11 shrink-0 gap-2 border-amber-300 text-amber-700 hover:bg-amber-50"
             data-testid="btn-bulk-set-locations"
           >
-            <LocateFixed className={`w-4 h-4 ${bulkGeocoding ? "animate-spin" : ""}`} />
-            {bulkGeocoding && bulkProgress
-              ? `Locating… ${bulkProgress.done}/${bulkProgress.total}`
-              : `Set All Locations (${noGpsCount} missing)`}
+            <LocateFixed className={`w-4 h-4 ${setLocationMutation.isPending ? "animate-spin" : ""}`} />
+            {setLocationMutation.isPending ? "Resolving…" : `Resolve All Locations (${unresolvedLocationCount})`}
           </Button>
         )}
       </div>
@@ -404,25 +340,6 @@ function PanditsTab() {
         <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}><SelectTrigger><SelectValue placeholder="Availability"/></SelectTrigger><SelectContent><SelectItem value="all">All availability</SelectItem><SelectItem value="available">Available</SelectItem><SelectItem value="busy">Busy</SelectItem><SelectItem value="unavailable">Unavailable</SelectItem></SelectContent></Select>
         <Select value={qualityFilter} onValueChange={setQualityFilter}><SelectTrigger><SelectValue placeholder="Data quality"/></SelectTrigger><SelectContent><SelectItem value="all">All data quality</SelectItem><SelectItem value="issues">Needs review</SelectItem><SelectItem value="clean">No detected issues</SelectItem></SelectContent></Select>
       </div>
-      {bulkGeocoding && bulkProgress && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3">
-          <LocateFixed className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-amber-800">
-              Geocoding pandits… {bulkProgress.done} of {bulkProgress.total} done
-              {bulkProgress.failed > 0 && <span className="text-red-600 ml-1">· {bulkProgress.failed} failed</span>}
-            </div>
-            <div className="mt-1.5 h-1.5 bg-amber-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-500 rounded-full transition-all duration-500"
-                style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
-              />
-            </div>
-          </div>
-          <span className="text-xs text-amber-600 shrink-0">{Math.round((bulkProgress.done / bulkProgress.total) * 100)}%</span>
-        </div>
-      )}
-
       {hasRegistrationLookup && !registrationLookupError && submittedRegistrationNo && registrationLookupQuery.data?.[0] && (
         <Card className="border-primary/25 bg-primary/[0.03]" data-testid="pandit-registration-lookup-result">
           <CardContent className="p-4">
@@ -458,7 +375,7 @@ function PanditsTab() {
         <div className="space-y-3">
           {displayedPandits.map((pandit) => {
             const hasGps = pandit.latitude != null && pandit.longitude != null;
-            const isGeocoding = geocodingId === pandit.id;
+            const isResolvingLocation = resolvingLocationId === pandit.id;
             return (
               <Card key={pandit.id} className="overflow-hidden bg-card border-border shadow-sm" data-testid={`card-pandit-${pandit.id}`}>
                 <CardContent className="p-4 sm:p-5">
@@ -571,14 +488,14 @@ function PanditsTab() {
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={isGeocoding}
+                         disabled={setLocationMutation.isPending}
                         onClick={() => setLocationMutation.mutate(pandit.id)}
                         className={`min-h-11 text-xs gap-1 sm:min-h-9 ${hasGps ? "text-sky-600 border-sky-200" : "text-amber-600 border-amber-300"}`}
-                        title={hasGps ? `GPS: ${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)} — click to refresh` : "Auto-detect coordinates from city"}
+                         title={hasGps ? `GPS: ${(pandit.latitude as number).toFixed(4)}, ${(pandit.longitude as number).toFixed(4)} — coordinates are preserved` : "Resolve an exact catalogue state/city match"}
                         data-testid={`btn-set-location-${pandit.id}`}
                       >
-                        <LocateFixed className={`w-3 h-3 ${isGeocoding ? "animate-spin" : ""}`} />
-                        {isGeocoding ? "Locating…" : hasGps ? "Re-locate" : "Set Location"}
+                         <LocateFixed className={`w-3 h-3 ${isResolvingLocation ? "animate-spin" : ""}`} />
+                         {isResolvingLocation ? "Resolving…" : "Resolve Location"}
                       </Button>
 
                       {(pandit as any).locationReviewStatus === "needs_review" && <span className="text-xs font-medium text-amber-700">⚠ Location needs review</span>}
@@ -670,7 +587,6 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
   const { toast } = useToast();
   const [form, setForm] = useState<Partial<Pandit & { latitude: number | null; longitude: number | null; stateId: number | null; cityId: number | null }>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>createFetcher(adminToken)("/api/admin/locations") });
 
@@ -695,23 +611,6 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
     }
     setUploadingPhoto(false);
-  };
-
-  const handleAutoDetectLocation = async () => {
-    const city = form.city || pandit?.city;
-    if (!city) {
-      toast({ title: "No City", description: "Enter a city name first.", variant: "destructive" });
-      return;
-    }
-    setGeocoding(true);
-    const coords = await geocodeCity(city);
-    setGeocoding(false);
-    if (!coords) {
-      toast({ title: "Not Found", description: `Could not find coordinates for "${city}". Try a more specific city name.`, variant: "destructive" });
-      return;
-    }
-    setForm(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
-    toast({ title: "Location Found", description: `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)} — save to apply.` });
   };
 
   useEffect(() => {
@@ -838,21 +737,9 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
                   className="flex-1"
                   data-testid="input-edit-pandit-longitude"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={geocoding}
-                  onClick={handleAutoDetectLocation}
-                  className="shrink-0 gap-1.5 text-sky-600 border-sky-300 hover:bg-sky-50"
-                  data-testid="btn-auto-detect-location"
-                >
-                  <LocateFixed className={`w-4 h-4 ${geocoding ? "animate-spin" : ""}`} />
-                  {geocoding ? "Detecting…" : "Auto-detect"}
-                </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Auto-detect fills coordinates from the city name via OpenStreetMap. Or enter manually.
+                Coordinates must come from verified address-level evidence. A city name is never used as a Pandit coordinate.
               </p>
             </div>
             <div className="md:col-span-2">
