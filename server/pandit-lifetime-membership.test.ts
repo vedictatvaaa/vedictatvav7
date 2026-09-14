@@ -14,6 +14,7 @@ import {
   adminSessions,
   indianCities,
   indianStates,
+  masterServices,
   panditApplications,
   panditCityRequests,
   panditServices,
@@ -111,6 +112,12 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       .where(and(eq(indianCities.isActive, true), eq(indianStates.isActive, true)))
       .limit(1);
     assert.ok(location, "approval integration requires an active canonical State and City");
+    const activeServices = await db.select({ id: masterServices.id, serviceType: masterServices.serviceType })
+      .from(masterServices)
+      .where(eq(masterServices.isActive, true))
+      .then((services) => services.filter((service) => ["puja", "katha", "ritual"].includes(service.serviceType)).slice(0, 6));
+    assert.ok(activeServices.length >= 6, "approval integration requires at least six active specialist Pujas");
+    const masterServiceIds = activeServices.map((service) => service.id);
 
     const [admin] = await db.insert(users).values({
       name: "Pandit Approval Integration Admin",
@@ -171,8 +178,7 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       });
       return { status: response.status, body: await response.json() };
     };
-
-    const submitted = await post("/api/pandit-applications", {
+    const applicationBody = (overrides: Record<string, unknown> = {}) => ({
       fullName,
       phone: "9876543210",
       email,
@@ -180,19 +186,62 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       cityId: location.city.id,
       experience: "12",
       specializations: "Vedic ceremonies",
-      masterServiceIds: [],
+      masterServiceIds: masterServiceIds.slice(0, 5),
       languages: "Hindi, English",
-      bio: "Integration fixture profile",
+      education: "Traditional Vedic training",
+      bio: "Integration fixture profile for route contract coverage.",
       photo,
       termsAccepted: true,
+      registeredAddress: `12 Test Street, ${location.city.name}, ${location.state.name}`,
+      latitude: 28.6139,
+      longitude: 77.209,
+      locationPermissionGranted: true,
+      servicesConfirmed: true,
       regionalOrigin: "Test region",
       serviceArea: location.city.name,
       feeRangeMin: 1100,
       feeRangeMax: 11000,
+      ...overrides,
     });
+
+    const fewerThanFive = await post("/api/pandit-applications", applicationBody({
+      email: `pandit-fewer-${suffix}@example.invalid`,
+      masterServiceIds: masterServiceIds.slice(0, 4),
+    }));
+    assert.equal(fewerThanFive.status, 400);
+    assert.match(fewerThanFive.body.message, /exactly five/i);
+
+    const moreThanFive = await post("/api/pandit-applications", applicationBody({
+      email: `pandit-more-${suffix}@example.invalid`,
+      masterServiceIds,
+    }));
+    assert.equal(moreThanFive.status, 400);
+    assert.match(moreThanFive.body.message, /exactly five/i);
+
+    const missingLocationConsent = await post("/api/pandit-applications", applicationBody({
+      email: `pandit-no-location-consent-${suffix}@example.invalid`,
+      locationPermissionGranted: false,
+    }));
+    assert.equal(missingLocationConsent.status, 400);
+    assert.match(missingLocationConsent.body.message, /expected true|permission|location/i);
+
+    const missingPhotoRequest = await post("/api/pandit-applications", applicationBody({
+      email: `pandit-no-photo-${suffix}@example.invalid`,
+      photo: "",
+    }));
+    assert.equal(missingPhotoRequest.status, 400);
+    assert.match(missingPhotoRequest.body.message, /photo|character/i);
+
+    const submitted = await post("/api/pandit-applications", applicationBody());
     assert.equal(submitted.status, 201);
     applicationId = submitted.body.id;
     assert.ok(Number.isInteger(applicationId));
+    const [storedApplication] = await db.select().from(panditApplications).where(eq(panditApplications.id, applicationId));
+    assert.equal(storedApplication.registeredAddress, `12 Test Street, ${location.city.name}, ${location.state.name}`);
+    assert.equal(storedApplication.latitude, 28.6139);
+    assert.equal(storedApplication.longitude, 77.209);
+    assert.equal(storedApplication.locationPermissionGranted, true);
+    assert.deepEqual(storedApplication.masterServiceIds, masterServiceIds.slice(0, 5));
 
     const approved = await post(`/api/admin/pandit-applications/${applicationId}/approve`, { note: "Integration approval" }, true);
     assert.equal(approved.status, 200);
@@ -217,6 +266,8 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
     assert.equal(publicBody.pandit.id, panditId);
     assert.equal(publicBody.pandit.verified, true);
     assert.equal(publicBody.pandit.registrationNo, approved.body.registrationNo);
+    assert.equal("latitude" in publicBody.pandit, false);
+    assert.equal("longitude" in publicBody.pandit, false);
 
     const governanceBefore = await adminRequest("GET", `/api/admin/pandit-governance?q=${encodeURIComponent(fullName)}`);
     assert.equal(governanceBefore.status, 200);
@@ -271,17 +322,13 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       .where(eq(pandits.slug, publishedPandit.slug));
     assert.equal(matchingPandits.length, 1);
 
-    const missingLocation = await post("/api/pandit-applications", {
+    const missingLocation = await post("/api/pandit-applications", applicationBody({
       fullName: `Missing Location ${suffix}`,
       phone: "9876543211",
       email: `pandit-location-${suffix}@example.invalid`,
-      stateId: location.state.id,
+      cityId: undefined,
       proposedCityName: `Unresolved City ${suffix}`,
-      experience: "3",
-      masterServiceIds: [],
-      photo,
-      termsAccepted: true,
-    });
+    }));
     assert.equal(missingLocation.status, 201);
     missingLocationApplicationId = missingLocation.body.id;
     const locationApproval = await post(`/api/admin/pandit-applications/${missingLocationApplicationId}/approve`, {}, true);
