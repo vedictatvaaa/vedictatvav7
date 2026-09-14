@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import OpenAI from "openai";
+import { createAiClient, getAiProviderConfig } from "./ai-provider";
 import { db } from "./db";
 import { abandonedCarts, orders } from "@shared/schema";
 import { desc, eq } from "drizzle-orm";
@@ -7,12 +7,9 @@ import { storage } from "./storage";
 import { sendAbandonedCartNudge } from "./email";
 import { adminAuthMiddleware } from "./admin-auth";
 
-function getOpenAI(): OpenAI | null {
+function getOpenAI() {
   try {
-    const apiKey = process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined;
-    if (!apiKey) return null;
-    return new OpenAI({ apiKey, baseURL });
+    return createAiClient({ task: "product_recommendations" });
   } catch { return null; }
 }
 
@@ -77,7 +74,7 @@ async function buildPersonalizedRecommendations(userId: number, limit = 8) {
       const productList = candidates.slice(0, 16).map((c, i) => `${i + 1}. ${c.product.name} (${c.product.category}) — ₹${c.product.price}`);
       const prompt = `You are a Vedic spiritual product advisor. A devotee has these recent buying patterns: ${JSON.stringify(userProfile)}.\n\nFrom this list, choose the top ${limit} products that complement their spiritual journey. Reply with ONLY a JSON array of the chosen 1-based indices, e.g. [3,1,7,2].\n\n${productList.join("\n")}`;
       const resp = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: getAiProviderConfig().model,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 80,
         temperature: 0.4,
@@ -162,7 +159,7 @@ async function answerProductQuestion(productSlugOrId: string, question: string):
   ].filter(Boolean).join("\n");
 
   const resp = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: getAiProviderConfig().model,
     messages: [
       { role: "system", content: "You are a knowledgeable Vedic spiritual product advisor for Vedic Tatva. Answer the customer's question warmly, concisely (2-4 sentences), and only based on the provided product context. If the answer is not in the context, suggest contacting Vedic Tatva support. Never invent specifications. Reply in the same language as the question." },
       { role: "user", content: `Product context:\n${ctx}\n\nCustomer question: ${question.trim()}` },

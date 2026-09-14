@@ -1,8 +1,7 @@
 import OpenAI from "openai";
 
-// Compatibility bridge for older feature modules that still construct an
-// OpenAI client directly. The gateway remains the preferred API, but all
-// server-side clients must resolve the same deployment and key.
+// Compatibility bridge for deployments that still provide the legacy
+// integration variable names. All AI clients now resolve through this module.
 if (!process.env.OPENAI_API_KEY && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
   process.env.OPENAI_API_KEY = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
 }
