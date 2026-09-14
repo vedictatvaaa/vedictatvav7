@@ -24,6 +24,12 @@ test("city-service SEO builder includes stable Service organization and location
   assert.deepEqual(result.schemas[2].payload.provider, { "@id": "https://example.test/#organization" });
 });
 
+test("city SEO description can use the live directory count independently of indexed providers", () => {
+  const result = buildPanditCitySeo({ ...base, providers: [], providerCount: 7 }, "https://example.test");
+  assert.match(result.description, /Compare 7 available Vedic Pandits in Delhi/);
+  assert.equal(result.schemas[1].payload.numberOfItems, 0);
+});
+
 test("SEO origin retains the SSR canonical origin during hydration", () => {
   assert.equal(panditCitySeoOrigin("https://public.example/book-pandit-online/delhi", "https://request.example"), "https://public.example");
   assert.equal(panditCitySeoOrigin(null, "https://request.example"), "https://request.example");

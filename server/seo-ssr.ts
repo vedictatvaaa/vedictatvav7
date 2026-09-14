@@ -53,6 +53,7 @@ import {
   getPublishedLocationEditorial,
   locationEditorialIsIndexable,
 } from "./pandit-seo-network/editorial";
+import { queryPanditDirectory } from "./pandit-directory-query";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
@@ -69,6 +70,18 @@ class PanditSeoSsrResolutionError extends Error {
   constructor(cause: unknown) {
     super("Pandit SEO projection could not be resolved", { cause });
   }
+}
+
+async function getLivePanditCount(cityId: number, service?: string) {
+  const result = await queryPanditDirectory({
+    cityId,
+    service,
+    languages: [],
+    sort: "best_match",
+    page: 1,
+    pageSize: 1,
+  });
+  return result.pagination.total;
 }
 
 export type HeadSchema = {
@@ -230,11 +243,19 @@ export async function resolvePanditNetworkHead(
   if (serviceSlug && !selectedService?.canonicalUrl) return null;
 
   const providers = selectedService?.providers || city.providers;
+  let providerCount = providers.length;
+  try {
+    providerCount = await getLivePanditCount(city.city.id, selectedService?.service.name);
+  } catch {
+    // SEO head generation must remain available if the live directory count
+    // is temporarily unavailable; the projection count is the safe fallback.
+  }
   const seo = buildPanditCitySeo({
     canonicalUrl: selectedService?.canonicalUrl || city.canonicalUrl,
     city: { name: city.city.name, canonicalUrl: city.canonicalUrl },
     state: { name: city.state.name },
     providers,
+    providerCount,
     indexable: selectedService?.indexability.indexable ?? city.indexability.indexable,
     ...(selectedService ? { service: { name: selectedService.service.name } } : {}),
   }, baseUrl);
@@ -272,7 +293,15 @@ export async function resolvePanditHierarchicalHead(
   } catch {
     // Editorial is an indexing input, not a page availability dependency.
   }
-  const seo = buildHierarchicalLocationSeo(location, baseUrl, editorial);
+  let providerCount: number | undefined;
+  if (location.kind === "city" && location.city?.city.id) {
+    try {
+      providerCount = await getLivePanditCount(location.city.city.id);
+    } catch {
+      // Keep the projection count as a safe fallback when the directory is unavailable.
+    }
+  }
+  const seo = buildHierarchicalLocationSeo(location, baseUrl, editorial, providerCount);
   return {
     title: seo.title,
     description: seo.description,

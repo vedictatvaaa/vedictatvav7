@@ -145,6 +145,7 @@ export function buildHierarchicalLocationSeo(
   location: HierarchicalLocation,
   origin: string,
   editorial?: LocationEditorial | null,
+  providerCount?: number,
 ) {
   const canonical = location.canonicalUrl;
   const site = origin.replace(/\/+$/, "");
@@ -152,7 +153,7 @@ export function buildHierarchicalLocationSeo(
   const stateName = location.state?.name || "";
   const cityName = location.city?.city.name;
   const label = cityName ? `Pandits in ${cityName}` : `Pandits in ${stateName}`;
-  const count = location.providers.length;
+  const count = providerCount ?? location.providers.length;
   const description = cityName
     ? `Compare ${count} published Vedic Pandits in ${cityName}, ${stateName}. Explore their exact services and request a booking through Vedic Tatva.`
     : `Compare ${count} published Vedic Pandits across ${stateName}. Explore canonical city pages and request a booking through Vedic Tatva.`;

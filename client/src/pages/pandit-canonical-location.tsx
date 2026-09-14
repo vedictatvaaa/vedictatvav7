@@ -52,6 +52,7 @@ type ProjectedCity = {
   city: { id: number; stateId: number; name: string; slug: string };
   state: { id: number; name: string; code: string };
   providers: ProjectedProvider[];
+  providerCount?: number;
   services: ProjectedCityService[];
   indexability: Indexability;
   editorial?: Editorial | null;
@@ -245,6 +246,23 @@ export default function PanditCanonicalLocation() {
   const selectedService = serviceSlug ? serviceQuery.data : undefined;
 
   const discoveryCity = discoveryLocation(discoveryQuery.data, stateSlug, citySlug);
+  const liveDirectoryCountQuery = useQuery<{ pagination?: { total?: number } }>({
+    queryKey: ["/api/book-pandit-online", "city-description-count", cityQuery.data?.city.id, selectedService?.service.name || ""],
+    enabled: Boolean(cityQuery.data?.city.id),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        cityId: String(cityQuery.data!.city.id),
+        page: "1",
+        pageSize: "1",
+        ...(selectedService?.service.name ? { service: selectedService.service.name } : {}),
+      });
+      const response = await fetch(`/api/book-pandit-online?${params.toString()}`);
+      if (!response.ok) throw new Error("Unable to load live Pandit count");
+      return response.json();
+    },
+    staleTime: 60 * 1000,
+    retry: false,
+  });
   if (
     cityQuery.isLoading
     || (serviceSlug && serviceQuery.isLoading)
@@ -259,7 +277,7 @@ export default function PanditCanonicalLocation() {
     return <main className="min-h-screen bg-[#F5F0E6] text-[#2B1115]">
       <PageSeo
         title={`Pandits in ${city.name} | Vedic Tatva`}
-        description={`Browse eligible Vedic Pandits in ${city.name}, ${state.name}.`}
+        description={`Compare ${discoveryCity.city.count} available Vedic Pandits in ${city.name}, ${state.name}. Explore their exact services and request a booking through Vedic Tatva.`}
         canonical={canonical}
         noindex
       />
@@ -303,11 +321,13 @@ export default function PanditCanonicalLocation() {
   const routeCanonical = city.canonicalUrl;
   const providers = selectedService?.providers || city.providers;
   const editorial = selectedService?.editorial || city.editorial;
+  const liveDirectoryCount = liveDirectoryCountQuery.data?.pagination?.total;
   const seo = buildPanditCitySeo({
     canonicalUrl: selectedService?.canonicalUrl || routeCanonical,
     city: { name: city.city.name, canonicalUrl: routeCanonical },
     state: { name: city.state.name },
     providers,
+    providerCount: liveDirectoryCount ?? discoveryCity?.city.count ?? city.providerCount ?? providers.length,
     indexable: selectedService?.indexability.indexable ?? city.indexability.indexable,
     ...(selectedService ? { service: { name: selectedService.service.name } } : {}),
   }, typeof window === "undefined"

@@ -8,6 +8,7 @@ export type PanditCitySeoInput = {
   city: { name: string; canonicalUrl: string };
   state: { name: string };
   providers: PanditCitySeoProvider[];
+  providerCount?: number;
   indexable: boolean;
   service?: { name: string };
 };
@@ -28,9 +29,10 @@ export function buildPanditCitySeo(input: PanditCitySeoInput, origin: string) {
   const pageName = input.service
     ? `${input.service.name} Pandits in ${input.city.name}`
     : `Pandits in ${input.city.name}`;
+  const providerCount = input.providerCount ?? input.providers.length;
   const description = input.service
-    ? `Compare ${input.providers.length} published Vedic Pandits in ${input.city.name} who offer ${input.service.name}. View exact services and book with canonical location context.`
-    : `Compare ${input.providers.length} published Vedic Pandits in ${input.city.name}, ${input.state.name}. Explore their exact services and book with verified location context.`;
+    ? `Compare ${providerCount} available Vedic Pandits in ${input.city.name} who offer ${input.service.name}. View exact services and book with canonical location context.`
+    : `Compare ${providerCount} available Vedic Pandits in ${input.city.name}, ${input.state.name}. Explore their exact services and book with verified location context.`;
   const breadcrumbs = [
     { name: "Home", item: absolute(origin, "/") },
     { name: "Pandits", item: absolute(origin, "/book-pandit-online") },
