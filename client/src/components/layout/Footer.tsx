@@ -6,7 +6,6 @@ import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
-import { useQuery } from "@tanstack/react-query";
 import { FOOTER_DESTINATIONS } from "@shared/footer-links";
 
 const complianceBadges = [
@@ -33,18 +32,6 @@ const socials = [
 
 export default function Footer() {
   const settings = useSiteSettings();
-  const { data: liveMetrics } = useQuery<{
-    health: "available" | "unavailable";
-    metrics: Record<string, { value: number | null; state: "available" | "unavailable"; health: "available" | "unavailable"; scope?: "global" | "this_instance" }>;
-  }>({
-    queryKey: ["/api/pandit-metrics"],
-    queryFn: async () => {
-      const response = await fetch("/api/pandit-metrics");
-      return response.json();
-    },
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  });
   const dynamicSocials = [
     settings?.socialInstagram ? { Icon: SiInstagram, href: settings.socialInstagram, label: "Instagram" } : null,
     settings?.socialFacebook ? { Icon: SiFacebook, href: settings.socialFacebook, label: "Facebook" } : null,
@@ -161,17 +148,17 @@ export default function Footer() {
 
       {/* Newsletter signup strip */}
       <div className="bg-[#120a10] border-b border-white/[0.04]" data-testid="footer-newsletter-strip">
-        <div className="container mx-auto px-4 py-5">
+        <div className="container mx-auto px-4 py-5 md:py-6">
           <form
             onSubmit={handleNewsletterSubmit}
-            className="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center gap-3 md:gap-4"
+            className="max-w-4xl mx-auto flex flex-col md:flex-row md:items-center gap-3 md:gap-6"
           >
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#D4AF37] font-semibold mb-0.5" data-testid="text-newsletter-eyebrow">{t.newsletter.eyebrow}</p>
-              <p className="text-[13px] text-white/75 leading-snug" data-testid="text-newsletter-description">{t.newsletter.description}</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-semibold mb-1" data-testid="text-newsletter-eyebrow">{t.newsletter.eyebrow}</p>
+              <p className="text-[13px] text-white/75 leading-relaxed max-w-xl" data-testid="text-newsletter-description">{t.newsletter.description}</p>
             </div>
-            <div className="flex items-center gap-2 md:w-auto w-full">
-                <input
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto md:min-w-[360px]">
+              <input
                 type="email"
                 required
                 value={email}
@@ -179,13 +166,13 @@ export default function Footer() {
                 disabled={status === "loading"}
                 placeholder={t.newsletter.placeholder}
                 aria-label={t.newsletter.eyebrow}
-                  className="flex-1 md:w-64 min-h-11 rounded-md bg-[#1a1118] border border-white/15 text-white placeholder:text-white/45 px-3 text-[13px] focus:outline-none focus:border-[#D4AF37]/60 disabled:opacity-60"
+                className="w-full sm:flex-1 md:w-64 min-h-11 rounded-lg bg-[#1a1118] border border-white/15 text-white placeholder:text-white/45 px-3.5 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:border-[#D4AF37]/60 disabled:opacity-60"
                 data-testid="input-newsletter-email"
               />
               <button
                 type="submit"
                 disabled={status === "loading"}
-                  className="min-h-11 rounded-md bg-[#D4AF37] hover:bg-[#c4a232] text-[#120a10] px-4 text-[12px] font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 focus:ring-offset-[#120a10]"
+                className="min-h-11 rounded-lg bg-[#D4AF37] hover:bg-[#f5d76e] active:bg-[#c4a232] text-[#120a10] px-5 text-[12px] font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
                 data-testid="button-newsletter-subscribe"
               >
                 {status === "loading" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -197,58 +184,13 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Stats micro-strip — one-line (migrated from homepage Stats Bar) */}
-      <div className="bg-[#6D2B35] border-b border-[#D4AF37]/20" data-testid="footer-stats-strip">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-2.5 text-center">
-            {[
-              { key: "totalEnrolledPandits", label: "Pandits", testid: "footer-stat-pandits" },
-              { key: "servedLast24h", label: "Served · 24h", testid: "footer-stat-served-24h" },
-              { key: "pujasBooked", label: "Pujas booked", testid: "footer-stat-pujas" },
-              { key: "onlineNow", label: "Online now · this server", testid: "footer-stat-online-now" },
-            ].map((s, idx, arr) => {
-              const value = liveMetrics?.metrics[s.key];
-              const display = value?.health === "available" ? String(value.value) : "—";
-              return (
-              <span key={s.label} className="inline-flex items-center gap-1.5 text-[11px]" data-testid={s.testid}>
-                <span className="text-[#D4AF37] font-serif font-semibold">{display}</span>
-                <span className="uppercase tracking-[0.18em] text-white/65 font-semibold">{s.label}</span>
-                {idx < arr.length - 1 && <span className="text-white/30 ml-1.5">·</span>}
-              </span>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Trust strip */}
-      <div className="bg-[#1a1118] border-b border-white/[0.04]">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 py-4">
-            {trustBadges.map(({ icon: Icon, label, sub }) => (
-              <div
-                key={label}
-                className="flex items-center gap-2.5"
-                data-testid={`trust-${label.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                <Icon className="h-4 w-4 text-[#D4AF37] flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-[12px] font-semibold text-white/80 leading-tight truncate">{label}</div>
-                  <div className="text-[10px] text-white/40 leading-tight truncate">{sub}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Support band — action-first help for the most common customer needs. */}
       <section
         aria-labelledby="footer-support-heading"
         className="bg-[#24131b] border-b border-[#D4AF37]/15"
         data-testid="footer-support-band"
       >
-        <div className="container mx-auto px-4 py-6 md:py-7">
+        <div className="container mx-auto px-4 py-5 md:py-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
             <div className="flex items-start gap-3 lg:w-64 lg:shrink-0">
               <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/10 text-[#f5d76e]">
@@ -270,7 +212,7 @@ export default function Footer() {
                 <Link
                   key={href}
                   href={href}
-                  className="group flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-white/[0.10] bg-[#120a10]/55 px-4 py-3 transition-colors hover:border-[#D4AF37]/55 hover:bg-[#120a10] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#24131b]"
+                  className="group flex min-h-[80px] items-center justify-between gap-3 rounded-lg border border-white/[0.10] bg-[#120a10]/55 px-4 py-3 transition-colors hover:border-[#D4AF37]/55 hover:bg-[#120a10] active:bg-[#120a10] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#24131b]"
                   data-testid={testid}
                 >
                   <span className="flex min-w-0 items-center gap-3">
