@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useSearch } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { ArrowRight, BookOpen, Clock, MapPin, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageSeo from "@/components/PageSeo";
+import { isIntentLikePujaQuery, rankPujaSearchResults } from "@shared/puja-smart-search";
 
 export interface PujaListItem {
   id: number;
@@ -44,10 +45,16 @@ const panditHref = (name?: string, mode?: "online" | "offline") => {
 export function PujaDiscoveryHub() {
   const incomingMode = new URLSearchParams(useSearch()).get("mode");
   const preferredMode = incomingMode === "online" || incomingMode === "offline" ? incomingMode : undefined;
+  const [, navigate] = useLocation();
+  const searchRef = useRef<HTMLDivElement>(null);
   const [term, setTerm] = useState("");
   const [category, setCategory] = useState("all");
   const [intent, setIntent] = useState("all");
   const [showAll, setShowAll] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [aiSlugs, setAiSlugs] = useState<string[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const { data: pujas = [], isLoading, isError, refetch } = useQuery<PujaListItem[]>({
     queryKey: ["/api/pujas"],
     queryFn: async () => {
@@ -69,6 +76,31 @@ export function PujaDiscoveryHub() {
       return matchesCategory && matchesIntent && matchesMode && matchesTerm;
     });
   }, [category, intent, preferredMode, pujas, term]);
+  const suggestionPool = useMemo(() => pujas.filter((puja) => {
+    const matchesCategory = category === "all" || puja.category === category;
+    const matchesIntent = intent === "all" || puja.intents?.includes(intent);
+    return matchesCategory && matchesIntent;
+  }), [category, intent, pujas]);
+  const localSuggestions = useMemo(
+    () => rankPujaSearchResults(suggestionPool, term, preferredMode, 6),
+    [preferredMode, suggestionPool, term],
+  );
+  const aiSuggestions = useMemo(() => {
+    const bySlug = new Map(pujas.map((puja) => [puja.slug, puja]));
+    return aiSlugs.map((slug) => bySlug.get(slug)).filter((puja): puja is PujaListItem => {
+      if (!puja) return false;
+      return preferredMode === "online" ? puja.onlineEligible : preferredMode === "offline" ? puja.inPersonEligible : true;
+    });
+  }, [aiSlugs, preferredMode, pujas]);
+  const localSlugs = useMemo(() => new Set(localSuggestions.map((puja) => puja.slug)), [localSuggestions]);
+  const intentSuggestions = useMemo(
+    () => aiSuggestions.filter((puja) => !localSlugs.has(puja.slug)),
+    [aiSuggestions, localSlugs],
+  );
+  const panelSuggestions = useMemo(
+    () => [...localSuggestions, ...intentSuggestions],
+    [intentSuggestions, localSuggestions],
+  );
   const visibleResults = showAll ? results : results.slice(0, 9);
   const featuredGroups = useMemo(() => {
     const bySlug = new Map(pujas.map((puja) => [puja.slug, puja]));
@@ -94,6 +126,73 @@ export function PujaDiscoveryHub() {
     ].map(group => ({ ...group, pujas: group.slugs.map(slug => bySlug.get(slug)).filter((puja): puja is PujaListItem => Boolean(puja)) }));
   }, [pujas]);
   const reset = () => { setTerm(""); setCategory("all"); setIntent("all"); setShowAll(false); };
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) setSearchOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePointer);
+  }, []);
+  useEffect(() => {
+    const query = term.trim();
+    setAiSlugs([]);
+    if (!searchOpen || query.length < 3 || (!isIntentLikePujaQuery(query) && localSuggestions.length > 0)) {
+      setIsAiLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setIsAiLoading(true);
+      try {
+        const response = await fetch("/api/pujas/smart-search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, mode: preferredMode }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Smart search unavailable");
+        const data = await response.json() as { matches?: Array<{ slug?: unknown }> };
+        setAiSlugs(Array.isArray(data.matches)
+          ? data.matches.map((match) => typeof match?.slug === "string" ? match.slug : "").filter(Boolean)
+          : []);
+      } catch {
+        if (!controller.signal.aborted) setAiSlugs([]);
+      } finally {
+        if (!controller.signal.aborted) setIsAiLoading(false);
+      }
+    }, 320);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [localSuggestions.length, preferredMode, searchOpen, term]);
+  useEffect(() => {
+    setActiveSuggestion(0);
+  }, [panelSuggestions.length, term]);
+  const openPujaGuide = (slug: string) => {
+    setSearchOpen(false);
+    navigate(`/puja-guide/${slug}`);
+  };
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!searchOpen || !panelSuggestions.length) {
+      if (event.key === "Escape") setSearchOpen(false);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestion((current) => (current + 1) % panelSuggestions.length);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestion((current) => (current - 1 + panelSuggestions.length) % panelSuggestions.length);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const selected = panelSuggestions[activeSuggestion];
+      if (selected) openPujaGuide(selected.slug);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setSearchOpen(false);
+    }
+  };
 
   return (
     <main className="min-h-[100dvh] bg-[#f7f0e2] text-[#2b1716]">
@@ -111,12 +210,66 @@ export function PujaDiscoveryHub() {
             <h1 className="font-serif text-4xl font-semibold leading-[1.03] sm:text-6xl">Find the right Puja<br /><span className="text-[#e5c675]">for this moment.</span></h1>
             <p className="mt-5 max-w-2xl text-sm leading-6 text-[#fff8e9]/75 sm:text-base">Begin with meaning. Read a guide, understand what the ritual involves, then choose how you would like to proceed.</p>
           </div>
-          <div className="mt-8 max-w-2xl">
+          <div className="mt-8 max-w-2xl" ref={searchRef}>
             <label className="sr-only" htmlFor="puja-search">Search the Puja atlas</label>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#681f2b]" />
-              <Input id="puja-search" value={term} onChange={(event) => { setTerm(event.target.value); setShowAll(false); }} placeholder="Search by Puja, deity, category, or purpose" className="h-14 border-0 bg-[#fff8e9] pl-12 text-[#2b1716] shadow-lg placeholder:text-[#725c52]" />
+              <Input
+                id="puja-search"
+                value={term}
+                onFocus={() => setSearchOpen(true)}
+                onKeyDown={handleSearchKeyDown}
+                onChange={(event) => { setTerm(event.target.value); setShowAll(false); setSearchOpen(true); }}
+                placeholder="Try “moving into a new home” or search a Puja"
+                className="h-14 border-0 bg-[#fff8e9] pl-12 pr-24 text-[#2b1716] shadow-lg placeholder:text-[#725c52]"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={searchOpen}
+                aria-controls="puja-smart-suggestions"
+                aria-activedescendant={searchOpen && panelSuggestions[activeSuggestion] ? `puja-suggestion-${panelSuggestions[activeSuggestion].slug}` : undefined}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[10px] font-bold uppercase tracking-[.12em] text-[#977025]"><Sparkles className="h-3 w-3" /> Smart</span>
+              {searchOpen && !isLoading && (panelSuggestions.length > 0 || isAiLoading) && (
+                <div id="puja-smart-suggestions" role="listbox" aria-label="Puja search suggestions" className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-md border border-[#b8893f]/35 bg-[#fffaf0] text-[#2b1716] shadow-2xl">
+                  <div className="max-h-[min(28rem,calc(100vh-10rem))] overflow-y-auto p-2">
+                    <p className="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[.18em] text-[#977025]">
+                      {term.trim() ? "Puja matches" : "Popular Puja guides"}
+                    </p>
+                    {localSuggestions.map((puja, index) => (
+                      <SuggestionRow
+                        key={puja.slug}
+                        puja={puja}
+                        active={activeSuggestion === index}
+                        onFocus={() => setActiveSuggestion(index)}
+                        onOpen={() => openPujaGuide(puja.slug)}
+                        onClose={() => setSearchOpen(false)}
+                        mode={preferredMode}
+                      />
+                    ))}
+                    {intentSuggestions.length > 0 && (
+                      <>
+                        <p className="border-t border-[#b8893f]/20 px-3 pb-2 pt-3 text-[10px] font-bold uppercase tracking-[.18em] text-[#977025]">Based on what you described</p>
+                        {intentSuggestions.map((puja, index) => (
+                          <SuggestionRow
+                            key={puja.slug}
+                            puja={puja}
+                            active={activeSuggestion === localSuggestions.length + index}
+                            onFocus={() => setActiveSuggestion(localSuggestions.length + index)}
+                            onOpen={() => openPujaGuide(puja.slug)}
+                            onClose={() => setSearchOpen(false)}
+                            mode={preferredMode}
+                          />
+                        ))}
+                      </>
+                    )}
+                    {isAiLoading && <p className="flex items-center gap-2 px-3 py-3 text-xs text-[#725c52]"><Sparkles className="h-3.5 w-3.5 text-[#977025]" /> Understanding your intention…</p>}
+                  </div>
+                </div>
+              )}
             </div>
+            <p aria-live="polite" className="sr-only">
+              {isAiLoading ? "Understanding your Puja intention." : searchOpen && panelSuggestions.length ? `${panelSuggestions.length} Puja suggestions available.` : ""}
+            </p>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <a href="#puja-catalogue" className="inline-flex h-10 items-center rounded-md bg-[#e5c675] px-4 text-sm font-bold text-[#681f2b] hover:bg-[#f2d98c]">Explore the catalogue <ArrowRight className="ml-2 h-4 w-4" /></a>
@@ -189,4 +342,47 @@ function PujaCard({ puja, mode }: { puja: PujaListItem; mode?: "online" | "offli
     <div className="mt-auto pt-5 text-xs text-[#725c52]">{puja.durationMinutes && <span className="mr-3 inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{puja.durationMinutes} min</span>}{puja.estimatedCost && <span>Estimated cost: {puja.estimatedCost}</span>}</div>
     <div className="mt-5 grid gap-2 border-t border-[#b8893f]/20 pt-4"><Link href={`/puja-guide/${puja.slug}`} className="inline-flex min-h-11 items-center text-sm font-bold text-[#681f2b] underline underline-offset-4">Understand this Puja</Link><Link href={panditHref(puja.name, mode)} className="inline-flex min-h-11 items-center text-sm font-bold text-[#681f2b]">Choose a Pandit to book <ArrowRight className="ml-1 inline h-3.5 w-3.5" /></Link></div>
   </article>;
+}
+
+function SuggestionRow({
+  puja,
+  active,
+  onFocus,
+  onOpen,
+  onClose,
+  mode,
+}: {
+  puja: PujaListItem;
+  active: boolean;
+  onFocus: () => void;
+  onOpen: () => void;
+  onClose: () => void;
+  mode?: "online" | "offline";
+}) {
+  return (
+    <div
+      id={`puja-suggestion-${puja.slug}`}
+      role="option"
+      aria-selected={active}
+      onMouseEnter={onFocus}
+      className={`rounded-md px-3 py-2.5 ${active ? "bg-[#f1e5ce]" : "bg-transparent"}`}
+    >
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+          <span className="block font-serif text-base font-semibold text-[#681f2b]">{puja.name}</span>
+          <span className="mt-0.5 block line-clamp-2 text-xs leading-5 text-[#725c52]">{puja.shortDescription}</span>
+        </button>
+        <Link
+          href={panditHref(puja.name, mode)}
+          onClick={onClose}
+          className="mt-0.5 shrink-0 rounded border border-[#b8893f]/45 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[.08em] text-[#681f2b] hover:bg-[#e5c675]"
+        >
+          Book
+        </Link>
+      </div>
+      <Link href={`/puja-guide/${puja.slug}`} onClick={onClose} className="mt-1 inline-flex min-h-9 items-center text-xs font-bold text-[#681f2b] underline underline-offset-4">
+        Understand this Puja <ArrowRight className="ml-1 h-3 w-3" />
+      </Link>
+    </div>
+  );
 }

@@ -35,7 +35,7 @@ The existing search input becomes a smart search surface:
 4. AI suggestions appear under the label “Based on what you described”.
 5. Each suggestion shows the existing Puja name and catalogue summary, plus:
    - “Understand the Puja” → `/puja-guide/:slug`
-   - “Book this Puja” → existing `online-puja-booking` query parameters
+   - “Book this Puja” → the existing `/book-pandit-online?service=...&mode=...` booking URL
 6. Selecting the main suggestion navigates to the existing guide. Users can continue to the existing booking action from that guide or use the direct booking link.
 7. If the AI request fails, times out, or returns invalid slugs, local catalogue results remain available and the UI does not show an error state for the user.
 8. Empty and no-match states keep the current clear/reset behavior.

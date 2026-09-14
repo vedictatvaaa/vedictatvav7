@@ -11,6 +11,7 @@ import { runDailyBlogGeneration, autoAnswerPendingQuestions, generateAiAnswerFor
 import { regenerateMuhuratsForYear, regenerateForCurrentAndNextYear, computeMuhuratsForPuja } from "./muhurat-engine";
 import { sanitizeRichHtml } from "./html-sanitizer";
 import { hasAnalyticsConsent } from "./consent";
+import { createStructuredCompletion, isAiProviderConfigured } from "./ai-provider";
 import {
   findPujaConflicts,
   normalizeGovernance,
@@ -39,6 +40,20 @@ function publicPujaProjection(puja: Record<string, any>, reviewerName?: string |
     ...safe
   } = puja;
   return { ...safe, reviewerName: reviewerName || null };
+}
+
+async function listPublicPujaRows() {
+  const rows = await db.select().from(pujaTypes)
+    .orderBy(asc(pujaTypes.displayOrder), asc(pujaTypes.name));
+  const verifiedReviewers = new Set((await db.select({ id: pandits.id }).from(pandits).where(eq(pandits.verified, true))).map(row => row.id));
+  return rows.filter(row => {
+    const conflicts = findPujaConflicts(row, rows, row.id);
+    return publicPujaEligible(
+      row,
+      conflicts,
+      row.reviewMethod !== "pandit" || (row.reviewedByPanditId != null && verifiedReviewers.has(row.reviewedByPanditId)),
+    );
+  });
 }
 
 export async function findPublicPujaBySlug(slug: string) {
@@ -576,17 +591,13 @@ export function registerContentRoutes(app: Express) {
   app.get("/api/pujas", async (req, res) => {
     try {
       const category = req.query.category ? String(req.query.category) : null;
-      const rows = await db.select().from(pujaTypes)
-        .orderBy(asc(pujaTypes.displayOrder), asc(pujaTypes.name));
-      const verifiedReviewers = new Set((await db.select({ id: pandits.id }).from(pandits).where(eq(pandits.verified, true))).map(row => row.id));
+      const rows = await listPublicPujaRows();
       const intent = req.query.intent ? String(req.query.intent).toLowerCase() : null;
       const deity = req.query.deity ? String(req.query.deity).toLowerCase() : null;
       const ceremony = req.query.ceremony ? String(req.query.ceremony).toLowerCase() : null;
       const festival = req.query.festival ? String(req.query.festival).toLowerCase() : null;
       const mode = req.query.mode ? String(req.query.mode) : null;
       const publicRows = rows.filter(row => {
-        const conflicts = findPujaConflicts(row, rows, row.id);
-        if (!publicPujaEligible(row, conflicts, row.reviewMethod !== "pandit" || (row.reviewedByPanditId != null && verifiedReviewers.has(row.reviewedByPanditId)))) return false;
         if (category && row.category !== category) return false;
         if (intent && !(row.intents || []).some(value => value.toLowerCase() === intent)) return false;
         if (deity && !(row.deities || []).some(value => value.toLowerCase() === deity)) return false;
@@ -599,6 +610,83 @@ export function registerContentRoutes(app: Express) {
       res.json(publicRows.map(row => publicPujaProjection(row)));
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  const pujaSmartSearchLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || "unknown"),
+    message: { message: "Too many smart-search requests. Please try again shortly." },
+  });
+
+  app.post("/api/pujas/smart-search", pujaSmartSearchLimiter, async (req, res) => {
+    const query = typeof req.body?.query === "string" ? req.body.query.trim().slice(0, 120) : "";
+    const mode = req.body?.mode === "online" || req.body?.mode === "offline" ? req.body.mode : undefined;
+    if (query.length < 2) return res.status(400).json({ message: "Enter at least two characters." });
+
+    try {
+      const rows = (await listPublicPujaRows()).filter(row => !mode || (mode === "online" ? row.onlineEligible : row.inPersonEligible));
+      if (!isAiProviderConfigured()) return res.json({ matches: [] });
+
+      const result = await createStructuredCompletion({
+        task: "puja_smart_search",
+        schemaName: "grounded_puja_matches",
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            matches: {
+              type: "array",
+              maxItems: 6,
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  slug: { type: "string" },
+                  confidence: { type: "string", enum: ["high", "medium"] },
+                },
+                required: ["slug", "confidence"],
+              },
+            },
+          },
+          required: ["matches"],
+        },
+        system: "You classify a devotee's search into existing Puja catalogue records. Return only catalogue slugs from the supplied list. Do not invent rituals, names, facts, prices, people, availability, or URLs. If the query is not a clear match, return an empty matches array.",
+        user: {
+          query,
+          mode: mode || "any",
+          catalogue: rows.map(row => ({
+            slug: row.slug,
+            name: row.name,
+            deity: row.deity,
+            category: row.category,
+            shortDescription: String(row.shortDescription || "").slice(0, 240),
+            intents: (row.intents || []).slice(0, 12),
+            ceremonies: (row.ceremonies || []).slice(0, 12),
+            festivals: (row.festivals || []).slice(0, 12),
+            aliases: (row.aliases || []).slice(0, 12),
+          })),
+        },
+        temperature: 0,
+        maxTokens: 240,
+      }) as { matches?: Array<{ slug?: unknown; confidence?: unknown }> };
+      const allowed = new Map(rows.map(row => [row.slug, row]));
+      const seen = new Set<string>();
+      const matches = Array.isArray(result?.matches)
+        ? result.matches.flatMap(match => {
+          const slug = typeof match?.slug === "string" ? match.slug : "";
+          if (!allowed.has(slug) || seen.has(slug)) return [];
+          seen.add(slug);
+          return [{ slug, confidence: match.confidence === "high" ? "high" : "medium" as const }];
+        }).slice(0, 6)
+        : [];
+      res.json({ matches });
+    } catch (error) {
+      console.warn("[puja-smart-search] falling back to local matching:", error instanceof Error ? error.message : error);
+      res.json({ matches: [] });
     }
   });
 
