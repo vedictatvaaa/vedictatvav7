@@ -16,6 +16,7 @@ export async function generateImageBuffer(
   size: "1024x1024" | "512x512" | "256x256" = "1024x1024"
 ): Promise<Buffer> {
   const response = await getImageAiClient().images.generate({
+    model: "gpt-image-1",
     prompt,
     size,
   });

@@ -26,6 +26,43 @@ async function verifyUser(req: Request) {
 // =====================================================================
 // 1. AI PRODUCT RECOMMENDER — personalized "for you" carousel
 // =====================================================================
+export async function rerankProductRecommendationsWithClient(
+  candidates: Array<{ product: any }>,
+  recentCategories: string[],
+  purchaseCount: number,
+  limit: number,
+  openai: ReturnType<typeof createAiClient>,
+) {
+  let ordered = candidates.map((c) => c.product);
+  if (openai && candidates.length > 1 && recentCategories.length > 0) {
+    const userProfile = {
+      recentCategories: recentCategories.slice(0, 5),
+      purchaseCount,
+    };
+    const productList = candidates.slice(0, 16).map((c, i) => `${i + 1}. ${c.product.name} (${c.product.category}) — ₹${c.product.price}`);
+    const prompt = `You are a Vedic spiritual product advisor. A devotee has these recent buying patterns: ${JSON.stringify(userProfile)}.\n\nFrom this list, choose the top ${limit} products that complement their spiritual journey. Reply with ONLY a JSON array of the chosen 1-based indices, e.g. [3,1,7,2].\n\n${productList.join("\n")}`;
+    const resp = await openai.chat.completions.create({
+      model: getAiProviderConfig().model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 80,
+      temperature: 0.4,
+    });
+    const txt = resp.choices[0]?.message?.content || "";
+    const m = txt.match(/\[[\d,\s]+\]/);
+    if (m) {
+      const indices = JSON.parse(m[0]) as number[];
+      const reranked: any[] = [];
+      for (const idx of indices) {
+        const c = candidates[idx - 1];
+        if (c) reranked.push(c.product);
+      }
+      for (const c of candidates) if (!reranked.includes(c.product) && reranked.length < limit) reranked.push(c.product);
+      ordered = reranked;
+    }
+  }
+  return ordered.slice(0, limit);
+}
+
 async function buildPersonalizedRecommendations(userId: number, limit = 8) {
   // Pull recent purchase history
   const recentOrders = await db.select().from(orders)
@@ -64,38 +101,19 @@ async function buildPersonalizedRecommendations(userId: number, limit = 8) {
 
   // Optional LLM re-ranking (best effort; falls back to scored list)
   const openai = getOpenAI();
-  let ordered = candidates.map((c) => c.product);
-  if (openai && candidates.length > 1 && purchasedCategories.size > 0) {
-    try {
-      const userProfile = {
-        recentCategories: Array.from(purchasedCategories.keys()).slice(0, 5),
-        purchaseCount: recentOrders.length,
-      };
-      const productList = candidates.slice(0, 16).map((c, i) => `${i + 1}. ${c.product.name} (${c.product.category}) — ₹${c.product.price}`);
-      const prompt = `You are a Vedic spiritual product advisor. A devotee has these recent buying patterns: ${JSON.stringify(userProfile)}.\n\nFrom this list, choose the top ${limit} products that complement their spiritual journey. Reply with ONLY a JSON array of the chosen 1-based indices, e.g. [3,1,7,2].\n\n${productList.join("\n")}`;
-      const resp = await openai.chat.completions.create({
-        model: getAiProviderConfig().model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 80,
-        temperature: 0.4,
-      });
-      const txt = resp.choices[0]?.message?.content || "";
-      const m = txt.match(/\[[\d,\s]+\]/);
-      if (m) {
-        const indices = JSON.parse(m[0]) as number[];
-        const reranked: any[] = [];
-        for (const idx of indices) {
-          const c = candidates[idx - 1];
-          if (c) reranked.push(c.product);
-        }
-        for (const c of candidates) if (!reranked.includes(c.product) && reranked.length < limit) reranked.push(c.product);
-        ordered = reranked;
-      }
-    } catch (e: any) {
-      console.warn("[recommender] LLM rerank failed:", e?.message);
-    }
+  if (!openai) return candidates.map((c) => c.product).slice(0, limit);
+  try {
+    return await rerankProductRecommendationsWithClient(
+      candidates,
+      Array.from(purchasedCategories.keys()),
+      recentOrders.length,
+      limit,
+      openai,
+    );
+  } catch (e: any) {
+    console.warn("[recommender] LLM rerank failed:", e?.message);
+    return candidates.map((c) => c.product).slice(0, limit);
   }
-  return ordered.slice(0, limit);
 }
 
 // =====================================================================
@@ -138,13 +156,11 @@ async function runAbandonedCartRecovery(): Promise<{ checked: number; sent: numb
 // =====================================================================
 // 3. AI PRODUCT Q&A — answer customer questions about a product
 // =====================================================================
-async function answerProductQuestion(productSlugOrId: string, question: string): Promise<string> {
-  const product = await storage.getProductBySlug(productSlugOrId)
-    || (Number.isFinite(Number(productSlugOrId)) ? await storage.getProduct(Number(productSlugOrId)) : null);
-  if (!product) throw new Error("Product not found");
-  const openai = getOpenAI();
-  if (!openai) throw new Error("AI service unavailable");
-
+export async function answerProductQuestionWithClient(
+  product: any,
+  question: string,
+  openai: ReturnType<typeof createAiClient>,
+): Promise<string> {
   const ctx = [
     `Product: ${product.name}`,
     `Category: ${product.category}`,
@@ -168,6 +184,15 @@ async function answerProductQuestion(productSlugOrId: string, question: string):
     temperature: 0.4,
   });
   return resp.choices[0]?.message?.content?.trim() || "I'm not sure — please contact Vedic Tatva support for help.";
+}
+
+async function answerProductQuestion(productSlugOrId: string, question: string): Promise<string> {
+  const product = await storage.getProductBySlug(productSlugOrId)
+    || (Number.isFinite(Number(productSlugOrId)) ? await storage.getProduct(Number(productSlugOrId)) : null);
+  if (!product) throw new Error("Product not found");
+  const openai = getOpenAI();
+  if (!openai) throw new Error("AI service unavailable");
+  return answerProductQuestionWithClient(product, question, openai);
 }
 
 // =====================================================================
