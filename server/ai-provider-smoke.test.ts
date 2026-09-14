@@ -9,6 +9,7 @@ import { createAiClient, getAiProviderConfig, getAiProviderStatus } from "./ai-p
 import { editImages, generateImageBuffer } from "./replit_integrations/image/client";
 import {
   speechToText,
+  speechToTextStream,
   textToSpeech,
   voiceChatStream,
 } from "./replit_integrations/audio/client";
@@ -116,6 +117,18 @@ async function startMockProvider() {
     }
 
     if (req.url?.endsWith("/audio/transcriptions")) {
+      if (body.includes('name="stream"') && body.includes("true")) {
+        res.writeHead(200, {
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache",
+          connection: "keep-alive",
+        });
+        res.write(`data: ${JSON.stringify({ type: "transcript.text.delta", delta: "mock " })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "transcript.text.delta", delta: "stream transcript" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: "transcript.text.done", text: "mock stream transcript" })}\n\n`);
+        res.write("data: [DONE]\n\n");
+        return res.end();
+      }
       return jsonResponse(res, { text: "mock transcript" });
     }
 
@@ -182,6 +195,10 @@ test("all AI channels reach a local OpenAI-compatible provider", async () => {
       assert.deepEqual(await editImages([imageInput], "add flowers", imageOutput), Buffer.from("mock-image"));
 
       assert.equal(await speechToText(Buffer.from("wav bytes"), "wav"), "mock transcript");
+      const transcriptStream = await speechToTextStream(Buffer.from("wav bytes"), "wav");
+      let streamedTranscript = "";
+      for await (const delta of transcriptStream) streamedTranscript += delta;
+      assert.equal(streamedTranscript, "mock stream transcript");
       assert.deepEqual(await textToSpeech("Namaste"), Buffer.from("mock-audio"));
 
       const voiceStream = await voiceChatStream(Buffer.from("wav bytes"), "alloy", "wav");
@@ -234,6 +251,13 @@ test("all AI channels reach a local OpenAI-compatible provider", async () => {
     assert.match(imageEdit.body, /gpt-image-1/);
     assert.ok(transcription);
     assert.match(transcription.body, /gpt-4o-mini-transcribe/);
+    const streamingTranscription = mock.requests.find(
+      (request) => request.path.endsWith("/audio/transcriptions")
+        && request.body.includes('name="stream"')
+        && request.body.includes("true"),
+    );
+    assert.ok(streamingTranscription);
+    assert.match(streamingTranscription.body, /gpt-4o-mini-transcribe/);
     assert.ok(mock.requests.every((request) => request.authorization === "Bearer smoke-test-secret"));
   } finally {
     await unlink(imageInput).catch(() => {});
