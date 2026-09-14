@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "wouter";
-import { Mail, Phone, MapPin, ShieldCheck, Truck, RotateCcw, Lock, Loader2, Check } from "lucide-react";
+import { ChevronDown, Mail, Phone, MapPin, ShieldCheck, Truck, RotateCcw, Lock, Loader2, Check } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX, SiYoutube, SiWhatsapp } from "react-icons/si";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
 import { useQuery } from "@tanstack/react-query";
+import { FOOTER_DESTINATIONS } from "@shared/footer-links";
 
 const complianceBadges = [
   { label: "PCI-DSS", sub: "Level 1 secure" },
@@ -28,34 +29,6 @@ const socials = [
   { Icon: SiYoutube, href: "https://youtube.com/@vedictatva", label: "YouTube" },
   { Icon: SiX, href: "https://x.com/vedictatva", label: "X" },
   { Icon: SiWhatsapp, href: "https://wa.me/918447844702", label: "WhatsApp" },
-];
-
-const shopCategories = [
-  { href: "/spiritual-essentials?category=rudraksha", label: "Rudraksha Beads", testid: "footer-cat-rudraksha" },
-  { href: "/spiritual-essentials?category=yantras", label: "Yantras", testid: "footer-cat-yantras" },
-  { href: "/puja-samagri-online?category=Idols", label: "Idols & Murtis", testid: "footer-cat-idols" },
-  { href: "/spiritual-essentials?category=puja-samagri", label: "Puja Samagri", testid: "footer-cat-puja-samagri" },
-  { href: "/spiritual-essentials?category=havan-samagri", label: "Havan Samagri", testid: "footer-cat-havan" },
-  { href: "/spiritual-essentials?category=dhoti-kurta", label: "Dhoti & Kurta", testid: "footer-cat-apparel" },
-  { href: "/spiritual-essentials?category=brass-copperware", label: "Brass & Copperware", testid: "footer-cat-brass" },
-  { href: "/spiritual-essentials?category=wearables", label: "Malas & Wearables", testid: "footer-cat-wearables" },
-];
-
-const popularCities = [
-  "Delhi", "Mumbai", "Bengaluru", "Kolkata", "Chennai", "Hyderabad",
-  "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Varanasi", "Haridwar",
-];
-
-const popularSearches = [
-  { href: "/online-puja-booking", label: "Online Puja Booking" },
-  { href: "/online-pandit-booking", label: "Pandit Near Me" },
-  { href: "/astrology", label: "Free Astrology Consultation" },
-  { href: "/today-panchang", label: "Today's Panchang" },
-  { href: "/muhurat-finder", label: "Shubh Muhurat" },
-  { href: "/spiritual-essentials?category=rudraksha", label: "Original Rudraksha" },
-  { href: "/virtual-puja", label: "Virtual Puja Online" },
-  { href: "/donations", label: "Online Donation to Temples" },
-  { href: "/blog", label: "Vedic Tatva Journal" },
 ];
 
 export default function Footer() {
@@ -109,45 +82,55 @@ export default function Footer() {
     }
   };
 
+  const shopCategories = [
+    { ...FOOTER_DESTINATIONS.shop[0], label: "Puja Samagri & Essentials" },
+    { ...FOOTER_DESTINATIONS.shop[1], label: "Rudraksha Collection" },
+    { ...FOOTER_DESTINATIONS.shop[2], label: "Rudraksha Malas" },
+    { ...FOOTER_DESTINATIONS.shop[3], label: "Havan Samagri" },
+    { ...FOOTER_DESTINATIONS.shop[4], label: "Puja Kits" },
+    { ...FOOTER_DESTINATIONS.shop[5], label: "Brass Diyas" },
+    { ...FOOTER_DESTINATIONS.shop[6], label: "Spiritual Jewelry" },
+    { ...FOOTER_DESTINATIONS.shop[7], label: "Temple Decor" },
+  ];
+
   const services = [
-    { href: "/online-pandit-booking", label: t.footer.findPandit, testid: "footer-link-pandits" },
-    { href: "/online-puja-booking", label: t.footer.bookPuja, testid: "footer-link-puja" },
-    { href: "/virtual-puja", label: t.footer.virtualPuja, testid: "footer-link-virtual-puja" },
-    { href: "/astrology", label: t.footer.astrology, testid: "footer-link-astrology" },
-    { href: "/donations", label: t.footer.donations, testid: "footer-link-donations" },
-    { href: "/matrimony", label: t.footer.matrimony, testid: "footer-link-matrimony" },
+    { ...FOOTER_DESTINATIONS.services[0], label: t.footer.findPandit },
+    { ...FOOTER_DESTINATIONS.services[1], label: t.footer.bookPuja },
+    { ...FOOTER_DESTINATIONS.services[2], label: t.footer.virtualPuja },
+    { ...FOOTER_DESTINATIONS.services[3], label: t.footer.astrology },
+    { ...FOOTER_DESTINATIONS.services[4], label: t.footer.donations },
   ];
 
   const tools = [
-    { href: "/today-panchang", label: t.footer.panchangCalendar, testid: "footer-link-panchang" },
-    { href: "/muhurat-finder", label: t.footer.muhuratFinder, testid: "footer-link-muhurat" },
-    { href: "/vastu-compass", label: t.footer.vastuCompass, testid: "footer-link-vastu" },
-    { href: "/kathas", label: t.footer.sacredKathas, testid: "footer-link-kathas" },
-    { href: "/spiritual-dashboard", label: t.footer.spiritualDashboard, testid: "footer-link-dashboard" },
-    { href: "/compare", label: t.footer.compareProducts, testid: "footer-link-compare" },
-    { href: "/track-order", label: "Track Order", testid: "footer-link-track-order" },
-    { href: "/return-ticket", label: "Returns & Refunds", testid: "footer-link-returns" },
+    { ...FOOTER_DESTINATIONS.tools[0], label: t.footer.panchangCalendar },
+    { ...FOOTER_DESTINATIONS.tools[1], label: t.footer.muhuratFinder },
+    { ...FOOTER_DESTINATIONS.tools[2], label: t.footer.vastuCompass },
+    { ...FOOTER_DESTINATIONS.tools[3], label: t.footer.sacredKathas },
+    { ...FOOTER_DESTINATIONS.tools[4], label: "Digital Japa Counter" },
+    { ...FOOTER_DESTINATIONS.tools[5], label: "Vedic Tatva Journal" },
+    { ...FOOTER_DESTINATIONS.tools[6], label: "Track Order" },
+    { ...FOOTER_DESTINATIONS.tools[7], label: "Returns & Refunds" },
   ];
 
   const company = [
-    { href: "/about", label: t.footer.aboutUs, testid: "footer-link-about" },
-    { href: "/contact", label: t.footer.contact, testid: "footer-link-contact" },
-    { href: "/careers", label: t.footer.careers, testid: "footer-link-careers" },
-    { href: "/franchise", label: "Franchise Opportunity", testid: "footer-link-franchise" },
-    { href: "/become-pandit", label: t.footer.becomePandit, testid: "footer-link-become-pandit" },
-    { href: "/become-astrologer", label: t.footer.becomeAstrologer, testid: "footer-link-become-astrologer" },
+    { ...FOOTER_DESTINATIONS.company[0], label: t.footer.aboutUs },
+    { ...FOOTER_DESTINATIONS.company[1], label: t.footer.contact },
+    { ...FOOTER_DESTINATIONS.company[2], label: t.footer.careers },
+    { ...FOOTER_DESTINATIONS.company[3], label: "Franchise Opportunity" },
+    { ...FOOTER_DESTINATIONS.company[4], label: t.footer.becomePandit },
+    { ...FOOTER_DESTINATIONS.company[5], label: t.footer.becomeAstrologer },
   ];
 
   const policies = [
-    { href: "/terms-conditions", label: t.footer.termsConditions, testid: "footer-link-terms" },
-    { href: "/privacy-policy", label: t.footer.privacyPolicy, testid: "footer-link-privacy" },
-    { href: "/refund-policy", label: t.footer.refundPolicy, testid: "footer-link-refund" },
-    { href: "/shipping-policy", label: t.footer.shippingPolicy, testid: "footer-link-shipping" },
-    { href: "/accessibility", label: "Accessibility", testid: "footer-link-accessibility" },
+    { ...FOOTER_DESTINATIONS.policies[0], label: t.footer.termsConditions },
+    { ...FOOTER_DESTINATIONS.policies[1], label: t.footer.privacyPolicy },
+    { ...FOOTER_DESTINATIONS.policies[2], label: t.footer.refundPolicy },
+    { ...FOOTER_DESTINATIONS.policies[3], label: t.footer.shippingPolicy },
+    { ...FOOTER_DESTINATIONS.policies[4], label: "Accessibility" },
   ];
 
   return (
-    <footer className="relative pb-20 lg:pb-0 text-white" data-testid="footer">
+    <footer className="relative pb-20 lg:pb-0 text-white" aria-label={`${siteName} footer`} data-testid="footer">
       {/* Hairline gold top border */}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
 
@@ -163,7 +146,7 @@ export default function Footer() {
               <p className="text-[13px] text-white/75 leading-snug" data-testid="text-newsletter-description">{t.newsletter.description}</p>
             </div>
             <div className="flex items-center gap-2 md:w-auto w-full">
-              <input
+                <input
                 type="email"
                 required
                 value={email}
@@ -171,13 +154,13 @@ export default function Footer() {
                 disabled={status === "loading"}
                 placeholder={t.newsletter.placeholder}
                 aria-label={t.newsletter.eyebrow}
-                className="flex-1 md:w-64 h-9 rounded-md bg-[#1a1118] border border-white/15 text-white placeholder:text-white/35 px-3 text-[13px] focus:outline-none focus:border-[#D4AF37]/60 disabled:opacity-60"
+                  className="flex-1 md:w-64 min-h-11 rounded-md bg-[#1a1118] border border-white/15 text-white placeholder:text-white/45 px-3 text-[13px] focus:outline-none focus:border-[#D4AF37]/60 disabled:opacity-60"
                 data-testid="input-newsletter-email"
               />
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="h-9 rounded-md bg-[#D4AF37] hover:bg-[#c4a232] text-[#120a10] px-4 text-[12px] font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-70"
+                  className="min-h-11 rounded-md bg-[#D4AF37] hover:bg-[#c4a232] text-[#120a10] px-4 text-[12px] font-semibold whitespace-nowrap transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 focus:ring-offset-[#120a10]"
                 data-testid="button-newsletter-subscribe"
               >
                 {status === "loading" && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -239,10 +222,12 @@ export default function Footer() {
         <div className="container mx-auto px-4">
 
           {/* Main grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-12 gap-8 md:gap-10 py-10 md:py-12">
+          <nav aria-label="Footer navigation" aria-labelledby="footer-navigation-heading">
+            <h2 id="footer-navigation-heading" className="sr-only">Explore {siteName}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-0 md:gap-10 py-8 md:py-12">
 
             {/* Brand */}
-            <div className="col-span-2 md:col-span-4 lg:col-span-4">
+            <div className="md:col-span-4 lg:col-span-4 pb-8 md:pb-0">
               <Link href="/" className="inline-flex items-center gap-2 mb-3" data-testid="footer-logo">
                 {settings?.logoUrl ? (
                   <img src={settings.logoUrl} alt={siteName} className="h-8 w-auto object-contain" data-testid="footer-logo-img" />
@@ -272,7 +257,7 @@ export default function Footer() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 mt-5">
+              <div className="flex items-center gap-2 mt-5">
                 {activeSocials.map(({ Icon, href, label }) => (
                   <a
                     key={label}
@@ -281,7 +266,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     aria-label={label}
                     title={label}
-                    className="w-8 h-8 rounded-md flex items-center justify-center text-white/55 hover:text-[#1a1118] hover:bg-[#D4AF37] border border-white/[0.06] hover:border-[#D4AF37] transition-all"
+                    className="w-10 h-10 rounded-md flex items-center justify-center text-white/65 hover:text-[#1a1118] hover:bg-[#D4AF37] border border-white/[0.10] hover:border-[#D4AF37] transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 focus:ring-offset-[#120a10]"
                     data-testid={`social-${label.toLowerCase()}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -294,58 +279,8 @@ export default function Footer() {
             <FooterCol title={t.footer.services} links={services} />
             <FooterCol title="Tools & Resources" links={tools} />
             <FooterCol title={t.footer.company} links={company} />
-          </div>
-
-          {/* SEO: Popular searches */}
-          <div className="border-t border-white/[0.05] py-5">
-            <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-[#D4AF37]/80 mb-3">Popular Searches</p>
-            <div className="flex flex-wrap gap-1.5">
-              {popularSearches.map((s) => (
-                <Link
-                  key={s.label}
-                  href={s.href}
-                  className="text-[11.5px] text-white/55 hover:text-[#f5d76e] border border-white/[0.06] hover:border-[#D4AF37]/40 px-2.5 py-1 rounded-md transition-colors"
-                  data-testid={`popular-${s.label.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  {s.label}
-                </Link>
-              ))}
             </div>
-          </div>
-
-          {/* SEO: Pan-India cities */}
-          <div className="border-t border-white/[0.05] py-5">
-            <p className="text-[10px] uppercase tracking-[0.22em] font-bold text-[#D4AF37]/80 mb-2">Book Pandit & Puja in</p>
-            <p className="text-[12px] text-white/45 leading-relaxed">
-              {popularCities.map((city, i) => (
-                <span key={city}>
-                  <Link
-                    href={`/book-pandit-online?city=${encodeURIComponent(city)}`}
-                    className="hover:text-[#f5d76e] transition-colors"
-                    data-testid={`city-${city.toLowerCase()}`}
-                    title={`Book a Pandit in ${city}`}
-                  >
-                    Pandit in {city}
-                  </Link>
-                  {i < popularCities.length - 1 && <span className="text-white/20 mx-1.5">·</span>}
-                </span>
-              ))}
-            </p>
-          </div>
-
-          {/* SEO services strip — keyword-loaded one-liner anchoring the
-              homepage's H1/title cluster at the bottom of every page.
-              Plain text (no links) so it functions purely as a thematic
-              footer caption Google can index without bloating the
-              link graph. */}
-          <div className="border-t border-white/[0.05] pt-5 pb-1">
-            <p
-              className="text-[11.5px] sm:text-xs text-white/50 leading-relaxed text-center"
-              data-testid="text-footer-seo-services"
-            >
-              Buy Puja Samagri Online &nbsp;•&nbsp; Online Puja Booking &nbsp;•&nbsp; Book Panditji &nbsp;•&nbsp; Astrology Consultation &nbsp;•&nbsp; Hindu Ritual Services &nbsp;•&nbsp; Festival Puja Kits
-            </p>
-          </div>
+          </nav>
 
           {/* Policies + bottom bar */}
           <div className="border-t border-white/[0.05] py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -354,7 +289,7 @@ export default function Footer() {
                 <Link
                   key={p.href}
                   href={p.href}
-                  className="text-[11.5px] text-white/45 hover:text-[#f5d76e] transition-colors"
+                  className="inline-flex items-center min-h-9 text-[11.5px] text-white/65 hover:text-[#f5d76e] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
                   data-testid={p.testid}
                 >
                   {p.label}
@@ -400,24 +335,39 @@ export default function Footer() {
 }
 
 function FooterCol({ title, links }: { title: string; links: { href: string; label: string; testid: string }[] }) {
+  const [open, setOpen] = useState(false);
+  const contentId = `footer-group-${useId().replace(/:/g, "")}`;
+
   return (
-    <div className="col-span-1 md:col-span-2 lg:col-span-2">
-      <h4 className="text-[10.5px] font-bold text-[#f5d76e] uppercase tracking-[0.2em] mb-3">
+    <div className="border-t border-white/[0.08] md:border-0 md:col-span-1 lg:col-span-2">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between min-h-12 py-3 text-left text-[11px] font-bold text-[#f5d76e] uppercase tracking-[0.2em] md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-inset"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span>{title}</span>
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+      </button>
+      <h3 className="hidden md:block text-[10.5px] font-bold text-[#f5d76e] uppercase tracking-[0.2em] mb-3">
         {title}
-      </h4>
-      <ul className="space-y-2">
-        {links.map((l) => (
-          <li key={l.href}>
-            <Link
-              href={l.href}
-              className="text-white/55 hover:text-[#f5d76e] text-[12.5px] transition-colors"
-              data-testid={l.testid}
-            >
-              {l.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      </h3>
+      <div id={contentId} className={`${open ? "block" : "hidden"} md:block pb-3 md:pb-0`}>
+        <ul className="space-y-0 md:space-y-2">
+          {links.map((l) => (
+            <li key={l.href}>
+              <Link
+                href={l.href}
+                className="inline-flex items-center min-h-11 md:min-h-0 text-white/70 hover:text-[#f5d76e] text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
+                data-testid={l.testid}
+              >
+                {l.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
