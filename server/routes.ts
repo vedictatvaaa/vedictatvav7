@@ -70,6 +70,7 @@ import {
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
+import { MANTRA_LIBRARY } from "@shared/mantra-library";
 import { eq, and, gt, gte, lt, like, or, ilike, inArray, sql } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
@@ -14563,6 +14564,18 @@ Please create an optimized route that minimizes backtracking and maximizes the s
   // meta, canonical and OG tags are spliced into <head> before crawlers
   // see the response. The React SPA still hydrates and updates head as
   // before; this only fixes the *first* HTML payload.
+  // Keep the old hub URL as a permanent redirect so crawlers consolidate
+  // signals on the canonical counter route instead of indexing two hubs.
+  app.get("/japa", (_req, res) => res.redirect(301, "/digital-japa-counter"));
+  app.get("/japa/:slug", (req, res, next) => {
+    const slug = String(req.params.slug || "").toLowerCase();
+    if (MANTRA_LIBRARY.some((mantra) => mantra.id === slug)) return next();
+    res
+      .status(404)
+      .set("X-Robots-Tag", "noindex, nofollow")
+      .type("html")
+      .send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><title>Page Not Found | Vedic Tatva</title></head><body><main><h1>Page not found</h1><p>This mantra page does not exist.</p><a href="/digital-japa-counter">Open the japa counter</a></main></body></html>`);
+  });
   app.use(publicRouteIntegrityMiddleware());
   const { seoHeadMiddleware } = await import("./seo-ssr");
   app.use(seoHeadMiddleware());

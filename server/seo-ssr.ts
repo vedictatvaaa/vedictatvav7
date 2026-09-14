@@ -54,6 +54,7 @@ import {
   locationEditorialIsIndexable,
 } from "./pandit-seo-network/editorial";
 import { queryPanditDirectory } from "./pandit-directory-query";
+import { MANTRA_LIBRARY } from "../shared/mantra-library";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
@@ -345,20 +346,83 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
     },
     "/japa": {
       title: "Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva",
-      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
+      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30 Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
       canonical: "/digital-japa-counter",
       keywords: "japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप",
       twitterCard: "summary_large_image",
     },
     "/digital-japa-counter": {
       title: "Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva",
-      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
+      description: "Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30 Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device.",
       canonical: "/digital-japa-counter",
       keywords: "japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप",
       twitterCard: "summary_large_image",
     },
   };
   if (staticHeads[reqPath]) return staticHeads[reqPath];
+
+  const mantraMatch = reqPath.match(/^\/japa\/([^/?#]+)\/?$/);
+  if (mantraMatch) {
+    const mantra = MANTRA_LIBRARY.find((entry) => entry.id === decodeURIComponent(mantraMatch[1]).toLowerCase());
+    if (mantra) {
+      const canonical = `/japa/${mantra.id}`;
+      const title = `${mantra.label} Online Japa Counter — ${mantra.recommendedCount} Mala | Vedic Tatva`;
+      const description = `Chant the ${mantra.label} (${mantra.deity}) on a free ${mantra.recommendedCount}-bead japa counter with temple bell and vibration. ${mantra.meaning.slice(0, 110)}…`;
+      const faqs = [
+        {
+          "@type": "Question",
+          name: `What is the meaning of the ${mantra.label}?`,
+          acceptedAnswer: { "@type": "Answer", text: `${mantra.meaning} It is traditionally chanted in honour of ${mantra.deity}.` },
+        },
+        {
+          "@type": "Question",
+          name: `How many times should I chant the ${mantra.label}?`,
+          acceptedAnswer: { "@type": "Answer", text: `The classical baseline is ${mantra.recommendedCount} repetitions — one full mala.` },
+        },
+      ];
+      return {
+        title,
+        description,
+        canonical,
+        ogImage: "/og/og-japa.jpg",
+        ogType: "website",
+        twitterCard: "summary_large_image",
+        jsonLd: [
+          {
+            id: `breadcrumb-japa-${mantra.id}`,
+            payload: {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Home", item: `${baseUrl}/` },
+                { "@type": "ListItem", position: 2, name: "Japa", item: `${baseUrl}/digital-japa-counter` },
+                { "@type": "ListItem", position: 3, name: mantra.label, item: `${baseUrl}${canonical}` },
+              ],
+            },
+          },
+          {
+            id: `howto-japa-${mantra.id}`,
+            payload: {
+              "@context": "https://schema.org",
+              "@type": "HowTo",
+              name: `How to chant the ${mantra.label}`,
+              description: `Step-by-step japa instructions for the ${mantra.label} using the Vedic Tatva counter.`,
+              tool: [{ "@type": "HowToTool", name: "108-bead mala or this digital counter" }],
+              step: [
+                { "@type": "HowToStep", name: "Set your intention", text: "Choose one short sankalpa before beginning." },
+                { "@type": "HowToStep", name: "Tap once per repetition", text: `Chant ${mantra.transliteration} silently or aloud as you tap.` },
+                { "@type": "HowToStep", name: `Complete ${mantra.recommendedCount} repetitions`, text: "Rest in silence for a few breaths when the mala completes." },
+              ],
+            },
+          },
+          {
+            id: `faq-japa-${mantra.id}`,
+            payload: { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs },
+          },
+        ],
+      };
+    }
+  }
 
   const hierarchicalHead = await resolvePanditHierarchicalHead(reqPath, baseUrl);
   if (hierarchicalHead) return hierarchicalHead;

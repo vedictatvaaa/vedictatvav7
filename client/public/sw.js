@@ -1,10 +1,41 @@
-const VERSION = 'v6';
+const VERSION = 'v7';
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const RUNTIME_CACHE = `vt-runtime-${VERSION}`;
 
 const PRECACHE = [
   '/',
   '/offline.html',
+  '/digital-japa-counter',
+  '/japa/om',
+  '/japa/gayatri',
+  '/japa/asato',
+  '/japa/shanti',
+  '/japa/om-namah-shivaya',
+  '/japa/mahamrityunjaya',
+  '/japa/shivaya-namah-om',
+  '/japa/rudra-gayatri',
+  '/japa/om-namo-narayanaya',
+  '/japa/vishnu-gayatri',
+  '/japa/hare-krishna',
+  '/japa/krishna-govinda',
+  '/japa/sri-ram-jai-ram',
+  '/japa/ram-naam',
+  '/japa/om-aim-saraswatyai',
+  '/japa/om-shrim-mahalakshmi',
+  '/japa/om-dum-durgayai',
+  '/japa/kali-bija',
+  '/japa/devi-gayatri',
+  '/japa/om-gam-ganapataye',
+  '/japa/vakratunda',
+  '/japa/ganesha-gayatri',
+  '/japa/hanuman-mantra',
+  '/japa/hanuman-bija',
+  '/japa/om-suryaya-namah',
+  '/japa/aditya-hridaya',
+  '/japa/dhanvantari',
+  '/japa/lokah-samastah',
+  '/japa/twameva-mata',
+  '/japa/sarve-bhavantu',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/favicon.png',
@@ -36,6 +67,11 @@ function isApi(url) {
 
 function isStaticAsset(url) {
   return /\.(?:js|css|woff2?|ttf|otf|svg|png|jpg|jpeg|gif|webp|avif|ico)$/.test(url.pathname);
+}
+
+function isJapaNavigation(url, req) {
+  return req.mode === 'navigate' &&
+    (url.pathname === '/digital-japa-counter' || url.pathname === '/japa' || url.pathname.startsWith('/japa/'));
 }
 
 self.addEventListener('fetch', (event) => {
@@ -116,6 +152,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req).catch(async (err) => {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          if (isJapaNavigation(url, req)) {
+            const japa = await caches.match(req);
+            if (japa) return japa;
+            const canonical = await caches.match('/digital-japa-counter');
+            if (canonical) return canonical;
+          }
           const off = await caches.match('/offline.html');
           if (off) return off;
           const shell = await caches.match('/');

@@ -167,9 +167,9 @@ export default function JapaMantraPage() {
             lyrics", "<mantra> Sanskrit". */}
         <section className="px-3 sm:px-5">
           <div className="max-w-3xl mx-auto rounded-md border border-[#D4AF37]/30 bg-[#FBF7EE]/[0.04] p-5 sm:p-7">
-            <h1 className="font-serif text-2xl sm:text-3xl text-[#D4AF37] leading-tight">
+             <h2 className="font-serif text-2xl sm:text-3xl text-[#D4AF37] leading-tight">
               {mantra.label} — Online Japa Counter
-            </h1>
+             </h2>
             <p className="mt-2 text-sm sm:text-base text-[#FBF7EE]/80">
               Deity: <span className="text-[#D4AF37]">{mantra.deity}</span> · Recommended:{" "}
               <span className="text-[#D4AF37]">{mantra.recommendedCount} repetitions</span>

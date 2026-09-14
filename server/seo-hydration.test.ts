@@ -116,7 +116,7 @@ test("raw responses and hydrated DOM keep representative SEO metadata identical"
         expectedTitle: "Compare Sacred Puja Products Side-by-Side | Vedic Tatva",
       },
       {
-        path: "/japa",
+        path: "/digital-japa-counter",
         expectedTitle: "Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva",
       },
       {
@@ -128,6 +128,31 @@ test("raw responses and hydrated DOM keep representative SEO metadata identical"
         expectedTitle: "Build Your Puja Kit · Vedic Tatva",
       },
     ];
+
+    const japaAlias = await fetch(`${origin}/japa`, {
+      headers: { accept: "text/html" },
+      redirect: "manual",
+    });
+    assert.equal(japaAlias.status, 301, "/japa must permanently redirect");
+    assert.equal(japaAlias.headers.get("location"), "/digital-japa-counter");
+
+    const invalidMantra = await fetch(`${origin}/japa/not-a-real-mantra`, {
+      headers: { accept: "text/html" },
+    });
+    assert.equal(invalidMantra.status, 404, "unknown mantra slugs must return 404");
+    assert.match(
+      invalidMantra.headers.get("x-robots-tag") || "",
+      /noindex/i,
+      "unknown mantra slugs must be excluded from indexing",
+    );
+
+    const mantraResponse = await fetch(`${origin}/japa/om`, {
+      headers: { accept: "text/html" },
+    });
+    const mantraHtml = await mantraResponse.text();
+    assert.equal(mantraResponse.status, 200, "valid mantra pages must return HTML");
+    assert.match(mantraHtml, /data-jsonld="howto-japa-om"/, "valid mantra HowTo schema must be present in SSR HTML");
+    assert.match(mantraHtml, /data-jsonld="faq-japa-om"/, "valid mantra FAQ schema must be present in SSR HTML");
 
     for (const route of routes) {
       const response = await fetch(`${origin}${route.path}`, {

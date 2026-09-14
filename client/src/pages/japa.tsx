@@ -288,11 +288,11 @@ export default function JapaPage() {
       operatingSystem: "Any (PWA)",
       url: "https://vedictatva.com/digital-japa-counter",
       description:
-        "Free online japa mala counter (108 / 54 / 27 beads) with temple bell, haptic vibration, daily streaks, and 30+ Vedic mantras. Works offline as a Progressive Web App.",
+        "Free online japa mala counter (108 / 54 / 27 beads) with temple bell, haptic vibration, daily streaks, and 30 Vedic mantras. Works offline as a Progressive Web App.",
       offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
       featureList: [
         "108 / 54 / 27 mala targets",
-        "30+ Vedic mantras with Devanagari, transliteration & meaning",
+        "30 Vedic mantras with Devanagari, transliteration & meaning",
         "Synthesised brass temple bell on mala completion",
         "Haptic vibration with milestone patterns at 108 and 1008",
         "Daily streak and lifetime sadhana tracking",
@@ -312,7 +312,7 @@ export default function JapaPage() {
     >
       <PageSeo
         title="Mantra Japa Counter — Free 108 Mala Counter Online | Vedic Tatva"
-        description="Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30+ Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device."
+        description="Free online japa mala counter (108 / 54 / 27 beads) with bell, vibration, daily streaks, and 30 Vedic mantras — Mahamrityunjaya, Gayatri, Om Namah Shivaya, Hare Krishna and more. AI mantra oracle. Saved privately on your device."
         keywords="japa counter, jaap counter, mala counter, online jap counter, 108 mala counter, 1008 mala counter, mantra counter, mantra japa online, Vedic mantra counter, Mahamrityunjaya mantra, Gayatri mantra, Om Namah Shivaya, Hare Krishna counter, Shiva mantra counter, chanting counter app, japa mala app, free mantra counter, sadhana tracker, ऑनलाइन माला जप, जप काउंटर, मंत्र जप"
         canonical="/digital-japa-counter"
         ogType="website"

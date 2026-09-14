@@ -747,6 +747,29 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [celebration, setCelebration] = useState<{ malaNumber: number; target: number; mantraLabel: string; mantraId: string; ts: number } | null>(null);
   const [celebrationExiting, setCelebrationExiting] = useState(false);
   const [ashirvad, setAshirvad] = useState<{ mantraLabel: string; mantraId: string; ts: number } | null>(null);
+  const completionResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completionResetPendingRef = useRef(false);
+  const cancelCompletionReset = useCallback(() => {
+    if (completionResetTimerRef.current) {
+      clearTimeout(completionResetTimerRef.current);
+      completionResetTimerRef.current = null;
+    }
+    completionResetPendingRef.current = false;
+  }, []);
+  const scheduleCompletionReset = useCallback((completedTarget: number) => {
+    if (completionResetTimerRef.current) clearTimeout(completionResetTimerRef.current);
+    completionResetPendingRef.current = true;
+    completionResetTimerRef.current = setTimeout(() => {
+      completionResetTimerRef.current = null;
+      completionResetPendingRef.current = false;
+      setPersist((prev) => (prev.count >= completedTarget ? { ...prev, count: 0 } : prev));
+      setSessionStartTs(null);
+    }, 4000);
+  }, []);
+  useEffect(() => () => cancelCompletionReset(), [cancelCompletionReset]);
+  useEffect(() => {
+    cancelCompletionReset();
+  }, [mantra.id, target, cancelCompletionReset]);
 
   // Pre-chant breathwork (4-7-8 pranayama). Auto-runs once per session
   // on the first orb tap; subsequent taps go straight to counting.
@@ -1199,6 +1222,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             mantraId: mantra.id,
             ts: Date.now(),
           });
+          scheduleCompletionReset(target);
           // Mix mode: hop to the next mantra that has a recorded
           // chant and let the loop continue (the effect re-runs
           // automatically because mantra.id is in its deps). We
@@ -1226,7 +1250,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       cancelled = true;
       mantraAudio.stop();
     };
-  }, [autoChanting, mantra.id, mantra.label, soundOn, vibrationOn, target, commitTick, toast, setMantraId]);
+  }, [autoChanting, mantra.id, mantra.label, soundOn, vibrationOn, target, commitTick, toast, setMantraId, scheduleCompletionReset]);
 
   // Toggle the auto-chant arming flag. Turning it OFF also stops any
   // running loop. Turning it ON only arms the mode — the actual chant
@@ -1240,6 +1264,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   }, []);
 
   const tap = useCallback(() => {
+    // Once a mala closes, keep the completed count visible until the
+    // independent reset timer runs. This prevents stray pointer, keyboard,
+    // or shake events from adding beads or firing completion repeatedly.
+    if (completionResetPendingRef.current) return;
     // Soft debounce (~250 ms) — kills accidental double-fires from palm
     // drag / shaky finger without blocking real chant pacing. A devotee
     // can still tap up to 4× per second if they want.
@@ -1289,6 +1317,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         mantraId: mantra.id,
         ts: Date.now(),
       });
+      scheduleCompletionReset(target);
     } else {
       // Milestone haptics — gives the chanting body a felt sense of
       // progress without any visual interruption. Spec: gentle pulse on
@@ -1340,7 +1369,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         streak: newStreak, lastDay: t,
       };
     });
-  }, [target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick]);
+  }, [target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick, scheduleCompletionReset]);
 
   // — Undo last tap. Long-press the orb (~600ms) and the existing Undo
   //   button both call this. Handles four cases:
@@ -1352,6 +1381,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   //   Also rolls back the streak credit when today's tap count zeros
   //   out (mirroring the original undo logic).
   const undoLastTap = useCallback(() => {
+    cancelCompletionReset();
     setPersist((prev) => {
       if (prev.total <= 0) return prev;
       let count = prev.count;
@@ -1398,7 +1428,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     // longer complete.
     setCelebration(null);
     setFullMalaBloom(null);
-  }, [target]);
+  }, [target, cancelCompletionReset]);
 
   // Long-press detection on the orb. We track a timer + a "fired" flag.
   // If the user holds for 600ms, undo fires and the upcoming click is
@@ -1430,6 +1460,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // armed but not yet running, the first tap kicks off the loop. Otherwise
   // it falls through to the normal manual tap.
   const handleTapOrAutoStart = useCallback(() => {
+    if (completionResetPendingRef.current) return;
     // First tap of the session → run pranayama instead of counting.
     // The breathing overlay calls back into normal tap behaviour once
     // it finishes (or the devotee skips it).
@@ -1455,7 +1486,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       return;
     }
     tap();
-  }, [autoMode, soundOn, mantra.id, toast, tap]);
+  }, [autoMode, soundOn, mantra.id, toast, tap, breathingActive]);
 
   // Shake-to-count: useShakeToJapa fires this CustomEvent on every clean
   // shake while the devotee is on /japa. We treat it like a manual tap —
@@ -1481,11 +1512,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // overlay was retired (it competed with the divine ashirvad for the
   // moment of completion). Now the aarti chime plays as the count flips,
   // and ~600 ms later the Tathastu blessing rises — one sacred handoff.
-  // `celebration` lives on purely as the scheduling trigger.
-  // Auto-reset: ~4s after the mala closes we silently roll the visible
-  // count back to 0 so when the devotee dismisses the ashirvad the orb
-  // is already showing a fresh mala. malasCompleted / total are
-  // untouched (those were credited at the moment of completion).
+  // `celebration` lives on purely as the scheduling trigger. The reset timer
+  // is deliberately managed independently so dismissing the celebration
+  // cannot cancel the reset.
   useEffect(() => {
     if (!celebration) return;
     setCelebrationExiting(false);
@@ -1499,16 +1528,11 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     const id = setTimeout(() => {
       setCelebration(null);
     }, 900);
-    const resetId = setTimeout(() => {
-      setPersist((prev) => (prev.count >= target ? { ...prev, count: 0 } : prev));
-      setSessionStartTs(null);
-    }, 4000);
     return () => {
       clearTimeout(id);
       clearTimeout(ashirvadId);
-      clearTimeout(resetId);
     };
-  }, [celebration, target]);
+  }, [celebration]);
 
   // Share the divine blessing — separate copy from the mantra share so
   // the recipient gets the ashirvad, not just the chant link.
@@ -1546,6 +1570,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     // (which can run several seconds per bead) keeps playing — visually
     // inconsistent and acoustically jarring. The synthesized bell is a
     // ~200 ms one-shot so it doesn't need an explicit stop.
+    cancelCompletionReset();
     try { mantraAudio.stop(); } catch {}
     setPersist((prev) => ({ ...prev, count: 0 }));
     setSessionStartTs(null);
@@ -1555,6 +1580,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
 
   const resetAll = () => {
     if (!confirm(`Reset ALL stats for "${mantra.label}"? This cannot be undone.`)) return;
+    cancelCompletionReset();
     try { mantraAudio.stop(); } catch {}
     setPersist(emptyPersist());
     toast({ title: "Stats reset" });
@@ -1674,11 +1700,11 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         if (role === "button" || role === "link" || role === "checkbox" || role === "switch") return;
       }
       e.preventDefault();
-      tap();
+      handleTapOrAutoStart();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tap]);
+  }, [handleTapOrAutoStart]);
 
   // ===== Mala garland sizing (108-bead SVG renders into a square box) =====
   // Responsive: shrinks on narrow screens so the orb never touches the
@@ -2197,6 +2223,16 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             <Button size="sm" variant="outline" onClick={resetMala} data-testid="btn-reset-mala">
               <RotateCcw className="h-3.5 w-3.5 mr-1" />Reset mala
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={enterFullscreen}
+              aria-label="Open focus mode"
+              title="Open focus mode"
+              data-testid="btn-focus-mode"
+            >
+              <Maximize2 className="h-3.5 w-3.5 mr-1" />Focus mode
+            </Button>
             <Button size="sm" variant="ghost" onClick={resetAll} className="text-rose-700" data-testid="btn-reset-all">
               <Trash2 className="h-3.5 w-3.5 mr-1" />Reset all
             </Button>
@@ -2215,8 +2251,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       <Card data-testid="card-mantra-picker">
         <CardContent className="p-3 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <label className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mantra</label>
+            <label htmlFor="japa-mantra-select" className="text-[11px] uppercase tracking-wide font-bold text-[#5a4a3a]/70">Mantra</label>
             <select
+              id="japa-mantra-select"
               value={mantraId}
               onChange={(e) => setMantraId(e.target.value)}
               disabled={audioLocked}
@@ -2479,6 +2516,7 @@ function TrishulCorner({ side, accent }: { side: "left" | "right"; accent: strin
   return (
     <svg viewBox="0 0 60 200"
       className={`absolute top-6 ${side === "left" ? "left-4" : "right-4"} w-10 h-32 sm:w-14 sm:h-40 opacity-30`}
+      aria-hidden="true"
       style={side === "right" ? { transform: "scaleX(-1)" } : undefined}>
       <g fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round">
         <line x1="30" y1="60" x2="30" y2="190" />
@@ -2493,7 +2531,8 @@ function TrishulCorner({ side, accent }: { side: "left" | "right"; accent: strin
 function LotusCorner({ side, accent }: { side: "left" | "right"; accent: string }) {
   return (
     <svg viewBox="0 0 60 200"
-      className={`absolute top-6 ${side === "left" ? "left-4" : "right-4"} w-10 h-32 sm:w-14 sm:h-40 opacity-35`}>
+      className={`absolute top-6 ${side === "left" ? "left-4" : "right-4"} w-10 h-32 sm:w-14 sm:h-40 opacity-35`}
+      aria-hidden="true">
       <g fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="30" y1="80" x2="30" y2="200" />
         <path d="M30 78 C22 60 22 38 30 22 C38 38 38 60 30 78 Z" />
@@ -2508,7 +2547,7 @@ function LotusCorner({ side, accent }: { side: "left" | "right"; accent: string 
 
 function CrescentMoon({ cutout }: { cutout: string }) {
   return (
-    <svg viewBox="0 0 200 200" className="absolute top-12 right-10 w-24 h-24 sm:w-32 sm:h-32 opacity-70">
+    <svg viewBox="0 0 200 200" className="absolute top-12 right-10 w-24 h-24 sm:w-32 sm:h-32 opacity-70" aria-hidden="true">
       <defs>
         <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#FFFAEC" stopOpacity="0.95" />
@@ -2529,7 +2568,7 @@ function SunWithRays({ accent }: { accent: string }) {
     return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />;
   });
   return (
-    <svg viewBox="0 0 200 200" className="absolute top-10 right-8 w-28 h-28 sm:w-36 sm:h-36 opacity-65">
+    <svg viewBox="0 0 200 200" className="absolute top-10 right-8 w-28 h-28 sm:w-36 sm:h-36 opacity-65" aria-hidden="true">
       <defs>
         <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#FFFAEC" stopOpacity="0.95" />
@@ -2544,7 +2583,7 @@ function SunWithRays({ accent }: { accent: string }) {
 
 function PeacockFeather({ accent, cutout }: { accent: string; cutout: string }) {
   return (
-    <svg viewBox="0 0 200 220" className="absolute top-10 right-8 w-24 h-32 sm:w-28 sm:h-36 opacity-75">
+    <svg viewBox="0 0 200 220" className="absolute top-10 right-8 w-24 h-32 sm:w-28 sm:h-36 opacity-75" aria-hidden="true">
       <ellipse cx="100" cy="80" rx="42" ry="60" fill={accent} opacity="0.25" />
       <ellipse cx="100" cy="80" rx="22" ry="30" fill={accent} opacity="0.45" />
       <ellipse cx="100" cy="80" rx="14" ry="20" fill={cutout} />
@@ -2558,7 +2597,7 @@ function PeacockFeather({ accent, cutout }: { accent: string; cutout: string }) 
 function MountainSilhouette() {
   return (
     <svg viewBox="0 0 1000 280" preserveAspectRatio="none"
-      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55">
+      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55" aria-hidden="true">
       <defs>
         <linearGradient id="mtnGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#000" stopOpacity="0" />
@@ -2574,7 +2613,7 @@ function MountainSilhouette() {
 function GroveSilhouette() {
   return (
     <svg viewBox="0 0 1000 280" preserveAspectRatio="none"
-      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55">
+      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55" aria-hidden="true">
       <defs>
         <linearGradient id="grvGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#000" stopOpacity="0" />
@@ -2596,7 +2635,7 @@ function GroveSilhouette() {
 function LotusPondSilhouette({ accent }: { accent: string }) {
   return (
     <svg viewBox="0 0 1000 280" preserveAspectRatio="none"
-      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55">
+      className="absolute bottom-0 left-0 right-0 w-full h-44 sm:h-56 opacity-55" aria-hidden="true">
       <defs>
         <linearGradient id="pondGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#000" stopOpacity="0" />
@@ -2829,7 +2868,7 @@ function MalaRings({
           50%      { filter: drop-shadow(0 0 10px var(--ring-glow)); }
         }
       `}</style>
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden="true">
         {RINGS.map((ring, i) => {
           const circumference = 2 * Math.PI * ring.r;
           const dash = circumference * ring.pct;
