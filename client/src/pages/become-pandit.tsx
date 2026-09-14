@@ -349,7 +349,7 @@ export default function BecomePandit() {
       return;
     }
     if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-      const message = "Please share your exact location before submitting.";
+      const message = "Share your exact location before submitting.";
       setLocationError(message);
       showApplicationError(message);
       toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
@@ -363,7 +363,7 @@ export default function BecomePandit() {
       return;
     }
     if (!photoFile) {
-      const message = "A profile photo is required.";
+      const message = "Upload a profile photo before submitting.";
       setPhotoError(message);
       showApplicationError(message);
       toast({ title: "Photo Required", description: "Please add a profile photo before submitting.", variant: "destructive" });
