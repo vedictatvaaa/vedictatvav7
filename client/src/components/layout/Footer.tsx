@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { Link } from "wouter";
-import { ChevronDown, Mail, Phone, MapPin, ShieldCheck, Truck, RotateCcw, Lock, Loader2, Check } from "lucide-react";
+import { ArrowRight, ChevronDown, LifeBuoy, Mail, MapPin, MessageCircle, PackageSearch, Phone, RotateCcw, ShieldCheck, Truck, Lock, Loader2, Check } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX, SiYoutube, SiWhatsapp } from "react-icons/si";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
@@ -129,6 +129,30 @@ export default function Footer() {
     { ...FOOTER_DESTINATIONS.policies[4], label: "Accessibility" },
   ];
 
+  const supportActions = [
+    {
+      href: "/track-order",
+      title: "Track an order",
+      description: "Check your latest delivery update.",
+      icon: PackageSearch,
+      testid: "footer-support-track-order",
+    },
+    {
+      href: "/return-ticket",
+      title: "Returns & refunds",
+      description: "Start a request or review next steps.",
+      icon: RotateCcw,
+      testid: "footer-support-returns",
+    },
+    {
+      href: "/contact",
+      title: "Contact support",
+      description: "Get help with orders, bookings, or products.",
+      icon: MessageCircle,
+      testid: "footer-support-contact",
+    },
+  ];
+
   return (
     <footer className="relative pb-20 lg:pb-0 text-white" aria-label={`${siteName} footer`} data-testid="footer">
       {/* Hairline gold top border */}
@@ -216,6 +240,52 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Support band — action-first help for the most common customer needs. */}
+      <section
+        aria-labelledby="footer-support-heading"
+        className="bg-[#24131b] border-b border-[#D4AF37]/15"
+        data-testid="footer-support-band"
+      >
+        <div className="container mx-auto px-4 py-6 md:py-7">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
+            <div className="flex items-start gap-3 lg:w-64 lg:shrink-0">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/10 text-[#f5d76e]">
+                <LifeBuoy className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#D4AF37]">Need a hand?</p>
+                <h2 id="footer-support-heading" className="mt-1 text-lg font-serif font-semibold text-white">
+                  Help &amp; Support
+                </h2>
+                <p className="mt-1 text-[12px] leading-relaxed text-white/65">
+                  Find the right next step quickly.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex-1">
+              {supportActions.map(({ href, title, description, icon: Icon, testid }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="group flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-white/[0.10] bg-[#120a10]/55 px-4 py-3 transition-colors hover:border-[#D4AF37]/55 hover:bg-[#120a10] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#24131b]"
+                  data-testid={testid}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Icon className="h-4 w-4 shrink-0 text-[#D4AF37]" aria-hidden="true" />
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-white/90">{title}</span>
+                      <span className="mt-0.5 block text-[11px] leading-snug text-white/60">{description}</span>
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[#D4AF37]/70 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main body */}
       <div className="bg-[#120a10]">
