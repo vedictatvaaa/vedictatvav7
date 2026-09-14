@@ -184,7 +184,7 @@ export default function PanditProfile() {
               && !pandit.onLeave
               && pandit.availability !== "unavailable"
               && pandit.locationReviewStatus === "resolved"
-              ? pandit.registrationNo
+              ? pandit.registrationNo || undefined
               : undefined,
           }),
         ]}
@@ -203,7 +203,7 @@ export default function PanditProfile() {
                 <img src={pandit.image} alt={pandit.name} className="w-24 h-24 sm:w-28 sm:h-28 rounded-md object-cover border border-[#D4AF37]/40" />
               ) : (
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md bg-white/8 border border-[#D4AF37]/40 flex items-center justify-center">
-                  <span className="text-3xl sm:text-4xl font-serif font-semibold text-white/70">{pandit.name.charAt(0)}</span>
+                  <span className="text-3xl sm:text-4xl font-serif font-semibold text-white/70">{pandit.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "VT"}</span>
                 </div>
               )}
               {isBoosted && (

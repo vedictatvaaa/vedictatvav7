@@ -10,7 +10,7 @@ export type TabId =
   | "payment-gateways" | "ai-providers"
   | "blog-ai" | "puja-library" | "community" | "sacred-library"
   | "festivals" | "homepage-sections" | "visitors" | "api-setup" | "distribution" | "locations" | "knowledge-graph"
-  | "pandit-governance" | "pandit-network-activity" | "pandit-storefront-content";
+  | "pandit-governance" | "pandit-network-activity" | "pandit-storefront-content" | "pandit-profile-completion";
 
 export type TabSection =
   | "Overview" | "Catalog" | "Orders & Bookings" | "People" | "Marketing" | "System";

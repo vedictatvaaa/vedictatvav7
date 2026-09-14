@@ -141,20 +141,45 @@ export default function BecomePandit() {
     stateId: "",
     cityId: "",
     proposedCityName: "",
+    registeredAddress: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
+    locationPermissionGranted: false,
     experience: "",
     specializations: "",
     education: "",
     languages: "",
     bio: "",
+    serviceArea: "",
     regionalOrigin: "",
     membership: "free",
     agreeTerms: false,
+    servicesConfirmed: false,
     masterServiceIds: [] as number[],
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [missingCityMode, setMissingCityMode] = useState(false);
+  const [locationError, setLocationError] = useState("");
+
+  const requestExactLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("This browser does not support location access.");
+      return;
+    }
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => setForm((current) => ({
+        ...current,
+        latitude: Number(position.coords.latitude.toFixed(6)),
+        longitude: Number(position.coords.longitude.toFixed(6)),
+        locationPermissionGranted: true,
+      })),
+      () => setLocationError("Location access is required to submit your application. Please allow it and try again."),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -206,7 +231,7 @@ export default function BecomePandit() {
         title: "Application Submitted",
         description: "We'll review your details and reach out within 48 hours.",
       });
-      setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", experience: "", specializations: "", education: "", languages: "", bio: "", regionalOrigin: "", membership: "free", agreeTerms: false, masterServiceIds: [] });
+       setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", registeredAddress: "", latitude: null, longitude: null, locationPermissionGranted: false, experience: "", specializations: "", education: "", languages: "", bio: "", serviceArea: "", regionalOrigin: "", membership: "free", agreeTerms: false, servicesConfirmed: false, masterServiceIds: [] });
       setPhotoPreview(null);
       setPhotoFile(null);
       setMissingCityMode(false);
@@ -223,8 +248,21 @@ export default function BecomePandit() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (submitMutation.isPending) return;
-    if (!form.fullName || !form.phone || !form.email || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.experience) {
+    if (!form.fullName || !form.phone || !form.email || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.registeredAddress.trim() || !form.experience || !form.specializations.trim() || !form.education.trim() || !form.languages.trim() || !form.bio.trim() || !form.serviceArea.trim()) {
       toast({ title: "Missing Fields", description: "Please fill all required fields.", variant: "destructive" });
+      return;
+    }
+    if (form.masterServiceIds.length !== 5) {
+      toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
+      return;
+    }
+    if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
+      setLocationError("Please share your exact location before submitting.");
+      toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
+      return;
+    }
+    if (!form.servicesConfirmed) {
+      toast({ title: "Confirm your services", description: "Confirm that the selected Pujas are services you personally offer.", variant: "destructive" });
       return;
     }
     if (!photoFile) {
@@ -296,6 +334,8 @@ export default function BecomePandit() {
         onPhotoChange={handlePhotoChange}
         onPhotoRemove={() => { setPhotoFile(null); setPhotoPreview(null); setPhotoError(""); }}
         photoError={photoError}
+        locationError={locationError}
+        requestExactLocation={requestExactLocation}
         missingCityMode={missingCityMode}
         setMissingCityMode={setMissingCityMode}
         onSubmit={handleSubmit}
@@ -1289,12 +1329,13 @@ function DemoSection() {
 type FormState = {
   fullName: string; phone: string; email: string; city: string; experience: string;
   stateId: string; cityId: string; proposedCityName: string;
-  specializations: string; education: string; languages: string; bio: string;
-  regionalOrigin: string; membership: string; agreeTerms: boolean; masterServiceIds: number[];
+  registeredAddress: string; latitude: number | null; longitude: number | null; locationPermissionGranted: boolean;
+  specializations: string; education: string; languages: string; bio: string; serviceArea: string;
+  regionalOrigin: string; membership: string; agreeTerms: boolean; servicesConfirmed: boolean; masterServiceIds: number[];
 };
 
 function RegistrationSection({
-  form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
+  form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
 }: {
   form: FormState;
   photoPreview: string | null;
@@ -1302,6 +1343,8 @@ function RegistrationSection({
   onPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPhotoRemove: () => void;
   photoError: string;
+  locationError: string;
+  requestExactLocation: () => void;
   missingCityMode: boolean;
   setMissingCityMode: React.Dispatch<React.SetStateAction<boolean>>;
   onSubmit: (e: React.FormEvent) => void;
@@ -1321,11 +1364,8 @@ function RegistrationSection({
   });
   const serviceChecklistInitialized = useRef(false);
   useEffect(() => {
-    if (!serviceChecklistInitialized.current && masterServices.length) {
-      serviceChecklistInitialized.current = true;
-      setForm(current => ({ ...current, masterServiceIds: masterServices.filter(service => ["puja", "katha", "ritual"].includes(service.serviceType)).map(service => service.id) }));
-    }
-  }, [masterServices, setForm]);
+    if (!serviceChecklistInitialized.current && masterServices.length) serviceChecklistInitialized.current = true;
+  }, [masterServices]);
   const activeStates = locations.filter(s => s.isActive);
   const activeCities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
   return (
@@ -1388,6 +1428,16 @@ function RegistrationSection({
                         {missingCityMode ? "Choose a listed city instead" : "My city is not listed"}
                       </button>
                     </Field>
+                    <Field label="Registered Address *" id="registeredAddress">
+                      <Textarea id="registeredAddress" name="registeredAddress" value={form.registeredAddress} onChange={onChange} placeholder="House, street, locality, city, state, PIN" required className="min-h-[80px]" data-testid="input-registered-address" style={{ borderColor: `${C.maroon}25` }} />
+                    </Field>
+                    <div className="rounded-lg border p-3" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>Exact location access *</p><p className="text-xs" style={{ color: C.brownSoft }}>Used for onboarding verification. It is not shown publicly.</p></div>
+                        <Button type="button" variant="outline" onClick={requestExactLocation} data-testid="button-share-location">{form.locationPermissionGranted ? "Location captured" : "Share exact location"}</Button>
+                      </div>
+                      {locationError && <p className="mt-2 text-xs text-destructive" role="alert">{locationError}</p>}
+                    </div>
                   </div>
                 </FieldGroup>
 
@@ -1413,19 +1463,22 @@ function RegistrationSection({
                       <Field label="Years of Experience *" id="experience">
                         <Input id="experience" name="experience" type="number" min="0" value={form.experience} onChange={onChange} placeholder="e.g., 5" required data-testid="input-experience" style={{ borderColor: `${C.maroon}25` }} />
                       </Field>
-                      <Field label="Vedic Education" id="education">
-                        <Input id="education" name="education" value={form.education} onChange={onChange} placeholder="Gurukul, Sanskrit University..." data-testid="input-education" style={{ borderColor: `${C.maroon}25` }} />
+                      <Field label="Vedic Education *" id="education">
+                        <Input id="education" name="education" value={form.education} onChange={onChange} placeholder="Gurukul, Sanskrit University..." required data-testid="input-education" style={{ borderColor: `${C.maroon}25` }} />
                       </Field>
                     </div>
-                    <Field label="Languages Known" id="languages">
-                      <Input id="languages" name="languages" value={form.languages} onChange={onChange} placeholder="Hindi, Sanskrit, English..." data-testid="input-languages" style={{ borderColor: `${C.maroon}25` }} />
+                    <Field label="Languages Known *" id="languages">
+                      <Input id="languages" name="languages" value={form.languages} onChange={onChange} placeholder="Hindi, Sanskrit, English..." required data-testid="input-languages" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
                     <Field label="Sevas You Perform" id="specializations">
-                      <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder="Satyanarayan Katha, Griha Pravesh, Rudra Abhishek..." className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
+                      <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder="Satyanarayan Katha, Griha Pravesh, Rudra Abhishek..." required className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
+                    </Field>
+                    <Field label="Service Area *" id="serviceArea">
+                      <Input id="serviceArea" name="serviceArea" value={form.serviceArea} onChange={onChange} placeholder="New Delhi and nearby areas" required data-testid="input-service-area" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
                     <fieldset>
                       <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
-                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>All active Pujas are selected initially. Uncheck any that you do not offer.</p>
+                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Select exactly five Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/5.</p>
                       {masterServicesLoading ? (
                         <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
                       ) : masterServicesError ? (
@@ -1437,7 +1490,8 @@ function RegistrationSection({
                               <input
                                 type="checkbox"
                                 checked={form.masterServiceIds.includes(service.id)}
-                                onChange={event => setForm(current => ({
+                                 disabled={!form.masterServiceIds.includes(service.id) && form.masterServiceIds.length >= 5}
+                                 onChange={event => setForm(current => ({
                                   ...current,
                                   masterServiceIds: event.target.checked
                                     ? [...current.masterServiceIds, service.id]
@@ -1449,6 +1503,10 @@ function RegistrationSection({
                           ))}
                         </div>
                       )}
+                      <label className="mt-3 flex items-start gap-2 text-xs" style={{ color: C.brownSoft }}>
+                        <input type="checkbox" checked={form.servicesConfirmed} onChange={event => setForm(current => ({ ...current, servicesConfirmed: event.target.checked }))} />
+                        <span>I confirm these are services I personally offer and can accept bookings for.</span>
+                      </label>
                     </fieldset>
                   </div>
                 </FieldGroup>

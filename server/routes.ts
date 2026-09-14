@@ -40,6 +40,7 @@ import { registerKnowledgeGraphPublicRoutes } from "./knowledge-graph/public-rou
 import { registerPanditToolsRoutes } from "./pandit-tools";
 import { registerPanditGovernanceRoutes } from "./pandit-governance";
 import { registerPanditLocationRectificationRoutes } from "./pandit-location-rectification-routes";
+import { registerPanditProfileCompletionRoutes } from "./pandit-profile-completion-routes";
 import { registerPanditResolveValidatePublishRoutes } from "./pandit-resolve-validate-publish";
 import { registerPanditCrmRoutes } from "./pandit-crm";
 import { registerPortalSyncRoutes, notifyPanditOnNewReview, notifyUserOnPaymentRequest, resolveUserIdForCustomer, pushPanditNotification } from "./portal-sync";
@@ -302,6 +303,7 @@ export async function registerRoutes(
   registerPanditStorefrontContentRoutes(app, adminAuthMiddleware);
   registerPanditGovernanceRoutes(app, adminAuthMiddleware);
   registerPanditLocationRectificationRoutes(app, adminAuthMiddleware);
+  registerPanditProfileCompletionRoutes(app, adminAuthMiddleware);
   registerPanditResolveValidatePublishRoutes(app, adminAuthMiddleware);
   registerKnowledgeGraphAdminRoutes(app, adminAuthMiddleware);
   registerDestinationAdminRoutes(app, adminAuthMiddleware);
@@ -9816,15 +9818,20 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         cityId: z.number().int().positive().optional(),
         proposedCityName: z.string().trim().min(1).max(120).optional(),
         experience: z.string().min(1),
-        specializations: z.string().optional(),
-        masterServiceIds: z.array(z.number().int().positive()).max(500).optional(),
-        education: z.string().optional(),
-        languages: z.string().optional(),
-        bio: z.string().optional(),
+        specializations: z.string().trim().min(1, "Tell us which services you perform"),
+        masterServiceIds: z.array(z.number().int().positive()).length(5, "Select exactly five specialist Pujas"),
+        education: z.string().trim().min(1, "Vedic education or training is required"),
+        languages: z.string().trim().min(1, "At least one language is required"),
+        bio: z.string().trim().min(20, "Add a short profile biography"),
         photo: z.string().min(1),
+        registeredAddress: z.string().trim().min(10, "A registered address is required"),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        locationPermissionGranted: z.literal(true),
+        servicesConfirmed: z.literal(true),
         termsAccepted: z.literal(true),
         regionalOrigin: z.string().optional(),
-        serviceArea: z.string().optional(),
+        serviceArea: z.string().trim().min(1, "Tell us where you serve devotees"),
         gotra: z.string().optional(),
         parampara: z.string().optional(),
         feeRangeMin: z.union([z.string(), z.number()]).optional(),
@@ -9849,14 +9856,15 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       const location = d.cityId ? await resolveLocation(d.stateId, d.cityId) : undefined;
       if (d.cityId && !location) return res.status(400).json({ message: "Invalid active state/city combination" });
       const expYears = Math.max(0, Math.min(80, parseInt(String(d.experience)) || 1));
-      const requestedMasterIds = Array.from(new Set(d.masterServiceIds || []));
+       const requestedMasterIds = Array.from(new Set(d.masterServiceIds));
       const activePujas = await db.select({ id: masterServices.id, name: masterServices.name }).from(masterServices)
         .where(and(eq(masterServices.isActive, true), inArray(masterServices.serviceType, ["puja", "katha", "ritual"])));
       const activePujaIds = new Set(activePujas.map(service => service.id));
       if (requestedMasterIds.some(id => !activePujaIds.has(id))) {
         return res.status(400).json({ message: "One or more selected Puja services are invalid or inactive" });
       }
-      const selectedMasterIds = d.masterServiceIds === undefined ? activePujas.map(service => service.id) : requestedMasterIds;
+       if (requestedMasterIds.length !== 5) return res.status(400).json({ message: "Select exactly five specialist Pujas you are fully expert in" });
+       const selectedMasterIds = requestedMasterIds;
       let feeMin = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMin ?? "")) || 1100));
       let feeMax = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMax ?? "")) || 11000));
       if (feeMax < feeMin) feeMax = feeMin;
@@ -9872,8 +9880,12 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         originalCity: location?.city.name ?? d.proposedCityName!,
         originalState: location?.state.name ?? selectedState.name,
         locationReviewStatus: location ? "resolved" : "pending_request",
+         registeredAddress: d.registeredAddress.trim(),
+         latitude: d.latitude,
+         longitude: d.longitude,
+         locationPermissionGranted: true,
          termsAcceptedAt: new Date(),
-        serviceArea: d.serviceArea || null,
+         serviceArea: d.serviceArea.trim(),
         regionalOrigin: d.regionalOrigin || null,
         gotra: d.gotra || null,
         parampara: d.parampara || null,
@@ -9881,16 +9893,16 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         yearsExperience: expYears,
         pujaTypes: d.specializations || "General Puja",
         masterServiceIds: selectedMasterIds,
-        languages: d.languages || "Hindi",
+         languages: d.languages.trim(),
         feeRangeMin: feeMin,
         feeRangeMax: feeMax,
-        education: d.education || null,
+         education: d.education.trim(),
         certificates: null,
         aadhaarLast4: null,
         panMasked: null,
         sampleVideoUrl: null,
         photo: d.photo,
-        bio: d.bio || null,
+         bio: d.bio.trim(),
         membership: d.membership || "free",
         }).returning();
         if (!location) {

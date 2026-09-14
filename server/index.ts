@@ -211,6 +211,20 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
   startEmailOutboxWorker();
 
+  const runPanditProfileReminderJob = async () => {
+    try {
+      const { runPanditProfileReminderSweep } = await import("./pandit-profile-reminders");
+      const result = await runPanditProfileReminderSweep();
+      if (result.queued > 0) log(`pandit profile reminders queued: ${result.queued}`);
+    } catch (error) {
+      console.error("[pandit profile reminders] failed:", error);
+    }
+  };
+  setTimeout(() => {
+    runPanditProfileReminderJob();
+    setInterval(runPanditProfileReminderJob, 15 * 60 * 1000);
+  }, 5 * 60 * 1000);
+
   // One-shot pandit slug backfill — guarantees every /p/<slug> URL exists
   // and is unique. Idempotent + cheap (only touches rows missing a slug or
   // sharing one), but wrapped in try/catch so a failure never blocks boot.

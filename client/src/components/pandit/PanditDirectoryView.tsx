@@ -40,7 +40,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -372,6 +372,7 @@ function PanditCard({
   const state = p.canonicalState || p.stateName || p.state || stateLabel;
   const profileHref = contextualProfileHref(p);
   const location = [city, state].filter((value): value is string => Boolean(value?.trim())).join(", ");
+  const initials = p.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "VT";
 
   return (
     <Link
@@ -387,6 +388,7 @@ function PanditCard({
         <CardContent className="flex h-full items-center gap-3 p-3 sm:gap-4 sm:p-5">
           <Avatar className="h-16 w-16 shrink-0 border border-amber-200 sm:h-20 sm:w-20">
             <AvatarImage src={p.image || undefined} alt={p.name} className="object-cover" />
+            <AvatarFallback className="bg-[#6D2B35] font-serif text-lg font-semibold text-[#F2D27A]">{initials}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
             <h3 className="truncate font-serif text-base font-semibold text-foreground sm:text-lg" data-testid={`text-pandit-name-${p.id}`}>

@@ -18,3 +18,4 @@
 - [Pandit approval registration dependency](pandit-approval-registration-dependency.md) — approval allocates numeric registration IDs via a database sequence; schema repair must restore it before testing approvals.
 - [Pandit city availability authority](pandit-city-availability-authority.md) — active catalogue cities must remain browseable from discovery even when their optional SEO projection is absent.
 - [Pandit contact/publication boundary](pandit-contact-publication-boundary.md) — protected contact access requires a currently eligible, published storefront; booking resets and reviewed content must be atomic/current.
+- [Legacy profile completion](profile-completion-source-hash.md) — review proposals are source-hashed, citation-backed, and never change visibility or booking eligibility.
