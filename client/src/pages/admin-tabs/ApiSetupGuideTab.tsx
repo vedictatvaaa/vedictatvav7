@@ -22,6 +22,19 @@ import { createFetcher } from "../admin-shared";
 interface KeyStatus { ok: boolean; vars: string[] }
 type StatusMap = Record<string, KeyStatus>;
 
+interface AiProviderStatus {
+  enabled: boolean;
+  configured: boolean;
+  provider: string;
+  baseUrlHost: string | null;
+  model: string;
+  state: "ready" | "disabled" | "missing_credentials" | "invalid_base_url" | "degraded";
+  message: string;
+  action: string;
+  lastFailureCategory: string | null;
+  lastFailureAt: string | null;
+}
+
 interface CredentialRow {
   id: number;
   kind: string;
@@ -764,6 +777,10 @@ export default function ApiSetupGuideTab() {
     queryKey: ["/api/admin/api-key-status"],
     queryFn: () => fetcher("/api/admin/api-key-status"),
   });
+  const { data: aiProviderStatus, isLoading: aiProviderLoading, refetch: refetchAiProvider } = useQuery<AiProviderStatus>({
+    queryKey: ["/api/admin/ai/provider-status"],
+    queryFn: () => fetcher("/api/admin/ai/provider-status"),
+  });
 
   const { data: allCreds = [], refetch: refetchCreds } = useQuery<CredentialRow[]>({
     queryKey: ["/api/admin/api-credentials/all"],
@@ -772,8 +789,9 @@ export default function ApiSetupGuideTab() {
 
   const refetchAll = useCallback(() => {
     refetchStatus();
+    refetchAiProvider();
     refetchCreds();
-  }, [refetchStatus, refetchCreds]);
+  }, [refetchStatus, refetchAiProvider, refetchCreds]);
 
   // Password gate — if unlocked (5-min cache) run immediately, else open dialog
   const gateMutation = useCallback((label: string, fn: () => Promise<void>) => {
@@ -845,6 +863,43 @@ export default function ApiSetupGuideTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Shared AI provider status */}
+      {aiProviderLoading ? <Skeleton className="h-28 rounded-xl" /> : aiProviderStatus && (
+        <Card className={`border ${aiProviderStatus.state === "ready" ? "border-emerald-200 bg-emerald-50/50" : aiProviderStatus.state === "degraded" ? "border-amber-200 bg-amber-50/60" : "border-red-200 bg-red-50/60"}`}>
+          <CardContent className="py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3 min-w-0">
+                {aiProviderStatus.state === "ready"
+                  ? <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  : <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${aiProviderStatus.state === "degraded" ? "text-amber-600" : "text-red-600"}`} />}
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">Shared AI provider</p>
+                    <Badge variant="outline" className={aiProviderStatus.state === "ready" ? "border-emerald-300 text-emerald-700" : aiProviderStatus.state === "degraded" ? "border-amber-300 text-amber-700" : "border-red-300 text-red-700"}>
+                      {aiProviderStatus.state.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{aiProviderStatus.message}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Provider: {aiProviderStatus.provider} · Endpoint: {aiProviderStatus.baseUrlHost || "not available"} · Model: {aiProviderStatus.model}
+                  </p>
+                  {aiProviderStatus.lastFailureCategory && (
+                    <p className="text-xs text-amber-800">
+                      Last failure: {aiProviderStatus.lastFailureCategory.replace(/_/g, " ")}
+                      {aiProviderStatus.lastFailureAt ? ` · ${aiProviderStatus.lastFailureAt}` : ""}
+                    </p>
+                  )}
+                  <p className="text-xs font-medium text-foreground">Next step: {aiProviderStatus.action}</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => refetchAiProvider()} className="shrink-0 self-start">
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">

@@ -6,6 +6,7 @@ import {
   getAiProviderConfig,
   getAiProviderStatus,
   isAiProviderConfigured,
+  recordAiProviderFailure,
 } from "./ai-provider";
 
 const ENV_KEYS = [
@@ -82,4 +83,18 @@ test("provider failures are normalized into stable categories", () => {
   assert.equal(classifyAiProviderError({ status: 408 }), "timeout");
   assert.equal(classifyAiProviderError({ status: 503 }), "upstream");
   assert.equal(classifyAiProviderError(new Error("invalid JSON schema")), "invalid_output");
+});
+
+test("Admin status exposes actionable failure state without provider credentials", () => {
+  withEnv({ OPENAI_API_KEY: "test-only-key", AI_ENABLED: "true" }, () => {
+    recordAiProviderFailure({ status: 429, message: "rate limit reached; secret-key-must-not-appear" });
+    const status = getAiProviderStatus();
+
+    assert.equal(status.state, "degraded");
+    assert.equal(status.lastFailureCategory, "rate_limit");
+    assert.ok(status.lastFailureAt);
+    assert.match(status.message, /rate limit/);
+    assert.doesNotMatch(JSON.stringify(status), /secret-key-must-not-appear/);
+    assert.doesNotMatch(JSON.stringify(status), /apiKey|authorization|token/i);
+  });
 });

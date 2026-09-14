@@ -15,7 +15,11 @@ export type AiProviderStatus = {
   provider: "openai-compatible";
   baseUrlHost: string | null;
   model: string;
-  lastFailureCategory?: string;
+  state: "ready" | "disabled" | "missing_credentials" | "invalid_base_url" | "degraded";
+  message: string;
+  action: string;
+  lastFailureCategory: string | null;
+  lastFailureAt: string | null;
 };
 
 export type AiRequestOptions = {
@@ -27,6 +31,8 @@ export type AiRequestOptions = {
 
 const firstNonEmpty = (...values: Array<string | undefined>) =>
   values.find(value => typeof value === "string" && value.trim())?.trim() || undefined;
+
+let lastFailure: { category: string; at: string } | null = null;
 
 export function getAiProviderConfig() {
   const apiKey = firstNonEmpty(
@@ -65,32 +71,95 @@ export function isAiProviderConfigured() {
 export function getAiProviderStatus(): AiProviderStatus {
   const config = getAiProviderConfig();
   let baseUrlHost: string | null = null;
+  let validBaseUrl = true;
   try {
     baseUrlHost = new URL(config.baseURL).host;
   } catch {
+    validBaseUrl = false;
     baseUrlHost = null;
   }
+  const state = !config.enabled
+    ? "disabled"
+    : !config.apiKey
+      ? "missing_credentials"
+      : !validBaseUrl
+        ? "invalid_base_url"
+        : lastFailure
+          ? "degraded"
+          : "ready";
+  const stateCopy = {
+    disabled: {
+      message: "AI generation is disabled by configuration.",
+      action: "Set AI_ENABLED=true when an AI provider should be available.",
+    },
+    missing_credentials: {
+      message: "AI is enabled but no server-side provider key is configured.",
+      action: "Add OPENAI_API_KEY in the server environment; never paste it into the Admin page.",
+    },
+    invalid_base_url: {
+      message: "The configured AI provider URL is not valid.",
+      action: "Set OPENAI_BASE_URL to a valid OpenAI-compatible /v1 endpoint.",
+    },
+    degraded: {
+      message: `The provider recently reported ${lastFailure?.category.replace(/_/g, " ")}.`,
+      action: "Review the provider availability and retry after correcting the reported condition.",
+    },
+    ready: {
+      message: "The shared AI provider is configured and ready.",
+      action: "No action required.",
+    },
+  }[state];
   return {
     enabled: config.enabled,
     configured: Boolean(config.apiKey),
     provider: "openai-compatible",
     baseUrlHost,
     model: config.model,
+    state,
+    message: stateCopy.message,
+    action: stateCopy.action,
+    lastFailureCategory: lastFailure?.category || null,
+    lastFailureAt: lastFailure?.at || null,
+  };
+}
+
+export function recordAiProviderFailure(error: unknown) {
+  lastFailure = { category: classifyAiProviderError(error), at: new Date().toISOString() };
+}
+
+function instrumentClientMethod(owner: any, method: string) {
+  const original = owner?.[method];
+  if (typeof original !== "function") return;
+  owner[method] = async (...args: any[]) => {
+    try {
+      return await original.apply(owner, args);
+    } catch (error) {
+      recordAiProviderFailure(error);
+      throw error;
+    }
   };
 }
 
 export function createAiClient(options: AiRequestOptions = { task: "default" }) {
   const config = getAiProviderConfig();
   if (!config.enabled || !config.apiKey) {
-    throw new Error("ai_provider_unavailable");
+    const error = new Error("ai_provider_unavailable");
+    recordAiProviderFailure(error);
+    throw error;
   }
-  return new OpenAI({
+  const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
     organization: firstNonEmpty(process.env.OPENAI_ORG, process.env.OPENAI_ORGANIZATION),
     timeout: options.timeoutMs ?? config.timeoutMs,
     maxRetries: options.maxRetries ?? config.maxRetries,
   });
+  instrumentClientMethod(client.chat?.completions, "create");
+  instrumentClientMethod(client.images, "generate");
+  instrumentClientMethod(client.images, "edit");
+  instrumentClientMethod(client.audio?.speech, "create");
+  instrumentClientMethod(client.audio?.transcriptions, "create");
+  return client;
 }
 
 export function classifyAiProviderError(error: unknown) {
@@ -134,10 +203,16 @@ export async function createStructuredCompletion(
     ],
   });
   const content = completion.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("ai_invalid_output");
+  if (typeof content !== "string" || !content.trim()) {
+    const error = new Error("ai_invalid_output");
+    recordAiProviderFailure(error);
+    throw error;
+  }
   try {
     return JSON.parse(content);
   } catch {
-    throw new Error("ai_invalid_output");
+    const error = new Error("ai_invalid_output");
+    recordAiProviderFailure(error);
+    throw error;
   }
 }
