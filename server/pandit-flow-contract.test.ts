@@ -49,3 +49,17 @@ test("Pandit signup returns applicant-safe requirement messages", () => {
   assert.match(signupRoute, /Upload a profile photo before submitting/);
   assert.doesNotMatch(signupRoute, /message: parsed\.error\.issues\.map\(i => i\.message\)\.join\(", "\)/);
 });
+
+test("Pandit signup routes the first error to one accessible live region", () => {
+  const page = readFileSync("client/src/pages/become-pandit.tsx", "utf8");
+  assert.match(page, /function signupErrorTarget\(message: string\)/);
+  assert.match(page, /target\.scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(page, /target\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(page, /id="signup-application-error" role="alert" aria-live="assertive"/);
+  assert.match(page, /id="signup-location" tabIndex=\{-1\}/);
+  assert.match(page, /id="masterServiceIds" tabIndex=\{-1\}/);
+  assert.match(page, /id="signup-photo" tabIndex=\{-1\}/);
+  assert.doesNotMatch(page, /locationError && <p[^>]+role="alert"/);
+  assert.doesNotMatch(page, /photoError && <p[^>]+role="alert"/);
+  assert.doesNotMatch(page, /servicesError && <p[^>]+role="alert"/);
+});

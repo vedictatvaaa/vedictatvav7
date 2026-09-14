@@ -20,3 +20,4 @@
 - [Pandit contact/publication boundary](pandit-contact-publication-boundary.md) — protected contact access requires a currently eligible, published storefront; booking resets and reviewed content must be atomic/current.
 - [Legacy profile completion](profile-completion-source-hash.md) — review proposals are source-hashed, citation-backed, and never change visibility or booking eligibility.
 - [Pandit onboarding contracts](pandit-onboarding-contracts.md) — exactly five unique specialist Pujas come from the active Puja-type allowlist, not arbitrary active services.
+- [Pandit onboarding accessibility](pandit-onboarding-accessibility.md) — focus the first relevant target and announce one consolidated signup error instead of competing alerts.

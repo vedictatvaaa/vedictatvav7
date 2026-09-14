@@ -127,6 +127,40 @@ function useCountUp(target: number, duration = 1500, start = false) {
   return value;
 }
 
+const signupErrorFieldTargets = [
+  ["full name", "fullName"],
+  ["phone number", "phone"],
+  ["email address", "email"],
+  ["state", "stateId"],
+  ["city", "cityId"],
+  ["registered address", "registeredAddress"],
+  ["years of experience", "experience"],
+  ["services you perform", "specializations"],
+  ["vedic education", "education"],
+  ["languages", "languages"],
+  ["profile biography", "bio"],
+  ["service area", "serviceArea"],
+] as const;
+
+function signupErrorTarget(message: string): string {
+  const normalized = message.toLowerCase();
+  if (normalized.includes("selected pujas are services") || normalized.includes("confirm that the selected pujas")) return "servicesConfirmed";
+  if (normalized.includes("puja")) return "masterServiceIds";
+  if (normalized.includes("location") || normalized.includes("exact") || normalized.includes("permission")) return "signup-location";
+  if (normalized.includes("photo")) return "signup-photo";
+  if (normalized.includes("terms")) return "agreeTerms";
+  if (normalized.includes("phone")) return "phone";
+  if (normalized.includes("email")) return "email";
+  if (normalized.includes("state")) return "stateId";
+  if (normalized.includes("city")) return "cityId";
+  if (normalized.includes("canonical city") || normalized.includes("missing-city")) return "cityId";
+  if (normalized.startsWith("complete these fields:")) {
+    const target = signupErrorFieldTargets.find(([label]) => normalized.includes(label));
+    if (target) return target[1];
+  }
+  return "fullName";
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Main page
 // ──────────────────────────────────────────────────────────────────────
@@ -164,10 +198,32 @@ export default function BecomePandit() {
   const [locationError, setLocationError] = useState("");
   const [servicesError, setServicesError] = useState("");
   const [applicationError, setApplicationError] = useState("");
+  const [errorTargetId, setErrorTargetId] = useState<string | null>(null);
+  const [errorFocusRequest, setErrorFocusRequest] = useState(0);
+
+  const showApplicationError = (message: string) => {
+    setApplicationError(message);
+    setErrorTargetId(signupErrorTarget(message));
+    setErrorFocusRequest((request) => request + 1);
+  };
+
+  useEffect(() => {
+    if (!errorTargetId) return;
+    const target = document.getElementById(errorTargetId)
+      || (errorTargetId === "cityId" ? document.getElementById("proposedCityName") : null);
+    if (!target) return;
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [errorTargetId, errorFocusRequest]);
 
   const requestExactLocation = () => {
     if (!navigator.geolocation) {
-      setLocationError("This browser does not support location access.");
+      const message = "This browser does not support location access.";
+      setLocationError(message);
+      showApplicationError(message);
       return;
     }
     setLocationError("");
@@ -178,7 +234,11 @@ export default function BecomePandit() {
         longitude: Number(position.coords.longitude.toFixed(6)),
         locationPermissionGranted: true,
       })),
-      () => setLocationError("Location access is required to submit your application. Please allow it and try again."),
+      () => {
+        const message = "Location access is required to submit your application. Please allow it and try again.";
+        setLocationError(message);
+        showApplicationError(message);
+      },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
   };
@@ -194,7 +254,9 @@ export default function BecomePandit() {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
       setPhotoFile(null);
       setPhotoPreview(null);
-      setPhotoError("Choose a JPG, PNG, or WebP image up to 5 MB.");
+      const message = "Choose a JPG, PNG, or WebP image up to 5 MB.";
+      setPhotoError(message);
+      showApplicationError(message);
       e.target.value = "";
       return;
     }
@@ -240,10 +302,11 @@ export default function BecomePandit() {
       setLocationError("");
       setServicesError("");
       setApplicationError("");
+      setErrorTargetId(null);
       setMissingCityMode(false);
     },
     onError: (error: Error) => {
-      setApplicationError(error.message);
+      showApplicationError(error.message);
       if (/photo/i.test(error.message)) setPhotoError(error.message);
       if (/location|exact|permission/i.test(error.message)) setLocationError(error.message);
       if (/Puja|services/i.test(error.message)) setServicesError(error.message);
@@ -274,31 +337,40 @@ export default function BecomePandit() {
       if (!form.bio.trim()) missing.push("profile biography");
       if (!form.serviceArea.trim()) missing.push("service area");
       const message = `Complete these fields: ${missing.join(", ")}.`;
-      setApplicationError(message);
+      showApplicationError(message);
       toast({ title: "Missing required details", description: message, variant: "destructive" });
       return;
     }
     if (form.masterServiceIds.length !== 5) {
-      setServicesError(`Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`);
+      const message = `Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
+      setServicesError(message);
+      showApplicationError(message);
       toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
     if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-      setLocationError("Please share your exact location before submitting.");
+      const message = "Please share your exact location before submitting.";
+      setLocationError(message);
+      showApplicationError(message);
       toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
       return;
     }
     if (!form.servicesConfirmed) {
-      setServicesError("Confirm that the selected Pujas are services you personally offer.");
+      const message = "Confirm that the selected Pujas are services you personally offer.";
+      setServicesError(message);
+      showApplicationError(message);
       toast({ title: "Confirm your services", description: "Confirm that the selected Pujas are services you personally offer.", variant: "destructive" });
       return;
     }
     if (!photoFile) {
-      setPhotoError("A profile photo is required.");
+      const message = "A profile photo is required.";
+      setPhotoError(message);
+      showApplicationError(message);
       toast({ title: "Photo Required", description: "Please add a profile photo before submitting.", variant: "destructive" });
       return;
     }
     if (!form.agreeTerms) {
+      showApplicationError("Accept the terms before submitting.");
       toast({ title: "Terms Required", description: "Please agree to the terms and conditions.", variant: "destructive" });
       return;
     }
@@ -1432,7 +1504,7 @@ function RegistrationSection({
           <Card className="lg:col-span-3 lg:order-1 order-2 shadow-xl" style={{ background: "white", border: `1px solid ${C.gold}30` }}>
             <CardContent className="p-6 md:p-8">
               <form onSubmit={onSubmit} className="space-y-7">
-                {applicationError && <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{applicationError}</div>}
+                {applicationError && <div id="signup-application-error" role="alert" aria-live="assertive" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{applicationError}</div>}
                 <FieldGroup index={1} title="Personal Details">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Full Name *" id="fullName">
@@ -1464,12 +1536,12 @@ function RegistrationSection({
                     <Field label="Registered Address *" id="registeredAddress">
                       <Textarea id="registeredAddress" name="registeredAddress" value={form.registeredAddress} onChange={onChange} placeholder="House, street, locality, city, state, PIN" required className="min-h-[80px]" data-testid="input-registered-address" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <div className="rounded-lg border p-3" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
+                    <div id="signup-location" tabIndex={-1} className="rounded-lg border p-3 outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>Exact location access *</p><p className="text-xs" style={{ color: C.brownSoft }}>Used for onboarding verification. It is not shown publicly.</p></div>
                         <Button type="button" variant="outline" onClick={requestExactLocation} data-testid="button-share-location">{form.locationPermissionGranted ? "Location captured" : "Share exact location"}</Button>
                       </div>
-                      {locationError && <p className="mt-2 text-xs text-destructive" role="alert">{locationError}</p>}
+                      {locationError && <p className="mt-2 text-xs text-destructive">{locationError}</p>}
                     </div>
                   </div>
                 </FieldGroup>
@@ -1509,10 +1581,10 @@ function RegistrationSection({
                     <Field label="Service Area *" id="serviceArea">
                       <Input id="serviceArea" name="serviceArea" value={form.serviceArea} onChange={onChange} placeholder="New Delhi and nearby areas" required data-testid="input-service-area" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <fieldset>
+                    <fieldset id="masterServiceIds" tabIndex={-1} className="outline-none focus-visible:ring-2 focus-visible:ring-primary">
                       <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
                       <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Select exactly five Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/5.</p>
-                      {servicesError && <p className="mt-2 text-xs text-destructive" role="alert">{servicesError}</p>}
+                      {servicesError && <p className="mt-2 text-xs text-destructive">{servicesError}</p>}
                       {masterServicesLoading ? (
                         <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
                       ) : masterServicesError ? (
@@ -1537,7 +1609,7 @@ function RegistrationSection({
                           ))}
                         </div>
                       )}
-                      <label className="mt-3 flex items-start gap-2 text-xs" style={{ color: C.brownSoft }}>
+                      <label id="servicesConfirmed" tabIndex={-1} className="mt-3 flex items-start gap-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.brownSoft }}>
                         <input type="checkbox" checked={form.servicesConfirmed} onChange={event => setForm(current => ({ ...current, servicesConfirmed: event.target.checked }))} />
                         <span>I confirm these are services I personally offer and can accept bookings for.</span>
                       </label>
@@ -1576,7 +1648,7 @@ function RegistrationSection({
                 <FieldGroup index={4} title="About You">
                   <div className="space-y-4">
                     <Field label="Profile Photo *" id="photo">
-                      <div className="flex items-center gap-4">
+                      <div id="signup-photo" tabIndex={-1} className="flex items-center gap-4 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         <label className="flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer hover:bg-[#F5F0E6] transition-colors" style={{ borderColor: `${C.maroon}40`, color: C.brown }} data-testid="input-photo">
                           <Upload className="w-4 h-4" />
                           <span className="text-sm">{photoPreview ? "Change photo" : "Choose file"}</span>
@@ -1588,7 +1660,7 @@ function RegistrationSection({
                         {photoPreview && <Button type="button" variant="ghost" size="sm" onClick={onPhotoRemove}>Remove</Button>}
                       </div>
                       <p className="text-xs" style={{ color: C.brownSoft }}>JPG, PNG, or WebP; maximum 5 MB. Your photo uploads securely when you submit.</p>
-                      {photoError && <p className="text-xs text-destructive" role="alert">{photoError}</p>}
+                      {photoError && <p className="text-xs text-destructive">{photoError}</p>}
                     </Field>
                     <Field label="Brief Bio" id="bio">
                       <Textarea id="bio" name="bio" value={form.bio} onChange={onChange} placeholder="Tell devotees about your sampradaya and approach..." className="min-h-[90px]" maxLength={500} data-testid="input-bio" style={{ borderColor: `${C.maroon}25` }} />
