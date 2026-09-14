@@ -423,6 +423,41 @@ export const panditLocationRectificationProposals = pgTable("pandit_location_rec
   confidenceCheck: check("pandit_location_rectification_confidence_check", sql`${t.confidence} BETWEEN 0 AND 1`),
 }));
 
+/**
+ * Field-level, source-hashed review proposals for legacy Pandit completion.
+ * This is intentionally separate from both location rectification and
+ * storefront publication so approval cannot silently change visibility.
+ */
+export const panditProfileCompletionProposals = pgTable("pandit_profile_completion_proposals", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  panditId: integer("pandit_id").notNull().references(() => pandits.id),
+  batchId: text("batch_id").notNull(),
+  fieldKey: text("field_key").notNull(),
+  proposalClass: text("proposal_class").notNull(),
+  safeBatch: boolean("safe_batch").notNull().default(false),
+  status: text("status").notNull().default("pending"),
+  before: jsonb("before").notNull().default(sql`'{}'::jsonb`),
+  proposed: jsonb("proposed").notNull().default(sql`'{}'::jsonb`),
+  sourceSnapshot: jsonb("source_snapshot").notNull().default(sql`'{}'::jsonb`),
+  sourceSnapshotHash: text("source_snapshot_hash").notNull(),
+  sourcePaths: text("source_paths").array().notNull().default(sql`'{}'::text[]`),
+  confidence: real("confidence").notNull().default(0),
+  reason: text("reason").notNull(),
+  generationKey: text("generation_key"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  appliedAt: timestamp("applied_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  panditStatusIdx: index("pandit_profile_completion_pandit_status_idx").on(t.panditId, t.status),
+  batchIdx: index("pandit_profile_completion_batch_idx").on(t.batchId),
+  statusCreatedIdx: index("pandit_profile_completion_status_created_idx").on(t.status, t.createdAt),
+  statusCheck: check("pandit_profile_completion_status_check", sql`${t.status} in ('pending', 'approved', 'rejected', 'applied', 'stale')`),
+  classCheck: check("pandit_profile_completion_class_check", sql`${t.proposalClass} in ('deterministic', 'ai_draft')`),
+  confidenceCheck: check("pandit_profile_completion_confidence_check", sql`${t.confidence} between 0 and 1`),
+}));
+
 export const panditSessions = pgTable("pandit_sessions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   panditId: integer("pandit_id").notNull(),
