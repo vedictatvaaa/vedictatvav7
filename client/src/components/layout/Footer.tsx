@@ -256,16 +256,16 @@ export default function Footer() {
               <p className="text-white/55 max-w-md text-[13px] leading-relaxed mb-5">{t.footer.tagline}</p>
 
               <div className="space-y-2">
-                <a href={`mailto:${contactEmail}`} className="flex items-center gap-2 text-white/60 hover:text-[#f5d76e] text-[13px] transition-colors" data-testid="footer-email">
-                  <Mail className="h-3.5 w-3.5 text-[#D4AF37]/70" />
+                <a href={`mailto:${contactEmail}`} className="inline-flex min-h-11 items-center gap-2 text-white/60 hover:text-[#f5d76e] text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]" data-testid="footer-email">
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-[#D4AF37]/70" aria-hidden="true" />
                   {contactEmail}
                 </a>
-                <a href={`tel:${contactPhone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-white/60 hover:text-[#f5d76e] text-[13px] transition-colors" data-testid="footer-phone">
-                  <Phone className="h-3.5 w-3.5 text-[#D4AF37]/70" />
+                <a href={`tel:${contactPhone.replace(/\s/g, "")}`} className="inline-flex min-h-11 items-center gap-2 text-white/60 hover:text-[#f5d76e] text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]" data-testid="footer-phone">
+                  <Phone className="h-3.5 w-3.5 shrink-0 text-[#D4AF37]/70" aria-hidden="true" />
                   {contactPhone}
                 </a>
-                <span className="flex items-center gap-2 text-white/60 text-[13px]">
-                  <MapPin className="h-3.5 w-3.5 text-[#D4AF37]/70" />
+                <span className="inline-flex min-h-11 items-center gap-2 text-white/60 text-[13px]">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-[#D4AF37]/70" aria-hidden="true" />
                   Pan-India delivery · HQ New Delhi
                 </span>
               </div>
@@ -279,7 +279,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     aria-label={label}
                     title={label}
-                    className="w-10 h-10 rounded-md flex items-center justify-center text-white/65 hover:text-[#1a1118] hover:bg-[#D4AF37] border border-white/[0.10] hover:border-[#D4AF37] transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 focus:ring-offset-[#120a10]"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/[0.10] text-white/65 transition-all hover:border-[#D4AF37] hover:bg-[#D4AF37] hover:text-[#1a1118] active:bg-[#c4a232] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
                     data-testid={`social-${label.toLowerCase()}`}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -294,6 +294,25 @@ export default function Footer() {
             <FooterCol title={t.footer.company} links={company} />
             </div>
           </nav>
+
+          {/* Trust strip — reassurance after the primary navigation, not before it. */}
+          <div className="border-t border-white/[0.05] bg-[#1a1118]">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 px-0 py-4 md:grid-cols-4 md:gap-x-6">
+              {trustBadges.map(({ icon: Icon, label, sub }) => (
+                <div
+                  key={label}
+                  className="flex min-w-0 items-center gap-2.5"
+                  data-testid={`trust-${label.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-[#D4AF37]" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-semibold leading-tight text-white/80">{label}</div>
+                    <div className="truncate text-[10px] leading-tight text-white/40">{sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Policies + bottom bar */}
           <div className="border-t border-white/[0.05] py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -355,31 +374,36 @@ function FooterCol({ title, links }: { title: string; links: { href: string; lab
     <div className="border-t border-white/[0.08] md:border-0 md:col-span-1 lg:col-span-2">
       <button
         type="button"
-        className="flex w-full items-center justify-between min-h-12 py-3 text-left text-[11px] font-bold text-[#f5d76e] uppercase tracking-[0.2em] md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-inset"
+        className={`flex w-full items-center justify-between min-h-12 py-3 text-left text-[11px] font-bold uppercase tracking-[0.2em] transition-colors md:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-inset ${open ? "text-white" : "text-[#f5d76e]"}`}
         aria-expanded={open}
         aria-controls={contentId}
         onClick={() => setOpen((value) => !value)}
       >
         <span>{title}</span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
       <h3 className="hidden md:block text-[10.5px] font-bold text-[#f5d76e] uppercase tracking-[0.2em] mb-3">
         {title}
       </h3>
-      <div id={contentId} className={`${open ? "block" : "hidden"} md:block pb-3 md:pb-0`}>
-        <ul className="space-y-0 md:space-y-2">
-          {links.map((l) => (
-            <li key={l.href}>
-              <Link
-                href={l.href}
-                className="inline-flex items-center min-h-11 md:min-h-0 text-white/70 hover:text-[#f5d76e] text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
-                data-testid={l.testid}
-              >
-                {l.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+      <div
+        id={contentId}
+        className={`grid transition-[grid-template-rows,opacity,visibility] duration-200 motion-reduce:transition-none md:block md:opacity-100 md:visible ${open ? "grid-rows-[1fr] opacity-100 visible" : "grid-rows-[0fr] opacity-0 invisible"}`}
+      >
+        <div className="min-h-0 overflow-hidden md:overflow-visible">
+          <ul className="space-y-0 pb-3 md:space-y-2 md:pb-0">
+            {links.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="inline-flex items-center min-h-11 md:min-h-0 text-white/70 hover:text-[#f5d76e] text-[13px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#120a10]"
+                  data-testid={l.testid}
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );
