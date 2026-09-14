@@ -1595,171 +1595,200 @@ id = "Rag2C7b6isNN5227ufVP1"
 uri = "file://attached_assets/stock_images/janeu-sacred-yajnopavit-thread-pure-cotton.jpg"
 type = "image"
 title = "white cotton sacred thread janeu hindu"
+logical_id = "20b50ca8-4419-4708-b6e1-2de2c9ab1797"
 
 [[outputs]]
 id = "HR2ndl7tWArTCnEGATRRW"
 uri = "file://attached_assets/stock_images/mouli-kalava-sacred-red-puja-thread.jpg"
 type = "image"
 title = "red yellow sacred thread kalava hindu"
+logical_id = "931fdd4c-fc55-421f-be93-0114dec2d71f"
 
 [[outputs]]
 id = "mOpq4SNn0pUOUuv_zngQU"
 uri = "file://attached_assets/stock_images/gangajal-holy-water-from-river-ganga.jpg"
 type = "image"
 title = "ganga river holy water bottle hindu"
+logical_id = "ecc52c60-f1c4-43d5-8afa-ee0b967372ea"
 
 [[outputs]]
 id = "R-GWqkugsTyQXyb532RvB"
 uri = "file://attached_assets/stock_images/laddu-gopal-vastra-poshak-multi-colour-variation.jpg"
 type = "image"
 title = "krishna idol clothing colourful silk"
+logical_id = "dab74b00-c218-4d53-87e9-4bcbcb09d34e"
 
 [[outputs]]
 id = "EU92-awJNwAp9f7ampFtk"
 uri = "file://attached_assets/stock_images/chowki-cloth-puja-altar-cover.jpg"
 type = "image"
 title = "red silk cloth golden border indian"
+logical_id = "0911e83f-b5b4-4abe-a44d-19ffb298e1af"
 
 [[outputs]]
 id = "vpdBzWHOr4tce9jCOnxYv"
 uri = "file://attached_assets/stock_images/terracotta-diya-pack-of-100.jpg"
 type = "image"
 title = "terracotta clay diya diwali"
+logical_id = "2cc38aad-b11e-48b6-aa19-0701872a8e32"
 
 [[outputs]]
 id = "3ULwvJaJOzuVxfrNz_wEM"
 uri = "file://attached_assets/stock_images/peela-vastra-yellow-puja-cloth.jpg"
 type = "image"
 title = "yellow folded cotton cloth indian"
+logical_id = "5d2afb48-1fdc-425a-8842-1b4e6bdeb2dc"
 
 [[outputs]]
 id = "CVvA3V1JVrguHs9O0F_WA"
 uri = "file://attached_assets/stock_images/long-cotton-batti-puja-diya-wicks.jpg"
 type = "image"
 title = "cotton wick diya thread bundle"
+logical_id = "71ba6f2d-13b8-4a61-a4f0-8ef21ce5b2aa"
 
 [[outputs]]
 id = "skrRTDzmQzOJS8OwOdpIV"
 uri = "file://attached_assets/stock_images/short-batti-cotton-wicks-for-diya.jpg"
 type = "image"
 title = "cotton wicks small puja"
+logical_id = "0d6acdb7-ab89-4f45-97be-5d85122c0ea6"
 
 [[outputs]]
 id = "tchLAz9LwjNQWlFPyhtlH"
 uri = "file://attached_assets/stock_images/kesar-chandan-tilak-saffron-sandalwood-paste.jpg"
 type = "image"
 title = "saffron paste brass bowl indian"
+logical_id = "5df6722b-7131-4f08-864e-af0e84b01b12"
 
 [[outputs]]
 id = "4-5qFdgnh521n2e2xS0AS"
 uri = "file://attached_assets/stock_images/white-chandan-tilak-pure-sandalwood-paste.jpg"
 type = "image"
 title = "sandalwood paste brass bowl"
+logical_id = "4c60e802-a525-4b97-a8ea-426b933aa2cc"
 
 [[outputs]]
 id = "pKewhGBSbqEQpSYaGikc6"
 uri = "file://attached_assets/stock_images/chandan-powder-pure-sandalwood-powder.jpg"
 type = "image"
 title = "sandalwood powder bowl"
+logical_id = "b3b374c8-0477-45b3-a97e-8442027d7f4c"
 
 [[outputs]]
 id = "Dv7sDJPLwMZUDrxBTzxvx"
 uri = "file://attached_assets/stock_images/pooja-chowki-small-wooden-altar-stand.jpg"
 type = "image"
 title = "small wooden stool altar wood"
+logical_id = "fbf7ccda-4c3c-4e61-902c-c8dee7473bd5"
 
 [[outputs]]
 id = "nKuF6hAdYZKyZ1q-tROy7"
 uri = "file://attached_assets/stock_images/gomti-chakra-pack-of-13-pieces.jpg"
 type = "image"
 title = "white spiral shell stones"
+logical_id = "2bbf616e-179e-4180-bae5-dcad4f02307e"
 
 [[outputs]]
 id = "T7oS7pqId5UWkNN5GWnPj"
 uri = "file://attached_assets/stock_images/beetal-betel-nuts-for-puja-pack-of-12.jpg"
 type = "image"
 title = "betel nut supari brown whole"
+logical_id = "a577a5d1-9b91-4007-9ba0-0e928670d319"
 
 [[outputs]]
 id = "bsqbYRTd_jtS8Ku_rzc2g"
 uri = "file://attached_assets/stock_images/cotton-phool-batti-flower-shaped-diya-wicks.jpg"
 type = "image"
 title = "cotton wicks flower lotus puja"
+logical_id = "79d636ff-8529-4f86-8216-1e1b6f60d1b5"
 
 [[outputs]]
 id = "Z_nN0QexxhkcCnQl5jTQ6"
 uri = "file://downloads/Vedic-Tatva-V5-GitHub.zip"
 type = "unspecified"
 title = "Vedic Tatva V5 — GitHub Deploy (lean, 94 MB)"
+logical_id = "9b963946-97e6-44f6-93f1-cfc185f9659a"
 
 [[outputs]]
 id = "FXUlfQSiFZQZr5ZifjkY1"
 uri = "file://downloads/Vedic-Tatva-V5-Source.zip"
 type = "unspecified"
 title = "Vedic Tatva V5 — Full Source Code (870 MB)"
+logical_id = "4890a34e-e897-4987-8f44-bc6c9dc069a0"
 
 [[outputs]]
 id = "Ts2XwE1DDj91AJjyCXGEG"
 uri = "file://downloads/Vedic-Tatva-V5-ReadyToDeploy.zip"
 type = "unspecified"
 title = "Vedic Tatva V5 — Ready to Deploy (905 MB, includes build)"
+logical_id = "2536324a-b2b9-4cf4-8747-e9d709283508"
 
 [[outputs]]
 id = "pbDZjuJpHMJvh_etNC_BI"
 uri = "file://downloads/vedictatva-source.tar.gz"
 type = "unspecified"
 title = "Vedic Tatva — Full Source Code (94 MB)"
+logical_id = "c264c8db-463c-42d5-b66b-d28f420e18cd"
 
 [[outputs]]
 id = "5858fu5fIkkwTDIxip-wo"
 uri = "file://downloads/VPS_DEPLOYMENT.md"
 type = "text"
 title = "VPS Deployment Guide (step-by-step)"
+logical_id = "ec6c8829-e96c-4a82-a0d0-397c86cd6f9f"
 
 [[outputs]]
 id = "kPCwYzJRCwAS8hNX9iZNJ"
 uri = "file://demo-kundli.pdf"
 type = "pdf"
 title = "Vedic Tatva Premium Kundli (Demo) — 69 pages, AES-encrypted (password 15081990)"
+logical_id = "7d562248-8e46-46d8-a217-3c089178239e"
 
 [[outputs]]
 id = "eWQfwq1yFdoRm-kj-y1TT"
 uri = "file://client/public/og/og-pandit-registration.jpg"
 type = "image"
 title = "WhatsApp share card — Pandit Registration"
+logical_id = "c2b51dd7-bba3-416f-95e2-20e45b1c5066"
 
 [[outputs]]
 id = "ojRIRxCd2H3mQ57VgtCW0"
 uri = "file://client/public/og/og-puja-essentials.jpg"
 type = "image"
 title = "WhatsApp share card — Puja Essentials shopping"
+logical_id = "57ce0b28-16c5-4c6d-876f-39d590a2fb78"
 
 [[outputs]]
 id = "UiI-2FVOUbRg6-iCKw3u9"
 uri = "file://client/public/og/og-pandit-booking.jpg"
 type = "image"
 title = "WhatsApp share card — Pandit / Puja Booking"
+logical_id = "e71175b0-1aa7-44e6-a3e4-407ebefa7021"
 
 [[outputs]]
 id = "IDx0ToxhLACLsrVhBW9Ro"
 uri = "file://client/public/og/og-prime-services.jpg"
 type = "image"
 title = "WhatsApp share card — Prime Services / flagship"
+logical_id = "967b8559-9270-4646-969a-6c067faab1d0"
 
 [[outputs]]
 id = "SWPsHJZl1mRXQPAT5XWOw"
 uri = "file://attached_assets/generated_images/shiva-blessing-hand.png"
 type = "image"
 title = "Shiva's blessing hand — abhaya mudra"
+logical_id = "e3692d5b-3d88-4357-bb10-5060dc1ab18f"
 
 [[outputs]]
 id = "cED3nW1uwJsIIlMoxdU9j"
 uri = "file://vedictatva-deploy-20260517-1830.zip"
 type = "unspecified"
 title = "Vedic Tatva — Deploy-Ready Package"
+logical_id = "185cef88-b9b7-44a2-bb42-37ac94ab512e"
 
 [[outputs]]
 id = "elpQRLGAwHykejTD3Layt"
 uri = "file://vedictatva-deploy-20260517-1838.zip"
 type = "unspecified"
 title = "Vedic Tatva — One-Click Coolify Deploy Package"
+logical_id = "06615fda-f9ed-4d03-94df-496e3a23b3ff"
