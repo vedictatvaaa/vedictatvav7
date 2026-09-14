@@ -1421,6 +1421,8 @@ User-agent: GPTBot
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ai/product-summary/
+Allow: /api/ai/pandit-feed
 Disallow: /checkout
 Disallow: /my-profile
 
@@ -1434,11 +1436,15 @@ User-agent: Google-Extended
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ai/product-summary/
+Allow: /api/ai/pandit-feed
 
 User-agent: ClaudeBot
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ai/product-summary/
+Allow: /api/ai/pandit-feed
 
 User-agent: Claude-Web
 Allow: /
@@ -1450,6 +1456,8 @@ User-agent: PerplexityBot
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ai/product-summary/
+Allow: /api/ai/pandit-feed
 
 User-agent: Perplexity-User
 Allow: /
@@ -1461,6 +1469,8 @@ User-agent: CCBot
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ai/product-summary/
+Allow: /api/ai/pandit-feed
 
 Sitemap: ${baseUrl}/sitemap.xml
 `);

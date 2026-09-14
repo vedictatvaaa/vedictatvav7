@@ -10,17 +10,17 @@ import { useQuery } from "@tanstack/react-query";
 import { FOOTER_DESTINATIONS } from "@shared/footer-links";
 
 const complianceBadges = [
-  { label: "PCI-DSS", sub: "Level 1 secure" },
-  { label: "256-bit SSL", sub: "TLS 1.3" },
-  { label: "80G", sub: "Tax-deductible" },
-  { label: "GSTIN", sub: "GST invoiced" },
+  { label: "Secure checkout", sub: "Protected payments" },
+  { label: "TLS protected", sub: "Encrypted connection" },
+  { label: "Donation receipts", sub: "Where applicable" },
+  { label: "GST invoicing", sub: "For eligible orders" },
 ];
 
 const trustBadges = [
-  { icon: Truck, label: "Free Shipping", sub: "Orders ₹499+" },
-  { icon: ShieldCheck, label: "Authentic", sub: "Lab-certified" },
-  { icon: RotateCcw, label: "Easy Returns", sub: "7-day window" },
-  { icon: Lock, label: "Secure Pay", sub: "256-bit SSL" },
+  { icon: Truck, label: "Shipping support", sub: "See shipping policy" },
+  { icon: ShieldCheck, label: "Product details", sub: "Check each item" },
+  { icon: RotateCcw, label: "Returns support", sub: "See refund policy" },
+  { icon: Lock, label: "Secure checkout", sub: "Payment protection" },
 ];
 
 const socials = [
@@ -107,9 +107,10 @@ export default function Footer() {
     { ...FOOTER_DESTINATIONS.tools[2], label: t.footer.vastuCompass },
     { ...FOOTER_DESTINATIONS.tools[3], label: t.footer.sacredKathas },
     { ...FOOTER_DESTINATIONS.tools[4], label: "Digital Japa Counter" },
-    { ...FOOTER_DESTINATIONS.tools[5], label: "Vedic Tatva Journal" },
-    { ...FOOTER_DESTINATIONS.tools[6], label: "Track Order" },
-    { ...FOOTER_DESTINATIONS.tools[7], label: "Returns & Refunds" },
+    { ...FOOTER_DESTINATIONS.tools[5], label: "AI Kundli" },
+    { ...FOOTER_DESTINATIONS.tools[6], label: "Vedic Tatva Journal" },
+    { ...FOOTER_DESTINATIONS.tools[7], label: "Track Order" },
+    { ...FOOTER_DESTINATIONS.tools[8], label: "Returns & Refunds" },
   ];
 
   const company = [

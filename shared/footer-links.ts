@@ -27,6 +27,7 @@ export const FOOTER_DESTINATIONS = {
     { href: "/vastu-compass", testid: "footer-link-vastu" },
     { href: "/kathas", testid: "footer-link-kathas" },
     { href: "/digital-japa-counter", testid: "footer-link-japa" },
+    { href: "/ai-kundli", testid: "footer-link-ai-kundli" },
     { href: "/blog", testid: "footer-link-blog" },
     { href: "/track-order", testid: "footer-link-track-order" },
     { href: "/return-ticket", testid: "footer-link-returns" },

@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import rateLimit from "express-rate-limit";
 import { getPanditDiscoveryFeed } from "./pandit-storefront-content";
+import { FOOTER_DESTINATIONS } from "@shared/footer-links";
 
 // llms.txt — convention for AI crawlers (ChatGPT/Claude/Perplexity) to discover
 // site structure and authoritative content.
@@ -29,30 +30,33 @@ const aiCrawlerLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-export async function buildLlmsTxt(siteUrl: string): Promise<string> {
+export async function buildLlmsTxt(siteUrl: string, generatedAt = new Date()): Promise<string> {
   const products = (await storage.getProducts()).slice(0, 50);
   const pandits = (await getPanditDiscoveryFeed(siteUrl)).slice(0, 20);
   const lines: string[] = [];
   lines.push(`# Vedic Tatva`);
   lines.push("");
-  lines.push("> Vedic Tatva is India's premium spiritual ecommerce platform offering authentic puja samagri, idols, gemstones, and verified pandit booking for online and at-home pujas, Pind Daan in Gaya/Kashi/Haridwar, and AI-powered Vedic astrology services.");
+  lines.push("> Vedic Tatva is an India-focused spiritual commerce and services platform offering puja samagri, idols, gemstones, Pandit booking, online and at-home pujas, Pind Daan in Gaya/Kashi/Haridwar, and Vedic astrology tools.");
+  lines.push(`> Generated ${generatedAt.toISOString()}. Product prices, stock, service availability, and Pandit eligibility can change; verify the linked page before relying on them.`);
+  lines.push("> AI-generated astrology and spiritual guidance is informational and may be inaccurate; it is not a substitute for qualified professional advice.");
   lines.push("");
   lines.push("## Core Services");
-  lines.push(`- [Book a Pandit](${siteUrl}/book-pandit-online): Verified Vedic pandits for puja at home or online`);
-  lines.push(`- [Book a Puja](${siteUrl}/puja): Online and at-home Vedic pujas`);
+  lines.push(`- [Book a Pandit](${siteUrl}${FOOTER_DESTINATIONS.services[0].href}): Browse Pandit profiles and booking options for puja at home or online`);
+  lines.push(`- [Book a Puja](${siteUrl}${FOOTER_DESTINATIONS.services[1].href}): Online and at-home Vedic pujas`);
   lines.push(`- [Pind Daan](${siteUrl}/pind-daan-booking): Ancestral rituals in Gaya, Kashi, Haridwar`);
-  lines.push(`- [Astrology](${siteUrl}/astrology): Kundli, matchmaking, dosha analysis`);
-  lines.push(`- [AI Kundli](${siteUrl}/ai-kundli): Free AI-powered Vedic birth chart analysis`);
-  lines.push(`- [Panchang](${siteUrl}/today-panchang): Daily Hindu calendar with tithi, nakshatra, muhurat`);
-  lines.push(`- [Matrimony](${siteUrl}/matrimony): Vedic-aligned matrimonial profiles`);
+  lines.push(`- [Astrology](${siteUrl}${FOOTER_DESTINATIONS.services[3].href}): Kundli, matchmaking, dosha analysis`);
+  lines.push(`- [AI Kundli](${siteUrl}${FOOTER_DESTINATIONS.tools[5].href}): Generate a Vedic birth chart with an AI-assisted interpretation`);
+  lines.push(`- [Panchang](${siteUrl}${FOOTER_DESTINATIONS.tools[0].href}): Daily Hindu calendar with tithi, nakshatra, muhurat`);
   lines.push("");
   lines.push("## Spiritual Shop");
-  lines.push(`- [Puja Essentials](${siteUrl}/spiritual-essentials)`);
-  lines.push(`- [Idols & Murtis](${siteUrl}/category/idols)`);
-  lines.push(`- [Puja Samagri](${siteUrl}/category/puja-samagri)`);
-  lines.push(`- [Havan Samagri](${siteUrl}/category/havan-samagri)`);
-  lines.push(`- [Wearables (Rudraksha, Mala)](${siteUrl}/category/wearables)`);
-  lines.push(`- [Brass & Copperware](${siteUrl}/category/brass-copperware)`);
+  lines.push(`- [Puja Samagri & Essentials](${siteUrl}${FOOTER_DESTINATIONS.shop[0].href})`);
+  lines.push(`- [Rudraksha Collection](${siteUrl}${FOOTER_DESTINATIONS.shop[1].href})`);
+  lines.push(`- [Rudraksha Malas](${siteUrl}${FOOTER_DESTINATIONS.shop[2].href})`);
+  lines.push(`- [Havan Samagri](${siteUrl}${FOOTER_DESTINATIONS.shop[3].href})`);
+  lines.push(`- [Puja Kits](${siteUrl}${FOOTER_DESTINATIONS.shop[4].href})`);
+  lines.push(`- [Brass Diyas](${siteUrl}${FOOTER_DESTINATIONS.shop[5].href})`);
+  lines.push(`- [Spiritual Jewelry](${siteUrl}${FOOTER_DESTINATIONS.shop[6].href})`);
+  lines.push(`- [Temple Decor](${siteUrl}${FOOTER_DESTINATIONS.shop[7].href})`);
   lines.push("");
   lines.push("## Featured Products");
   for (const p of products) {
@@ -65,7 +69,7 @@ export async function buildLlmsTxt(siteUrl: string): Promise<string> {
     const summary = pa.summary || `${pa.name} offers published Vedic puja services${pa.location.city ? ` in ${pa.location.city}` : ""}.`;
     lines.push(`- [${pa.name}](${pa.url}): ${summary}`);
   }
-  lines.push(`\n- [Factual Pandit discovery feed](${siteUrl}/api/ai/pandit-feed)`);
+  lines.push(`\n- [Factual Pandit discovery feed](${siteUrl}/api/ai/pandit-feed): Public profiles only; eligibility and availability can change.`);
   lines.push("");
   lines.push("## Optional");
   lines.push(`- [Sitemap](${siteUrl}/sitemap.xml)`);
@@ -114,7 +118,7 @@ export function registerLlmsRoutes(app: Express) {
         faq: (product as any).seoFaq || null,
         videoUrl: (product as any).seoVideoUrl || null,
         images: [product.image, ...(product.images || [])].filter(Boolean),
-        spiritualContext: `Used in Hindu puja and Vedic rituals. Authentic ${product.category} sourced and curated by Vedic Tatva.`,
+         spiritualContext: `Listed for use in Hindu puja and Vedic rituals. Category: ${product.category}.`,
         ratings: product.salesCount ? { salesCount: product.salesCount } : null,
       });
     } catch (e: any) {
