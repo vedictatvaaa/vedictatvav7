@@ -34,5 +34,18 @@ test("Pandit application and admin contracts reject invalid identity/status inpu
   assert.match(routes, /return res\.status\(400\)\.json\(\{ message: "Invalid application status" \}\)/);
   assert.match(admin, /const cookieUserId = cookieToken/);
   assert.match(adminUi, /\.cities\.filter\(c=>c\.isActive\)/);
-  assert.match(adminUi, /if \(!response\.ok\) throw new Error\("Location update failed"\)/);
+  assert.match(adminUi, /if \(!res\.ok\) throw new Error\(body\.message \|\| "Safe location resolution failed"\)/);
+});
+
+test("Pandit signup returns applicant-safe requirement messages", () => {
+  const routes = readFileSync("server/routes.ts", "utf8");
+  const start = routes.indexOf('app.post("/api/pandit-applications"');
+  const end = routes.indexOf("// Admin: list pandit applications", start);
+  assert.ok(start >= 0 && end > start);
+  const signupRoute = routes.slice(start, end);
+  assert.match(signupRoute, /Select exactly five specialist Pujas \(you selected \$\{count\}\)/);
+  assert.match(signupRoute, /Share your exact location before submitting/);
+  assert.match(signupRoute, /Confirm that the selected Pujas are services you personally offer/);
+  assert.match(signupRoute, /Upload a profile photo before submitting/);
+  assert.doesNotMatch(signupRoute, /message: parsed\.error\.issues\.map\(i => i\.message\)\.join\(", "\)/);
 });

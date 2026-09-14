@@ -9843,12 +9843,40 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         }
       });
       const parsed = schema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues.map(i => i.message).join(", ") });
+      if (!parsed.success) {
+        const body = req.body as Record<string, unknown>;
+        const messages = Array.from(new Set(parsed.error.issues.map((issue) => {
+          const field = String(issue.path[0] || "");
+          if (field === "masterServiceIds") {
+            const count = Array.isArray(body.masterServiceIds) ? body.masterServiceIds.length : 0;
+            return `Select exactly five specialist Pujas (you selected ${count}).`;
+          }
+          if (field === "registeredAddress") return "Enter your registered address.";
+          if (field === "latitude" || field === "longitude" || field === "locationPermissionGranted") return "Share your exact location before submitting.";
+          if (field === "servicesConfirmed") return "Confirm that the selected Pujas are services you personally offer.";
+          if (field === "photo") return "Upload a profile photo before submitting.";
+          if (field === "termsAccepted") return "Accept the terms before submitting.";
+          if (field === "fullName") return "Enter your full name.";
+          if (field === "phone") return "Enter a valid phone number.";
+          if (field === "email") return "Enter a valid email address.";
+          if (field === "stateId") return "Select your State.";
+          if (field === "cityId" || field === "proposedCityName") return "Choose a canonical City or submit a missing-city request.";
+          if (field === "experience") return "Enter your years of experience.";
+          if (field === "specializations") return "Describe the services you perform.";
+          if (field === "education") return "Enter your Vedic education or training.";
+          if (field === "languages") return "Enter at least one language.";
+          if (field === "bio") return "Add a profile biography of at least 20 characters.";
+          if (field === "serviceArea") return "Enter the areas where you serve devotees.";
+          if (issue.message.includes("canonical city")) return issue.message;
+          return "Check the required fields and try again.";
+        })));
+        return res.status(400).json({ message: messages.join(" ") });
+      }
       const d = parsed.data;
       const normalizedPhone = normalizePanditPhone(d.phone);
       if (!normalizedPhone) return res.status(400).json({ message: "Enter a valid 10-digit Indian mobile number" });
       if (!(await isValidStoredProfilePhoto(d.photo, uploadsDir))) {
-        return res.status(400).json({ message: "A valid successfully uploaded profile photo is required" });
+        return res.status(400).json({ message: "Upload a valid profile photo before submitting." });
       }
       const [selectedState] = await db.select().from(indianStates)
         .where(and(eq(indianStates.id, d.stateId), eq(indianStates.isActive, true)));

@@ -162,6 +162,8 @@ export default function BecomePandit() {
   const [photoError, setPhotoError] = useState("");
   const [missingCityMode, setMissingCityMode] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [servicesError, setServicesError] = useState("");
+  const [applicationError, setApplicationError] = useState("");
 
   const requestExactLocation = () => {
     if (!navigator.geolocation) {
@@ -234,9 +236,17 @@ export default function BecomePandit() {
        setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", registeredAddress: "", latitude: null, longitude: null, locationPermissionGranted: false, experience: "", specializations: "", education: "", languages: "", bio: "", serviceArea: "", regionalOrigin: "", membership: "free", agreeTerms: false, servicesConfirmed: false, masterServiceIds: [] });
       setPhotoPreview(null);
       setPhotoFile(null);
+      setPhotoError("");
+      setLocationError("");
+      setServicesError("");
+      setApplicationError("");
       setMissingCityMode(false);
     },
     onError: (error: Error) => {
+      setApplicationError(error.message);
+      if (/photo/i.test(error.message)) setPhotoError(error.message);
+      if (/location|exact|permission/i.test(error.message)) setLocationError(error.message);
+      if (/Puja|services/i.test(error.message)) setServicesError(error.message);
       toast({
         title: "Submission Failed",
         description: error.message,
@@ -248,11 +258,28 @@ export default function BecomePandit() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (submitMutation.isPending) return;
+    setApplicationError("");
     if (!form.fullName || !form.phone || !form.email || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.registeredAddress.trim() || !form.experience || !form.specializations.trim() || !form.education.trim() || !form.languages.trim() || !form.bio.trim() || !form.serviceArea.trim()) {
-      toast({ title: "Missing Fields", description: "Please fill all required fields.", variant: "destructive" });
+      const missing: string[] = [];
+      if (!form.fullName) missing.push("full name");
+      if (!form.phone) missing.push("phone number");
+      if (!form.email) missing.push("email address");
+      if (!form.stateId) missing.push("State");
+      if (!form.cityId && !form.proposedCityName.trim()) missing.push("City");
+      if (!form.registeredAddress.trim()) missing.push("registered address");
+      if (!form.experience) missing.push("years of experience");
+      if (!form.specializations.trim()) missing.push("services you perform");
+      if (!form.education.trim()) missing.push("Vedic education");
+      if (!form.languages.trim()) missing.push("languages");
+      if (!form.bio.trim()) missing.push("profile biography");
+      if (!form.serviceArea.trim()) missing.push("service area");
+      const message = `Complete these fields: ${missing.join(", ")}.`;
+      setApplicationError(message);
+      toast({ title: "Missing required details", description: message, variant: "destructive" });
       return;
     }
     if (form.masterServiceIds.length !== 5) {
+      setServicesError(`Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`);
       toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
@@ -262,6 +289,7 @@ export default function BecomePandit() {
       return;
     }
     if (!form.servicesConfirmed) {
+      setServicesError("Confirm that the selected Pujas are services you personally offer.");
       toast({ title: "Confirm your services", description: "Confirm that the selected Pujas are services you personally offer.", variant: "destructive" });
       return;
     }
@@ -335,6 +363,8 @@ export default function BecomePandit() {
         onPhotoRemove={() => { setPhotoFile(null); setPhotoPreview(null); setPhotoError(""); }}
         photoError={photoError}
         locationError={locationError}
+        servicesError={servicesError}
+        applicationError={applicationError}
         requestExactLocation={requestExactLocation}
         missingCityMode={missingCityMode}
         setMissingCityMode={setMissingCityMode}
@@ -1335,7 +1365,7 @@ type FormState = {
 };
 
 function RegistrationSection({
-  form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
+  form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, servicesError, applicationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
 }: {
   form: FormState;
   photoPreview: string | null;
@@ -1344,6 +1374,8 @@ function RegistrationSection({
   onPhotoRemove: () => void;
   photoError: string;
   locationError: string;
+  servicesError: string;
+  applicationError: string;
   requestExactLocation: () => void;
   missingCityMode: boolean;
   setMissingCityMode: React.Dispatch<React.SetStateAction<boolean>>;
@@ -1400,6 +1432,7 @@ function RegistrationSection({
           <Card className="lg:col-span-3 lg:order-1 order-2 shadow-xl" style={{ background: "white", border: `1px solid ${C.gold}30` }}>
             <CardContent className="p-6 md:p-8">
               <form onSubmit={onSubmit} className="space-y-7">
+                {applicationError && <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{applicationError}</div>}
                 <FieldGroup index={1} title="Personal Details">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Full Name *" id="fullName">
@@ -1479,6 +1512,7 @@ function RegistrationSection({
                     <fieldset>
                       <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
                       <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Select exactly five Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/5.</p>
+                      {servicesError && <p className="mt-2 text-xs text-destructive" role="alert">{servicesError}</p>}
                       {masterServicesLoading ? (
                         <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
                       ) : masterServicesError ? (

@@ -209,28 +209,28 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       masterServiceIds: masterServiceIds.slice(0, 4),
     }));
     assert.equal(fewerThanFive.status, 400);
-    assert.match(fewerThanFive.body.message, /exactly five/i);
+    assert.equal(fewerThanFive.body.message, "Select exactly five specialist Pujas (you selected 4).");
 
     const moreThanFive = await post("/api/pandit-applications", applicationBody({
       email: `pandit-more-${suffix}@example.invalid`,
       masterServiceIds,
     }));
     assert.equal(moreThanFive.status, 400);
-    assert.match(moreThanFive.body.message, /exactly five/i);
+    assert.equal(moreThanFive.body.message, "Select exactly five specialist Pujas (you selected 6).");
 
     const missingLocationConsent = await post("/api/pandit-applications", applicationBody({
       email: `pandit-no-location-consent-${suffix}@example.invalid`,
       locationPermissionGranted: false,
     }));
     assert.equal(missingLocationConsent.status, 400);
-    assert.match(missingLocationConsent.body.message, /expected true|permission|location/i);
+    assert.equal(missingLocationConsent.body.message, "Share your exact location before submitting.");
 
     const missingPhotoRequest = await post("/api/pandit-applications", applicationBody({
       email: `pandit-no-photo-${suffix}@example.invalid`,
       photo: "",
     }));
     assert.equal(missingPhotoRequest.status, 400);
-    assert.match(missingPhotoRequest.body.message, /photo|character/i);
+    assert.equal(missingPhotoRequest.body.message, "Upload a profile photo before submitting.");
 
     const submitted = await post("/api/pandit-applications", applicationBody());
     assert.equal(submitted.status, 201);
