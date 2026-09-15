@@ -2,7 +2,7 @@
 // Every mutation route requires the caller's email for identity verification
 // (mirrors the existing /api/my-bookings pattern). The user's email is
 // resolved by the caller from useAuth() and threaded through these calls.
-import type { FamilyMember, UserNotification, InsertFamilyMember } from "@shared/schema";
+import type { FamilyMember, UserNotification, InsertFamilyMember, AlertPreferences } from "@shared/schema";
 
 async function jfetch(url: string, init?: RequestInit) {
   const res = await fetch(url, {
@@ -88,4 +88,37 @@ export async function markAllNotificationsRead(userId: number, identityEmail: st
     body: JSON.stringify({ userId, identityEmail }),
   });
   return Number(d.updated || 0);
+}
+
+// ──────── Unified alert preferences ────────
+export async function getAlertPreferences(userId: number, email: string): Promise<AlertPreferences> {
+  const d = await jfetch(`/api/alert-preferences?userId=${userId}&email=${encodeURIComponent(email)}`);
+  return d.preferences as AlertPreferences;
+}
+
+export async function updateAlertPreferences(
+  userId: number,
+  identityEmail: string,
+  patch: Partial<Omit<AlertPreferences, "id" | "userId" | "updatedAt">>,
+): Promise<AlertPreferences> {
+  const d = await jfetch("/api/alert-preferences", {
+    method: "PUT",
+    body: JSON.stringify({ userId, identityEmail, ...patch }),
+  });
+  return d.preferences as AlertPreferences;
+}
+
+export async function registerAlertDevice(input: {
+  userId: number;
+  identityEmail: string;
+  platform: "web" | "android";
+  endpoint: string;
+  permissionState?: string;
+  appVersion?: string;
+}) {
+  const d = await jfetch("/api/alert-devices", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return d.device;
 }

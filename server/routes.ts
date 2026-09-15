@@ -71,7 +71,7 @@ import {
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
 import { MANTRA_LIBRARY } from "@shared/mantra-library";
-import { eq, and, gt, gte, lt, like, or, ilike, inArray, sql } from "drizzle-orm";
+import { eq, and, gt, gte, lt, like, or, ilike, inArray, sql, desc } from "drizzle-orm";
 import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
@@ -127,6 +127,8 @@ import {
   enqueueWelcomeSeries, dispatchBroadcast, recordUnsubscribe, verifyUnsubscribeToken,
 } from "./email-marketing";
 import { insertNewsletterCampaignSchema } from "@shared/schema";
+import { alertDeliveries, alertEvents, alertPreferences } from "@shared/schema";
+import { processAlertDeliveriesOnce } from "./alert-system";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { ageing, allowedTransitions, decrementMembershipCardInventory, isOperationallyStale, itemCounts, membershipCardAllocations, nextAction, normalizeOrderStatus, parseInventoryAllocations, paymentProjection, validateTransition, verifyInventory, type InventoryAllocation } from "./order-operations";
 import { validateCanonicalServiceBookingContext } from "./pandit-booking-context";
@@ -7108,6 +7110,63 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         email: has("SMTP_HOST") && has("SMTP_USER") && (has("SMTP_PASSWORD") || has("SMTP_PASS")),
       },
     });
+  });
+
+  app.get("/api/admin/alerts/overview", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const [deliveryCounts] = await db.select({
+        total: sql<number>`count(*)`,
+        queued: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'queued')`,
+        processing: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'processing')`,
+        sent: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'sent')`,
+        skipped: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'skipped')`,
+        retrying: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'retrying')`,
+        failed: sql<number>`count(*) filter (where ${alertDeliveries.status} = 'failed')`,
+      }).from(alertDeliveries);
+      const [eventCounts] = await db.select({
+        total: sql<number>`count(*)`,
+        pending: sql<number>`count(*) filter (where ${alertEvents.processedAt} is null)`,
+      }).from(alertEvents);
+      const [preferenceCounts] = await db.select({
+        total: sql<number>`count(*)`,
+        panchangEnabled: sql<number>`count(*) filter (where ${alertPreferences.panchangEnabled} = true)`,
+      }).from(alertPreferences);
+      const recent = await db.select({
+        id: alertDeliveries.id,
+        eventKey: alertEvents.eventKey,
+        eventType: alertEvents.eventType,
+        category: alertEvents.category,
+        channel: alertDeliveries.channel,
+        status: alertDeliveries.status,
+        attemptCount: alertDeliveries.attemptCount,
+        lastError: alertDeliveries.lastError,
+        scheduledFor: alertDeliveries.scheduledFor,
+        sentAt: alertDeliveries.sentAt,
+      }).from(alertDeliveries)
+        .innerJoin(alertEvents, eq(alertEvents.id, alertDeliveries.eventId))
+        .orderBy(desc(alertDeliveries.id))
+        .limit(50);
+      res.json({
+        externalDeliveryEnabled: process.env.ALERT_EXTERNAL_DELIVERY_ENABLED === "true",
+        deliveries: deliveryCounts,
+        events: eventCounts,
+        preferences: preferenceCounts,
+        recent,
+      });
+    } catch (error: any) {
+      console.error("[admin alerts/overview] failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to load unified alert overview" });
+    }
+  });
+
+  app.post("/api/admin/alerts/process", adminAuthMiddleware, async (_req, res) => {
+    try {
+      const result = await processAlertDeliveriesOnce(200);
+      res.json({ ok: true, result });
+    } catch (error: any) {
+      console.error("[admin alerts/process] failed:", error?.message || error);
+      res.status(500).json({ message: "Unable to process alert queue" });
+    }
   });
 
   app.get("/api/admin/email-outbox", adminAuthMiddleware, async (req, res) => {

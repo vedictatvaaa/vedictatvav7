@@ -10,6 +10,7 @@ import { spawn } from "child_process";
 import { mkdirSync, readdirSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
 import { startEmailOutboxWorker } from "./email-outbox";
+import { startAlertSystemWorker } from "./alert-system";
 
 const app = express();
 const httpServer = createServer(app);
@@ -210,6 +211,7 @@ app.use((req, res, next) => {
   await seedSeoPages();
   await registerRoutes(httpServer, app);
   startEmailOutboxWorker();
+  startAlertSystemWorker();
 
   const runPanditProfileReminderJob = async () => {
     try {

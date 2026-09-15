@@ -2079,6 +2079,133 @@ export const insertPanditNotificationSchema = createInsertSchema(panditNotificat
 export type PanditNotification = typeof panditNotifications.$inferSelect;
 export type InsertPanditNotification = z.infer<typeof insertPanditNotificationSchema>;
 
+// Unified alert orchestration. Domain features create one durable alert event;
+// channel-specific delivery rows are then processed independently so retries,
+// opt-outs, and provider failures do not affect the originating booking/order.
+export const ALERT_CATEGORIES = [
+  "panchang",
+  "booking",
+  "order",
+  "account",
+  "operations",
+  "recommendations",
+  "promotions",
+] as const;
+export type AlertCategory = typeof ALERT_CATEGORIES[number];
+
+export const ALERT_CHANNELS = [
+  "in_app",
+  "visual_overlay",
+  "email",
+  "sms",
+  "whatsapp",
+  "web_push",
+  "android_push",
+] as const;
+export type AlertChannel = typeof ALERT_CHANNELS[number];
+
+export const ALERT_DELIVERY_STATUSES = [
+  "queued",
+  "processing",
+  "sent",
+  "skipped",
+  "retrying",
+  "failed",
+] as const;
+export type AlertDeliveryStatus = typeof ALERT_DELIVERY_STATUSES[number];
+
+export const alertEvents = pgTable("alert_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  eventKey: text("event_key").notNull().unique(),
+  eventType: text("event_type").notNull(),
+  category: text("category").$type<AlertCategory>().notNull(),
+  audience: text("audience").notNull().default("customer"),
+  userId: integer("user_id"),
+  panditId: integer("pandit_id"),
+  relatedType: text("related_type"),
+  relatedId: integer("related_id"),
+  payload: jsonb("payload"),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  scheduledIdx: index("alert_events_scheduled_idx").on(t.scheduledFor, t.processedAt),
+  userIdx: index("alert_events_user_idx").on(t.userId, t.createdAt),
+  categoryIdx: index("alert_events_category_idx").on(t.category, t.scheduledFor),
+}));
+
+export const alertDeliveries = pgTable("alert_deliveries", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  eventId: integer("event_id").notNull(),
+  userId: integer("user_id"),
+  panditId: integer("pandit_id"),
+  channel: text("channel").$type<AlertChannel>().notNull(),
+  status: text("status").$type<AlertDeliveryStatus>().notNull().default("queued"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
+  providerMessageId: text("provider_message_id"),
+  lastError: text("last_error"),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  eventChannelIdx: uniqueIndex("alert_deliveries_event_channel_recipient_uniq")
+    .on(t.eventId, t.userId, t.panditId, t.channel),
+  dueIdx: index("alert_deliveries_due_idx").on(t.status, t.scheduledFor),
+  recipientIdx: index("alert_deliveries_recipient_idx").on(t.userId, t.createdAt),
+}));
+
+export const alertPreferences = pgTable("alert_preferences", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().unique(),
+  panchangEnabled: boolean("panchang_enabled").notNull().default(true),
+  bookingEnabled: boolean("booking_enabled").notNull().default(true),
+  orderEnabled: boolean("order_enabled").notNull().default(true),
+  accountEnabled: boolean("account_enabled").notNull().default(true),
+  operationsEnabled: boolean("operations_enabled").notNull().default(true),
+  recommendationsEnabled: boolean("recommendations_enabled").notNull().default(true),
+  promotionsEnabled: boolean("promotions_enabled").notNull().default(false),
+  inAppEnabled: boolean("in_app_enabled").notNull().default(true),
+  visualOverlayEnabled: boolean("visual_overlay_enabled").notNull().default(true),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+  smsEnabled: boolean("sms_enabled").notNull().default(true),
+  whatsappEnabled: boolean("whatsapp_enabled").notNull().default(true),
+  webPushEnabled: boolean("web_push_enabled").notNull().default(true),
+  androidPushEnabled: boolean("android_push_enabled").notNull().default(true),
+  lockScreenEnabled: boolean("lock_screen_enabled").notNull().default(true),
+  omChimeEnabled: boolean("om_chime_enabled").notNull().default(true),
+  language: text("language").notNull().default("en"),
+  timezone: text("timezone").notNull().default("Asia/Kolkata"),
+  dailySendTime: text("daily_send_time").notNull().default("08:00"),
+  quietStart: text("quiet_start").notNull().default("21:00"),
+  quietEnd: text("quiet_end").notNull().default("07:00"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  timezoneIdx: index("alert_preferences_timezone_idx").on(t.timezone),
+}));
+
+export const alertDeviceSubscriptions = pgTable("alert_device_subscriptions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  platform: text("platform").notNull(), // web | android
+  endpoint: text("endpoint").notNull(),
+  permissionState: text("permission_state").notNull().default("granted"),
+  appVersion: text("app_version"),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  endpointUniq: uniqueIndex("alert_device_subscriptions_endpoint_uniq").on(t.platform, t.endpoint),
+  userPlatformIdx: index("alert_device_subscriptions_user_platform_idx").on(t.userId, t.platform),
+}));
+export const insertAlertPreferencesSchema = createInsertSchema(alertPreferences).omit({ id: true, updatedAt: true });
+export type AlertEvent = typeof alertEvents.$inferSelect;
+export type AlertDelivery = typeof alertDeliveries.$inferSelect;
+export type AlertPreferences = typeof alertPreferences.$inferSelect;
+export type AlertDeviceSubscription = typeof alertDeviceSubscriptions.$inferSelect;
+
 // Phase 2 — Pandit payout ledger. Admin-recorded payments to pandits.
 // Earnings (computed): completed-booking gross − commission + paid tips.
 // Pending balance = earnings − sum(payouts).

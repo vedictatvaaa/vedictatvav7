@@ -4,6 +4,40 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, userNotifications, insertFamilyMemberSchema, insertUserNotificationSchema } from "@shared/schema";
 import { and, eq, gt, sql } from "drizzle-orm";
+import { getAlertPreferences, registerAlertDevice, updateAlertPreferences } from "./alert-system";
+
+const alertPreferencesPatchSchema = z.object({
+  panchangEnabled: z.boolean().optional(),
+  bookingEnabled: z.boolean().optional(),
+  orderEnabled: z.boolean().optional(),
+  accountEnabled: z.boolean().optional(),
+  operationsEnabled: z.boolean().optional(),
+  recommendationsEnabled: z.boolean().optional(),
+  promotionsEnabled: z.boolean().optional(),
+  inAppEnabled: z.boolean().optional(),
+  visualOverlayEnabled: z.boolean().optional(),
+  emailEnabled: z.boolean().optional(),
+  smsEnabled: z.boolean().optional(),
+  whatsappEnabled: z.boolean().optional(),
+  webPushEnabled: z.boolean().optional(),
+  androidPushEnabled: z.boolean().optional(),
+  lockScreenEnabled: z.boolean().optional(),
+  omChimeEnabled: z.boolean().optional(),
+  language: z.string().trim().min(2).max(10).optional(),
+  timezone: z.string().trim().min(1).max(100).optional(),
+  dailySendTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  quietStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  quietEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+}).strict();
+
+const alertDeviceSchema = z.object({
+  userId: z.number().int().positive(),
+  identityEmail: z.string().email(),
+  platform: z.enum(["web", "android"]),
+  endpoint: z.string().trim().min(10).max(4000),
+  permissionState: z.string().trim().min(1).max(30).optional(),
+  appVersion: z.string().trim().max(100).optional(),
+});
 
 // ─────────────────────────────────────────────────────────────────────
 // Helper: confirm caller owns the userId being mutated. Mirrors the
@@ -210,6 +244,49 @@ export function registerDashboardRoutes(app: Express): void {
       res.json({ updated: n });
     } catch (e: any) {
       res.status(500).json({ message: e?.message || "Failed" });
+    }
+  });
+
+  // ─────────────── Unified alert preferences and device registration ───────────────
+  app.get("/api/alert-preferences", async (req: Request, res: Response) => {
+    try {
+      const userId = Number(req.query.userId);
+      if (!(await verifyUserIdentity(req, userId))) {
+        return res.status(403).json({ message: "Identity check failed" });
+      }
+      const preferences = await getAlertPreferences(userId);
+      res.json({ preferences });
+    } catch (e: any) {
+      res.status(500).json({ message: e?.message || "Failed to load alert preferences" });
+    }
+  });
+
+  app.put("/api/alert-preferences", async (req: Request, res: Response) => {
+    try {
+      const userId = Number(req.body?.userId);
+      if (!(await verifyUserIdentity(req, userId))) {
+        return res.status(403).json({ message: "Identity check failed" });
+      }
+      const patch = alertPreferencesPatchSchema.parse(req.body);
+      const preferences = await updateAlertPreferences(userId, patch);
+      res.json({ preferences });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid alert preference", issues: e.issues });
+      res.status(500).json({ message: e?.message || "Failed to update alert preferences" });
+    }
+  });
+
+  app.post("/api/alert-devices", async (req: Request, res: Response) => {
+    try {
+      const parsed = alertDeviceSchema.parse(req.body);
+      if (!(await verifyUserIdentity(req, parsed.userId))) {
+        return res.status(403).json({ message: "Identity check failed" });
+      }
+      const device = await registerAlertDevice(parsed);
+      res.status(201).json({ device });
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid alert device", issues: e.issues });
+      res.status(500).json({ message: e?.message || "Failed to register alert device" });
     }
   });
 }

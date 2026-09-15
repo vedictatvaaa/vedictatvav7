@@ -7,4 +7,4 @@ Additive database changes require a uniquely sequenced migration file, an explic
 
 **Why:** The server seeds data before registering routes, so a new Drizzle field can make development startup fail immediately when the database has not been updated. The repository also had a global SQL ignore rule that silently omitted a production migration even though it existed and had been applied locally.
 
-**How to apply:** Use the database tooling for the development schema, keep migration numbering unique, verify the new file appears in `git status`/the remote tree, and verify development startup. Production startup should log the migration as applied or already applied before launching the server.
+**How to apply:** Use the database tooling for the development schema, keep migration numbering unique, verify the new file appears in `git status`/the remote tree, and verify development startup. If `drizzle-kit push` stops on a non-TTY named-schema conflict, do not force-approve blindly; use the committed additive SQL migration against the development database instead. Production startup should log the migration as applied or already applied before launching the server.

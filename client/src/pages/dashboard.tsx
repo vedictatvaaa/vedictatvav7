@@ -14,6 +14,7 @@ import {
   Settings as SettingsIcon, Sparkles, ArrowRight, IndianRupee, MapPin, Receipt, Contact,
 } from "lucide-react";
 import NotificationsInbox from "@/components/dashboard/NotificationsInbox";
+import AlertPreferencesPanel from "@/components/dashboard/AlertPreferencesPanel";
 import FamilyProfiles from "@/components/dashboard/FamilyProfiles";
 import MyBookings from "@/pages/my-bookings";
 import Wishlist from "@/pages/wishlist";
@@ -180,7 +181,12 @@ export default function DashboardPage() {
             {tab === "bookings" && <MyBookings />}
             {tab === "wishlist" && <Wishlist />}
             {tab === "family" && <FamilyProfiles />}
-            {tab === "notifications" && <NotificationsInbox />}
+            {tab === "notifications" && (
+              <div className="space-y-6">
+                <AlertPreferencesPanel />
+                <NotificationsInbox />
+              </div>
+            )}
             {tab === "payments" && <PaymentRequestsTab />}
             {tab === "chanting" && (
               <JapCounter
