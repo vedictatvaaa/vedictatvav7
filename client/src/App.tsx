@@ -262,6 +262,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { useShakeToJapa } from "@/hooks/use-shake-to-japa";
 import ThemeApplier from "@/components/ThemeApplier";
 import { useConsentPreferences } from "@/lib/consent";
+import { usePwaManifest } from "@/lib/pwa";
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -669,6 +670,7 @@ function LocaleScope({ children }: { children: ReactNode }) {
 
 function Router() {
   const [routerLocation] = useLocation();
+  usePwaManifest(routerLocation);
   useShakeToJapa();
   // Admin and pandit-portal are full-screen back-office surfaces with their
   // own chrome. Suppress the customer-facing Navbar / Footer / mobile bottom

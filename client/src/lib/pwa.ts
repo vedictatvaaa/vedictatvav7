@@ -7,6 +7,30 @@ type BeforeInstallPromptEvent = Event & {
 
 const DISMISS_KEY = "vt-pwa-install-dismissed-at";
 const DISMISS_DAYS = 14;
+const GENERAL_MANIFEST_URL = "/manifest.webmanifest";
+const PANDIT_MANIFEST_URL = "/pandit-manifest.webmanifest";
+
+export function isPanditPwaPath(pathname: string): boolean {
+  const path = pathname.split(/[?#]/, 1)[0] || "/";
+  return path === "/pandit/login" || path.startsWith("/pandit/portal");
+}
+
+export function syncPwaManifest(pathname?: string): void {
+  if (typeof document === "undefined") return;
+  const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+  if (!manifest) return;
+  const next = isPanditPwaPath(pathname || window.location.pathname)
+    ? PANDIT_MANIFEST_URL
+    : GENERAL_MANIFEST_URL;
+  if (manifest.getAttribute("href") !== next) manifest.setAttribute("href", next);
+  document.documentElement.dataset.pwaApp = next === PANDIT_MANIFEST_URL ? "pandit" : "general";
+}
+
+export function usePwaManifest(pathname: string): void {
+  useEffect(() => {
+    syncPwaManifest(pathname);
+  }, [pathname]);
+}
 
 // Capture beforeinstallprompt at module load so deferred-mounted subscribers don't miss it.
 let cachedPrompt: BeforeInstallPromptEvent | null = null;
@@ -35,7 +59,8 @@ export function registerServiceWorker() {
   });
 }
 
-export function useInstallPrompt() {
+export function useInstallPrompt(options: { dismissKey?: string } = {}) {
+  const dismissKey = options.dismissKey || DISMISS_KEY;
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(cachedPrompt);
   const [installed, setInstalled] = useState<boolean>(() => {
     if (typeof window === "undefined") return cachedInstalled;
@@ -55,7 +80,7 @@ export function useInstallPrompt() {
 
   const recentlyDismissed = (() => {
     try {
-      const ts = Number(localStorage.getItem(DISMISS_KEY) || "0");
+      const ts = Number(localStorage.getItem(dismissKey) || "0");
       if (!ts) return false;
       return Date.now() - ts < DISMISS_DAYS * 24 * 60 * 60 * 1000;
     } catch {
@@ -66,6 +91,11 @@ export function useInstallPrompt() {
   return {
     canInstall: !!deferred && !installed && !recentlyDismissed,
     installed,
+    recentlyDismissed,
+    isIOS: typeof navigator !== "undefined" && (
+      /iPad|iPhone|iPod/.test(navigator.platform) ||
+      (navigator.userAgent.includes("Mac") && "ontouchend" in document)
+    ),
     install: async () => {
       if (!deferred) return false;
       await deferred.prompt();
@@ -75,7 +105,7 @@ export function useInstallPrompt() {
       return choice.outcome === "accepted";
     },
     dismiss: () => {
-      try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}
+      try { localStorage.setItem(dismissKey, String(Date.now())); } catch {}
       cachedPrompt = null;
       setDeferred(null);
     },

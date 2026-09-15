@@ -84,6 +84,14 @@ export async function resolvePublicRouteDecision(
 ): Promise<PublicRouteDecision> {
   const cleanPath = normalisePath(path);
 
+  // These authenticated Pandit workspace routes share the /pandit/:slug
+  // namespace used by public storefronts. Resolve them before the storefront
+  // matcher so a missing/expired session still receives the SPA login shell
+  // with HTTP 200 instead of being classified as a missing public Pandit.
+  if (cleanPath === "/pandit/login" || cleanPath === "/pandit/portal" || cleanPath === "/pandit/reset-password") {
+    return { kind: "registered" };
+  }
+
   if (cleanPath === "/book-pandit-online/all") {
     return { kind: "pandit-network", found: true, indexable: false };
   }

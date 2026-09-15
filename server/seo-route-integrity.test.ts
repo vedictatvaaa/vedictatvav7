@@ -103,6 +103,12 @@ test("Pandit storefronts require the authoritative published resolver", async ()
   assert.deepEqual(incomplete, { kind: "entity", family: "pandit", found: true });
 });
 
+test("authenticated Pandit workspace routes are not mistaken for public storefront slugs", async () => {
+  for (const path of ["/pandit/login", "/pandit/portal", "/pandit/reset-password"]) {
+    assert.deepEqual(await resolvePublicRouteDecision(path, baseDependencies), { kind: "registered" }, path);
+  }
+});
+
 test("blog routes reject drafts and accept published posts", async () => {
   const draft = await resolvePublicRouteDecision("/blog/draft-post", {
     ...baseDependencies,

@@ -14,6 +14,7 @@
 - [Muhurat matching authority](muhurat-matching-authority.md) — dated Pandit matching must validate a published catalogue record; catalogue eligibility never means calendar availability.
 - [Development schema application](dev-schema-application.md) — additive schema changes need explicit development DB application and unique migration numbering before startup.
 - [Public route integrity API isolation](public-route-integrity-api-isolation.md) — public SEO 404 middleware must skip `/api` by path; browser fetch defaults to `Accept: */*`.
+- [Pandit workspace route integrity](pandit-workspace-route-integrity.md) — private `/pandit/login|portal|reset-password` paths must bypass the public `/pandit/:slug` storefront resolver.
 - [GitHub push reconciliation](github-push-reconciliation.md) — reconcile the watched remote before UI Push; connector uploads may hit payload-specific Cloudflare blocks even with healthy OAuth.
 - [Pandit approval registration dependency](pandit-approval-registration-dependency.md) — approval allocates numeric registration IDs via a database sequence; schema repair must restore it before testing approvals.
 - [Pandit city availability authority](pandit-city-availability-authority.md) — active catalogue cities must remain browseable from discovery even when their optional SEO projection is absent.

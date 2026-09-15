@@ -56,8 +56,18 @@
     <link rel="alternate" type="application/atom+xml" title="Vedic Tatva Blog — Atom Feed" href="/blog/feed.atom" />
     <link rel="alternate" type="application/feed+json" title="Vedic Tatva Blog — JSON Feed" href="/blog/feed.json" />
 
-    <!-- PWA: installable app shell -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- PWA: route-specific install identity. React keeps this in sync after
+         client-side navigation; this inline bootstrap covers first load before
+         hydration so browsers evaluate the correct manifest immediately. -->
+    <link id="app-manifest" rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        if (path === "/pandit/login" || path.indexOf("/pandit/portal") === 0) {
+          document.getElementById("app-manifest").setAttribute("href", "/pandit-manifest.webmanifest");
+        }
+      }());
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

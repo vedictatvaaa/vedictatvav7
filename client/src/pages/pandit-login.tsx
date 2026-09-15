@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Lock, Phone, Info, PlayCircle, Copy, Mail } from "lucide-react";
 import { panditApi } from "@/lib/panditAuth";
+import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
 
 export default function PanditLoginPage() {
   const { toast } = useToast();
@@ -69,6 +70,7 @@ export default function PanditLoginPage() {
             <Sparkles className="h-10 w-10 text-[#6D2B35] mx-auto mb-2" />
             <h1 className="text-xl md:text-2xl font-serif font-bold text-[#4a1a22]" data-testid="text-pandit-login-title">Panditji Portal</h1>
             <p className="text-xs text-[#5a4a3a]/70 mt-1">Sign in to manage your bookings, calendar & messages.</p>
+            <div className="mt-4 flex justify-center"><PanditPwaInstallButton /></div>
           </div>
           <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
             <div>

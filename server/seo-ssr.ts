@@ -58,6 +58,7 @@ import { MANTRA_LIBRARY } from "../shared/mantra-library";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
+  "/pandit-manifest.webmanifest",
   "/sw.js", "/service-worker.js", "/__vite", "/@",
   "/admin", "/checkout", "/cart", "/order-confirmation", "/login",
   "/register", "/reset-password", "/my-profile", "/my-bookings",
