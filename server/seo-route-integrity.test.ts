@@ -104,7 +104,7 @@ test("Pandit storefronts require the authoritative published resolver", async ()
 });
 
 test("authenticated Pandit workspace routes are not mistaken for public storefront slugs", async () => {
-  for (const path of ["/pandit/login", "/pandit/portal", "/pandit/reset-password"]) {
+  for (const path of ["/pandit/login", "/pandit/signup", "/pandit/portal", "/pandit/reset-password"]) {
     assert.deepEqual(await resolvePublicRouteDecision(path, baseDependencies), { kind: "registered" }, path);
   }
 });

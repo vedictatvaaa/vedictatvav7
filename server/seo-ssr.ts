@@ -62,7 +62,7 @@ const SKIP_PREFIXES = [
   "/sw.js", "/service-worker.js", "/__vite", "/@",
   "/admin", "/checkout", "/cart", "/order-confirmation", "/login",
   "/register", "/reset-password", "/my-profile", "/my-bookings",
-  "/pandit/login", "/pandit/portal",
+  "/pandit/login", "/pandit/signup", "/pandit/portal",
 ];
 
 const SITE_NAME = "Vedic Tatva";

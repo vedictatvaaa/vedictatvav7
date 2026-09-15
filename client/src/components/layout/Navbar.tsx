@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogIn, UserPlus, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
+import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
@@ -185,7 +185,7 @@ function getResultImage(result: SearchResult): string | null {
 export default function Navbar() {
   const [location, setLocation] = useLocation();
   const { totalItems } = useCart();
-  const { user, logout, openAuth } = useAuth();
+  const { user, logout } = useAuth();
   const { t, language, setLanguage } = useI18n();
   const { currency, setCurrency } = useCurrency();
   // Switch the i18n locale AND navigate between EN <-> /hi twin URLs so the
@@ -1194,22 +1194,24 @@ export default function Navbar() {
               >
                 {!user ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => { setMobileOpen(false); openAuth("login"); }}
-                      className="inline-flex items-center justify-center gap-1.5 h-9 rounded-md text-[12px] font-semibold bg-[#6D2B35] text-[#D4AF37] hover:bg-[#5a1f29] transition-colors shadow-sm"
-                      data-testid="mobile-btn-login"
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="inline-flex h-16 flex-col items-center justify-center gap-1 rounded-lg border border-[#6D2B35]/15 bg-white/80 text-[12px] font-extrabold text-[#6D2B35] transition-colors hover:border-[#D4AF37]/60 hover:bg-[#FFFAF1]"
+                      data-testid="mobile-audience-devotee"
                     >
-                      <LogIn className="h-3.5 w-3.5" strokeWidth={1.8} /> {t.nav.login}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setMobileOpen(false); openAuth("signup"); }}
-                      className="inline-flex items-center justify-center gap-1.5 h-9 rounded-md text-[12px] font-semibold bg-white text-[#6D2B35] border border-[#D4AF37]/40 hover:bg-[#FBF7EE] transition-colors"
-                      data-testid="mobile-btn-register"
+                      <Users className="h-4 w-4 text-[#B98117]" strokeWidth={1.8} />
+                      <span>Devotee</span>
+                    </Link>
+                    <Link
+                      href="/pandit/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="inline-flex h-16 flex-col items-center justify-center gap-1 rounded-lg border border-[#D4AF37]/35 bg-[#FFF8E7] text-[12px] font-extrabold text-[#6D2B35] transition-colors hover:border-[#D4AF37] hover:bg-[#FFF3D2]"
+                      data-testid="mobile-audience-pandit"
                     >
-                      <UserPlus className="h-3.5 w-3.5" strokeWidth={1.8} /> {t.nav.register}
-                    </button>
+                      <UserCircle className="h-4 w-4 text-[#B98117]" strokeWidth={1.8} />
+                      <span>Pandit</span>
+                    </Link>
                   </div>
                 ) : (
                   <button

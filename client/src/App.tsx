@@ -811,7 +811,8 @@ function Router() {
           <Route path="/tirth-yatra" component={TirthYatra} />
           <Route path="/lucky-draw" component={LuckyDraw} />
           <Route path="/pilgrimage-card" component={PilgrimageCard} />
-          <Route path="/pandit/login" component={PanditLogin} />
+          <Route path="/pandit/login">{() => <PanditLogin />}</Route>
+          <Route path="/pandit/signup">{() => <PanditLogin initialMode="signup" />}</Route>
           <Route path="/pandit/reset-password" component={PanditResetPassword} />
           <Route path="/pandit/portal" component={PanditPortal} />
           <Route path="/verify-pandit/:registrationNo" component={VerifyPandit} />
@@ -869,7 +870,7 @@ function Router() {
           <Route path="/pandit/:slug" component={PanditStorefront} />
           <Route path="/astrologer/:id" component={AstrologerProfile} />
           <Route path="/register" component={Register} />
-          <Route path="/login" component={Login} />
+          <Route path="/login">{() => <Login />}</Route>
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/my-profile" component={MyProfile} />
           <Route path="/vastu-compass" component={VastuCompass} />

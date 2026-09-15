@@ -23,3 +23,4 @@
 - [Pandit onboarding contracts](pandit-onboarding-contracts.md) — exactly five unique specialist Pujas come from the active Puja-type allowlist, not arbitrary active services.
 - [Pandit onboarding accessibility](pandit-onboarding-accessibility.md) — focus the first relevant target and announce one consolidated signup error instead of competing alerts.
 - [Pandit city SEO counts](pandit-city-seo-counts.md) — page descriptions should use live directory totals, separate from the smaller indexed-provider projection.
+- [Mockup preview access](mockup-preview-access.md) — localhost visual companion URLs are container-only; use the canvas with a registered or reserved-port mockup service.

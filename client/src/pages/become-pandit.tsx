@@ -1475,36 +1475,65 @@ function RegistrationSection({
   return (
     <section
       id="apply"
-      className="py-16 md:py-24 scroll-mt-20"
-      style={{ background: `linear-gradient(180deg, ${C.warmWhite} 0%, ${C.cream} 100%)` }}
+      className="scroll-mt-20 border-t border-[#6D2B35]/10 py-12 sm:py-16 md:py-24"
+      style={{
+        backgroundImage: "radial-gradient(circle at 8% 4%, rgba(215,167,55,.16), transparent 25%), linear-gradient(180deg, #FFFCF5 0%, #FBF7EE 100%)",
+      }}
     >
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <SectionEyebrow>The Application</SectionEyebrow>
-          <SectionTitle>Take three minutes. Begin a movement.</SectionTitle>
-          <p className="text-sm md:text-base mt-3 max-w-xl mx-auto" style={{ color: C.brownSoft }}>
-            Fill in your details and watch your Pandit ID card come alive in real-time.
+        <div className="mx-auto mb-10 max-w-3xl text-center md:mb-12">
+          <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-extrabold uppercase tracking-[.2em]" style={{ color: C.goldDeep }}>
+            <span className="h-px w-8" style={{ background: C.gold }} />
+            Panditji workspace
+            <span className="h-px w-8" style={{ background: C.gold }} />
+          </div>
+          <SectionTitle>Begin your practice, beautifully.</SectionTitle>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 md:text-base" style={{ color: C.brownSoft }}>
+            Share the details devotees need to find you. Your profile preview updates as you build it, and our team will guide you through verification.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-bold text-[#806F5E]">
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#6D2B35] text-[10px] text-[#F1D68E]">1</span> Your details</span>
+            <span className="hidden h-px w-8 bg-[#D4AF37]/50 sm:block" />
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">2</span> Your practice</span>
+            <span className="hidden h-px w-8 bg-[#D4AF37]/50 sm:block" />
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">3</span> Verification</span>
+          </div>
+          <p className="mt-4 text-[11px] text-[#806F5E]">
+            Already approved?{" "}
+            <Link href="/pandit/login" className="font-extrabold text-[#6D2B35] hover:underline">Sign in to your practice</Link>
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-8 lg:gap-12 max-w-6xl mx-auto items-start">
+        <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-5 lg:gap-12">
           {/* Live Pandit ID Card preview — appears FIRST on mobile so devotees see the live preview while typing; sticky on desktop in 2nd column */}
           <div className="lg:col-span-2 lg:order-2 lg:sticky lg:top-24 order-1" data-testid="live-pandit-card-wrap">
-            <div className="text-xs uppercase tracking-wider mb-3 text-center" style={{ color: C.brownSoft }}>
+            <div className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-[.16em]" style={{ color: C.brownSoft }}>
               <Sparkles className="inline w-3.5 h-3.5 mr-1" style={{ color: C.gold }} />
               Your Pandit ID — Live Preview
             </div>
             <LivePanditCard form={form} photoPreview={photoPreview} />
-            <p className="text-center text-xs mt-4" style={{ color: C.brownSoft }}>
+            <div className="mx-auto mt-4 max-w-[22rem] rounded-xl border border-[#D4AF37]/25 bg-white/65 px-3.5 py-3 text-center text-[11px] leading-5" style={{ color: C.brownSoft }}>
+              <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" style={{ color: C.goldDeep }} />
+              <span className="font-semibold text-[#4A1A22]">A preview, not a promise.</span>{" "}
               This is a preview of your verified card. The actual card is issued after onboarding.
-            </p>
+            </div>
           </div>
 
           {/* Form — 3 cols */}
-          <Card className="lg:col-span-3 lg:order-1 order-2 shadow-xl" style={{ background: "white", border: `1px solid ${C.gold}30` }}>
-            <CardContent className="p-6 md:p-8">
+          <Card className="order-2 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/85 shadow-[0_22px_65px_rgba(77,40,36,.11)] lg:order-1 lg:col-span-3" style={{ backdropFilter: "blur(10px)" }}>
+            <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
+            <CardContent className="p-5 sm:p-7 md:p-8">
+              <div className="mb-6 flex items-center justify-between gap-3 border-b border-[#6D2B35]/10 pb-5">
+                <div>
+                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Your application</p>
+                  <h3 className="font-serif text-xl font-semibold tracking-[-.03em] text-[#4A1A22]">Tell us about your practice</h3>
+                </div>
+                <div className="hidden shrink-0 rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] px-3 py-1.5 text-[10px] font-bold text-[#7F5A15] sm:block">
+                  3 min to begin
+                </div>
+              </div>
               <form onSubmit={onSubmit} className="space-y-7">
-                {applicationError && <div id="signup-application-error" role="alert" aria-live="assertive" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{applicationError}</div>}
+                {applicationError && <div id="signup-application-error" role="alert" aria-live="assertive" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3.5 text-sm leading-5 text-destructive">{applicationError}</div>}
                 <FieldGroup index={1} title="Personal Details">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Full Name *" id="fullName">
@@ -1717,8 +1746,8 @@ function RegistrationSection({
 
 function Field({ label, id, children }: { label: string; id: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>{label}</Label>
+    <div className="space-y-2">
+      <Label htmlFor={id} className="text-[11px] font-bold tracking-wide" style={{ color: C.brownSoft }}>{label}</Label>
       {children}
     </div>
   );
@@ -1726,16 +1755,19 @@ function Field({ label, id, children }: { label: string; id: string; children: R
 
 function FieldGroup({ index, title, children }: { index: number; title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-4">
+    <div className="rounded-2xl border border-[#6D2B35]/10 bg-[#FFFCF6]/65 p-4 sm:p-5">
+      <div className="mb-5 flex items-center gap-3">
         <div
-          className="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0"
-          style={{ background: C.maroon, color: C.gold }}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold shadow-sm"
+          style={{ background: C.maroon, color: C.goldLight }}
         >
           {index}
         </div>
-        <h3 className="text-base font-serif" style={{ color: C.maroon }}>{title}</h3>
-        <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${C.gold}40, transparent)` }} />
+        <div>
+          <p className="text-[9px] font-extrabold uppercase tracking-[.17em]" style={{ color: C.goldDeep }}>Step {index}</p>
+          <h3 className="font-serif text-base font-semibold tracking-[-.02em]" style={{ color: C.maroon }}>{title}</h3>
+        </div>
+        <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${C.gold}45, transparent)` }} />
       </div>
       {children}
     </div>

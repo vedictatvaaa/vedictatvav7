@@ -88,7 +88,7 @@ export async function resolvePublicRouteDecision(
   // namespace used by public storefronts. Resolve them before the storefront
   // matcher so a missing/expired session still receives the SPA login shell
   // with HTTP 200 instead of being classified as a missing public Pandit.
-  if (cleanPath === "/pandit/login" || cleanPath === "/pandit/portal" || cleanPath === "/pandit/reset-password") {
+  if (cleanPath === "/pandit/login" || cleanPath === "/pandit/signup" || cleanPath === "/pandit/portal" || cleanPath === "/pandit/reset-password") {
     return { kind: "registered" };
   }
 

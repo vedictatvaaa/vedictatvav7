@@ -91,6 +91,7 @@ export const REGISTERED_SPA_ROUTE_PATTERNS = [
   "/lucky-draw",
   "/pilgrimage-card",
   "/pandit/login",
+  "/pandit/signup",
   "/pandit/portal",
   "/pandit/reset-password",
   "/store/:slug",
