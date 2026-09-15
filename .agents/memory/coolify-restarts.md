@@ -8,3 +8,11 @@ Keep dependency installation before source copies so Docker can reuse the depend
 **Why:** A broad, unrelated lockfile refresh changed hundreds of package versions and made npm 10.9.4 terminate with “Exit handler never called” only on the Coolify builder, even with lifecycle scripts disabled and a clean cache. Restoring the last successful dependency graph while removing only the retired provider fixed deployment. A clean Node 20 Alpine install also compiles native modules for several minutes, and an automatic schema push can delay startup beyond health-check windows.
 
 **How to apply:** Source-only changes should reuse the Docker dependency layer. Do not run broad package updates as a side effect of removing or adding one dependency; make the smallest manifest/lockfile change and validate a completely clean Docker builder before publishing. On startup, wait explicitly for PostgreSQL, apply each committed migration once, then start the server; only enable schema push for an intentional maintenance deployment.
+
+## Deployment queue recovery
+
+Coolify can leave a deployment permanently `in_progress` at the repository clone step while the existing application remains healthy. A later deployment then stays queued behind it; cancel the stale deployment and its queued child before retrying.
+
+**Why:** A verified Panditji PWA commit was present on the tracked branch, but repeated Coolify jobs stopped after `Cloning into ...` with no log or timestamp progress. The production container stayed on the previous build until the jobs were cancelled.
+
+**How to apply:** Treat an unchanged deployment timestamp and unchanged clone log as a stale queue signal. Cancel only the stale deployment records for that application, confirm the current branch commit, then run one fresh deployment and verify the live routes—not merely the application health status.
