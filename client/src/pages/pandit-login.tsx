@@ -575,7 +575,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             <div className="min-w-0">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[#D4AF37]/35 bg-[#FFFAF1] px-4 py-3">
                 <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Panditji workspace</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Panditji registration</p>
                   <p className="mt-1 text-xs text-[#806F5E]">Complete your Panditji profile and application here.</p>
                 </div>
                 <button type="button" onClick={() => setMode("login")} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#6F2B38] hover:underline">

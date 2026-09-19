@@ -1554,7 +1554,7 @@ export function RegistrationSection({
         <div className="mx-auto mb-10 max-w-3xl text-center md:mb-12">
           <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-extrabold uppercase tracking-[.2em]" style={{ color: C.goldDeep }}>
             <span className="h-px w-8" style={{ background: C.gold }} />
-            Panditji workspace
+             Panditji registration
             <span className="h-px w-8" style={{ background: C.gold }} />
           </div>
           <SectionTitle>Begin your practice, beautifully.</SectionTitle>

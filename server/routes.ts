@@ -10129,7 +10129,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         proposedCityName: z.string().trim().min(1).max(120).optional(),
         experience: z.string().min(1),
         specializations: z.string().trim().min(1, "Tell us which services you perform"),
-        masterServiceIds: z.array(z.number().int().positive()).length(5, "Select exactly five specialist Pujas"),
+        masterServiceIds: z.array(z.number().int().positive()).min(5, "Select at least five specialist Pujas").max(10, "Select no more than ten specialist Pujas"),
         education: z.string().trim().min(1, "Vedic education or training is required"),
         languages: z.string().trim().min(1, "At least one language is required"),
         bio: z.string().trim().min(20, "Add a short profile biography"),
@@ -10159,7 +10159,9 @@ Return JSON: {"description": "your optimized HTML description here"}` }
           const field = String(issue.path[0] || "");
           if (field === "masterServiceIds") {
             const count = Array.isArray(body.masterServiceIds) ? body.masterServiceIds.length : 0;
-            return `Select exactly five specialist Pujas (you selected ${count}).`;
+            return count > 10
+              ? `Select no more than ten specialist Pujas (you selected ${count}).`
+              : `Select at least five specialist Pujas (you selected ${count}).`;
           }
           if (field === "registeredAddress") return "Enter your registered address.";
           if (field === "latitude" || field === "longitude" || field === "locationPermissionGranted") return "Share your exact location before submitting.";
@@ -10201,7 +10203,13 @@ Return JSON: {"description": "your optimized HTML description here"}` }
       if (requestedMasterIds.some(id => !activePujaIds.has(id))) {
         return res.status(400).json({ message: "One or more selected Puja services are invalid or inactive" });
       }
-       if (requestedMasterIds.length !== 5) return res.status(400).json({ message: "Select exactly five specialist Pujas you are fully expert in" });
+        if (requestedMasterIds.length < 5 || requestedMasterIds.length > 10) {
+          return res.status(400).json({
+            message: requestedMasterIds.length > 10
+              ? "Select no more than ten specialist Pujas you are fully expert in"
+              : "Select at least five specialist Pujas you are fully expert in",
+          });
+        }
        const selectedMasterIds = requestedMasterIds;
       let feeMin = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMin ?? "")) || 1100));
       let feeMax = Math.max(0, Math.min(1_000_000, parseInt(String(d.feeRangeMax ?? "")) || 11000));
