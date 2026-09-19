@@ -82,10 +82,10 @@ export function BrandMark({ settings, placement = "desktop", className = "", tes
     }
     return (
       <span
-        className={`flex w-full min-w-0 items-center gap-2 ${placement === "mobile" ? "justify-center" : "justify-start"} ${className}`}
+        className={`flex h-full w-full min-w-0 items-center gap-2 ${placement === "mobile" ? "justify-center" : "justify-start"} ${className}`}
         data-testid={testId}
       >
-        {logoUrl ? <img src={logoUrl} alt={`${siteName} logo`} className={placement === "mobile" ? "h-8 w-auto shrink-0 object-contain" : "h-9 w-auto shrink-0 object-contain lg:h-10"} /> : null}
+        {logoUrl ? <img src={logoUrl} alt={`${siteName} logo`} className="h-[75%] max-h-[75%] w-auto shrink-0 object-contain" /> : null}
         <span className={`font-vedic min-w-0 truncate font-normal leading-none tracking-[0.015em] text-[#6D2B35] ${placement === "mobile" ? "text-[22px]" : "text-[24px] lg:text-[27px]"}`}>
           {siteName}
         </span>
@@ -106,12 +106,12 @@ export function BrandMark({ settings, placement = "desktop", className = "", tes
 
   return (
     <span
-      className={`flex w-full min-w-0 max-w-full flex-col ${className}`}
+      className={`flex h-full w-full min-w-0 max-w-full flex-col ${className}`}
       style={{ alignItems: align, maxWidth }}
       data-testid={testId}
     >
-      <span className="flex min-w-0 max-w-full items-center gap-2" style={{ justifyContent: align }}>
-        {showImage && <img src={s.logoUrl || ""} alt={`${s.siteName || defaults.siteName} logo`} onError={() => setImageFailed(true)} style={{ height: renderedSize, maxWidth: maxWidth * 0.48 }} className="w-auto shrink-0 object-contain" />}
+      <span className="flex h-full min-w-0 max-w-full items-center gap-2" style={{ justifyContent: align }}>
+        {showImage && <img src={s.logoUrl || ""} alt={`${s.siteName || defaults.siteName} logo`} onError={() => setImageFailed(true)} style={{ height: placement === "desktop" || placement === "mobile" ? "75%" : renderedSize, maxHeight: placement === "desktop" || placement === "mobile" ? "75%" : undefined, maxWidth: maxWidth * 0.48 }} className="w-auto shrink-0 object-contain" />}
         {showText && <span className="min-w-0 truncate leading-none" style={{ color: textColor, fontFamily: s.logoFontSource === "custom" && fontUrl ? `"${customFontFamily}"` : `"${s.logoFontFamily}", "Fraunces", Georgia, serif`, fontSize: renderedSize, fontWeight: s.logoFontWeight, letterSpacing: `${s.logoLetterSpacing}px` }}>{s.siteName || defaults.siteName}</span>}
       </span>
       {s.taglineVisible && s.tagline && <span className="mt-1 max-w-full truncate leading-tight" style={{ color: s.taglineColor, fontSize: Math.min(Number(s.taglineSizePx) || 14, placement === "mobile" ? 11 : 18), letterSpacing: ".04em" }}>{s.tagline}</span>}

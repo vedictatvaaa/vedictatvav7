@@ -522,8 +522,8 @@ export default function Navbar({ hidePromo = false }: NavbarProps) {
             className="absolute left-1/2 z-10 flex min-w-0 -translate-x-1/2 items-center gap-2 whitespace-nowrap lg:static lg:z-auto lg:translate-x-0"
             data-testid="link-home"
           >
-             <span className="hidden w-[210px] md:inline-flex"><BrandMark settings={settings} placement="desktop" testId="navbar-brand-mark" /></span>
-             <span className="inline-flex w-[170px] md:hidden"><BrandMark settings={settings} placement="mobile" testId="navbar-brand-mark-mobile" /></span>
+             <span className="hidden h-full w-[210px] items-center md:inline-flex"><BrandMark settings={settings} placement="desktop" testId="navbar-brand-mark" /></span>
+             <span className="inline-flex h-full w-[170px] items-center md:hidden"><BrandMark settings={settings} placement="mobile" testId="navbar-brand-mark-mobile" /></span>
             {festival && (
               <span
                 className="absolute left-full ml-2.5 hidden items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide whitespace-nowrap lg:static lg:inline-flex"
