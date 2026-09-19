@@ -27,10 +27,14 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --foreground-scripts --jobs=1 --maxsockets=1 --no-audit --no-fund && \
+        npm ci --include=dev --ignore-scripts --maxsockets=1 --no-audit --no-fund && \
+    npm rebuild @google/genai bufferutil core-js esbuild protobufjs puppeteer sharp swisseph-v2 \
+        --foreground-scripts --no-audit --no-fund && \
+    npm ls --depth=0 --include=dev >/dev/null && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
-    test -x node_modules/.bin/esbuild
+    test -x node_modules/.bin/esbuild && \
+    node -e "require('sharp'); require('swisseph-v2'); require.resolve('drizzle-orm'); require.resolve('express')"
 
 # Copy source files explicitly (avoids COPY . . picking up unexpected fs artifacts)
 COPY client ./client
