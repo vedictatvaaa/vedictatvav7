@@ -52,6 +52,10 @@ function normalisePath(path: string): string {
   return `/${path.replace(/^\/+|\/+$/g, "")}`;
 }
 
+function normalisePublicSpaPath(path: string): string {
+  return normalisePath(path).replace(/^\/hi(?=\/|$)/, "") || "/";
+}
+
 function compileRoutePattern(pattern: string): RegExp {
   if (pattern === "/") return /^\/$/;
   const source = pattern
@@ -65,7 +69,7 @@ function compileRoutePattern(pattern: string): RegExp {
 const registeredMatchers = REGISTERED_SPA_ROUTE_PATTERNS.map(compileRoutePattern);
 
 export function isRegisteredSpaPath(path: string): boolean {
-  const cleanPath = normalisePath(path);
+  const cleanPath = normalisePublicSpaPath(path);
   return registeredMatchers.some((matcher) => matcher.test(cleanPath));
 }
 
@@ -82,7 +86,7 @@ export async function resolvePublicRouteDecision(
   path: string,
   dependencies: PublicEntityDependencies = defaultDependencies,
 ): Promise<PublicRouteDecision> {
-  const cleanPath = normalisePath(path);
+  const cleanPath = normalisePublicSpaPath(path);
 
   // These authenticated Pandit workspace routes share the /pandit/:slug
   // namespace used by public storefronts. Resolve them before the storefront

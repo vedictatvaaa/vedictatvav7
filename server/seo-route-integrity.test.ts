@@ -66,8 +66,20 @@ test("registered static and dynamic SPA routes are recognized", () => {
   assert.equal(isRegisteredSpaPath("/about"), true);
   assert.equal(isRegisteredSpaPath("/tools/tithi-calculator"), true);
   assert.equal(isRegisteredSpaPath("/track-order/VT-123"), true);
+  assert.equal(isRegisteredSpaPath("/hi/partner"), true);
   assert.equal(isRegisteredSpaPath("/definitely-not-a-route"), false);
   assert.equal(isRegisteredSpaPath("/about/unregistered-child"), false);
+});
+
+test("Hindi route twins resolve through the same public route integrity contract", async () => {
+  assert.deepEqual(
+    await resolvePublicRouteDecision("/hi/partner", baseDependencies),
+    { kind: "registered" },
+  );
+  assert.deepEqual(
+    await resolvePublicRouteDecision("/hi/pandit/login", baseDependencies),
+    { kind: "registered" },
+  );
 });
 
 test("product routes resolve by slug and numeric id", async () => {
