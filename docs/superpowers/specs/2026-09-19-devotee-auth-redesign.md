@@ -45,6 +45,14 @@ Signup, password recovery, and reset confirmation use the same visual shell. The
 
 Devotee password signup requires a full name, an exact 10-digit mobile number, an email address, a password, and matching password confirmation. Before registration, the user must verify the email with a single-use six-digit code that expires after 10 minutes. Registration tokens are consumed atomically and cannot be replayed. First-time Google users must complete this required signup flow before Google can be linked to the verified account.
 
+## Editorial Heritage Refinement
+
+The authentication surface uses an editorial heritage direction with a premium, contemporary finish. On larger screens, the page becomes an asymmetric two-part composition: a branded storytelling area and a focused authentication area. The storytelling area uses abstract architectural and Vedic geometric references rather than deity photography. Warm ivory, deep maroon, and restrained antique-gold details remain the core palette.
+
+On mobile, the storytelling content condenses into a compact masthead so the form remains immediately accessible. Typography, spacing, field grouping, verification feedback, password guidance, and transitions should feel deliberate and polished without adding friction.
+
+The guest action is labeled **“Continue as guest”**. Login, signup, email verification, referrals, redirects, password recovery, Google sign-in, validation, keyboard operation, reduced-motion behavior, and screen-reader semantics remain functionally unchanged.
+
 ## Responsive Behavior
 
 Design mobile-first. Keep the form centered and comfortably touch-sized. On tablet and desktop, constrain the content width instead of stretching it. Maintain generous surrounding whitespace without adding a split-screen promotional panel.
