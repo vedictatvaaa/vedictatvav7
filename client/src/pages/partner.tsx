@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, BookOpenCheck, Flower2, Gem, LockKeyhole, Orbit, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, Gem, LockKeyhole, Orbit, type LucideIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import PageSeo from "@/components/PageSeo";
 import { partnerProviders } from "@/lib/partner-providers";
@@ -12,10 +12,16 @@ const roleIcons: Record<string, LucideIcon> = {
 
 function DevotionalMark() {
   return (
-    <div className="relative grid h-14 w-14 place-items-center rounded-full border border-[#D4AF37]/35 bg-[#F1DFB5]/70 text-[#7F5A15] shadow-[0_10px_22px_rgba(127,90,21,.10)]">
-      <span className="absolute inset-1.5 rounded-full border border-[#D4AF37]/45" />
-      <Flower2 className="h-6 w-6" strokeWidth={1.25} aria-hidden="true" />
-      <span className="absolute bottom-1 text-[7px] font-semibold tracking-[0.22em]" aria-hidden="true">ॐ</span>
+    <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-[#D4AF37]/35 bg-[#F1DFB5]/70 text-[#7F5A15] shadow-[0_10px_22px_rgba(127,90,21,.10)]">
+      <img
+        src="/attached_assets/generated_images/partner-portal-namaste.png"
+        alt=""
+        aria-hidden="true"
+        loading="eager"
+        decoding="async"
+        className="h-full w-full object-cover"
+      />
+      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border border-[#FFFDF8]/80 bg-[#FFFDF8]/80 px-1.5 text-[8px] font-semibold leading-4 tracking-[0.12em] shadow-sm" aria-hidden="true">ॐ</span>
     </div>
   );
 }
@@ -32,8 +38,8 @@ export default function PartnerPage() {
         eyebrow: "पार्टनर पोर्टल",
         title: "अपने डैशबोर्ड में साइन इन करें",
         intro: "अपनी भूमिका चुनें और अपने Vedic Tatva कार्यक्षेत्र में आगे बढ़ें।",
-        back: "वापस",
-        backAria: "पिछले पृष्ठ पर जाएं",
+        back: "होम",
+        backAria: "होम पेज पर जाएं",
         panditTitle: "पंडितजी पोर्टल",
         panditDescription: "बुकिंग, कैलेंडर, कमाई और अपनी सेवाओं को संभालें।",
         panditAction: "साइन इन या आवेदन करें",
@@ -52,8 +58,8 @@ export default function PartnerPage() {
         eyebrow: "PARTNER PORTAL",
         title: "Sign in to your dashboard",
         intro: "Choose your role to continue to your Vedic Tatva workspace.",
-        back: "Back",
-        backAria: "Go back",
+        back: "Home",
+        backAria: "Go to home",
         panditTitle: "Panditji portal",
         panditDescription: "Manage bookings, calendar, earnings and your services.",
         panditAction: "Sign in or apply",
@@ -83,10 +89,6 @@ export default function PartnerPage() {
   };
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
     setLocation("/");
   };
 
@@ -148,12 +150,12 @@ export default function PartnerPage() {
                     {provider.id === "pandit" ? (
                       <>
                         <img
-                          src="/attached_assets/generated_images/sage-partner-card.png"
+                          src="/attached_assets/generated_images/sage-face-partner-card.png"
                           alt=""
                           aria-hidden="true"
                           loading="eager"
                           decoding="async"
-                          className="absolute inset-0 h-full w-full scale-[2.4] object-cover object-[46%_28%]"
+                          className="absolute inset-0 h-full w-full object-cover"
                         />
                         <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full border border-[#FFFDF8] bg-[#F1DFB5] text-[#7F5A15] shadow-sm">
                           <ProviderIcon className="h-3 w-3" strokeWidth={1.8} aria-hidden="true" />
