@@ -201,12 +201,53 @@ export default function BecomePandit() {
   const [applicationError, setApplicationError] = useState("");
   const [errorTargetId, setErrorTargetId] = useState<string | null>(null);
   const [errorFocusRequest, setErrorFocusRequest] = useState(0);
+  const [registrationStep, setRegistrationStep] = useState(1);
+  const [draftToken, setDraftToken] = useState("");
+  const [draftSaving, setDraftSaving] = useState(false);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [draftExpiresAt, setDraftExpiresAt] = useState("");
 
   const showApplicationError = (message: string) => {
     setApplicationError(message);
     setErrorTargetId(signupErrorTarget(message));
     setErrorFocusRequest((request) => request + 1);
   };
+
+  useEffect(() => {
+    const token = window.sessionStorage.getItem("pandit_registration_draft_token") || "";
+    if (!token) return;
+    let cancelled = false;
+    fetch(`/api/pandit-application-drafts/${encodeURIComponent(token)}`)
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.message || "This registration draft could not be resumed.");
+        return body;
+      })
+      .then((body) => {
+        if (cancelled) return;
+        setForm((current) => ({
+          ...current,
+          ...body.form,
+          latitude: null,
+          longitude: null,
+          locationPermissionGranted: false,
+          agreeTerms: false,
+        }));
+        setPhotoFile(null);
+        setPhotoPreview(null);
+        setMissingCityMode(Boolean(body.form?.proposedCityName && !body.form?.cityId));
+        setRegistrationStep(1);
+        setDraftToken(token);
+        setDraftExpiresAt(String(body.expiresAt || ""));
+        setDraftMessage("Draft resumed. For your security, choose your photo and share your exact location again before submitting.");
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setDraftMessage(error.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!errorTargetId) return;
@@ -330,28 +371,81 @@ export default function BecomePandit() {
     reader.readAsDataURL(file);
   };
 
+  const saveDraft = async (step: number) => {
+    if (draftSaving) return;
+    setDraftSaving(true);
+    setDraftMessage("");
+    try {
+      const {
+        latitude: _latitude,
+        longitude: _longitude,
+        locationPermissionGranted: _locationPermissionGranted,
+        agreeTerms: _agreeTerms,
+        ...draftForm
+      } = form;
+      const response = await fetch(
+        draftToken ? `/api/pandit-application-drafts/${encodeURIComponent(draftToken)}` : "/api/pandit-application-drafts",
+        {
+          method: draftToken ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form: draftForm, step }),
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.token) throw new Error(body.message || "Draft could not be saved.");
+      setDraftToken(body.token);
+      window.sessionStorage.setItem("pandit_registration_draft_token", body.token);
+      setDraftExpiresAt(body.expiresAt || "");
+      setDraftMessage("Draft saved on the server. Keep this private resume link to continue later.");
+    } catch (error) {
+      setDraftMessage(error instanceof Error ? error.message : "Draft could not be saved.");
+    } finally {
+      setDraftSaving(false);
+    }
+  };
+
+  const copyDraftLink = async () => {
+    if (!draftToken) return;
+    await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?draft=${encodeURIComponent(draftToken)}`);
+    setDraftMessage("Private resume link copied.");
+  };
+
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!photoFile) throw new Error("A profile photo is required.");
-      const uploadData = new FormData();
-      uploadData.append("photo", photoFile);
-      const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
-      const uploadBody = await upload.json().catch(() => ({}));
-      if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
-      const { city: _city, stateId, cityId, proposedCityName, ...rest } = form;
-      const res = await fetch("/api/pandit-applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...rest,
-          termsAccepted: form.agreeTerms,
-          stateId: Number(stateId),
-          ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
-          photo: uploadBody.url,
-        }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Failed to submit application");
-      return res.json();
+      let uploadedPhotoUrl = "";
+      try {
+        const uploadData = new FormData();
+        uploadData.append("photo", photoFile);
+        const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
+        const uploadBody = await upload.json().catch(() => ({}));
+        if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
+        uploadedPhotoUrl = uploadBody.url;
+        const { city: _city, stateId, cityId, proposedCityName, ...rest } = form;
+        const res = await fetch("/api/pandit-applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...rest,
+            termsAccepted: form.agreeTerms,
+            stateId: Number(stateId),
+            ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
+            photo: uploadedPhotoUrl,
+            ...(draftToken ? { draftToken } : {}),
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Failed to submit application");
+        return res.json();
+      } catch (error) {
+        if (uploadedPhotoUrl) {
+          await fetch("/api/pandit-applications/upload-photo", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: uploadedPhotoUrl }),
+          }).catch(() => undefined);
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -367,6 +461,12 @@ export default function BecomePandit() {
       setApplicationError("");
       setErrorTargetId(null);
       setMissingCityMode(false);
+      setRegistrationStep(1);
+      setDraftToken("");
+      window.sessionStorage.removeItem("pandit_registration_draft_token");
+      setDraftMessage("");
+      setDraftExpiresAt("");
+      window.history.replaceState({}, "", "/become-pandit");
     },
     onError: (error: Error) => {
       showApplicationError(error.message);
@@ -508,6 +608,14 @@ export default function BecomePandit() {
         onSubmit={handleSubmit}
         setForm={setForm}
         isPending={submitMutation.isPending}
+        currentStep={registrationStep}
+        setCurrentStep={setRegistrationStep}
+        onSaveDraft={saveDraft}
+        draftSaving={draftSaving}
+        draftMessage={draftMessage}
+        draftExpiresAt={draftExpiresAt}
+        hasDraft={Boolean(draftToken)}
+        onCopyDraftLink={copyDraftLink}
       />
       <HashtagShareSection />
       <FinalCTA onApply={scrollToId("apply")} />
@@ -1508,6 +1616,7 @@ const PANDIT_LANGUAGE_OPTIONS = [
 
 export function RegistrationSection({
   form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, servicesError, applicationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
+  currentStep, setCurrentStep, onSaveDraft, draftSaving, draftMessage, draftExpiresAt, hasDraft, onCopyDraftLink,
 }: {
   form: FormState;
   photoPreview: string | null;
@@ -1524,6 +1633,14 @@ export function RegistrationSection({
   onSubmit: (e: React.FormEvent) => void;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   isPending: boolean;
+  currentStep: number;
+  setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  onSaveDraft: (step: number) => Promise<void>;
+  draftSaving: boolean;
+  draftMessage: string;
+  draftExpiresAt: string;
+  hasDraft: boolean;
+  onCopyDraftLink: () => Promise<void>;
 }) {
   const { data: locations = [], isLoading: locationsLoading, isError: locationsError } = useQuery<Array<{ id: number; name: string; isActive: boolean; cities: Array<{ id: number; name: string; isActive: boolean }> }>>({
     queryKey: ["/api/locations"],
@@ -1545,10 +1662,46 @@ export function RegistrationSection({
   const [bioAiUses, setBioAiUses] = useState(0);
   const [bioAiLoading, setBioAiLoading] = useState(false);
   const [bioAiError, setBioAiError] = useState("");
+  const [stepError, setStepError] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ id: string; label: string }>>([]);
+  const [addressSuggestionsLoading, setAddressSuggestionsLoading] = useState(false);
+  const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
+  const [addressSuggestionsEnabled, setAddressSuggestionsEnabled] = useState(false);
 
   useEffect(() => {
     if (!form.fullName && !form.phone && !form.email && !form.bio) setBioAiUses(0);
   }, [form.fullName, form.phone, form.email, form.bio]);
+
+  useEffect(() => {
+    const query = form.registeredAddress.trim();
+    if (!addressSuggestionsEnabled || !addressSuggestionsOpen || query.length < 4) {
+      setAddressSuggestions([]);
+      setAddressSuggestionsLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setAddressSuggestionsLoading(true);
+      try {
+        const stateName = activeStates.find((state) => String(state.id) === form.stateId)?.name || "";
+        const params = new URLSearchParams({ q: query });
+        if (form.city) params.set("city", form.city);
+        if (stateName) params.set("state", stateName);
+        const response = await fetch(`/api/pandit-applications/address-suggestions?${params}`, { signal: controller.signal });
+        const body = await response.json().catch(() => []);
+        if (!response.ok) throw new Error("Address suggestions unavailable");
+        setAddressSuggestions(Array.isArray(body) ? body : []);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") setAddressSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setAddressSuggestionsLoading(false);
+      }
+    }, 350);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [addressSuggestionsEnabled, addressSuggestionsOpen, form.registeredAddress, form.city, form.stateId]);
 
   const writeBioWithAi = async () => {
     if (bioAiLoading || bioAiUses >= 2) return;
@@ -1581,6 +1734,56 @@ export function RegistrationSection({
       setBioAiLoading(false);
     }
   };
+
+  const continueToNextStep = () => {
+    setStepError("");
+    if (currentStep === 1) {
+      if (!form.fullName.trim() || !form.phone.trim() || !form.email.trim() || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.registeredAddress.trim()) {
+        setStepError("Complete your name, contact details, city, and registered address before continuing.");
+        return;
+      }
+      if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
+        setStepError("Share your exact location again before continuing. It is used only for onboarding verification.");
+        return;
+      }
+    }
+    if (currentStep === 2) {
+      if (!form.experience || !form.education.trim() || !form.languages.trim() || !form.specializations.trim() || !form.serviceArea.trim()) {
+        setStepError("Complete your experience, education, languages, services, and service area before continuing.");
+        return;
+      }
+      if (form.masterServiceIds.length < 5 || form.masterServiceIds.length > 10 || !form.servicesConfirmed) {
+        setStepError("Choose 5–10 specialist Pujas and confirm that you personally offer them.");
+        return;
+      }
+    }
+    setCurrentStep((step) => Math.min(3, step + 1));
+    window.requestAnimationFrame(() => document.getElementById("apply")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
+  const handleStepSubmit = (event: React.FormEvent) => {
+    if (currentStep < 3) {
+      event.preventDefault();
+      continueToNextStep();
+      return;
+    }
+    onSubmit(event);
+  };
+
+  const stepSummaries = [
+    {
+      label: "Your details",
+      complete: Boolean(form.fullName.trim() && form.phone.trim() && form.email.trim() && form.stateId && (form.cityId || form.proposedCityName.trim()) && form.registeredAddress.trim() && form.locationPermissionGranted),
+    },
+    {
+      label: "Your practice",
+      complete: Boolean(form.experience && form.education.trim() && form.languages.trim() && form.specializations.trim() && form.serviceArea.trim() && form.masterServiceIds.length >= 5 && form.masterServiceIds.length <= 10 && form.servicesConfirmed),
+    },
+    {
+      label: "Verification",
+      complete: Boolean(photoPreview && form.bio.trim().length >= 20 && form.agreeTerms),
+    },
+  ];
 
   return (
     <section
@@ -1633,17 +1836,47 @@ export function RegistrationSection({
           <Card className="order-2 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/85 shadow-[0_22px_65px_rgba(77,40,36,.11)] lg:order-1 lg:col-span-3" style={{ backdropFilter: "blur(10px)" }}>
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-5 sm:p-7 md:p-8">
-              <div className="mb-6 flex items-center justify-between gap-3 border-b border-[#6D2B35]/10 pb-5">
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <div>
                   <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Your application</p>
                   <h3 className="font-serif text-xl font-semibold tracking-[-.03em] text-[#4A1A22]">Tell us about your practice</h3>
                 </div>
-                <div className="hidden shrink-0 rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] px-3 py-1.5 text-[10px] font-bold text-[#7F5A15] sm:block">
-                  3 min to begin
+                <div className="shrink-0 rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] px-3 py-1.5 text-[10px] font-bold text-[#7F5A15]">
+                  Step {currentStep} of 3
                 </div>
               </div>
-              <form onSubmit={onSubmit} className="space-y-7">
+              <div className="mb-6 grid grid-cols-3 gap-2 border-b border-[#6D2B35]/10 pb-5" aria-label="Registration progress">
+                {stepSummaries.map((step, index) => (
+                  <button
+                    key={step.label}
+                    type="button"
+                    onClick={() => index + 1 < currentStep && setCurrentStep(index + 1)}
+                    disabled={index + 1 > currentStep}
+                    className="rounded-xl border px-2 py-2 text-left disabled:cursor-default"
+                    style={{
+                      borderColor: index + 1 === currentStep ? C.gold : `${C.maroon}20`,
+                      background: index + 1 === currentStep ? "#FFF8E7" : "white",
+                    }}
+                  >
+                    <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-[.08em]" style={{ color: C.maroon }}>
+                      <span className="grid h-5 w-5 place-items-center rounded-full" style={{ background: step.complete ? C.maroon : "#F1DFB5", color: step.complete ? C.goldLight : C.maroon }}>
+                        {step.complete ? <Check className="h-3 w-3" /> : index + 1}
+                      </span>
+                      <span className="hidden sm:inline">{step.label}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <form onSubmit={handleStepSubmit} className="space-y-7">
                 {applicationError && <div id="signup-application-error" role="alert" aria-live="assertive" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3.5 text-sm leading-5 text-destructive">{applicationError}</div>}
+                {stepError && <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3.5 text-sm leading-5 text-destructive">{stepError}</div>}
+                {draftMessage && (
+                  <div role="status" className="rounded-xl border border-[#D4AF37]/35 bg-[#FFF8E7] p-3.5 text-xs leading-5 text-[#6D2B35]">
+                    <p>{draftMessage}</p>
+                    {draftExpiresAt && <p className="mt-1 text-[#806F5E]">Available until {new Date(draftExpiresAt).toLocaleString()}.</p>}
+                  </div>
+                )}
+                {currentStep === 1 && (
                 <FieldGroup index={1} title="Personal Details">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Full Name *" id="fullName">
@@ -1690,7 +1923,60 @@ export function RegistrationSection({
                         )}
                       </Field>
                     <Field label="Registered Address *" id="registeredAddress">
-                      <Textarea id="registeredAddress" name="registeredAddress" value={form.registeredAddress} onChange={onChange} placeholder="House, street, locality, city, state, PIN" required className="min-h-[80px]" data-testid="input-registered-address" style={{ borderColor: `${C.maroon}25` }} />
+                      <div className="relative">
+                        <Textarea
+                          id="registeredAddress"
+                          name="registeredAddress"
+                          value={form.registeredAddress}
+                          onChange={onChange}
+                          onFocus={() => addressSuggestionsEnabled && setAddressSuggestionsOpen(true)}
+                          onBlur={() => window.setTimeout(() => setAddressSuggestionsOpen(false), 150)}
+                          placeholder="Start typing house, street, or locality"
+                          autoComplete="street-address"
+                          required
+                          className="min-h-[80px]"
+                          data-testid="input-registered-address"
+                          aria-autocomplete="list"
+                          aria-controls="registered-address-suggestions"
+                          aria-expanded={addressSuggestionsOpen && addressSuggestions.length > 0}
+                          style={{ borderColor: `${C.maroon}25` }}
+                        />
+                        {addressSuggestionsOpen && (addressSuggestionsLoading || addressSuggestions.length > 0) && (
+                          <div id="registered-address-suggestions" role="listbox" className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[#D4AF37]/35 bg-white p-1 shadow-xl" data-lenis-prevent>
+                            {addressSuggestionsLoading && <p className="px-3 py-2 text-xs text-[#806F5E]">Searching addresses…</p>}
+                            {!addressSuggestionsLoading && addressSuggestions.map((suggestion) => (
+                              <button
+                                key={suggestion.id}
+                                type="button"
+                                role="option"
+                                className="block w-full rounded-lg px-3 py-2 text-left text-xs leading-5 text-[#4A1A22] hover:bg-[#FFF8E7]"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  setForm((current) => ({ ...current, registeredAddress: suggestion.label }));
+                                  setAddressSuggestionsOpen(false);
+                                }}
+                              >
+                                {suggestion.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {!addressSuggestionsEnabled ? (
+                        <button
+                          type="button"
+                          className="text-left text-xs font-semibold text-[#6D2B35] underline underline-offset-2"
+                          onClick={() => {
+                            setAddressSuggestionsEnabled(true);
+                            setAddressSuggestionsOpen(true);
+                            window.requestAnimationFrame(() => document.getElementById("registeredAddress")?.focus());
+                          }}
+                        >
+                          Use address suggestions
+                        </button>
+                      ) : (
+                        <p className="text-xs" style={{ color: C.brownSoft }}>Suggestions are provided by OpenStreetMap. The address text you type is sent to its search service; you can still enter it manually.</p>
+                      )}
                     </Field>
                     <div id="signup-location" tabIndex={-1} className="rounded-lg border p-3 outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
                       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1701,7 +1987,10 @@ export function RegistrationSection({
                     </div>
                   </div>
                 </FieldGroup>
+                )}
 
+                {currentStep === 2 && (
+                <>
                 <FieldGroup index={2} title="Practice & Tradition">
                   <div className="space-y-4">
                     <Field label="Regional Tradition" id="regionalOrigin">
@@ -1821,8 +2110,12 @@ export function RegistrationSection({
                     })}
                   </div>
                 </FieldGroup>
+                </>
+                )}
 
-                <FieldGroup index={4} title="About You">
+                {currentStep === 3 && (
+                <>
+                <FieldGroup index={3} title="About You">
                   <div className="space-y-4">
                     <Field label="Profile Photo *" id="photo">
                       <div id="signup-photo" tabIndex={-1} className="flex items-center gap-4 outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -1863,6 +2156,18 @@ export function RegistrationSection({
                 </FieldGroup>
 
                 <div className="pt-4 border-t space-y-5" style={{ borderColor: `${C.maroon}10` }}>
+                  <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#FFF8E7]/70 p-4">
+                    <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#A67817]">Completion summary</p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {stepSummaries.map((step) => (
+                        <div key={step.label} className="flex items-center gap-2 text-xs text-[#4A1A22]">
+                          {step.complete ? <CheckCircle2 className="h-4 w-4 text-[#7F5A15]" /> : <CircleDot className="h-4 w-4 text-[#B04A42]" />}
+                          <span>{step.label}: {step.complete ? "complete" : "needs attention"}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[11px] leading-5 text-[#806F5E]">Your exact coordinates and photo are never stored in your resumable draft.</p>
+                  </div>
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -1877,26 +2182,46 @@ export function RegistrationSection({
                       I agree to the Terms &amp; Conditions and confirm all information provided is accurate.
                     </Label>
                   </div>
+                </div>
+                </>
+                )}
 
-                  <Button
-                    type="submit"
-                    className="w-full rounded-full h-12 text-base font-semibold shadow-lg"
-                    disabled={isPending}
-                    style={{
-                      background: `linear-gradient(135deg, ${C.maroon} 0%, ${C.maroonDeep} 100%)`,
-                      color: "white",
-                    }}
-                    data-testid="btn-submit-application"
-                  >
-                    {isPending ? "Submitting..." : "Submit Application"}
-                    {!isPending && <ArrowRight className="w-4 h-4 ml-2" />}
+                <div className="flex flex-col gap-3 border-t border-[#6D2B35]/10 pt-5 sm:flex-row sm:items-center">
+                  {currentStep > 1 && (
+                    <Button type="button" variant="outline" onClick={() => { setStepError(""); setCurrentStep((step) => Math.max(1, step - 1)); }}>
+                      Back
+                    </Button>
+                  )}
+                  <Button type="button" variant="outline" onClick={() => onSaveDraft(currentStep)} disabled={draftSaving} data-testid="button-save-registration-draft">
+                    {draftSaving ? "Saving…" : hasDraft ? "Update saved draft" : "Save and continue later"}
                   </Button>
+                  {hasDraft && (
+                    <Button type="button" variant="ghost" onClick={onCopyDraftLink} data-testid="button-copy-draft-link">
+                      <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy resume link
+                    </Button>
+                  )}
+                  {currentStep < 3 ? (
+                    <Button type="submit" className="sm:ml-auto" style={{ background: C.maroon, color: "white" }}>
+                      Continue <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      className="h-12 rounded-full text-base font-semibold shadow-lg sm:ml-auto"
+                      disabled={isPending}
+                      style={{ background: `linear-gradient(135deg, ${C.maroon} 0%, ${C.maroonDeep} 100%)`, color: "white" }}
+                      data-testid="btn-submit-application"
+                    >
+                      {isPending ? "Submitting..." : "Submit Application"}
+                      {!isPending && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
 
-                  <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: C.brownSoft }}>
-                    <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" style={{ color: C.gold }} /> Free to join</span>
-                    <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" style={{ color: C.gold }} /> No upfront fees</span>
-                    <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" style={{ color: C.gold }} /> Verified in 48 hrs</span>
-                  </div>
+                <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: C.brownSoft }}>
+                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" style={{ color: C.gold }} /> Free to join</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" style={{ color: C.gold }} /> No upfront fees</span>
+                  <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" style={{ color: C.gold }} /> Verified in 48 hrs</span>
                 </div>
               </form>
             </CardContent>

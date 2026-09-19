@@ -527,6 +527,18 @@ export const panditApplications = pgTable("pandit_applications", {
     .where(sql`${t.panditId} is not null`),
 }));
 
+export const panditApplicationDrafts = pgTable("pandit_application_drafts", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  data: jsonb("data").notNull().default(sql`'{}'::jsonb`),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (t) => ({
+  tokenHashUnique: uniqueIndex("pandit_application_drafts_token_hash_unique").on(t.tokenHash),
+  expiresAtIdx: index("pandit_application_drafts_expires_at_idx").on(t.expiresAt),
+}));
+
 export const panditCityRequests = pgTable("pandit_city_requests", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   applicationId: integer("application_id").notNull().references(() => panditApplications.id),

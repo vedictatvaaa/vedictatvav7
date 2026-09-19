@@ -192,8 +192,10 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      const containsPrivateRegistrationData = path.startsWith("/api/pandit-application-drafts");
+      const loggedPath = containsPrivateRegistrationData ? "/api/pandit-application-drafts/[redacted]" : path;
+      let logLine = `${req.method} ${loggedPath} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse && !containsPrivateRegistrationData) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
 

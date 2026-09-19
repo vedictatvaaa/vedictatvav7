@@ -72,7 +72,7 @@ import {
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
 import { MANTRA_LIBRARY } from "@shared/mantra-library";
 import { eq, and, gt, gte, lt, like, or, ilike, inArray, sql, desc } from "drizzle-orm";
-import { panditApplications, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
+import { panditApplications, panditApplicationDrafts, panditCityRequests, insertFranchiseApplicationSchema } from "@shared/schema";
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { normalizePanditPhone } from "./pandit-phone";
@@ -184,6 +184,30 @@ const upload = multer({
     } else {
       cb(new Error("Only image files (JPG, PNG, GIF, WebP) are allowed. SVG is not permitted."));
     }
+  },
+});
+
+const panditApplicationUploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `pandit-application-${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
+  },
+});
+const panditApplicationUpload = multer({
+  storage: panditApplicationUploadStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = new Map([
+      [".jpg", "image/jpeg"],
+      [".jpeg", "image/jpeg"],
+      [".png", "image/png"],
+      [".webp", "image/webp"],
+    ]);
+    cb(allowed.get(path.extname(file.originalname).toLowerCase()) === file.mimetype.toLowerCase()
+      ? null
+      : new Error("Only JPG, PNG, or WebP profile photos are allowed."),
+    allowed.get(path.extname(file.originalname).toLowerCase()) === file.mimetype.toLowerCase());
   },
 });
 
@@ -10108,6 +10132,170 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   // ---- Application Forms (Pandit & Astrologer) ----
   // Pandit applications go into pandit_applications table with status="pending".
   // An admin reviews and approves, which promotes the entry into the public pandits table.
+  const panditDraftFormSchema = z.object({
+    fullName: z.string().max(160).optional().default(""),
+    phone: z.string().max(40).optional().default(""),
+    email: z.string().max(254).optional().default(""),
+    city: z.string().max(120).optional().default(""),
+    stateId: z.string().max(20).optional().default(""),
+    cityId: z.string().max(20).optional().default(""),
+    proposedCityName: z.string().max(120).optional().default(""),
+    registeredAddress: z.string().max(600).optional().default(""),
+    experience: z.string().max(10).optional().default(""),
+    specializations: z.string().max(1200).optional().default(""),
+    education: z.string().max(600).optional().default(""),
+    languages: z.string().max(400).optional().default(""),
+    bio: z.string().max(500).optional().default(""),
+    serviceArea: z.string().max(400).optional().default(""),
+    regionalOrigin: z.string().max(120).optional().default(""),
+    membership: z.enum(["free", "silver", "gold", "elite"]).optional().default("free"),
+    servicesConfirmed: z.boolean().optional().default(false),
+    masterServiceIds: z.array(z.number().int().positive()).max(10).optional().default([]),
+  }).strict();
+  const panditDraftSchema = z.object({
+    form: panditDraftFormSchema,
+    step: z.number().int().min(1).max(3).optional().default(1),
+  }).strict();
+  const hashPanditDraftToken = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+  const panditDraftLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+  });
+  const panditUploadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+  });
+  const privateDraftResponse = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.setHeader("Cache-Control", "private, no-store, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+    next();
+  };
+  app.use("/api/pandit-application-drafts", privateDraftResponse);
+
+  const cleanupExpiredPanditRegistrationData = async () => {
+    try {
+      await db.delete(panditApplicationDrafts).where(lt(panditApplicationDrafts.expiresAt, new Date()));
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      for (const filename of fs.readdirSync(uploadsDir)) {
+        if (!/^pandit-application-\d+-[a-f0-9]{12}\.(jpe?g|png|webp)$/i.test(filename)) continue;
+        const fullPath = path.join(uploadsDir, filename);
+        if (fs.statSync(fullPath).mtimeMs >= cutoff) continue;
+        const url = `/uploads/${filename}`;
+        const [referenced] = await db.select({ id: panditApplications.id }).from(panditApplications)
+          .where(eq(panditApplications.photo, url)).limit(1);
+        if (!referenced) fs.rmSync(fullPath, { force: true });
+      }
+    } catch (error: any) {
+      console.error("[pandit-registration-cleanup] failed:", error?.message || error);
+    }
+  };
+  void cleanupExpiredPanditRegistrationData();
+  const panditRegistrationCleanupTimer = setInterval(() => {
+    void cleanupExpiredPanditRegistrationData();
+  }, 6 * 60 * 60 * 1000);
+  panditRegistrationCleanupTimer.unref();
+
+  app.post("/api/pandit-application-drafts", panditDraftLimiter, async (req, res) => {
+    const parsed = panditDraftSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Check the draft details and try again." });
+    const token = crypto.randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await db.delete(panditApplicationDrafts).where(lt(panditApplicationDrafts.expiresAt, new Date()));
+    await db.insert(panditApplicationDrafts).values({
+      tokenHash: hashPanditDraftToken(token),
+      data: parsed.data,
+      expiresAt,
+      updatedAt: new Date(),
+    });
+    res.status(201).json({ token, expiresAt: expiresAt.toISOString() });
+  });
+
+  app.get("/api/pandit-application-drafts/:token", panditDraftLimiter, async (req, res) => {
+    const token = String(req.params.token || "");
+    if (!/^[A-Za-z0-9_-]{40,80}$/.test(token)) return res.status(404).json({ message: "This draft link is invalid." });
+    const [draft] = await db.select().from(panditApplicationDrafts)
+      .where(eq(panditApplicationDrafts.tokenHash, hashPanditDraftToken(token))).limit(1);
+    if (!draft) return res.status(404).json({ message: "This draft link is invalid or has already been used." });
+    if (draft.expiresAt <= new Date()) {
+      await db.delete(panditApplicationDrafts).where(eq(panditApplicationDrafts.id, draft.id));
+      return res.status(410).json({ message: "This draft link has expired. Start a new registration draft." });
+    }
+    const parsed = panditDraftSchema.safeParse(draft.data);
+    if (!parsed.success) return res.status(422).json({ message: "This draft can no longer be resumed safely." });
+    res.json({ ...parsed.data, expiresAt: draft.expiresAt.toISOString() });
+  });
+
+  app.put("/api/pandit-application-drafts/:token", panditDraftLimiter, async (req, res) => {
+    const token = String(req.params.token || "");
+    const parsed = panditDraftSchema.safeParse(req.body);
+    if (!/^[A-Za-z0-9_-]{40,80}$/.test(token) || !parsed.success) {
+      return res.status(400).json({ message: "Check the draft details and try again." });
+    }
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const [draft] = await db.update(panditApplicationDrafts).set({
+      data: parsed.data,
+      expiresAt,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(panditApplicationDrafts.tokenHash, hashPanditDraftToken(token)),
+      gt(panditApplicationDrafts.expiresAt, new Date()),
+    )).returning({ id: panditApplicationDrafts.id });
+    if (!draft) return res.status(404).json({ message: "This draft link is invalid or expired." });
+    res.json({ token, expiresAt: expiresAt.toISOString() });
+  });
+
+  app.delete("/api/pandit-application-drafts/:token", panditDraftLimiter, async (req, res) => {
+    const token = String(req.params.token || "");
+    if (/^[A-Za-z0-9_-]{40,80}$/.test(token)) {
+      await db.delete(panditApplicationDrafts).where(eq(panditApplicationDrafts.tokenHash, hashPanditDraftToken(token)));
+    }
+    res.status(204).end();
+  });
+
+  const addressSuggestionLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+  });
+  app.get("/api/pandit-applications/address-suggestions", addressSuggestionLimiter, async (req, res) => {
+    const parsed = z.object({
+      q: z.string().trim().min(4).max(180),
+      city: z.string().trim().max(120).optional(),
+      state: z.string().trim().max(120).optional(),
+    }).safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ message: "Enter at least four characters to search addresses." });
+    try {
+      const search = [parsed.data.q, parsed.data.city, parsed.data.state, "India"].filter(Boolean).join(", ");
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("format", "jsonv2");
+      url.searchParams.set("addressdetails", "1");
+      url.searchParams.set("countrycodes", "in");
+      url.searchParams.set("limit", "5");
+      url.searchParams.set("q", search);
+      const response = await fetch(url, {
+        headers: { "User-Agent": "VedicTatva/1.0 (address autocomplete)" },
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!response.ok) throw new Error(`address provider returned ${response.status}`);
+      const results = await response.json() as Array<{ place_id?: number; display_name?: string }>;
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.json(results
+        .filter((item) => item.display_name)
+        .map((item) => ({ id: String(item.place_id || item.display_name), label: String(item.display_name).slice(0, 300) })));
+    } catch (error: any) {
+      console.error("[pandit-address-suggestions] failed:", error?.message || error);
+      res.status(502).json({ message: "Address suggestions are temporarily unavailable. You can still type the address manually." });
+    }
+  });
+
   const panditBioAiLimiter = rateLimit({
     windowMs: 30 * 60 * 1000,
     max: 2,
@@ -10170,7 +10358,7 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
     }
   });
 
-  app.post("/api/pandit-applications/upload-photo", upload.single("photo"), async (req: any, res) => {
+  app.post("/api/pandit-applications/upload-photo", panditUploadLimiter, panditApplicationUpload.single("photo"), async (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "A valid profile photo is required" });
     const url = `/uploads/${req.file.filename}`;
     if (!(await isValidStoredProfilePhoto(url, uploadsDir))) {
@@ -10178,6 +10366,20 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
       return res.status(400).json({ message: "The uploaded profile photo is invalid" });
     }
     res.status(201).json({ url });
+  });
+
+  app.delete("/api/pandit-applications/upload-photo", async (req, res) => {
+    const parsed = z.object({ url: z.string().max(300) }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid upload cleanup request." });
+    const filename = path.basename(parsed.data.url);
+    if (!/^pandit-application-\d+-[a-f0-9]{12}\.(jpe?g|png|webp)$/i.test(filename)) {
+      return res.status(400).json({ message: "Invalid upload cleanup request." });
+    }
+    const url = `/uploads/${filename}`;
+    const [referenced] = await db.select({ id: panditApplications.id }).from(panditApplications)
+      .where(eq(panditApplications.photo, url)).limit(1);
+    if (!referenced) fs.rmSync(path.join(uploadsDir, filename), { force: true });
+    res.status(204).end();
   });
 
   app.post("/api/pandit-applications", async (req, res) => {
@@ -10209,6 +10411,7 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         feeRangeMin: z.union([z.string(), z.number()]).optional(),
         feeRangeMax: z.union([z.string(), z.number()]).optional(),
         membership: z.enum(["free", "silver", "gold", "elite"]).optional(),
+        draftToken: z.string().regex(/^[A-Za-z0-9_-]{40,80}$/).optional(),
       }).superRefine((value, ctx) => {
         if ((value.cityId == null) === (value.proposedCityName == null)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Choose a canonical city or submit one missing-city request" });
@@ -10322,6 +10525,10 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         }
         return created;
       });
+      if (d.draftToken) {
+        await db.delete(panditApplicationDrafts)
+          .where(eq(panditApplicationDrafts.tokenHash, hashPanditDraftToken(d.draftToken)));
+      }
       try {
         await enqueueTransactionalEmail({
           eventKey: `pandit_application_received:${application.id}`,

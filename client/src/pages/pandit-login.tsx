@@ -133,6 +133,11 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   const [registrationServicesError, setRegistrationServicesError] = useState("");
   const [registrationApplicationError, setRegistrationApplicationError] = useState("");
   const [registrationMissingCityMode, setRegistrationMissingCityMode] = useState(false);
+  const [registrationStep, setRegistrationStep] = useState(1);
+  const [registrationDraftToken, setRegistrationDraftToken] = useState("");
+  const [registrationDraftSaving, setRegistrationDraftSaving] = useState(false);
+  const [registrationDraftMessage, setRegistrationDraftMessage] = useState("");
+  const [registrationDraftExpiresAt, setRegistrationDraftExpiresAt] = useState("");
 
   const DEMO_PHONE = "9000012345";
   const DEMO_PASS = "demo1234";
@@ -141,6 +146,43 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   useEffect(() => {
     setMode(initialMode);
     if (initialMode === "login") setShowForgotPassword(false);
+  }, [initialMode]);
+
+  useEffect(() => {
+    if (initialMode !== "signup") return;
+    const token = window.sessionStorage.getItem("pandit_registration_draft_token") || "";
+    if (!token) return;
+    let cancelled = false;
+    fetch(`/api/pandit-application-drafts/${encodeURIComponent(token)}`)
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.message || "This registration draft could not be resumed.");
+        return body;
+      })
+      .then((body) => {
+        if (cancelled) return;
+        setRegistrationForm({
+          ...registrationInitialState,
+          ...body.form,
+          latitude: null,
+          longitude: null,
+          locationPermissionGranted: false,
+          agreeTerms: false,
+        });
+        setRegistrationPhotoFile(null);
+        setRegistrationPhotoPreview(null);
+        setRegistrationMissingCityMode(Boolean(body.form?.proposedCityName && !body.form?.cityId));
+        setRegistrationStep(1);
+        setRegistrationDraftToken(token);
+        setRegistrationDraftExpiresAt(String(body.expiresAt || ""));
+        setRegistrationDraftMessage("Draft resumed. For your security, choose your photo and share your exact location again before submitting.");
+      })
+      .catch((error: Error) => {
+        if (!cancelled) setRegistrationDraftMessage(error.message);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [initialMode]);
 
   useEffect(() => {
@@ -290,30 +332,85 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     reader.readAsDataURL(file);
   };
 
+  const saveRegistrationDraft = async (step: number) => {
+    if (registrationDraftSaving) return;
+    setRegistrationDraftSaving(true);
+    setRegistrationDraftMessage("");
+    try {
+      const {
+        latitude: _latitude,
+        longitude: _longitude,
+        locationPermissionGranted: _locationPermissionGranted,
+        agreeTerms: _agreeTerms,
+        ...draftForm
+      } = registrationForm;
+      const response = await fetch(
+        registrationDraftToken
+          ? `/api/pandit-application-drafts/${encodeURIComponent(registrationDraftToken)}`
+          : "/api/pandit-application-drafts",
+        {
+          method: registrationDraftToken ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form: draftForm, step }),
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.token) throw new Error(body.message || "Draft could not be saved.");
+      setRegistrationDraftToken(body.token);
+      window.sessionStorage.setItem("pandit_registration_draft_token", body.token);
+      setRegistrationDraftExpiresAt(body.expiresAt || "");
+      setRegistrationDraftMessage("Draft saved on the server. Keep this private resume link to continue later.");
+    } catch (error) {
+      setRegistrationDraftMessage(error instanceof Error ? error.message : "Draft could not be saved.");
+    } finally {
+      setRegistrationDraftSaving(false);
+    }
+  };
+
+  const copyRegistrationDraftLink = async () => {
+    if (!registrationDraftToken) return;
+    await navigator.clipboard.writeText(`${window.location.origin}/pandit/signup?draft=${encodeURIComponent(registrationDraftToken)}`);
+    setRegistrationDraftMessage("Private resume link copied.");
+  };
+
   const registrationMutation = useMutation({
     mutationFn: async () => {
       if (!registrationPhotoFile) throw new Error("A profile photo is required.");
-      const uploadData = new FormData();
-      uploadData.append("photo", registrationPhotoFile);
-      const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
-      const uploadBody = await upload.json().catch(() => ({}));
-      if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
-      const { city: _city, stateId, cityId, proposedCityName, ...rest } = registrationForm;
-      const response = await fetch("/api/pandit-applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...rest,
-          termsAccepted: registrationForm.agreeTerms,
-          stateId: Number(stateId),
-          ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
-          photo: uploadBody.url,
-        }),
-      });
-      if (!response.ok) {
-        throw new Error((await response.json().catch(() => ({}))).message || "Failed to submit application");
+      let uploadedPhotoUrl = "";
+      try {
+        const uploadData = new FormData();
+        uploadData.append("photo", registrationPhotoFile);
+        const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
+        const uploadBody = await upload.json().catch(() => ({}));
+        if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
+        uploadedPhotoUrl = uploadBody.url;
+        const { city: _city, stateId, cityId, proposedCityName, ...rest } = registrationForm;
+        const response = await fetch("/api/pandit-applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...rest,
+            termsAccepted: registrationForm.agreeTerms,
+            stateId: Number(stateId),
+            ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
+            photo: uploadedPhotoUrl,
+            ...(registrationDraftToken ? { draftToken: registrationDraftToken } : {}),
+          }),
+        });
+        if (!response.ok) {
+          throw new Error((await response.json().catch(() => ({}))).message || "Failed to submit application");
+        }
+        return response.json();
+      } catch (error) {
+        if (uploadedPhotoUrl) {
+          await fetch("/api/pandit-applications/upload-photo", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: uploadedPhotoUrl }),
+          }).catch(() => undefined);
+        }
+        throw error;
       }
-      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Application Submitted", description: "We'll review your details and reach out within 48 hours." });
@@ -325,6 +422,12 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       setRegistrationServicesError("");
       setRegistrationApplicationError("");
       setRegistrationMissingCityMode(false);
+      setRegistrationStep(1);
+      setRegistrationDraftToken("");
+      window.sessionStorage.removeItem("pandit_registration_draft_token");
+      setRegistrationDraftMessage("");
+      setRegistrationDraftExpiresAt("");
+      window.history.replaceState({}, "", "/pandit/signup");
     },
     onError: (error: Error) => {
       setRegistrationApplicationError(error.message);
@@ -607,6 +710,14 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 onSubmit={handleRegistrationSubmit}
                 setForm={setRegistrationForm}
                 isPending={registrationMutation.isPending}
+                currentStep={registrationStep}
+                setCurrentStep={setRegistrationStep}
+                onSaveDraft={saveRegistrationDraft}
+                draftSaving={registrationDraftSaving}
+                draftMessage={registrationDraftMessage}
+                draftExpiresAt={registrationDraftExpiresAt}
+                hasDraft={Boolean(registrationDraftToken)}
+                onCopyDraftLink={copyRegistrationDraftLink}
               />
             </div>
           ) : (

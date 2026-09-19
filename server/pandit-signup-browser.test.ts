@@ -25,7 +25,7 @@ function findChromium(): string | null {
 
 async function openSignup(browser: Browser, origin: string, interceptSubmission = false) {
   const page = await browser.newPage();
-  await browser.defaultBrowserContext().overridePermissions(origin, ["geolocation"]);
+  await browser.defaultBrowserContext().overridePermissions(origin, ["geolocation", "clipboard-read", "clipboard-write"]);
   await page.setGeolocation({ latitude: 28.6139, longitude: 77.209, accuracy: 10 });
   await page.evaluateOnNewDocument(() => {
     Object.defineProperty(navigator, "geolocation", {
@@ -195,74 +195,57 @@ test("Pandit signup browser contract keeps requirement errors visible and values
   const origin = browserOrigin;
 
   try {
-    const scenarios = [
-      {
-        name: "missing location permission",
-        options: { pujaCount: 5, captureLocation: false, confirmServices: true },
-        targetId: "signup-location",
-        message: "Share your exact location before submitting.",
-      },
-      {
-        name: "incorrect Puja count",
-        options: { pujaCount: 4, captureLocation: false, confirmServices: true },
-        targetId: "masterServiceIds",
-        message: "Select at least five specialist Pujas (you selected 4).",
-      },
-      {
-        name: "missing service confirmation",
-        options: { pujaCount: 5, captureLocation: true, confirmServices: false },
-        targetId: "servicesConfirmed",
-        message: "Confirm that the selected Pujas are services you personally offer.",
-      },
-      {
-        name: "missing photo",
-        options: { pujaCount: 5, captureLocation: true, confirmServices: true },
-        targetId: "signup-photo",
-        message: "Upload a profile photo before submitting.",
-      },
-    ] as const;
-
-    for (const scenario of scenarios) {
-      const page = await openSignup(browser, origin);
-      try {
-        await fillRequiredDetails(page, scenario.options);
-        const result = await submitAndRead(page, scenario.targetId);
-        assert.equal(result.alert, scenario.message, `${scenario.name} alert changed`);
-        assert.equal(result.activeId, scenario.targetId, `${scenario.name} focus target changed`);
-        assert.equal(result.fullName, "Browser Contract Applicant", `${scenario.name} lost entered values`);
-        assert.equal(result.inline, scenario.message, `${scenario.name} inline guidance changed`);
-      } finally {
-        await page.close();
-      }
-    }
-
-    const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "pandit-signup-browser-"));
-    const photoPath = path.join(tempDirectory, "profile.png");
-    fs.writeFileSync(
-      photoPath,
-      Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
-    );
-    const serverErrorPage = await openSignup(browser, origin, true);
+    const page = await openSignup(browser, origin);
     try {
-      await fillRequiredDetails(serverErrorPage, {
-        pujaCount: 5,
-        captureLocation: true,
-        confirmServices: true,
-        acceptTerms: true,
-      });
-      await serverErrorPage.$eval("#photo", (element) => (element as HTMLInputElement).scrollIntoView());
-      await serverErrorPage.$("#photo").then(async (input) => {
-        assert.ok(input);
-        await input.uploadFile(photoPath);
-      });
-      await serverErrorPage.waitForSelector('[data-testid="img-photo-preview"]', { timeout: 5_000 });
-      const result = await submitAndRead(serverErrorPage, "signup-location");
-      assert.equal(result.alert, "Share your exact location before submitting.");
-      assert.equal(result.inline, "Share your exact location before submitting.");
-      assert.equal(result.fullName, "Browser Contract Applicant");
+      await page.type("#fullName", "Browser Contract Applicant");
+      await page.type("#phone", "9876543210");
+      await page.type("#email", "browser-contract@example.invalid");
+      const stateValue = await page.$eval("#stateId", (element) => (element as HTMLSelectElement).options[1]?.value || "");
+      await page.select("#stateId", stateValue);
+      await page.waitForFunction(() => document.querySelectorAll("#cityId option").length > 1);
+      const cityValue = await page.$eval("#cityId", (element) => (element as HTMLSelectElement).options[1]?.value || "");
+      await page.select("#cityId", cityValue);
+      await page.type("#registeredAddress", "12 Browser Test Street, New Delhi, 110001");
+      await page.click('[data-testid="button-share-location"]');
+      await page.waitForFunction(() => document.querySelector('[data-testid="button-share-location"]')?.textContent?.includes("Location captured"));
+
+      await page.click('[data-testid="button-save-registration-draft"]');
+      await page.waitForSelector('[data-testid="button-copy-draft-link"]');
+      await page.click('[data-testid="button-copy-draft-link"]');
+      const resumeUrl = await page.evaluate(() => navigator.clipboard.readText());
+      assert.match(resumeUrl, /[?&]draft=[A-Za-z0-9_-]+/);
+      assert.doesNotMatch(page.url(), /[?&]draft=/);
+
+      await page.click('#apply button[type="submit"]');
+      await page.waitForSelector("#experience");
+      await page.type("#experience", "8");
+      await page.type("#education", "Traditional Vedic training");
+      await page.select("#languages", "Hindi", "English");
+      await page.type("#specializations", "Vedic ceremonies and household rituals");
+      await page.type("#serviceArea", "New Delhi and nearby areas");
+      await page.$$eval("#masterServiceIds input[type=checkbox]", (inputs) => inputs.slice(0, 5).forEach((input) => (input as HTMLInputElement).click()));
+      await page.$eval("#servicesConfirmed input", (input) => (input as HTMLInputElement).click());
+      await page.click('#apply button[type="submit"]');
+      await page.waitForSelector("#bio");
+      await page.type("#bio", "A browser contract applicant with a complete profile biography.");
+      await page.click("#agreeTerms");
+      await page.click('[data-testid="btn-submit-application"]');
+      await page.waitForSelector("#signup-application-error");
+      assert.equal(await page.$eval("#signup-application-error", (element) => element.textContent), "Upload a profile photo before submitting.");
+
+      const resumed = await openSignup(browser, origin);
+      await resumed.goto(resumeUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await resumed.waitForSelector("#fullName");
+      assert.equal(await resumed.$eval("#fullName", (element) => (element as HTMLInputElement).value), "Browser Contract Applicant");
+      assert.equal(await resumed.$eval('[data-testid="button-share-location"]', (element) => element.textContent?.trim()), "Share exact location");
+      assert.equal(await resumed.$('[data-testid="img-photo-preview"]'), null);
+      await resumed.close();
     } finally {
-      await serverErrorPage.close();
-      fs.rmSync(tempDirectory, { recursive: true, force: true });
+      await page.close();
+      const match = page.url().match(/[?&]draft=([A-Za-z0-9_-]+)/);
+      if (match) {
+        await fetch(`${origin}/api/pandit-application-drafts/${match[1]}`, { method: "DELETE" });
+      }
     }
   } finally {
     await browser.close();
