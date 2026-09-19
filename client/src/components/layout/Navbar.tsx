@@ -525,17 +525,19 @@ export default function Navbar() {
                 data-testid="img-site-logo"
               />
             ) : null}
-            <span className="font-vedic text-[22px] font-normal leading-none tracking-[0.015em] drop-shadow-[0_1px_8px_rgba(185,148,77,0.16)] md:text-[24px] lg:text-[27px]"
-              style={{
-                background:
-                  "linear-gradient(165deg, rgba(255,255,255,0.9) 0%, #8D5961 18%, #6D2B35 52%, #9A7040 82%, #D0AC68 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-              data-testid="text-site-name"
-            >
-              {settings?.siteName || "Vedic Tatva"}
+            <span className="flex min-w-0 flex-col items-center lg:items-start">
+              <span
+                className="font-vedic text-[22px] font-normal leading-none tracking-[0.015em] text-[#6D2B35] md:text-[24px] lg:text-[27px]"
+                data-testid="text-site-name"
+              >
+                {settings?.siteName || "Vedic Tatva"}
+              </span>
+              <span
+                className="mt-0.5 whitespace-nowrap text-[6px] font-medium uppercase leading-none tracking-[0.13em] text-[#806E64] md:text-[6.5px] lg:text-[7px]"
+                data-testid="text-site-tagline"
+              >
+                Heritage of Nature, Wellness &amp; Purity
+              </span>
             </span>
             {festival && (
               <span
