@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
 import { panditApi } from "@/lib/panditAuth";
 import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
 import { savePanditAccessHandoff } from "@/lib/panditAccessHandoff";
+import { RegistrationSection, type FormState } from "@/pages/become-pandit";
 
 type AuthMode = "login" | "signup";
 type Language = "en" | "hi";
@@ -80,6 +82,31 @@ const signupInitialState: SignupState = {
   experience: "",
 };
 
+const registrationInitialState: FormState = {
+  fullName: "",
+  phone: "",
+  email: "",
+  city: "",
+  experience: "",
+  stateId: "",
+  cityId: "",
+  proposedCityName: "",
+  registeredAddress: "",
+  latitude: null,
+  longitude: null,
+  locationPermissionGranted: false,
+  specializations: "",
+  education: "",
+  languages: "",
+  bio: "",
+  serviceArea: "",
+  regionalOrigin: "",
+  membership: "free",
+  agreeTerms: false,
+  servicesConfirmed: false,
+  masterServiceIds: [],
+};
+
 export default function PanditLoginPage({ initialMode = "login" }: { initialMode?: AuthMode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -95,6 +122,14 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   const [locations, setLocations] = useState<LocationState[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [locationsError, setLocationsError] = useState("");
+  const [registrationForm, setRegistrationForm] = useState<FormState>(registrationInitialState);
+  const [registrationPhotoPreview, setRegistrationPhotoPreview] = useState<string | null>(null);
+  const [registrationPhotoFile, setRegistrationPhotoFile] = useState<File | null>(null);
+  const [registrationPhotoError, setRegistrationPhotoError] = useState("");
+  const [registrationLocationError, setRegistrationLocationError] = useState("");
+  const [registrationServicesError, setRegistrationServicesError] = useState("");
+  const [registrationApplicationError, setRegistrationApplicationError] = useState("");
+  const [registrationMissingCityMode, setRegistrationMissingCityMode] = useState(false);
 
   const DEMO_PHONE = "9000012345";
   const DEMO_PASS = "demo1234";
@@ -198,6 +233,145 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     window.requestAnimationFrame(() => {
       document.getElementById("pandit-demo")?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
+  };
+
+  const requestRegistrationExactLocation = () => {
+    if (!navigator.geolocation) {
+      const message = "This browser does not support location access.";
+      setRegistrationLocationError(message);
+      setRegistrationApplicationError(message);
+      return;
+    }
+    setRegistrationLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => setRegistrationForm((current) => ({
+        ...current,
+        latitude: Number(position.coords.latitude.toFixed(6)),
+        longitude: Number(position.coords.longitude.toFixed(6)),
+        locationPermissionGranted: true,
+      })),
+      () => {
+        const message = "Location access is required to submit your application. Please allow it and try again.";
+        setRegistrationLocationError(message);
+        setRegistrationApplicationError(message);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  const handleRegistrationChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = event.target;
+    setRegistrationForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleRegistrationPhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setRegistrationPhotoFile(null);
+      setRegistrationPhotoPreview(null);
+      setRegistrationPhotoError("Choose a JPG, PNG, or WebP image up to 5 MB.");
+      event.target.value = "";
+      return;
+    }
+    setRegistrationPhotoError("");
+    setRegistrationPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setRegistrationPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const registrationMutation = useMutation({
+    mutationFn: async () => {
+      if (!registrationPhotoFile) throw new Error("A profile photo is required.");
+      const uploadData = new FormData();
+      uploadData.append("photo", registrationPhotoFile);
+      const upload = await fetch("/api/pandit-applications/upload-photo", { method: "POST", body: uploadData });
+      const uploadBody = await upload.json().catch(() => ({}));
+      if (!upload.ok || !uploadBody.url) throw new Error(uploadBody.message || "Photo upload failed");
+      const { city: _city, stateId, cityId, proposedCityName, ...rest } = registrationForm;
+      const response = await fetch("/api/pandit-applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...rest,
+          termsAccepted: registrationForm.agreeTerms,
+          stateId: Number(stateId),
+          ...(cityId ? { cityId: Number(cityId) } : { proposedCityName: proposedCityName.trim() }),
+          photo: uploadBody.url,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error((await response.json().catch(() => ({}))).message || "Failed to submit application");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Application Submitted", description: "We'll review your details and reach out within 48 hours." });
+      setRegistrationForm(registrationInitialState);
+      setRegistrationPhotoPreview(null);
+      setRegistrationPhotoFile(null);
+      setRegistrationPhotoError("");
+      setRegistrationLocationError("");
+      setRegistrationServicesError("");
+      setRegistrationApplicationError("");
+      setRegistrationMissingCityMode(false);
+    },
+    onError: (error: Error) => {
+      setRegistrationApplicationError(error.message);
+      if (/photo/i.test(error.message)) setRegistrationPhotoError(error.message);
+      if (/location|exact|permission/i.test(error.message)) setRegistrationLocationError(error.message);
+      if (/Puja|services/i.test(error.message)) setRegistrationServicesError(error.message);
+      toast({ title: "Submission Failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleRegistrationSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (registrationMutation.isPending) return;
+    setRegistrationApplicationError("");
+    const form = registrationForm;
+    if (!form.fullName.trim() || !form.phone.trim() || !form.email.trim() || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.registeredAddress.trim() || !form.experience || !form.specializations.trim() || !form.education.trim() || !form.languages.trim() || !form.bio.trim() || !form.serviceArea.trim()) {
+      const message = "Complete all required personal, location, and practice fields.";
+      setRegistrationApplicationError(message);
+      toast({ title: "Missing required details", description: message, variant: "destructive" });
+      return;
+    }
+    if (form.masterServiceIds.length !== 5) {
+      const message = `Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
+      setRegistrationServicesError(message);
+      setRegistrationApplicationError(message);
+      toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
+      return;
+    }
+    if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
+      const message = "Share your exact location before submitting.";
+      setRegistrationLocationError(message);
+      setRegistrationApplicationError(message);
+      toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
+      return;
+    }
+    if (!form.servicesConfirmed) {
+      const message = "Confirm that the selected Pujas are services you personally offer.";
+      setRegistrationServicesError(message);
+      setRegistrationApplicationError(message);
+      toast({ title: "Confirm your services", description: message, variant: "destructive" });
+      return;
+    }
+    if (!registrationPhotoFile) {
+      const message = "Upload a profile photo before submitting.";
+      setRegistrationPhotoError(message);
+      setRegistrationApplicationError(message);
+      toast({ title: "Photo Required", description: message, variant: "destructive" });
+      return;
+    }
+    if (!form.agreeTerms) {
+      const message = "Accept the terms before submitting.";
+      setRegistrationApplicationError(message);
+      toast({ title: "Terms Required", description: message, variant: "destructive" });
+      return;
+    }
+    registrationMutation.mutate();
   };
 
   const submit = async () => {
@@ -326,9 +500,9 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             </button>
           </header>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(25rem,.95fr)] lg:items-start">
-            <section
-              className="relative min-h-[25rem] overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/20 bg-[#4A1A22] shadow-[0_22px_65px_rgba(77,40,36,.16)] lg:min-h-[40rem]"
+          <div className={mode === "signup" ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(25rem,.95fr)] lg:items-start"}>
+            {mode !== "signup" && <section
+              className={`relative overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/20 bg-[#4A1A22] shadow-[0_22px_65px_rgba(77,40,36,.16)] ${mode === "signup" ? "min-h-[16rem] lg:min-h-[18rem]" : "min-h-[25rem] lg:min-h-[40rem]"}`}
               aria-labelledby="pandit-benefits-heading"
               data-testid="panel-pandit-benefits"
             >
@@ -339,7 +513,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#281016] via-[#4A1A22]/75 to-[#4A1A22]/10" />
-              <div className="relative flex min-h-[25rem] flex-col justify-between p-5 text-white sm:p-7 lg:min-h-[40rem]">
+              <div className={`relative flex flex-col justify-between p-5 text-white sm:p-7 ${mode === "signup" ? "min-h-[16rem] lg:min-h-[18rem]" : "min-h-[25rem] lg:min-h-[40rem]"}`}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="rounded-full border border-[#F0D276]/50 bg-[#2D1117]/45 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#F0D276]">
                     {copy.benefitsEyebrow}
@@ -389,8 +563,42 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                   </div>
                 </div>
               </div>
-            </section>
+            </section>}
 
+          {mode === "signup" ? (
+            <div className="min-w-0">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[#D4AF37]/35 bg-[#FFFAF1] px-4 py-3">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Complete registration</p>
+                  <p className="mt-1 text-xs text-[#806F5E]">Submit your full Panditji application from this page.</p>
+                </div>
+                <button type="button" onClick={() => setMode("login")} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#6F2B38] hover:underline">
+                  <ArrowLeft className="h-3.5 w-3.5" /> {copy.backToLogin}
+                </button>
+              </div>
+              <RegistrationSection
+                form={registrationForm}
+                photoPreview={registrationPhotoPreview}
+                onChange={handleRegistrationChange}
+                onPhotoChange={handleRegistrationPhotoChange}
+                onPhotoRemove={() => {
+                  setRegistrationPhotoFile(null);
+                  setRegistrationPhotoPreview(null);
+                  setRegistrationPhotoError("");
+                }}
+                photoError={registrationPhotoError}
+                locationError={registrationLocationError}
+                servicesError={registrationServicesError}
+                applicationError={registrationApplicationError}
+                requestExactLocation={requestRegistrationExactLocation}
+                missingCityMode={registrationMissingCityMode}
+                setMissingCityMode={setRegistrationMissingCityMode}
+                onSubmit={handleRegistrationSubmit}
+                setForm={setRegistrationForm}
+                isPending={registrationMutation.isPending}
+              />
+            </div>
+          ) : (
           <Card className="overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/70 shadow-[0_22px_65px_rgba(77,40,36,.12)] backdrop-blur lg:self-start">
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-6 sm:p-9">
@@ -603,6 +811,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
               )}
             </CardContent>
           </Card>
+          )}
           </div>
           <p className="px-1 pt-3 text-center text-[9px] leading-4 text-[#9B8A7C]">{copy.privacy}</p>
         </div>
