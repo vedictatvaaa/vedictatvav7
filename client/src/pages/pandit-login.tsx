@@ -11,6 +11,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Copy,
+  Eye,
+  EyeOff,
   Info,
   Languages,
   Lock,
@@ -114,6 +116,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   const [language, setLanguage] = useState<Language>("en");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
@@ -773,7 +776,17 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                       <Label htmlFor="p-pass" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.password}</Label>
                       <div className="flex h-12 items-center gap-2.5 rounded-xl border border-[#DDCFBC] bg-white/80 px-3.5 focus-within:border-[#A67817] focus-within:ring-2 focus-within:ring-[#D4AF37]/20">
                         <Lock className="h-4 w-4 shrink-0 text-[#806F5E]" />
-                        <Input id="p-pass" type="password" autoComplete="current-password" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={password} onChange={(e) => setPassword(e.target.value)} data-testid="input-pandit-password" />
+                        <Input id="p-pass" type={showPassword ? "text" : "password"} autoComplete="current-password" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={password} onChange={(e) => setPassword(e.target.value)} data-testid="input-pandit-password" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((visible) => !visible)}
+                          className="shrink-0 rounded-md p-1 text-[#806F5E] transition-colors hover:bg-[#F4EADB] hover:text-[#6F2B38] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/50"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          title={showPassword ? "Hide password" : "Show password"}
+                          data-testid="button-toggle-pandit-password"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                         <span className="text-[10px] font-extrabold text-[#A67817]">PRIVATE</span>
                       </div>
                     </div>
