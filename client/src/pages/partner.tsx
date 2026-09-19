@@ -93,14 +93,14 @@ export default function PartnerPage() {
   };
 
   return (
-    <main className="relative isolate min-h-full overflow-hidden bg-[#F7F9F5] text-[#5A4A3A]" data-testid="partner-entry-page">
+    <main className="relative isolate min-h-full overflow-hidden bg-[#F5F0E6] text-[#5A4A3A]" data-testid="partner-entry-page">
       <PageSeo
         title={hindi ? "पार्टनर पोर्टल | Vedic Tatva" : "Partner Portal | Vedic Tatva"}
         description={copy.intro}
         ogType="website"
       />
 
-      <div className="pointer-events-none absolute -left-24 top-40 h-64 w-64 rounded-full bg-[#DCE8D8]/60 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute -left-24 top-40 h-64 w-64 rounded-full bg-[#E8D6D2]/65 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute -right-20 top-10 h-72 w-72 rounded-full bg-[#F1DFB5]/45 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute right-[-5rem] top-28 h-64 w-64 rounded-full border border-[#D4AF37]/15" aria-hidden="true" />
 
@@ -108,7 +108,7 @@ export default function PartnerPage() {
         <button
           type="button"
           onClick={handleBack}
-          className="group inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-1 text-[12px] font-semibold text-[#6B5B52] transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F9F5]"
+          className="group inline-flex min-h-10 w-fit items-center gap-2 rounded-full px-1 text-[12px] font-semibold text-[#6B5B52] transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F0E6]"
           aria-label={copy.backAria}
           data-testid="button-partner-back"
         >
@@ -116,7 +116,7 @@ export default function PartnerPage() {
           {copy.back}
         </button>
 
-        <section className="mt-5 rounded-[1.75rem] border border-white/85 bg-white/60 p-5 text-center shadow-[0_18px_55px_rgba(77,40,36,.08)] backdrop-blur-xl sm:mt-8 sm:p-8" aria-labelledby="partner-page-heading">
+        <section className="mt-5 rounded-[1.75rem] border border-[#D4AF37]/20 bg-[#FBF7EE]/75 p-5 text-center shadow-[0_18px_55px_rgba(109,43,53,.10)] backdrop-blur-xl sm:mt-8 sm:p-8" aria-labelledby="partner-page-heading">
           <div className="flex justify-center">
             <DevotionalMark />
           </div>
@@ -138,14 +138,14 @@ export default function PartnerPage() {
               const cardClass = `group flex min-h-[88px] items-center gap-3 rounded-2xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 ${
                 isPrimary
                   ? "border-[#D4AF37]/45 bg-[#FFFDF8] shadow-[0_10px_24px_rgba(77,40,36,.08)] hover:-translate-y-0.5 hover:shadow-[0_15px_30px_rgba(77,40,36,.12)]"
-                  : "border-white/90 bg-white/45 hover:border-[#D4AF37]/35 hover:bg-white/70"
+                       : "border-[#D4AF37]/20 bg-[#F5F0E6]/65 hover:border-[#D4AF37]/40 hover:bg-[#FBF7EE]/85"
               }`;
               const cardContent = (
                 <>
                   <span className={`relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border ${
                     isPrimary
                       ? "border-[#D4AF37]/35 bg-[#F1DFB5] text-[#7F5A15]"
-                      : "border-[#8EA98B]/25 bg-[#DCE8D8]/55 text-[#56745B]"
+                       : "border-[#D4AF37]/25 bg-[#F1DFB5]/35 text-[#7F5A15]"
                   }`}>
                     {provider.id === "pandit" ? (
                       <>
@@ -163,7 +163,7 @@ export default function PartnerPage() {
                       </>
                     ) : (
                       <>
-                        <Gem className="h-6 w-6 text-[#56745B]" strokeWidth={1.25} aria-hidden="true" />
+                        <Gem className="h-6 w-6 text-[#7F5A15]" strokeWidth={1.25} aria-hidden="true" />
                         <Orbit className="absolute h-10 w-10 text-[#A67817]/65" strokeWidth={0.9} aria-hidden="true" />
                       </>
                     )}
@@ -171,7 +171,7 @@ export default function PartnerPage() {
                   <span className="min-w-0 flex-1">
                     <span className={`block font-serif text-[17px] font-semibold leading-none ${isFrozen ? "text-[#806F5E]" : "text-[#6D2B35]"}`}>{content.title}</span>
                     <span className="mt-1.5 block text-[11px] leading-[1.35] text-[#6B5B52]">{content.description}</span>
-                    <span className={`mt-1.5 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] ${isFrozen ? "text-[#806F5E]" : isPrimary ? "text-[#A67817]" : "text-[#56745B]"}`}>
+                    <span className={`mt-1.5 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] ${isFrozen ? "text-[#806F5E]" : "text-[#A67817]"}`}>
                       {isFrozen && <LockKeyhole className="h-3 w-3" aria-hidden="true" />}
                       {isFrozen ? content.action : content.action}
                     </span>
@@ -223,7 +223,7 @@ export default function PartnerPage() {
               {astrologerAccessEnabled ? (
                 <Link
                   href="/become-astrologer"
-                  className="inline-flex min-h-8 items-center rounded-full px-3 text-[11px] font-bold text-[#56745B] underline decoration-[#8EA98B]/70 underline-offset-4 transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+                  className="inline-flex min-h-8 items-center rounded-full px-3 text-[11px] font-bold text-[#7F5A15] underline decoration-[#D4AF37]/70 underline-offset-4 transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
                   data-testid="link-partner-astrologer-signup"
                 >
                   {copy.astrologerApply}
