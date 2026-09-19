@@ -1542,6 +1542,46 @@ export function RegistrationSection({
   }, [masterServices]);
   const activeStates = locations.filter(s => s.isActive);
   const activeCities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
+  const [bioAiUses, setBioAiUses] = useState(0);
+  const [bioAiLoading, setBioAiLoading] = useState(false);
+  const [bioAiError, setBioAiError] = useState("");
+
+  useEffect(() => {
+    if (!form.fullName && !form.phone && !form.email && !form.bio) setBioAiUses(0);
+  }, [form.fullName, form.phone, form.email, form.bio]);
+
+  const writeBioWithAi = async () => {
+    if (bioAiLoading || bioAiUses >= 2) return;
+    setBioAiError("");
+    setBioAiLoading(true);
+    try {
+      const response = await fetch("/api/pandit-applications/generate-bio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          experience: form.experience,
+          specializations: form.specializations,
+          education: form.education,
+          languages: form.languages,
+          serviceArea: form.serviceArea,
+          regionalOrigin: form.regionalOrigin,
+          currentBio: form.bio,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.bio !== "string") {
+        throw new Error(result.message || "AI bio writing is unavailable.");
+      }
+      setForm(current => ({ ...current, bio: result.bio.slice(0, 500) }));
+      setBioAiUses(current => current + 1);
+    } catch (error) {
+      setBioAiError(error instanceof Error ? error.message : "AI bio writing is unavailable.");
+    } finally {
+      setBioAiLoading(false);
+    }
+  };
+
   return (
     <section
       id="apply"
@@ -1799,10 +1839,26 @@ export function RegistrationSection({
                       <p className="text-xs" style={{ color: C.brownSoft }}>JPG, PNG, or WebP; maximum 5 MB. Your photo uploads securely when you submit.</p>
                       {photoError && <p className="text-xs text-destructive">{photoError}</p>}
                     </Field>
-                    <Field label="Brief Bio" id="bio">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label htmlFor="bio" className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Brief Bio</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={writeBioWithAi}
+                          disabled={bioAiLoading || bioAiUses >= 2}
+                          className="h-8 text-xs"
+                          data-testid="button-ai-write-bio"
+                        >
+                          <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                          {bioAiLoading ? "Writing…" : bioAiUses >= 2 ? "AI drafts used" : `Write better bio with AI (${2 - bioAiUses} left)`}
+                        </Button>
+                      </div>
                       <Textarea id="bio" name="bio" value={form.bio} onChange={onChange} placeholder="Tell devotees about your sampradaya and approach..." className="min-h-[90px]" maxLength={500} data-testid="input-bio" style={{ borderColor: `${C.maroon}25` }} />
                       <p className="text-xs text-right mt-1" style={{ color: C.brownSoft }}>{form.bio.length}/500</p>
-                    </Field>
+                      {bioAiError && <p className="text-xs text-destructive" role="alert">{bioAiError}</p>}
+                    </div>
                   </div>
                 </FieldGroup>
 
