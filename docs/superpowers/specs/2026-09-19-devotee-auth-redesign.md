@@ -43,6 +43,8 @@ Do not display WhatsApp sign-in because the application does not currently suppo
 
 Signup, password recovery, and reset confirmation use the same visual shell. Their existing fields, validation, referral-code behavior, submission logic, and state transitions remain unchanged.
 
+Devotee password signup requires a full name, an exact 10-digit mobile number, an email address, a password, and matching password confirmation. Before registration, the user must verify the email with a single-use six-digit code that expires after 10 minutes. Registration tokens are consumed atomically and cannot be replayed. First-time Google users must complete this required signup flow before Google can be linked to the verified account.
+
 ## Responsive Behavior
 
 Design mobile-first. Keep the form centered and comfortably touch-sized. On tablet and desktop, constrain the content width instead of stretching it. Maintain generous surrounding whitespace without adding a split-screen promotional panel.

@@ -38,6 +38,8 @@ export type RegisterData = {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
+  emailVerificationToken: string;
   phone?: string;
   city?: string;
   gotra?: string;

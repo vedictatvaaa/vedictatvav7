@@ -556,6 +556,38 @@ It expires in ${params.expiresInMinutes} minutes and can be used once. ${params.
   return { to: params.to, subject, text, html };
 }
 
+export function buildCustomerEmailVerificationEmail(params: {
+  to: string;
+  code: string;
+  expiresInMinutes: number;
+}): EmailMessage {
+  const subject = "Verify your Vedic Tatva email";
+  const text = `Namaste,
+
+Your Vedic Tatva email verification code is: ${params.code}
+
+It expires in ${params.expiresInMinutes} minutes and can be used once. If you did not request this code, you can safely ignore this email.
+
+— Vedic Tatva Team`;
+  const html = wrapHtml(subject, `
+    <p style="margin:0 0 12px;font-size:15px;">Namaste,</p>
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.55;">
+      Use this code to verify your email and finish creating your Vedic Tatva devotee account:
+    </p>
+    <p style="margin:18px 0;text-align:center;">
+      <span style="display:inline-block;background:#f7f1e8;color:#7a1f1f;padding:14px 26px;border-radius:6px;font-weight:700;font-size:28px;letter-spacing:8px;font-family:Menlo,Consolas,monospace;">${escapeHtml(params.code)}</span>
+    </p>
+    <p style="margin:0 0 8px;font-size:13px;color:#6b6b6b;line-height:1.55;">
+      This single-use code expires in <strong>${params.expiresInMinutes} minutes</strong>.
+    </p>
+    <p style="margin:14px 0 0;font-size:13px;color:#6b6b6b;line-height:1.55;">
+      If you did not request this code, you can safely ignore this email.
+    </p>
+    <p style="margin:8px 0 0;font-size:13px;color:#6b6b6b;">— Vedic Tatva Team</p>
+  `);
+  return { to: params.to, subject, text, html };
+}
+
 // ---- Welcome email (account creation) ----
 export function buildWelcomeEmail(params: {
   to: string;

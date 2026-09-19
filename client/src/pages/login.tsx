@@ -9,6 +9,7 @@ import {
   Loader2,
   Lock,
   Mail,
+  Phone,
   User as UserIcon,
 } from "lucide-react";
 import PageSeo from "@/components/PageSeo";
@@ -151,6 +152,8 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
   const [view, setView] = useState<View>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [referralCode, setReferralCode] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -163,6 +166,10 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
   const [rememberMe, setRememberMe] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verificationChallengeId, setVerificationChallengeId] = useState<number | null>(null);
+  const [emailVerificationToken, setEmailVerificationToken] = useState("");
+  const [verificationBusy, setVerificationBusy] = useState(false);
 
   useEffect(() => {
     if (user) setLocation(redirect);
@@ -184,12 +191,18 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
         handleSuccess();
       } else if (view === "signup") {
         if (!name.trim()) throw new Error("Please enter your full name");
+        if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) throw new Error("Enter a valid 10-digit mobile number");
         if (password.length < 6) throw new Error("Password must be at least 6 characters");
+        if (password !== confirmPassword) throw new Error("Passwords do not match");
+        if (!emailVerificationToken) throw new Error("Please verify your email before creating your account");
         await register(
           {
             name: name.trim(),
             email,
             password,
+            confirmPassword,
+            phone: phone.replace(/\D/g, ""),
+            emailVerificationToken,
             referralCode: referralCode.trim().toUpperCase() || undefined,
           } as any,
           rememberMe,
@@ -224,6 +237,47 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
   const isBusy = submitting || loading;
   const copy = viewCopy[view];
   const isAccountView = view === "login" || view === "signup";
+
+  const requestEmailVerification = async () => {
+    setVerificationBusy(true);
+    try {
+      const response = await fetch("/api/auth/email-verification/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Could not send verification code");
+      setVerificationChallengeId(data.challengeId);
+      setVerificationCode("");
+      setEmailVerificationToken("");
+      toast({ title: "Verification code sent", description: "Check your email for the six-digit code." });
+    } catch (error: any) {
+      toast({ title: "Could not send code", description: error.message, variant: "destructive" });
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
+
+  const verifyEmailCode = async () => {
+    if (!verificationChallengeId) return;
+    setVerificationBusy(true);
+    try {
+      const response = await fetch("/api/auth/email-verification/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId: verificationChallengeId, email, code: verificationCode }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Could not verify email");
+      setEmailVerificationToken(data.verificationToken);
+      toast({ title: "Email verified", description: "You can now create your devotee account." });
+    } catch (error: any) {
+      toast({ title: "Verification failed", description: error.message, variant: "destructive" });
+    } finally {
+      setVerificationBusy(false);
+    }
+  };
 
   return (
     <>
@@ -329,6 +383,17 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
                         autoComplete="name"
                         testId="input-name"
                       />
+                      <AuthField
+                        id="auth-phone"
+                        label="Mobile number"
+                        icon={Phone}
+                        type="tel"
+                        value={phone}
+                        onChange={(value) => setPhone(value.replace(/\D/g, "").slice(0, 10))}
+                        placeholder="10-digit mobile number"
+                        autoComplete="tel-national"
+                        testId="input-phone"
+                      />
                       <div>
                         <div className="mb-1.5 flex items-center justify-between gap-3">
                           <Label htmlFor="auth-ref" className="text-[13px] font-medium text-[#4F4543]">
@@ -353,17 +418,85 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
                     </>
                   )}
 
-                  <AuthField
-                    id="auth-email"
-                    label="Email address"
-                    icon={Mail}
-                    type="email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    testId="input-email"
-                  />
+                  {view === "signup" ? (
+                    <div>
+                      <Label htmlFor="auth-email" className="mb-1.5 block text-[13px] font-medium text-[#4F4543]">
+                        Email address
+                      </Label>
+                      <div className="flex gap-2">
+                        <div className="relative min-w-0 flex-1">
+                          <Mail className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7C7470]" strokeWidth={1.6} />
+                          <Input
+                            id="auth-email"
+                            data-testid="input-email"
+                            type="email"
+                            value={email}
+                            onChange={(event) => {
+                              setEmail(event.target.value);
+                              setVerificationChallengeId(null);
+                              setEmailVerificationToken("");
+                            }}
+                            placeholder="you@example.com"
+                            className="h-12 rounded-lg border-[#D8D0CA] bg-white/70 pl-11 pr-4 text-[15px] focus-visible:border-[#8D3442] focus-visible:ring-[#8D3442]/15"
+                            autoComplete="email"
+                            required
+                            disabled={Boolean(emailVerificationToken)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={requestEmailVerification}
+                          disabled={verificationBusy || !email || Boolean(emailVerificationToken)}
+                          className="h-12 shrink-0 rounded-lg border-[#8D2230]/35 px-3 text-xs font-semibold text-[#6D2B35] hover:bg-[#F7F0EA]"
+                          data-testid="button-send-email-code"
+                        >
+                          {emailVerificationToken ? "Verified" : verificationChallengeId ? "Resend code" : "Verify email"}
+                        </Button>
+                      </div>
+                      {emailVerificationToken ? (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700" role="status">
+                          <CheckCircle2 className="h-4 w-4" /> Email verified
+                        </p>
+                      ) : verificationChallengeId ? (
+                        <div className="mt-3 flex gap-2">
+                          <Input
+                            value={verificationCode}
+                            onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            placeholder="6-digit code"
+                            aria-label="Email verification code"
+                            className="h-11 rounded-lg border-[#D8D0CA] bg-white/70 tracking-[0.25em]"
+                            data-testid="input-email-verification-code"
+                          />
+                          <Button
+                            type="button"
+                            onClick={verifyEmailCode}
+                            disabled={verificationBusy || verificationCode.length !== 6}
+                            className="h-11 shrink-0 rounded-lg bg-[#6D2B35] px-4 text-white hover:bg-[#581F28]"
+                            data-testid="button-verify-email-code"
+                          >
+                            Confirm
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[11px] text-[#7B706B]">Verification is required before account creation.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <AuthField
+                      id="auth-email"
+                      label="Email address"
+                      icon={Mail}
+                      type="email"
+                      value={email}
+                      onChange={setEmail}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      testId="input-email"
+                    />
+                  )}
 
                   {view !== "forgot" && (
                     <div>
@@ -399,6 +532,34 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
                     </div>
                   )}
 
+                  {view === "signup" && (
+                    <div>
+                      <Label htmlFor="auth-confirm-password" className="mb-1.5 block text-[13px] font-medium text-[#4F4543]">
+                        Re-enter password
+                      </Label>
+                      <div className="relative">
+                        <Lock className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7C7470]" strokeWidth={1.6} />
+                        <Input
+                          id="auth-confirm-password"
+                          data-testid="input-confirm-password"
+                          type={showPwd ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(event) => setConfirmPassword(event.target.value)}
+                          placeholder="Re-enter your password"
+                          className="h-12 rounded-lg border-[#D8D0CA] bg-white/70 pl-11 pr-4 text-[15px] focus-visible:border-[#8D3442] focus-visible:ring-[#8D3442]/15"
+                          autoComplete="new-password"
+                          required
+                          aria-describedby={confirmPassword && password !== confirmPassword ? "password-match-error" : undefined}
+                        />
+                      </div>
+                      {confirmPassword && password !== confirmPassword && (
+                        <p id="password-match-error" className="mt-1.5 text-xs text-red-700" role="alert">
+                          Passwords do not match.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {isAccountView && (
                     <div className="flex items-center justify-between gap-4 pt-0.5">
                       <label className="flex min-h-9 cursor-pointer select-none items-center gap-2.5">
@@ -426,7 +587,7 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
                   <Button
                     type="submit"
                     className="h-12 w-full rounded-lg bg-[#8D2230] font-serif text-base text-white shadow-[0_8px_20px_rgba(109,43,53,0.16)] hover:bg-[#731B27] focus-visible:ring-[#B9944D] disabled:bg-[#A9868B]"
-                    disabled={isBusy}
+                    disabled={isBusy || (view === "signup" && !emailVerificationToken)}
                     data-testid="button-submit-auth"
                   >
                     {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

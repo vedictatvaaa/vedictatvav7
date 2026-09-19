@@ -37,6 +37,18 @@ export const users = pgTable("users", {
   referralBonusPaid: boolean("referral_bonus_paid").notNull().default(false),
 });
 
+export const customerEmailVerificationChallenges = pgTable("customer_email_verification_challenges", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull(),
+  codeHash: text("code_hash").notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  registrationTokenHash: text("registration_token_hash"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const loyaltyTransactions = pgTable("loyalty_transactions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("user_id").notNull(),

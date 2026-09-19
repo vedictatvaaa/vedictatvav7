@@ -117,12 +117,10 @@ export function AuthModal() {
         toast({ title: "Welcome back!", description: "You are now signed in" });
         closeAuth();
       } else if (view === "signup") {
-        if (!name.trim()) throw new Error("Please enter your name");
-        if (password.length < 6) throw new Error("Password must be at least 6 characters");
-        await register({ name: name.trim(), email, password, referralCode: referralCode.trim().toUpperCase() || undefined } as any, rememberMe);
-        if (referralCode) try { localStorage.removeItem("vt_referral_code"); } catch {}
-        toast({ title: "Account created", description: "Welcome to Vedic Tatva" });
         closeAuth();
+        const ref = referralCode.trim().toUpperCase();
+        window.location.assign(`/register${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`);
+        return;
       } else if (view === "forgot") {
         await requestPasswordReset(email);
         setView("forgot-sent");
@@ -346,7 +344,11 @@ export function AuthModal() {
                       New here?{" "}
                       <button
                         type="button"
-                        onClick={() => setView("signup")}
+                        onClick={() => {
+                          closeAuth();
+                          const ref = referralCode.trim().toUpperCase();
+                          window.location.assign(`/register${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`);
+                        }}
                         className="text-[#D4AF37] font-semibold hover:underline"
                         data-testid="button-switch-signup"
                       >

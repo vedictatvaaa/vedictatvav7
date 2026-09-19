@@ -66,7 +66,7 @@ import {
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
    products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
-  pujaTypes, pujaMuhurats,
+   pujaTypes, pujaMuhurats, customerEmailVerificationChallenges,
   type AbandonedCart,
 } from "@shared/schema";
 import { resolveStandardPuja } from "@shared/standard-puja-catalogue";
@@ -880,29 +880,177 @@ export async function registerRoutes(
   });
 
   // ---- Auth Routes ----
+  const customerVerificationRequestLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => `${ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown")}|${String(req.body?.email || "").trim().toLowerCase()}`,
+    message: { message: "Too many verification requests. Please try again later." },
+  });
+  const customerVerificationIpLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+    message: { message: "Too many verification requests. Please try again later." },
+  });
+  const customerVerificationCheckLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many verification attempts. Please try again later." },
+  });
+  const verificationSecret = () => {
+    if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required for email verification");
+    return process.env.SESSION_SECRET;
+  };
+  const verificationHash = (value: string) =>
+    crypto.createHmac("sha256", verificationSecret()).update(value).digest("hex");
+
+  app.post("/api/auth/email-verification/request", customerVerificationIpLimiter, customerVerificationRequestLimiter, async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "Please enter a valid email address" });
+      }
+      if (await storage.getUserByEmail(email)) {
+        return res.status(409).json({ message: "An account with this email already exists" });
+      }
+      const [latest] = await db.select()
+        .from(customerEmailVerificationChallenges)
+        .where(eq(customerEmailVerificationChallenges.email, email))
+        .orderBy(desc(customerEmailVerificationChallenges.createdAt))
+        .limit(1);
+      if (latest?.createdAt && Date.now() - new Date(latest.createdAt).getTime() < 60_000) {
+        return res.status(429).json({ message: "Please wait one minute before requesting another code" });
+      }
+      const code = String(crypto.randomInt(100000, 1000000));
+      const [challenge] = await db.insert(customerEmailVerificationChallenges).values({
+        email,
+        codeHash: verificationHash(`${email}:${code}`),
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      }).returning({ id: customerEmailVerificationChallenges.id });
+      const { buildCustomerEmailVerificationEmail } = await import("./email");
+      const delivery = await sendEmail(buildCustomerEmailVerificationEmail({
+        to: email,
+        code,
+        expiresInMinutes: 10,
+      }));
+      if (!delivery.sent) {
+        await db.delete(customerEmailVerificationChallenges).where(eq(customerEmailVerificationChallenges.id, challenge.id));
+        return res.status(503).json({ message: "Verification email could not be sent. Please try again later." });
+      }
+      res.json({ ok: true, challengeId: challenge.id, expiresInSeconds: 600, resendAfterSeconds: 60 });
+    } catch (error) {
+      console.error("[customer-email-verification] request failed:", error);
+      res.status(500).json({ message: "Could not send verification code" });
+    }
+  });
+
+  app.post("/api/auth/email-verification/verify", customerVerificationCheckLimiter, async (req, res) => {
+    try {
+      const challengeId = Number(req.body?.challengeId);
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      const code = String(req.body?.code || "").trim();
+      if (!Number.isInteger(challengeId) || !/^\d{6}$/.test(code)) {
+        return res.status(400).json({ message: "Enter the six-digit verification code" });
+      }
+      const result = await db.transaction(async (tx) => {
+        const [challenge] = await tx.select().from(customerEmailVerificationChallenges)
+          .where(and(
+            eq(customerEmailVerificationChallenges.id, challengeId),
+            eq(customerEmailVerificationChallenges.email, email),
+          ))
+          .limit(1)
+          .for("update");
+        if (!challenge || challenge.verifiedAt || new Date(challenge.expiresAt).getTime() < Date.now()) {
+          return { status: 400, message: "This verification code is invalid or has expired" } as const;
+        }
+        if (challenge.attempts >= 5) {
+          return { status: 429, message: "Too many incorrect attempts. Request a new code." } as const;
+        }
+        const expected = Buffer.from(challenge.codeHash, "hex");
+        const supplied = Buffer.from(verificationHash(`${email}:${code}`), "hex");
+        if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
+          await tx.update(customerEmailVerificationChallenges)
+            .set({ attempts: challenge.attempts + 1 })
+            .where(eq(customerEmailVerificationChallenges.id, challenge.id));
+          return { status: 400, message: "Incorrect verification code" } as const;
+        }
+        const registrationToken = crypto.randomBytes(32).toString("hex");
+        await tx.update(customerEmailVerificationChallenges).set({
+          verifiedAt: new Date(),
+          registrationTokenHash: verificationHash(registrationToken),
+          tokenExpiresAt: new Date(Date.now() + 20 * 60 * 1000),
+        }).where(eq(customerEmailVerificationChallenges.id, challenge.id));
+        return { status: 200, verificationToken: registrationToken } as const;
+      });
+      if (result.status !== 200) return res.status(result.status).json({ message: result.message });
+      res.json({ ok: true, verificationToken: result.verificationToken });
+    } catch (error) {
+      console.error("[customer-email-verification] verify failed:", error);
+      res.status(500).json({ message: "Could not verify email" });
+    }
+  });
+
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { name, email, password, phone, city, gotra, birthDate, birthTime, birthCity } = req.body;
-      if (!name || !email || !password) {
-        return res.status(400).json({ message: "Name, email and password are required" });
+      const { name, email, password, confirmPassword, phone, city, gotra, birthDate, birthTime, birthCity, emailVerificationToken } = req.body;
+      if (!name || !email || !password || !confirmPassword || !phone) {
+        return res.status(400).json({ message: "Name, mobile number, email and both password fields are required" });
       }
       const normalizedEmail = String(email).trim().toLowerCase();
+      const normalizedName = String(name).trim();
+      const normalizedPhone = String(phone).trim();
+      if (!normalizedName) {
+        return res.status(400).json({ message: "Please enter your full name" });
+      }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
         return res.status(400).json({ message: "Please enter a valid email address" });
+      }
+      if (!/^\d{10}$/.test(normalizedPhone)) {
+        return res.status(400).json({ message: "Mobile number must contain exactly 10 digits" });
       }
       if (String(password).length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
-      const existing = await storage.getUserByEmail(normalizedEmail);
-      if (existing) {
-        return res.status(409).json({ message: "An account with this email already exists" });
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
       }
+      if (!emailVerificationToken) {
+        return res.status(400).json({ message: "Please verify your email before creating your account" });
+      }
+      const tokenHash = verificationHash(String(emailVerificationToken));
       const bcrypt = await import("bcryptjs");
       const hashed = await bcrypt.hash(password, 10);
-      const user = await storage.createUser({
-        name, email: normalizedEmail, password: hashed, phone: phone || null, city: city || null,
-        gotra: gotra || null, birthDate: birthDate || null,
-        birthTime: birthTime || null, birthCity: birthCity || null,
+      const user = await db.transaction(async (tx) => {
+        const [challenge] = await tx.select().from(customerEmailVerificationChallenges)
+          .where(and(
+            eq(customerEmailVerificationChallenges.email, normalizedEmail),
+            eq(customerEmailVerificationChallenges.registrationTokenHash, tokenHash),
+          ))
+          .orderBy(desc(customerEmailVerificationChallenges.verifiedAt))
+          .limit(1)
+          .for("update");
+        if (!challenge?.verifiedAt || !challenge.tokenExpiresAt || new Date(challenge.tokenExpiresAt).getTime() < Date.now()) {
+          throw Object.assign(new Error("Please verify your email before creating your account"), { statusCode: 400 });
+        }
+        const [existing] = await tx.select({ id: users.id }).from(users)
+          .where(eq(users.email, normalizedEmail)).limit(1);
+        if (existing) {
+          throw Object.assign(new Error("An account with this email already exists"), { statusCode: 409 });
+        }
+        const [created] = await tx.insert(users).values({
+          name: normalizedName, email: normalizedEmail, password: hashed, phone: normalizedPhone, city: city || null,
+          gotra: gotra || null, birthDate: birthDate || null,
+          birthTime: birthTime || null, birthCity: birthCity || null, emailVerified: true,
+        }).returning();
+        await tx.delete(customerEmailVerificationChallenges)
+          .where(eq(customerEmailVerificationChallenges.email, normalizedEmail));
+        return created;
       });
       // Generate referral code & apply incoming referral if any
       try { await ensureReferralCode(user.id); } catch {}
@@ -940,9 +1088,11 @@ export async function registerRoutes(
 
       setCustomerSession(res, safeUser.id);
       res.status(201).json(safeUser);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(error?.statusCode || (error?.code === "23505" ? 409 : 500)).json({
+        message: error?.statusCode ? error.message : error?.code === "23505" ? "An account with these details already exists" : "Registration failed",
+      });
     }
   });
 
@@ -1042,11 +1192,9 @@ export async function registerRoutes(
           user = (await storage.getUser(user.id))!;
         }
       } else {
-        user = await storage.createUser({
-          name, email, password: null, phone: null, city: null,
-          gotra: null, birthDate: null, birthTime: null, birthCity: null,
-          googleId, avatarUrl, emailVerified: true,
-        } as any);
+        return res.status(409).json({
+          message: "Create your devotee account with a verified email and mobile number first, then continue with Google.",
+        });
       }
       const { password: _, ...safeUser } = user;
       setCustomerSession(res, safeUser.id);
