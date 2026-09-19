@@ -7,7 +7,7 @@ Keep dependency installation before source copies so Docker can reuse the depend
 
 **Why:** A broad, unrelated lockfile refresh changed hundreds of package versions and made npm 10.9.4 terminate with “Exit handler never called” only on the Coolify builder, even with lifecycle scripts disabled and a clean cache. Restoring the last successful dependency graph while removing only the retired provider fixed deployment. A clean Node 20 Alpine install also compiles native modules for several minutes, and an automatic schema push can delay startup beyond health-check windows.
 
-**How to apply:** Source-only changes should reuse the Docker dependency layer. Do not run broad package updates as a side effect of removing or adding one dependency; make the smallest manifest/lockfile change and validate a completely clean Docker builder before publishing. On startup, wait explicitly for PostgreSQL, apply each committed migration once, then start the server; only enable schema push for an intentional maintenance deployment.
+**How to apply:** Source-only changes should reuse the Docker dependency layer. Do not run broad package updates as a side effect of removing or adding one dependency; make the smallest manifest/lockfile change and validate `npm ci` with Coolify's strict flags in a clean environment before publishing. On startup, wait explicitly for PostgreSQL, apply each committed migration once, then start the server; only enable schema push for an intentional maintenance deployment.
 
 ## Deployment queue recovery
 
