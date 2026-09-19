@@ -410,7 +410,7 @@ function PanditCard({
 // =====================================================================
 // Main directory view
 // =====================================================================
-export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, pujaSlug, language, tradition, date, muhurat, facetOptions, embedded = false }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; pujaSlug?: string; language?: string; tradition?: string; date?: string; muhurat?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean }) {
+export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, stateLabel, stateSlug, cityOptions = [], mode = "city", service, pujaSlug, language, tradition, date, muhurat, facetOptions, embedded = false, pageSize = 12 }: { defaultCity?: string; cityLabel?: string; cityId?: number; stateId?: number; stateLabel?: string; stateSlug?: string; cityOptions?: { id: number; name: string; slug: string; count: number }[]; mode?: "city" | "state" | "nearMe"; service?: string; pujaSlug?: string; language?: string; tradition?: string; date?: string; muhurat?: string; facetOptions?: { services: string[]; languages: string[]; traditions: string[] }; embedded?: boolean; pageSize?: number }) {
   const initialQuery = typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const directorySearch = useSearch();
   const [filters, setFilters] = useState<Filters>(() => ({
@@ -576,14 +576,14 @@ export function PanditDirectoryView({ defaultCity, cityLabel, cityId, stateId, s
     if (filters.onlineOnly) params.set("onlineOnly", "true");
     params.set("sort", sortBy);
     params.set("page", String(page));
-    params.set("pageSize", "12");
+     params.set("pageSize", String(pageSize));
     if (userLocation) {
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
       if (mode === "nearMe") params.set("radiusKm", "50");
     }
     return params.toString();
-  }, [defaultCity, cityId, stateId, mode, service, pujaSlug, language, tradition, date, muhurat, filters, debouncedSearch, sortBy, page, userLocation]);
+   }, [defaultCity, cityId, stateId, mode, service, pujaSlug, language, tradition, date, muhurat, filters, debouncedSearch, sortBy, page, pageSize, userLocation]);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery<DirectoryResponse>({
     queryKey: ["/api/book-pandit-online", queryParams],

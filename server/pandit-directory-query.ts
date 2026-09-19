@@ -39,7 +39,7 @@ export function parseDirectoryQuery(query: Record<string, unknown>): DirectoryQu
   const requestedSort = text("sort");
   if (requestedSort && !DIRECTORY_SORTS.includes(requestedSort as DirectorySort)) throw new Error("Invalid sort");
   const page = numberParam(query.page, "page", { min: 1, integer: true }) ?? 1;
-  const pageSize = numberParam(query.pageSize, "pageSize", { min: 1, max: 24, integer: true }) ?? 12;
+  const pageSize = numberParam(query.pageSize, "pageSize", { min: 1, max: 50, integer: true }) ?? 12;
   const lat = numberParam(query.lat, "lat", { min: -90, max: 90 });
   const lng = numberParam(query.lng, "lng", { min: -180, max: 180 });
   const nearMe = bool("nearMe");

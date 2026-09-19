@@ -3787,13 +3787,21 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
 
   app.get("/api/admin/pandit-discovery/health", adminAuthMiddleware, async (_req, res) => {
     try {
-      const [all, states, cities] = await Promise.all([
+      const [all, states, cities, storefrontRows] = await Promise.all([
         storage.getPandits(),
         db.select().from(indianStates),
         db.select().from(indianCities),
+        db.select({
+          panditId: panditStorefronts.panditId,
+          slug: pandits.slug,
+          isPublished: panditStorefronts.isPublished,
+          status: panditStorefronts.status,
+        }).from(panditStorefronts).leftJoin(pandits, eq(pandits.id, panditStorefronts.panditId)),
       ]);
       const stateById = new Map(states.map(state => [state.id, state]));
       const cityById = new Map(cities.map(city => [city.id, city]));
+      const storefrontByPanditId = new Map(storefrontRows.map(storefront => [storefront.panditId, storefront]));
+      const now = Date.now();
       const issueFor = (pandit: any) => {
         const issues: string[] = [];
         const state = pandit.stateId == null ? undefined : stateById.get(pandit.stateId);
@@ -3809,11 +3817,67 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         return issues;
       };
       const rows = all.map(pandit => ({ pandit, issues: issueFor(pandit) }));
-      const publiclyDiscoverable = rows.filter(({ pandit, issues }) =>
-        pandit.verified && !pandit.onLeave && !issues.some(issue =>
-          ["missing_state", "missing_city", "inactive_state", "inactive_city", "invalid_state_city", "location_review"].includes(issue),
-        ),
-      ).length;
+      const diagnostics = await Promise.all(all.map(async (pandit: any) => {
+        const state = pandit.stateId == null ? undefined : stateById.get(pandit.stateId);
+        const city = pandit.cityId == null ? undefined : cityById.get(pandit.cityId);
+        const storefront = storefrontByPanditId.get(pandit.id);
+        const locationIssues = issueFor(pandit).filter(issue => [
+          "missing_state", "missing_city", "inactive_state", "inactive_city", "invalid_state_city", "location_review",
+        ].includes(issue));
+        const suspendedUntil = pandit.suspendedUntil instanceof Date
+          ? pandit.suspendedUntil.getTime()
+          : pandit.suspendedUntil ? new Date(pandit.suspendedUntil).getTime() : null;
+        const accountEligible = pandit.accountStatus !== "banned"
+          && (pandit.accountStatus !== "suspended" || (suspendedUntil != null && suspendedUntil <= now));
+        const publicReasons: string[] = [];
+        if (!pandit.verified) publicReasons.push("not_verified");
+        if (pandit.onLeave) publicReasons.push("on_leave");
+        if (pandit.archived) publicReasons.push("archived");
+        if (!pandit.directoryVisible) publicReasons.push("directory_hidden");
+        if (!pandit.searchEligible) publicReasons.push("search_not_eligible");
+        publicReasons.push(...locationIssues);
+        if (!accountEligible) publicReasons.push(pandit.accountStatus === "banned" ? "account_banned" : "account_suspended");
+        if (!storefront || storefront.isPublished !== true || storefront.status !== "published") publicReasons.push("storefront_not_published");
+
+        const services = await storage.listPanditServicesWithMaster(pandit.id, true);
+        const booking = evaluatePanditBookingEligibility(
+          pandit,
+          {
+            services: services.map(service => ({ mode: service.service.mode, serviceAreas: service.service.serviceAreas })),
+            pujaSupported: services.length > 0,
+          },
+        );
+        const publicEligible = publicReasons.length === 0;
+        const storefrontUrl = storefront?.slug ? `/pandit/${encodeURIComponent(storefront.slug)}` : null;
+        return {
+          id: pandit.id,
+          name: pandit.name,
+          city: city?.name || pandit.city || null,
+          state: state?.name || pandit.state || null,
+          accountStatus: pandit.accountStatus,
+          enrolled: !pandit.archived && ["active", "suspended", "banned"].includes(pandit.accountStatus),
+          verified: pandit.verified === true,
+          onLeave: pandit.onLeave === true,
+          archived: pandit.archived === true,
+          directoryVisible: pandit.directoryVisible === true,
+          searchEligible: pandit.searchEligible === true,
+          locationReviewStatus: pandit.locationReviewStatus || "needs_review",
+          storefront: {
+            url: storefrontUrl,
+            isPublished: storefront?.isPublished === true,
+            status: storefront?.status || null,
+          },
+          public: { eligible: publicEligible, reasons: publicReasons },
+          booking: { eligible: booking.result.passed, reasons: booking.exclusions },
+        };
+      }));
+      const publiclyDiscoverable = diagnostics.filter(row => row.public.eligible).length;
+      const publishedStorefronts = diagnostics.filter(row => row.storefront.isPublished && row.storefront.status === "published").length;
+      const bookable = diagnostics.filter(row => row.booking.eligible).length;
+      const exclusionCounts = diagnostics.reduce<Record<string, number>>((counts, row) => {
+        for (const reason of row.public.reasons) counts[reason] = (counts[reason] || 0) + 1;
+        return counts;
+      }, {});
       res.json({
         ok: true,
         generatedAt: new Date().toISOString(),
@@ -3821,6 +3885,10 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         verified: all.filter(pandit => pandit.verified).length,
         active: all.filter(pandit => !pandit.onLeave).length,
         publiclyDiscoverable,
+        publishedStorefronts,
+        bookable,
+        exclusionCounts,
+        diagnostics,
         missingState: rows.filter(row => row.issues.includes("missing_state")).length,
         missingCity: rows.filter(row => row.issues.includes("missing_city")).length,
         locationIssues: rows.filter(row => row.issues.some(issue => ["inactive_state", "inactive_city", "invalid_state_city", "location_review", "coordinates_missing"].includes(issue))).length,

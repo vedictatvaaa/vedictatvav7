@@ -42,8 +42,30 @@ function PanditsTab() {
     queryFn: () => fetcher("/api/admin/pandits"),
   });
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>fetcher("/api/admin/locations") });
-  type DiscoveryHealth = { total:number; verified:number; active:number; publiclyDiscoverable:number; missingState:number; missingCity:number; locationIssues:number; missingProfileData:number; issuePanditIds:number[] };
+  type DiscoveryDiagnostic = {
+    id: number;
+    name: string;
+    city: string | null;
+    state: string | null;
+    accountStatus: string;
+    enrolled: boolean;
+    verified: boolean;
+    onLeave: boolean;
+    archived: boolean;
+    directoryVisible: boolean;
+    searchEligible: boolean;
+    locationReviewStatus: string;
+    storefront: { url: string | null; isPublished: boolean; status: string | null };
+    public: { eligible: boolean; reasons: string[] };
+    booking: { eligible: boolean; reasons: string[] };
+  };
+  type DiscoveryHealth = {
+    total:number; verified:number; active:number; publiclyDiscoverable:number; publishedStorefronts:number; bookable:number;
+    missingState:number; missingCity:number; locationIssues:number; missingProfileData:number; issuePanditIds:number[];
+    exclusionCounts: Record<string, number>; diagnostics: DiscoveryDiagnostic[];
+  };
   const { data: health } = useQuery<DiscoveryHealth>({ queryKey:["/api/admin/pandit-discovery/health"], queryFn:()=>fetcher("/api/admin/pandit-discovery/health") });
+  const diagnosticById = new Map((health?.diagnostics || []).map(diagnostic => [diagnostic.id, diagnostic]));
   const normalizedRegistrationNo = registrationLookup.trim();
   const hasRegistrationLookup = registrationLookup.length > 0;
   const registrationLookupError = hasRegistrationLookup && !/^[0-9]{10}$/.test(normalizedRegistrationNo)
@@ -292,6 +314,8 @@ function PanditsTab() {
             ["Verified", health.verified],
             ["Active", health.active],
             ["Discoverable", health.publiclyDiscoverable],
+            ["Bookable", health.bookable],
+            ["Published storefronts", health.publishedStorefronts],
             ["Missing State", health.missingState],
             ["Missing City", health.missingCity],
             ["Location Issues", health.locationIssues],
@@ -299,6 +323,18 @@ function PanditsTab() {
             ["Total", health.total],
           ].map(([label, value]) => <div key={String(label)} className="rounded-lg border bg-muted/20 p-3"><div className="text-xl font-semibold text-primary">{value}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}
         </div>
+        {Object.keys(health.exclusionCounts || {}).length > 0 && (
+          <div className="mt-4 border-t pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why public listing is blocked</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {Object.entries(health.exclusionCounts).sort(([, a], [, b]) => b - a).map(([reason, count]) => (
+                <span key={reason} className="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-800">
+                  {reason.replaceAll("_", " ")} · {count}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent></Card>}
       <PanditLocationRectification />
       <form onSubmit={submitRegistrationLookup} className="rounded-lg border bg-muted/20 p-3 sm:p-4" aria-label="Registration number lookup">
@@ -376,6 +412,7 @@ function PanditsTab() {
           {displayedPandits.map((pandit) => {
             const hasGps = pandit.latitude != null && pandit.longitude != null;
             const isResolvingLocation = resolvingLocationId === pandit.id;
+            const diagnosis = diagnosticById.get(pandit.id);
             return (
               <Card key={pandit.id} className="overflow-hidden bg-card border-border shadow-sm" data-testid={`card-pandit-${pandit.id}`}>
                 <CardContent className="p-4 sm:p-5">
@@ -412,6 +449,23 @@ function PanditsTab() {
                         )}
                       </div>
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{(pandit as any).state ? `${(pandit as any).state} · ` : ""}{pandit.city} · {pandit.specialization} · {(pandit as any).regionalOrigin || "Tradition not set"}</p>
+                      {diagnosis && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                          <span className={`rounded-full px-2 py-0.5 font-medium ${diagnosis.public.eligible ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                            {diagnosis.public.eligible ? "Publicly discoverable" : `Not public: ${diagnosis.public.reasons.slice(0, 2).map(reason => reason.replaceAll("_", " ")).join(", ")}${diagnosis.public.reasons.length > 2 ? "…" : ""}`}
+                          </span>
+                          <span className={`rounded-full px-2 py-0.5 font-medium ${diagnosis.booking.eligible ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                            {diagnosis.booking.eligible ? "Bookable" : "Not bookable"}
+                          </span>
+                          {diagnosis.storefront.url ? (
+                            <a href={diagnosis.storefront.url} target="_blank" rel="noopener noreferrer" className="rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-700 underline underline-offset-2">
+                              {diagnosis.storefront.isPublished && diagnosis.storefront.status === "published" ? "Open storefront" : `Storefront ${diagnosis.storefront.status || "not published"}`}
+                            </a>
+                          ) : (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">No storefront</span>
+                          )}
+                        </div>
+                      )}
                       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-secondary sm:flex sm:flex-wrap sm:gap-x-3">
                         <span>{pandit.experience} yrs experience</span>
                         <span>{pandit.languages}</span>

@@ -122,7 +122,7 @@ export default function AllPanditsDirectory() {
               <button type="button" onClick={clearAll} className="min-h-11 px-2 text-sm font-semibold text-[#6D2B35] underline underline-offset-4">Clear all</button>
             </div>}
             {isError && <div className="mb-5 rounded-xl border border-[#B45F4D]/35 bg-[#FBF7EE] p-6 text-center"><p className="font-serif text-xl text-[#6D2B35]">Locations are taking a moment.</p><Button onClick={() => refetch()} className="mt-4 min-h-11 bg-[#6D2B35]">Try again</Button></div>}
-            <PanditDirectoryView mode="state" stateId={state?.id} stateLabel={state?.name} cityId={city?.id} cityLabel={city?.name} cityOptions={state?.cities || []} facetOptions={data?.facets} embedded />
+             <PanditDirectoryView mode="state" stateId={state?.id} stateLabel={state?.name} cityId={city?.id} cityLabel={city?.name} cityOptions={state?.cities || []} facetOptions={data?.facets} pageSize={50} embedded />
           </section>
         </div>
       </div>
