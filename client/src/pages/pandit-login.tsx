@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,16 +25,58 @@ import {
 } from "lucide-react";
 import { panditApi } from "@/lib/panditAuth";
 import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
+import { savePanditAccessHandoff } from "@/lib/panditAccessHandoff";
 
 type AuthMode = "login" | "signup";
 type Language = "en" | "hi";
 
-const signupInitialState = {
+type LocationCity = {
+  id: number;
+  name: string;
+  isActive: boolean;
+};
+
+type LocationState = {
+  id: number;
+  name: string;
+  code: string;
+  isActive: boolean;
+  cities: LocationCity[];
+};
+
+type SignupState = {
+  fullName: string;
+  phone: string;
+  email: string;
+  stateId: string;
+  cityId: string;
+  languages: string[];
+  experience: string;
+};
+
+const SUPPORTED_PANDIT_LANGUAGES = [
+  "Hindi",
+  "Sanskrit",
+  "English",
+  "Tamil",
+  "Telugu",
+  "Kannada",
+  "Malayalam",
+  "Marathi",
+  "Bengali",
+  "Gujarati",
+  "Punjabi",
+  "Odia",
+  "Assamese",
+] as const;
+
+const signupInitialState: SignupState = {
   fullName: "",
   phone: "",
   email: "",
-  city: "",
-  languages: "",
+  stateId: "",
+  cityId: "",
+  languages: [],
   experience: "",
 };
 
@@ -50,10 +92,44 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
   const [signup, setSignup] = useState(signupInitialState);
+  const [locations, setLocations] = useState<LocationState[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationsError, setLocationsError] = useState("");
 
   const DEMO_PHONE = "9000012345";
   const DEMO_PASS = "demo1234";
   const hindi = language === "hi";
+
+  useEffect(() => {
+    let cancelled = false;
+    setLocationsLoading(true);
+    fetch("/api/locations")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load the location catalogue");
+        const data: unknown = await response.json();
+        if (!Array.isArray(data)) throw new Error("Invalid location catalogue");
+        return data as LocationState[];
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setLocations(data.filter((state) => state.isActive));
+        setLocationsError("");
+      })
+      .catch((error: Error) => {
+        if (cancelled) return;
+        setLocationsError(error.message || "Unable to load locations");
+      })
+      .finally(() => {
+        if (!cancelled) setLocationsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeStates = locations.filter((state) => state.isActive);
+  const selectedState = activeStates.find((state) => String(state.id) === signup.stateId);
+  const activeCities = selectedState?.cities.filter((city) => city.isActive) || [];
 
   const copy = {
     workspace: hindi ? "पंडितजी पोर्टल" : "Panditji portal",
@@ -70,8 +146,14 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     name: hindi ? "पूरा नाम" : "Full name",
     registeredPhone: hindi ? "मोबाइल नंबर" : "Mobile number",
     email: hindi ? "ईमेल पता" : "Email address",
+    state: hindi ? "राज्य" : "State",
     city: hindi ? "शहर" : "City",
+    chooseState: hindi ? "राज्य चुनें" : "Choose a state",
+    chooseCity: hindi ? "शहर चुनें" : "Choose a city",
+    locationsLoading: hindi ? "स्थान लोड हो रहे हैं..." : "Loading locations...",
+    locationsError: hindi ? "स्थान सूची उपलब्ध नहीं है। कृपया बाद में प्रयास करें।" : "The location list is unavailable. Please try again later.",
     languages: hindi ? "आप किन भाषाओं में सेवा देते हैं?" : "Languages you serve in",
+    languageHint: hindi ? "एक या अधिक भाषाएँ चुनें" : "Choose one or more languages",
     experience: hindi ? "अनुभव (वर्ष)" : "Years of experience",
     profileStep: hindi
       ? "अगले चरण में सटीक स्थान, पाँच पूजाएँ और प्रोफ़ाइल फ़ोटो जोड़कर सत्यापन पूरा होगा।"
@@ -163,16 +245,59 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     }
   };
 
-  const updateSignup = (field: keyof typeof signupInitialState, value: string) => {
+  const updateSignup = (field: Exclude<keyof SignupState, "languages">, value: string) => {
     setSignup((current) => ({ ...current, [field]: value }));
+  };
+
+  const toggleSignupLanguage = (selectedLanguage: string) => {
+    setSignup((current) => ({
+      ...current,
+      languages: current.languages.includes(selectedLanguage)
+        ? current.languages.filter((item) => item !== selectedLanguage)
+        : [...current.languages, selectedLanguage],
+    }));
   };
 
   const submitSignup = (event: React.FormEvent) => {
     event.preventDefault();
-    if (Object.values(signup).some((value) => !value.trim())) {
+    const selectedCity = activeCities.find((city) => String(city.id) === signup.cityId);
+    const requiredTextMissing = !signup.fullName.trim()
+      || !signup.phone.trim()
+      || !signup.email.trim()
+      || !signup.experience.trim();
+    if (
+      requiredTextMissing
+      || !signup.stateId
+      || !signup.cityId
+      || signup.languages.length === 0
+      || !selectedState
+      || !selectedCity
+    ) {
       toast({
         title: hindi ? "कृपया सभी विवरण भरें" : "Complete the signup form",
-        description: hindi ? "सभी फ़ील्ड आवेदन शुरू करने के लिए आवश्यक हैं।" : "All fields are needed to start your application.",
+        description: hindi
+          ? "नाम, मोबाइल, ईमेल, अनुभव, राज्य, शहर और कम से कम एक भाषा आवश्यक है।"
+          : "Name, mobile, email, experience, state, city, and at least one language are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const saved = savePanditAccessHandoff({
+      fullName: signup.fullName.trim(),
+      phone: signup.phone.trim(),
+      email: signup.email.trim(),
+      stateId: selectedState.id,
+      cityId: selectedCity.id,
+      stateName: selectedState.name,
+      cityName: selectedCity.name,
+      languages: signup.languages.join(", "),
+      experience: signup.experience.trim(),
+    });
+    if (!saved) {
+      toast({
+        title: hindi ? "आवेदन शुरू नहीं हो सका" : "Could not start application",
+        description: hindi ? "कृपया ब्राउज़र स्टोरेज की अनुमति देकर फिर प्रयास करें।" : "Please allow browser storage and try again.",
         variant: "destructive",
       });
       return;
@@ -319,35 +444,91 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                       <Label htmlFor="signup-full-name" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.name}</Label>
                       <div className="flex h-12 items-center gap-2.5 rounded-xl border border-[#DDCFBC] bg-white/80 px-3.5 focus-within:border-[#A67817] focus-within:ring-2 focus-within:ring-[#D4AF37]/20">
                         <UserRound className="h-4 w-4 shrink-0 text-[#806F5E]" />
-                        <Input id="signup-full-name" autoComplete="name" placeholder={hindi ? "उदा. पंडित रमेश शर्मा" : "e.g. Pandit Ramesh Sharma"} className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.fullName} onChange={(event) => updateSignup("fullName", event.target.value)} data-testid="input-pandit-signup-name" />
+                        <Input id="signup-full-name" required autoComplete="name" placeholder={hindi ? "उदा. पंडित रमेश शर्मा" : "e.g. Pandit Ramesh Sharma"} className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.fullName} onChange={(event) => updateSignup("fullName", event.target.value)} data-testid="input-pandit-signup-name" />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="signup-phone" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.registeredPhone}</Label>
                       <div className="flex h-12 items-center gap-2.5 rounded-xl border border-[#DDCFBC] bg-white/80 px-3.5 focus-within:border-[#A67817] focus-within:ring-2 focus-within:ring-[#D4AF37]/20">
                         <Phone className="h-4 w-4 shrink-0 text-[#806F5E]" />
-                        <Input id="signup-phone" inputMode="tel" autoComplete="tel" placeholder="+91 98765 43210" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.phone} onChange={(event) => updateSignup("phone", event.target.value)} data-testid="input-pandit-signup-phone" />
+                        <Input id="signup-phone" required inputMode="tel" autoComplete="tel" placeholder="+91 98765 43210" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.phone} onChange={(event) => updateSignup("phone", event.target.value)} data-testid="input-pandit-signup-phone" />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="signup-email" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.email}</Label>
                       <div className="flex h-12 items-center gap-2.5 rounded-xl border border-[#DDCFBC] bg-white/80 px-3.5 focus-within:border-[#A67817] focus-within:ring-2 focus-within:ring-[#D4AF37]/20">
                         <Mail className="h-4 w-4 shrink-0 text-[#806F5E]" />
-                        <Input id="signup-email" type="email" autoComplete="email" placeholder="pandit@example.com" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.email} onChange={(event) => updateSignup("email", event.target.value)} data-testid="input-pandit-signup-email" />
+                        <Input id="signup-email" required type="email" autoComplete="email" placeholder="pandit@example.com" className="h-auto border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0" value={signup.email} onChange={(event) => updateSignup("email", event.target.value)} data-testid="input-pandit-signup-email" />
                       </div>
                     </div>
                     <div>
+                      <Label htmlFor="signup-state" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.state}</Label>
+                      <select
+                        id="signup-state"
+                        required
+                        value={signup.stateId}
+                        onChange={(event) => {
+                          setSignup((current) => ({ ...current, stateId: event.target.value, cityId: "" }));
+                        }}
+                        disabled={locationsLoading || Boolean(locationsError)}
+                        className="h-12 w-full rounded-xl border border-[#DDCFBC] bg-white/80 px-3 text-sm text-[#4A1A22] outline-none transition focus:border-[#A67817] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        data-testid="select-pandit-signup-state"
+                      >
+                        <option value="">{locationsLoading ? copy.locationsLoading : copy.chooseState}</option>
+                        {activeStates.map((state) => (
+                          <option key={state.id} value={state.id}>{state.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <Label htmlFor="signup-city" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.city}</Label>
-                      <Input id="signup-city" autoComplete="address-level2" placeholder={hindi ? "जैसे वाराणसी" : "e.g. Varanasi"} className="h-12 rounded-xl border-[#DDCFBC] bg-white/80 text-sm focus-visible:border-[#A67817] focus-visible:ring-[#D4AF37]/20" value={signup.city} onChange={(event) => updateSignup("city", event.target.value)} data-testid="input-pandit-signup-city" />
+                      <select
+                        id="signup-city"
+                        required
+                        value={signup.cityId}
+                        onChange={(event) => updateSignup("cityId", event.target.value)}
+                        disabled={!signup.stateId || locationsLoading || Boolean(locationsError)}
+                        className="h-12 w-full rounded-xl border border-[#DDCFBC] bg-white/80 px-3 text-sm text-[#4A1A22] outline-none transition focus:border-[#A67817] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        data-testid="select-pandit-signup-city"
+                      >
+                        <option value="">{signup.stateId ? copy.chooseCity : copy.chooseState}</option>
+                        {activeCities.map((city) => (
+                          <option key={city.id} value={city.id}>{city.name}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label htmlFor="signup-experience" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.experience}</Label>
-                      <Input id="signup-experience" type="number" min="0" inputMode="numeric" placeholder="5" className="h-12 rounded-xl border-[#DDCFBC] bg-white/80 text-sm focus-visible:border-[#A67817] focus-visible:ring-[#D4AF37]/20" value={signup.experience} onChange={(event) => updateSignup("experience", event.target.value)} data-testid="input-pandit-signup-experience" />
+                      <Input id="signup-experience" required type="number" min="0" inputMode="numeric" placeholder="5" className="h-12 rounded-xl border-[#DDCFBC] bg-white/80 text-sm focus-visible:border-[#A67817] focus-visible:ring-[#D4AF37]/20" value={signup.experience} onChange={(event) => updateSignup("experience", event.target.value)} data-testid="input-pandit-signup-experience" />
                     </div>
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="signup-languages" className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.languages}</Label>
-                      <Input id="signup-languages" placeholder={hindi ? "हिंदी, संस्कृत, English..." : "Hindi, Sanskrit, English..."} className="h-12 rounded-xl border-[#DDCFBC] bg-white/80 text-sm focus-visible:border-[#A67817] focus-visible:ring-[#D4AF37]/20" value={signup.languages} onChange={(event) => updateSignup("languages", event.target.value)} data-testid="input-pandit-signup-languages" />
-                    </div>
+                    <fieldset className="sm:col-span-2">
+                      <legend className="mb-1.5 block text-[11px] font-bold text-[#5A4A3A]">{copy.languages}</legend>
+                      <div className="rounded-xl border border-[#DDCFBC] bg-white/80 p-2.5">
+                        <div className="grid grid-cols-2 gap-2">
+                          {SUPPORTED_PANDIT_LANGUAGES.map((supportedLanguage) => {
+                            const checked = signup.languages.includes(supportedLanguage);
+                            return (
+                              <label key={supportedLanguage} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] font-semibold transition-colors ${checked ? "border-[#A67817] bg-[#FFF4D9] text-[#55252D]" : "border-transparent text-[#806F5E] hover:border-[#DDCFBC] hover:bg-[#FFFAF1]"}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleSignupLanguage(supportedLanguage)}
+                                  className="h-3.5 w-3.5 accent-[#6F2B38]"
+                                  data-testid={`checkbox-pandit-language-${supportedLanguage.toLowerCase()}`}
+                                />
+                                {supportedLanguage}
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <p className="mt-2 text-[10px] leading-4 text-[#806F5E]">{copy.languageHint}</p>
+                      </div>
+                    </fieldset>
+                    {locationsError && (
+                      <div className="sm:col-span-2 rounded-[13px] border border-[#B85C4A]/30 bg-[#FFF1EC] p-3 text-[10px] leading-4 text-[#8F3F31]" role="alert" data-testid="alert-pandit-signup-locations">
+                        {copy.locationsError}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start gap-2.5 rounded-[13px] border border-[#D4AF37]/30 bg-[#FFFAF1] p-3 text-[10px] leading-[1.5] text-[#806F5E]">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#6F2B38]" />
