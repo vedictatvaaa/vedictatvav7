@@ -748,24 +748,18 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [celebration, setCelebration] = useState<{ malaNumber: number; target: number; mantraLabel: string; mantraId: string; ts: number } | null>(null);
   const [celebrationExiting, setCelebrationExiting] = useState(false);
   const [ashirvad, setAshirvad] = useState<{ mantraLabel: string; mantraId: string; ts: number } | null>(null);
-  const completionResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [malaCompleteLocked, setMalaCompleteLocked] = useState(false);
   const completionResetPendingRef = useRef(false);
   const cancelCompletionReset = useCallback(() => {
-    if (completionResetTimerRef.current) {
-      clearTimeout(completionResetTimerRef.current);
-      completionResetTimerRef.current = null;
-    }
     completionResetPendingRef.current = false;
+    setMalaCompleteLocked(false);
   }, []);
-  const scheduleCompletionReset = useCallback((completedTarget: number) => {
-    if (completionResetTimerRef.current) clearTimeout(completionResetTimerRef.current);
+  const scheduleCompletionReset = useCallback(() => {
+    // Keep the completed count visible and require an intentional action
+    // before another mala can begin. This prevents a stray tap after the
+    // completion blessing from silently becoming bead one of a new mala.
     completionResetPendingRef.current = true;
-    completionResetTimerRef.current = setTimeout(() => {
-      completionResetTimerRef.current = null;
-      completionResetPendingRef.current = false;
-      setPersist((prev) => (prev.count >= completedTarget ? { ...prev, count: 0 } : prev));
-      setSessionStartTs(null);
-    }, 4000);
+    setMalaCompleteLocked(true);
   }, []);
   useEffect(() => () => cancelCompletionReset(), [cancelCompletionReset]);
   useEffect(() => {
@@ -1223,24 +1217,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             mantraId: mantra.id,
             ts: Date.now(),
           });
-          scheduleCompletionReset(target);
-          // Mix mode: hop to the next mantra that has a recorded
-          // chant and let the loop continue (the effect re-runs
-          // automatically because mantra.id is in its deps). We
-          // skip auto-chant teardown so it just keeps going.
-          if (mixModeRef.current) {
-            const audibles = allMantrasRef.current.filter((m) => mantraAudio.has(m.id));
-            const idx = audibles.findIndex((m) => m.id === mantra.id);
-            const nextMantra = audibles.length > 1 ? audibles[(idx + 1) % audibles.length] : null;
-            if (nextMantra && nextMantra.id !== mantra.id) {
-              toast({
-                title: "Mix mode",
-                description: `Now chanting ${nextMantra.label}`,
-              });
-              setMantraId(nextMantra.id);
-              break; // effect re-fires with the new mantra; autoChanting stays true
-            }
-          }
+          scheduleCompletionReset();
+          // Always stop at the completed mala. Even Mix mode requires an
+          // intentional restart so a completion click cannot launch another
+          // mantra or mala without the devotee choosing to continue.
           setAutoChanting(false);
           setAutoMode(false);
           break;
@@ -1251,7 +1231,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       cancelled = true;
       mantraAudio.stop();
     };
-  }, [autoChanting, mantra.id, mantra.label, soundOn, vibrationOn, target, commitTick, toast, setMantraId, scheduleCompletionReset]);
+  }, [autoChanting, mantra.id, mantra.label, soundOn, vibrationOn, target, commitTick, toast, scheduleCompletionReset]);
 
   // Toggle the auto-chant arming flag. Turning it OFF also stops any
   // running loop. Turning it ON only arms the mode — the actual chant
@@ -1265,8 +1245,8 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   }, []);
 
   const tap = useCallback(() => {
-    // Once a mala closes, keep the completed count visible until the
-    // independent reset timer runs. This prevents stray pointer, keyboard,
+    // Once a mala closes, keep the completed count visible until the devotee
+    // explicitly starts the next mala. This prevents stray pointer, keyboard,
     // or shake events from adding beads or firing completion repeatedly.
     if (completionResetPendingRef.current) return;
     // Soft debounce (~250 ms) — kills accidental double-fires from palm
@@ -1318,7 +1298,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         mantraId: mantra.id,
         ts: Date.now(),
       });
-      scheduleCompletionReset(target);
+      scheduleCompletionReset();
     } else {
       // Milestone haptics — gives the chanting body a felt sense of
       // progress without any visual interruption. Spec: gentle pulse on
@@ -1563,6 +1543,15 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // target" wrap rule that was added when the counter started showing
   // 108 instead of wrapping to 0).
   const undo = undoLastTap;
+
+  const startNextMala = useCallback(() => {
+    if (!completionResetPendingRef.current) return;
+    cancelCompletionReset();
+    setPersist((prev) => ({ ...prev, count: 0 }));
+    setSessionStartTs(null);
+    setMilestoneFlash(null);
+    toast({ title: "Next mala ready", description: "Tap the mala to begin." });
+  }, [cancelCompletionReset, toast]);
 
   const resetMala = () => {
     // Hard-stop any in-flight chant audio so the devotee doesn't hear
@@ -1877,6 +1866,8 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           vibrationOn={vibrationOn}
           wakeLockOn={wakeLockOn}
           onTap={handleTapOrAutoStart}
+          malaCompleteLocked={malaCompleteLocked}
+          onStartNextMala={startNextMala}
           audioLocked={audioLocked}
           syncTapsToAudio={syncTapsToAudio}
           paceHint={paceHint}
@@ -2046,10 +2037,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 onPointerUp={handleOrbPointerEnd}
                 onPointerLeave={handleOrbPointerEnd}
                 onPointerCancel={handleOrbPointerEnd}
-                disabled={autoChanting || (audioLocked && syncTapsToAudio)}
+                disabled={malaCompleteLocked || autoChanting || (audioLocked && syncTapsToAudio)}
                 aria-busy={(autoChanting || (audioLocked && syncTapsToAudio)) || undefined}
                 className={`absolute inset-7 overflow-hidden rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
-                aria-label={autoMode && !autoChanting ? "Tap to start auto-chant" : autoChanting ? "Auto-chant is playing — press Stop to chant manually" : (audioLocked && syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa")}
+                aria-label={malaCompleteLocked ? "Mala complete — press Start next mala to continue" : autoMode && !autoChanting ? "Tap to start auto-chant" : autoChanting ? "Auto-chant is playing — press Stop to chant manually" : (audioLocked && syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa")}
                 data-testid="btn-tap"
               >
                  <img
@@ -2124,7 +2115,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             </div>
 
             <div className="mt-3 text-xs text-[#5a4a3a]/70" data-testid="text-tap-hint">
-              {autoMode && !autoChanting
+              {malaCompleteLocked
+                ? "Mala complete — use Start next mala to continue. Your next tap will not start another mala."
+                : autoMode && !autoChanting
                 ? `Auto-chant is armed — tap the mala to begin. The chant will play and count itself to ${target}.`
                 : autoChanting
                 ? "Auto-chant is on — the mantra is reciting and counting itself. Press Stop anytime."
@@ -2134,6 +2127,17 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 ? "Chant is playing — keep tapping at your own pace."
                 : "Tap the mala (or press Space) to count one japa · Hold to undo"}
             </div>
+            {malaCompleteLocked && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={startNextMala}
+                className="mt-2 bg-[#6D2B35] text-[#D4AF37] hover:bg-[#4a1a22]"
+                data-testid="btn-start-next-mala"
+              >
+                Start next mala
+              </Button>
+            )}
 
             <div className="mt-3 flex items-center gap-2 flex-wrap justify-center">
               <Badge className="bg-[#D4AF37]/25 text-[#6D2B35] hover:bg-[#D4AF37]/25" data-testid="badge-malas">
@@ -2379,6 +2383,8 @@ type FullscreenOverlayProps = {
   vibrationOn: boolean;
   wakeLockOn: boolean;
   onTap: () => void;
+  malaCompleteLocked?: boolean;
+  onStartNextMala?: () => void;
   audioLocked?: boolean;
   syncTapsToAudio?: boolean;
   paceHint?: boolean;
@@ -3262,7 +3268,7 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
             if (dx * dx + dy * dy > r * r) return;
             p.onTap();
           }}
-          disabled={!!(p.autoChanting || (p.audioLocked && p.syncTapsToAudio))}
+          disabled={!!(p.malaCompleteLocked || p.autoChanting || (p.audioLocked && p.syncTapsToAudio))}
           aria-busy={(p.autoChanting || (p.audioLocked && p.syncTapsToAudio)) || undefined}
           // Pointer-events restricted to the visible circle via clip-path
           // so even hover / cursor-change feedback only happens inside
@@ -3275,8 +3281,8 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
             touchAction: "manipulation",
             WebkitTapHighlightColor: "transparent",
           }}
-          className={`relative w-[min(78vmin,560px)] h-[min(78vmin,560px)] rounded-full select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 transition-transform ${p.autoChanting || (p.audioLocked && p.syncTapsToAudio) ? "cursor-wait" : "active:scale-[0.985]"}`}
-          aria-label={p.autoMode && !p.autoChanting ? "Tap to start auto-chant" : p.autoChanting ? "Auto-chant is playing — press Stop to chant manually" : p.audioLocked && p.syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa"}
+          className={`relative w-[min(78vmin,560px)] h-[min(78vmin,560px)] rounded-full select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]/60 transition-transform ${p.malaCompleteLocked || p.autoChanting || (p.audioLocked && p.syncTapsToAudio) ? "cursor-wait" : "active:scale-[0.985]"}`}
+          aria-label={p.malaCompleteLocked ? "Mala complete — press Start next mala below to continue" : p.autoMode && !p.autoChanting ? "Tap to start auto-chant" : p.autoChanting ? "Auto-chant is playing — press Stop to chant manually" : p.audioLocked && p.syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa"}
           data-testid="btn-fs-tap"
         >
           {/* Apple-Breathe orb — soft luminous halo behind the central
@@ -3405,6 +3411,19 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
       {/* Bottom controls — sticky so Bell / Auto / Reset stay reachable
           when the overlay scrolls on short screens. */}
       <div className="sticky bottom-0 z-20 p-3 sm:p-4 flex items-center justify-center gap-2 flex-wrap bg-gradient-to-t from-black/45 via-black/25 to-transparent backdrop-blur-sm">
+        {p.malaCompleteLocked && p.onStartNextMala && (
+          <div className="basis-full flex flex-col items-center gap-2" role="status" data-testid="fs-mala-complete-lock">
+            <span className="text-xs text-[#FFFAEC]/80">Mala complete — the next tap is paused.</span>
+            <Button
+              size="sm"
+              onClick={p.onStartNextMala}
+              className="bg-[#D4AF37] text-[#6D2B35] hover:bg-[#E4C65A]"
+              data-testid="btn-fs-start-next-mala"
+            >
+              Start next mala
+            </Button>
+          </div>
+        )}
         <Button size="sm" variant="outline" onClick={p.onToggleSound} className="border-[#D4AF37]/40 bg-transparent text-[#FFFAEC]" data-testid="btn-fs-sound" aria-pressed={p.soundOn}>
           {p.soundOn ? <Volume2 className="h-3.5 w-3.5 mr-1.5" /> : <VolumeX className="h-3.5 w-3.5 mr-1.5" />}
           Bell
