@@ -521,11 +521,13 @@ export default function Navbar() {
                 data-testid="img-site-logo"
               />
             ) : null}
-            <span className="font-serif text-[20px] md:text-[22px] lg:text-[24px] font-bold tracking-tight leading-none"
+            <span className="font-vedic text-[22px] font-normal leading-none tracking-[0.015em] drop-shadow-[0_1px_8px_rgba(185,148,77,0.16)] md:text-[24px] lg:text-[27px]"
               style={{
-                background: "linear-gradient(135deg, #4a1a22 0%, #6D2B35 50%, #8B3A47 100%)",
+                background:
+                  "linear-gradient(165deg, rgba(255,255,255,0.9) 0%, #8D5961 18%, #6D2B35 52%, #9A7040 82%, #D0AC68 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
               }}
               data-testid="text-site-name"
             >
