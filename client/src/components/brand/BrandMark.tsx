@@ -111,7 +111,7 @@ export function BrandMark({ settings, placement = "desktop", className = "", tes
       data-testid={testId}
     >
       <span className="flex h-full min-w-0 max-w-full items-center gap-2" style={{ justifyContent: align }}>
-        {showImage && <img src={s.logoUrl || ""} alt={`${s.siteName || defaults.siteName} logo`} onError={() => setImageFailed(true)} style={{ height: placement === "desktop" || placement === "mobile" ? "75%" : renderedSize, maxHeight: placement === "desktop" || placement === "mobile" ? "75%" : undefined, maxWidth: maxWidth * 0.48 }} className="w-auto shrink-0 object-contain" />}
+        {showImage && <img src={s.logoUrl || ""} alt={`${s.siteName || defaults.siteName} logo`} onError={() => setImageFailed(true)} style={{ height: placement === "desktop" || placement === "mobile" ? "100%" : renderedSize, maxHeight: placement === "desktop" || placement === "mobile" ? "100%" : undefined, maxWidth: maxWidth * (showText ? 0.48 : 0.9) }} className="w-auto shrink-0 object-contain" />}
         {showText && <span className="min-w-0 truncate leading-none" style={{ color: textColor, fontFamily: s.logoFontSource === "custom" && fontUrl ? `"${customFontFamily}"` : `"${s.logoFontFamily}", "Fraunces", Georgia, serif`, fontSize: renderedSize, fontWeight: s.logoFontWeight, letterSpacing: `${s.logoLetterSpacing}px` }}>{s.siteName || defaults.siteName}</span>}
       </span>
       {s.taglineVisible && s.tagline && <span className="mt-1 max-w-full truncate leading-tight" style={{ color: s.taglineColor, fontSize: Math.min(Number(s.taglineSizePx) || 14, placement === "mobile" ? 11 : 18), letterSpacing: ".04em" }}>{s.tagline}</span>}
