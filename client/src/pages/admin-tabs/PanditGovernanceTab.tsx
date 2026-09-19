@@ -15,17 +15,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { createFetcher } from "../admin-shared";
 
 type BookingCheck = { passed: boolean; label: string; reason: string };
-type GovernanceAction = "publish" | "unpublish" | "directory_show" | "directory_hide" | "search_enable" | "search_disable" | "booking_enable" | "booking_disable" | "verify" | "revoke_verification" | "archive" | "restore" | "suspend" | "reactivate" | "start_leave" | "end_leave" | "set_indexing" | "set_contact_override" | "set_location";
+type GovernanceAction = "publish" | "unpublish" | "directory_show" | "directory_hide" | "search_enable" | "search_disable" | "booking_enable" | "booking_disable" | "verify" | "revoke_verification" | "archive" | "restore" | "suspend" | "reactivate" | "start_leave" | "end_leave" | "update_profile" | "set_indexing" | "set_contact_override" | "set_location";
 type GovernanceRow = {
   id: number;
   name: string;
   slug?: string | null;
-  image?: string | null; bio?: string | null; languages?: string | null; experience?: number;
+  image?: string | null; bio?: string | null; languages?: string | null; experience?: number; specialization?: string | null;
   verified?: boolean; archived?: boolean; onLeave?: boolean; bookingEnabled?: boolean;
   completeness: { score: number; missing: string[]; checks: Record<string, boolean> };
   bookingDiagnostics: { checks: Record<string, BookingCheck>; result: BookingCheck; exclusions: string[] };
   currentLocation?: { id?: number; name?: string; city?: string; state?: string } | string | null;
-  location?: { id?: number; name?: string; city?: string; state?: string } | string | null;
+  location?: { id?: number; stateId?: number | null; cityId?: number | null; name?: string; city?: string; state?: string; canonical?: boolean } | string | null;
   publication: { published: boolean; directoryVisible: boolean; searchEligible: boolean };
   accountStatus?: string;
   contact: { override: string; hasPhone: boolean; hasWhatsapp: boolean; revealCount: number };
@@ -42,7 +42,7 @@ type GovernanceResponse = {
 };
 
 const PAGE_SIZE = 25;
-const RISKY_ACTIONS = new Set<GovernanceAction>(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate"]);
+const RISKY_ACTIONS = new Set<GovernanceAction>(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate", "update_profile", "set_location"]);
 const ACTIONS = [
   { value: "publish", label: "Publish storefront", bulk: true }, { value: "unpublish", label: "Unpublish storefront", bulk: true },
   { value: "directory_show", label: "Make directory visible", bulk: true }, { value: "directory_hide", label: "Hide from directory", bulk: true },
@@ -52,6 +52,7 @@ const ACTIONS = [
   { value: "archive", label: "Archive", bulk: true }, { value: "restore", label: "Restore", bulk: true },
   { value: "suspend", label: "Suspend account", bulk: false }, { value: "reactivate", label: "Reactivate account", bulk: false },
   { value: "start_leave", label: "Start leave", bulk: false }, { value: "end_leave", label: "End leave", bulk: false },
+  { value: "update_profile", label: "Edit profile fields", bulk: false }, { value: "set_location", label: "Set active location", bulk: false },
   { value: "set_indexing", label: "Set index mode", bulk: false }, { value: "set_contact_override", label: "Set contact override", bulk: false },
 ] as const;
 
@@ -79,6 +80,10 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
   const [bulkOpen, setBulkOpen] = useState(false);
   const [action, setAction] = useState<GovernanceAction | "">("");
   const [value, setValue] = useState("");
+  const [profileField, setProfileField] = useState<"name" | "specialization" | "languages" | "bio" | "experience">("bio");
+  const [profileValue, setProfileValue] = useState("");
+  const [locationStateId, setLocationStateId] = useState("");
+  const [locationCityId, setLocationCityId] = useState("");
   const [reason, setReason] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
@@ -90,6 +95,11 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
     return `/api/admin/pandit-governance?${params}`;
   }, [page, deferredQ, status, issue]);
   const governance = useQuery<GovernanceResponse>({ queryKey: ["/api/admin/pandit-governance", url], queryFn: () => fetcher(url) });
+  const locations = useQuery<{ states: Array<{ id: number; name: string; cities: Array<{ id: number; name: string }> }> }>({
+    queryKey: ["/api/pandit-discovery", "governance-remedies"],
+    queryFn: () => fetcher("/api/pandit-discovery"),
+    staleTime: 300_000,
+  });
   const rows = governance.data?.items || [];
   const selectedRows = rows.filter(row => selected.has(row.id));
   const selectedCount = selectedRows.length;
@@ -97,8 +107,19 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-governance"] });
   const updateOne = useMutation({
-    mutationFn: ({ id, action: nextAction, value: nextValue, reason: nextReason }: { id: number; action: GovernanceAction; value?: string; reason?: string }) =>
-      apiRequest("PATCH", `/api/admin/pandit-governance/${id}`, { action: nextAction, ...(nextAction === "set_indexing" ? { indexingMode: nextValue } : {}), ...(nextAction === "set_contact_override" ? { contactAccessOverride: nextValue } : {}), ...(nextReason ? { reason: nextReason, confirmed: true } : {}) }, { "x-admin-token": adminToken || "" }),
+    mutationFn: ({ id, action: nextAction, value: nextValue, reason: nextReason, nextProfileField, nextProfileValue, nextStateId, nextCityId }: { id: number; action: GovernanceAction; value?: string; reason?: string; nextProfileField?: typeof profileField; nextProfileValue?: string; nextStateId?: string; nextCityId?: string }) => {
+      const profilePatch = nextAction === "update_profile" && nextProfileField && nextProfileValue !== undefined
+        ? { [nextProfileField]: nextProfileField === "experience" ? Number(nextProfileValue) : nextProfileValue }
+        : undefined;
+      return apiRequest("PATCH", `/api/admin/pandit-governance/${id}`, {
+        action: nextAction,
+        ...(nextAction === "set_indexing" ? { indexingMode: nextValue } : {}),
+        ...(nextAction === "set_contact_override" ? { contactAccessOverride: nextValue } : {}),
+        ...(nextAction === "set_location" ? { stateId: Number(nextStateId), cityId: Number(nextCityId) } : {}),
+        ...(profilePatch ? { profilePatch } : {}),
+        ...(nextReason ? { reason: nextReason, confirmed: true } : {}),
+      }, { "x-admin-token": adminToken || "" });
+    },
     onSuccess: () => { refresh(); closeDialog(); toast({ title: "Governance update saved" }); },
     onError: (error: Error) => toast({ title: "Governance update failed", description: error.message, variant: "destructive" }),
   });
@@ -108,19 +129,27 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
     onSuccess: (data: any, variables) => { refresh(); setSelected(new Set()); closeDialog(); toast({ title: `Updated ${Number(data?.updated ?? variables.ids.length)} pandit${variables.ids.length === 1 ? "" : "s"}` }); },
     onError: (error: Error) => toast({ title: "Bulk update failed", description: error.message, variant: "destructive" }),
   });
-  const closeDialog = () => { setTarget(null); setBulkOpen(false); setAction(""); setValue(""); setReason(""); setConfirmed(false); };
-  const openAction = (row: GovernanceRow | null, nextAction: GovernanceAction | "" = "") => { setTarget(row); setBulkOpen(row === null); setAction(nextAction); setValue(""); setReason(""); setConfirmed(false); };
+  const closeDialog = () => { setTarget(null); setBulkOpen(false); setAction(""); setValue(""); setProfileField("bio"); setProfileValue(""); setLocationStateId(""); setLocationCityId(""); setReason(""); setConfirmed(false); };
+  const openAction = (row: GovernanceRow | null, nextAction: GovernanceAction | "" = "", preset?: { field?: typeof profileField; value?: string; stateId?: number | null; cityId?: number | null }) => {
+    setTarget(row); setBulkOpen(row === null); setAction(nextAction); setValue("");
+    setProfileField(preset?.field || "bio"); setProfileValue(preset?.value || "");
+    setLocationStateId(preset?.stateId ? String(preset.stateId) : ""); setLocationCityId(preset?.cityId ? String(preset.cityId) : "");
+    setReason(""); setConfirmed(false);
+  };
   const isBulk = bulkOpen;
   const requiresReason = action !== "" && RISKY_ACTIONS.has(action);
   const requiresValue = action === "set_indexing" || action === "set_contact_override";
-  const canSubmit = !!action && (!requiresReason || reason.trim().length > 0) && (!requiresValue || value) && (!requiresReason || confirmed) && (!isBulk || selectedCount > 0) && !updateOne.isPending && !updateBulk.isPending;
+  const profileActionValid = action !== "update_profile" || profileValue.trim().length > 0;
+  const locationActionValid = action !== "set_location" || (!!locationStateId && !!locationCityId);
+  const canSubmit = !!action && (!requiresReason || reason.trim().length > 0) && (!requiresValue || value) && profileActionValid && locationActionValid && (!requiresReason || confirmed) && (!isBulk || selectedCount > 0) && !updateOne.isPending && !updateBulk.isPending;
   const submitAction = () => {
     if (!canSubmit) return;
-    if (target) updateOne.mutate({ id: target.id, action, value, reason: reason.trim() || undefined });
+    if (target) updateOne.mutate({ id: target.id, action, value, reason: reason.trim() || undefined, nextProfileField: profileField, nextProfileValue: profileValue, nextStateId: locationStateId, nextCityId: locationCityId });
     else updateBulk.mutate({ ids: selectedRows.map(row => row.id), action: action as GovernanceAction, reason: reason.trim() });
   };
   const totalPages = governance.data?.pagination.totalPages || Math.max(1, Math.ceil((governance.data?.pagination.total || 0) / PAGE_SIZE));
   const setFilter = (setter: (value: string) => void, next: string) => { setter(next); setPage(1); setSelected(new Set()); };
+  const applyIssueFilter = (next: string) => setFilter(setIssue, next);
 
   return (
     <div className="space-y-5 min-w-0" data-testid="pandit-governance-workspace">
@@ -136,8 +165,23 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
         <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_180px_180px]">
           <div className="relative"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input aria-label="Search pandit governance records" className="pl-9" value={q} onChange={event => setFilter(setQ, event.target.value)} placeholder="Search by name or profile identifier" /></div>
           <Select value={status} onValueChange={next => setFilter(setStatus, next)}><SelectTrigger aria-label="Filter by status"><SelectValue placeholder="All statuses" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="complete">Complete</SelectItem><SelectItem value="incomplete">Incomplete</SelectItem><SelectItem value="published">Published</SelectItem><SelectItem value="unpublished">Unpublished</SelectItem><SelectItem value="verified">Verified</SelectItem><SelectItem value="unverified">Unverified</SelectItem><SelectItem value="booking_eligible">Booking eligible</SelectItem><SelectItem value="booking_ineligible">Booking ineligible</SelectItem><SelectItem value="suspended">Suspended</SelectItem></SelectContent></Select>
-          <Select value={issue} onValueChange={next => setFilter(setIssue, next)}><SelectTrigger aria-label="Filter by issue"><SelectValue placeholder="All issues" /></SelectTrigger><SelectContent><SelectItem value="all">All issues</SelectItem><SelectItem value="incomplete">Incomplete profile</SelectItem><SelectItem value="location">Location issue</SelectItem><SelectItem value="contact">Contact policy</SelectItem><SelectItem value="discovery">Discovery issue</SelectItem></SelectContent></Select>
+           <Select value={issue} onValueChange={next => setFilter(setIssue, next)}><SelectTrigger aria-label="Filter by issue"><SelectValue placeholder="All issues" /></SelectTrigger><SelectContent><SelectItem value="all">All issues</SelectItem><SelectItem value="incomplete">Incomplete profile</SelectItem><SelectItem value="location">Location issue</SelectItem><SelectItem value="contact">Contact policy</SelectItem><SelectItem value="discovery">All discovery issues</SelectItem><SelectItem value="directory_hidden">Directory hidden</SelectItem><SelectItem value="search_ineligible">Search ineligible</SelectItem><SelectItem value="unpublished">Storefront unpublished</SelectItem><SelectItem value="unverified">Unverified</SelectItem><SelectItem value="on_leave">On leave</SelectItem><SelectItem value="archived">Archived</SelectItem></SelectContent></Select>
         </div>
+         <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4" aria-label="Clickable governance issue filters">
+           <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open blocked list:</span>
+           {[
+             ["directory_hidden", "Directory hidden"],
+             ["search_ineligible", "Search ineligible"],
+             ["unpublished", "Unpublished"],
+             ["incomplete", "Incomplete profile"],
+             ["location", "Location issue"],
+           ].map(([filter, label]) => (
+             <Button key={filter} type="button" size="sm" variant={issue === filter ? "default" : "outline"} onClick={() => applyIssueFilter(filter)} aria-pressed={issue === filter}>
+               {label}
+             </Button>
+           ))}
+           {issue !== "all" && <Button type="button" size="sm" variant="ghost" onClick={() => applyIssueFilter("all")}>Clear issue filter</Button>}
+         </div>
         <div className="mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">{selectedCount ? <><strong className="text-foreground">{selectedCount}</strong> selected (maximum 100)</> : "Select matching records for one supported, homogeneous safe action."}</p>
           <div className="flex gap-2"><Button size="sm" variant="outline" disabled={!selectedCount} onClick={() => setSelected(new Set())}>Clear selection</Button><Button size="sm" disabled={!selectedCount || selectedCount > 100} onClick={() => openAction(null)}><SlidersHorizontal className="mr-1.5 h-4 w-4" />Bulk action</Button></div>
@@ -145,28 +189,64 @@ export default function PanditGovernanceTab({ adminToken, onNavigate }: { adminT
       </CardContent></Card>
 
       {governance.isLoading ? <div className="py-12 text-center text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading governance records…</div> : governance.isError ? <div role="alert" className="py-10 text-center text-sm text-destructive">Governance records could not be loaded. Please try again.</div> : rows.length === 0 ? <div className="py-12 text-center text-sm text-muted-foreground">No records match these filters.</div> : <>
-        <div className="hidden overflow-x-auto rounded-lg border md:block"><table className="w-full min-w-[980px] text-sm"><thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="w-12 p-3"><Checkbox aria-label="Select all visible rows" checked={rows.length > 0 && rows.every(row => selected.has(row.id))} onCheckedChange={checked => setSelected(checked ? new Set(rows.map(row => row.id)) : new Set())} /></th><th className="p-3">Pandit / completeness</th><th className="p-3">Effective access</th><th className="p-3">Location & account</th><th className="p-3 text-right">Controls</th></tr></thead><tbody>{rows.map(row => <GovernanceTableRow key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => setSelected(current => { const next = new Set(current); next.has(row.id) ? next.delete(row.id) : next.add(row.id); return next; })} onManage={() => openAction(row)} />)}</tbody></table></div>
-        <div className="space-y-3 md:hidden">{rows.map(row => <GovernanceCard key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => setSelected(current => { const next = new Set(current); next.has(row.id) ? next.delete(row.id) : next.add(row.id); return next; })} onManage={() => openAction(row)} />)}</div>
+         <div className="hidden overflow-x-auto rounded-lg border md:block"><table className="w-full min-w-[980px] text-sm"><thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="w-12 p-3"><Checkbox aria-label="Select all visible rows" checked={rows.length > 0 && rows.every(row => selected.has(row.id))} onCheckedChange={checked => setSelected(checked ? new Set(rows.map(row => row.id)) : new Set())} /></th><th className="p-3">Pandit / completeness</th><th className="p-3">Effective access</th><th className="p-3">Location & account</th><th className="p-3 text-right">Controls</th></tr></thead><tbody>{rows.map(row => <GovernanceTableRow key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => setSelected(current => { const next = new Set(current); next.has(row.id) ? next.delete(row.id) : next.add(row.id); return next; })} onManage={() => openAction(row)} onIssueFilter={applyIssueFilter} />)}</tbody></table></div>
+         <div className="space-y-3 md:hidden">{rows.map(row => <GovernanceCard key={row.id} row={row} selected={selected.has(row.id)} onToggle={() => setSelected(current => { const next = new Set(current); next.has(row.id) ? next.delete(row.id) : next.add(row.id); return next; })} onManage={() => openAction(row)} onIssueFilter={applyIssueFilter} />)}</div>
       </>}
       <div className="flex items-center justify-between"><p className="text-xs text-muted-foreground">Page {page} of {totalPages} · {governance.data?.pagination.total || 0} records</p><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft className="h-4 w-4" />Previous</Button><Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next<ChevronRight className="h-4 w-4" /></Button></div></div>
 
-      <Dialog open={!!target || bulkOpen} onOpenChange={open => { if (!open) closeDialog(); }}><DialogContent data-lenis-prevent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{isBulk ? "Bulk governance action" : "Manage pandit governance"}</DialogTitle><DialogDescription>{isBulk ? `${selectedCount} selected record${selectedCount === 1 ? "" : "s"} will receive the same atomic control. If any record fails, none are changed.` : target?.name}</DialogDescription></DialogHeader><div className="space-y-4">
-        {target && <GovernanceDetail row={target} onNavigate={onNavigate} />}
+       <Dialog open={!!target || bulkOpen} onOpenChange={open => { if (!open) closeDialog(); }}><DialogContent data-lenis-prevent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl"><DialogHeader><DialogTitle>{isBulk ? "Bulk governance action" : "Manage pandit governance"}</DialogTitle><DialogDescription>{isBulk ? `${selectedCount} selected record${selectedCount === 1 ? "" : "s"} will receive the same atomic control. If any record fails, none are changed.` : target?.name}</DialogDescription></DialogHeader><div className="space-y-4">
+         {target && <GovernanceDetail row={target} onNavigate={onNavigate} />}
+         {target && <RemedySuggestions row={target} onChoose={(nextAction, preset) => openAction(target, nextAction, preset)} />}
         <div><Label htmlFor="governance-action">Action</Label><Select value={action} onValueChange={next => setAction(next as GovernanceAction)}><SelectTrigger id="governance-action"><SelectValue placeholder="Choose an action" /></SelectTrigger><SelectContent>{(isBulk ? bulkActions : ACTIONS).map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
         {action === "set_indexing" && <div><Label htmlFor="governance-value">Index mode</Label><Select value={value} onValueChange={setValue}><SelectTrigger id="governance-value"><SelectValue placeholder="Choose index mode" /></SelectTrigger><SelectContent><SelectItem value="auto">Allow indexing</SelectItem><SelectItem value="noindex">Prevent indexing</SelectItem></SelectContent></Select></div>}
         {action === "set_contact_override" && <div><Label htmlFor="governance-value">Contact override</Label><Select value={value} onValueChange={setValue}><SelectTrigger id="governance-value"><SelectValue placeholder="Choose contact policy" /></SelectTrigger><SelectContent><SelectItem value="use_global">Use global policy</SelectItem><SelectItem value="always_open">Always open</SelectItem><SelectItem value="login_required">Login required</SelectItem><SelectItem value="never_display">Never display</SelectItem></SelectContent></Select></div>}
+         {action === "update_profile" && <div className="space-y-2 rounded-md border p-3">
+           <Label htmlFor="profile-field">Profile field</Label>
+           <Select value={profileField} onValueChange={next => setProfileField(next as typeof profileField)}><SelectTrigger id="profile-field"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="name">Name</SelectItem><SelectItem value="specialization">Specialization</SelectItem><SelectItem value="languages">Languages</SelectItem><SelectItem value="bio">Bio</SelectItem><SelectItem value="experience">Experience (years)</SelectItem></SelectContent></Select>
+           <Label htmlFor="profile-value">New value</Label>
+           {profileField === "bio" ? <Textarea id="profile-value" value={profileValue} onChange={event => setProfileValue(event.target.value)} placeholder="Enter the corrected profile value" /> : <Input id="profile-value" type={profileField === "experience" ? "number" : "text"} min={profileField === "experience" ? 0 : undefined} value={profileValue} onChange={event => setProfileValue(event.target.value)} placeholder="Enter the corrected profile value" />}
+         </div>}
+         {action === "set_location" && <div className="space-y-2 rounded-md border p-3">
+           <Label htmlFor="remedy-state">Active state</Label>
+           <Select value={locationStateId} onValueChange={next => { setLocationStateId(next); setLocationCityId(""); }}><SelectTrigger id="remedy-state"><SelectValue placeholder="Choose a state" /></SelectTrigger><SelectContent>{(locations.data?.states || []).map(state => <SelectItem key={state.id} value={String(state.id)}>{state.name}</SelectItem>)}</SelectContent></Select>
+           <Label htmlFor="remedy-city">Active city</Label>
+           <Select value={locationCityId} onValueChange={setLocationCityId} disabled={!locationStateId}><SelectTrigger id="remedy-city"><SelectValue placeholder={locationStateId ? "Choose a city" : "Choose a state first"} /></SelectTrigger><SelectContent>{(locations.data?.states.find(state => String(state.id) === locationStateId)?.cities || []).map(city => <SelectItem key={city.id} value={String(city.id)}>{city.name}</SelectItem>)}</SelectContent></Select>
+         </div>}
         {requiresReason && <div><Label htmlFor="governance-reason">Reason <span className="text-destructive">*</span></Label><Textarea id="governance-reason" value={reason} onChange={event => setReason(event.target.value)} placeholder="Record the operational reason for this change" /><label className="mt-3 flex items-start gap-2 text-sm"><Checkbox checked={confirmed} onCheckedChange={checked => setConfirmed(checked === true)} />I confirm this governance action and its impact.</label></div>}
-        {action && <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><strong>Independent controls:</strong> Storefront publication, directory visibility, search eligibility, protected contact policy, and managed-booking eligibility are separate. This action changes only <strong>{action.startsWith("directory_") ? "directory visibility" : action.startsWith("search_") ? "search eligibility" : action.startsWith("booking_") ? "managed booking" : "the selected governance setting"}</strong>; it does not automatically change the others.</p>}
+         {action && <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"><strong>Independent controls:</strong> Storefront publication, directory visibility, search eligibility, protected contact policy, and managed-booking eligibility are separate. This action changes only <strong>{action.startsWith("directory_") ? "directory visibility" : action.startsWith("search_") ? "search eligibility" : action.startsWith("booking_") ? "managed booking" : action === "update_profile" ? "the selected profile field" : action === "set_location" ? "the active location" : "the selected governance setting"}</strong>; it does not automatically change the others.</p>}
       </div><DialogFooter><Button variant="outline" onClick={closeDialog}>Cancel</Button><Button disabled={!canSubmit} onClick={submitAction}>{(updateOne.isPending || updateBulk.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Apply action</Button></DialogFooter></DialogContent></Dialog>
     </div>
   );
 }
 
-function GovernanceTableRow({ row, selected, onToggle, onManage }: { row: GovernanceRow; selected: boolean; onToggle: () => void; onManage: () => void }) {
-  return <tr className="border-t align-top"><td className="p-3"><Checkbox aria-label={`Select ${row.name}`} checked={selected} onCheckedChange={onToggle} /></td><td className="p-3"><p className="font-medium">{row.name}</p><p className="text-xs">{row.completeness.score}% complete · {row.completeness.missing.join(", ") || "complete"}</p></td><td className="p-3 text-xs"><Badge>{row.publication.published ? "Published" : "Unpublished"}</Badge> <Badge variant="outline">{row.bookingDiagnostics.result.passed ? "Booking eligible" : "Booking blocked"}</Badge><p className="mt-1">Directory {row.publication.directoryVisible ? "on" : "off"} · Search {row.publication.searchEligible ? "on" : "off"} · Booking switch {row.bookingEnabled ? "on" : "off"}</p></td><td className="p-3 text-xs"><p className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{locationLabel(row)}</p><p>{readable(row.accountStatus)}{row.archived ? " · archived" : ""}</p><p className="text-muted-foreground">Contact configured: {row.contact.hasPhone || row.contact.hasWhatsapp ? "yes" : "no"} · {row.contact.revealCount} reveals</p></td><td className="p-3 text-right"><Button size="sm" variant="outline" onClick={onManage}>Manage</Button></td></tr>;
+function GovernanceTableRow({ row, selected, onToggle, onManage, onIssueFilter }: { row: GovernanceRow; selected: boolean; onToggle: () => void; onManage: () => void; onIssueFilter: (issue: string) => void }) {
+  return <tr className="border-t align-top"><td className="p-3"><Checkbox aria-label={`Select ${row.name}`} checked={selected} onCheckedChange={onToggle} /></td><td className="p-3"><p className="font-medium">{row.name}</p><p className="text-xs">{row.completeness.score}% complete · {row.completeness.missing.join(", ") || "complete"}</p></td><td className="p-3 text-xs"><Badge>{row.publication.published ? "Published" : "Unpublished"}</Badge> <Badge variant="outline">{row.bookingDiagnostics.result.passed ? "Booking eligible" : "Booking blocked"}</Badge><p className="mt-1 flex flex-wrap gap-x-2 gap-y-1">Directory {row.publication.directoryVisible ? "on" : <IssueLink label="hidden" onClick={() => onIssueFilter("directory_hidden")} />} · Search {row.publication.searchEligible ? "on" : <IssueLink label="ineligible" onClick={() => onIssueFilter("search_ineligible")} />} · Booking switch {row.bookingEnabled ? "on" : "off"}</p></td><td className="p-3 text-xs"><p className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{locationLabel(row)}</p><p>{readable(row.accountStatus)}{row.archived ? " · archived" : ""}</p><p className="text-muted-foreground">Contact configured: {row.contact.hasPhone || row.contact.hasWhatsapp ? "yes" : "no"} · {row.contact.revealCount} reveals</p></td><td className="p-3 text-right"><Button size="sm" variant="outline" onClick={onManage}>Manage</Button></td></tr>;
 }
-function GovernanceCard({ row, selected, onToggle, onManage }: { row: GovernanceRow; selected: boolean; onToggle: () => void; onManage: () => void }) {
-  return <Card><CardContent className="p-4"><div className="flex items-start gap-3"><Checkbox aria-label={`Select ${row.name}`} checked={selected} onCheckedChange={onToggle} /><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><div><p className="font-medium">{row.name}</p><p className="text-xs">{row.completeness.score}% complete · {row.bookingDiagnostics.result.passed ? "booking eligible" : "booking blocked"}</p></div><Button size="sm" variant="outline" onClick={onManage}>Manage</Button></div><p className="mt-3 text-xs"><MapPin className="mr-1 inline h-3.5 w-3.5" />{locationLabel(row)} · {row.publication.published ? "Published" : "Unpublished"}</p><p className="mt-1 text-xs">Directory {row.publication.directoryVisible ? "on" : "off"} · Search {row.publication.searchEligible ? "on" : "off"} · Booking switch {row.bookingEnabled ? "on" : "off"}</p></div></div></CardContent></Card>;
+function GovernanceCard({ row, selected, onToggle, onManage, onIssueFilter }: { row: GovernanceRow; selected: boolean; onToggle: () => void; onManage: () => void; onIssueFilter: (issue: string) => void }) {
+  return <Card><CardContent className="p-4"><div className="flex items-start gap-3"><Checkbox aria-label={`Select ${row.name}`} checked={selected} onCheckedChange={onToggle} /><div className="min-w-0 flex-1"><div className="flex justify-between gap-2"><div><p className="font-medium">{row.name}</p><p className="text-xs">{row.completeness.score}% complete · {row.bookingDiagnostics.result.passed ? "booking eligible" : "booking blocked"}</p></div><Button size="sm" variant="outline" onClick={onManage}>Manage</Button></div><p className="mt-3 text-xs"><MapPin className="mr-1 inline h-3.5 w-3.5" />{locationLabel(row)} · {row.publication.published ? "Published" : "Unpublished"}</p><p className="mt-1 text-xs">Directory {row.publication.directoryVisible ? "on" : <IssueLink label="hidden" onClick={() => onIssueFilter("directory_hidden")} />} · Search {row.publication.searchEligible ? "on" : <IssueLink label="ineligible" onClick={() => onIssueFilter("search_ineligible")} />} · Booking switch {row.bookingEnabled ? "on" : "off"}</p></div></div></CardContent></Card>;
+}
+
+function IssueLink({ label, onClick }: { label: string; onClick: () => void }) {
+  return <button type="button" className="font-semibold text-destructive underline decoration-dotted underline-offset-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={onClick}>{label}</button>;
+}
+
+function RemedySuggestions({ row, onChoose }: { row: GovernanceRow; onChoose: (action: GovernanceAction, preset?: { field?: "name" | "specialization" | "languages" | "bio" | "experience"; value?: string; stateId?: number | null; cityId?: number | null }) => void }) {
+  const remedies: Array<{ label: string; description: string; action: GovernanceAction; preset?: Parameters<typeof onChoose>[1] }> = [];
+  if (!row.publication.published) remedies.push({ label: "Publish storefront", description: "The storefront is not published. This does not bypass verification or location safety checks.", action: "publish" });
+  if (!row.publication.directoryVisible) remedies.push({ label: "Show in directory", description: "Enable the directory switch after confirming this profile is ready for public discovery.", action: "directory_show" });
+  if (!row.publication.searchEligible) remedies.push({ label: "Enable search eligibility", description: "Enable search separately; the public safety gate still applies.", action: "search_enable" });
+  if (row.location && typeof row.location !== "string" && row.location.canonical === false) remedies.push({ label: "Correct active location", description: "Choose an active matching state and city to resolve the location issue.", action: "set_location", preset: { stateId: row.location.stateId, cityId: row.location.cityId } });
+  const profileFields: Array<["name" | "specialization" | "languages" | "bio" | "experience", string, string]> = [
+    ["name", "Name", row.name || ""],
+    ["specialization", "Specialization", row.specialization || ""],
+    ["languages", "Languages", row.languages || ""],
+    ["bio", "Bio", row.bio || ""],
+    ["experience", "Experience", String(row.experience || "")],
+  ];
+  const missingField = profileFields.find(([field]) => row.completeness.missing.includes(field));
+  if (missingField) remedies.push({ label: `Complete ${missingField[1].toLowerCase()}`, description: `Enter a value for the missing ${missingField[1].toLowerCase()} field.`, action: "update_profile", preset: { field: missingField[0], value: missingField[2] } });
+  if (!remedies.length) return null;
+  return <section className="rounded-md border border-primary/20 bg-primary/5 p-3" aria-labelledby="remedy-title"><h3 id="remedy-title" className="font-semibold text-foreground">Suggested remedies</h3><p className="mt-1 text-xs text-muted-foreground">These suggestions explain what may unblock this profile. Choose one to edit and explicitly apply it; other independent controls remain unchanged.</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{remedies.map(remedy => <div key={remedy.label} className="rounded-md border bg-background p-3"><p className="text-sm font-medium">{remedy.label}</p><p className="mt-1 text-xs text-muted-foreground">{remedy.description}</p><Button type="button" size="sm" variant="outline" className="mt-2" onClick={() => onChoose(remedy.action, remedy.preset)}>Edit remedy</Button></div>)}</div></section>;
 }
 function GovernanceDetail({ row, onNavigate }: { row: GovernanceRow; onNavigate?: (tab: "reviews" | "analytics" | "seo" | "audit-log") => void }) {
   const checks = Object.entries(row.bookingDiagnostics?.checks || {});

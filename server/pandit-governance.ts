@@ -10,16 +10,23 @@ import { effectivePanditGovernance } from "./pandit-public-eligibility";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 
 const actionSchema = z.enum(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify",
-  "revoke_verification", "archive", "restore", "suspend", "reactivate", "start_leave", "end_leave",
+  "revoke_verification", "archive", "restore", "suspend", "reactivate", "start_leave", "end_leave", "update_profile",
   "set_location", "set_indexing", "set_contact_override"]);
 const write = z.object({
   action: actionSchema, reason: z.string().trim().max(500).optional(), confirmed: z.literal(true).optional(),
   stateId: z.number().int().positive().optional(), cityId: z.number().int().positive().optional(),
   indexingMode: z.enum(["auto", "noindex"]).optional(),
   contactAccessOverride: z.enum(["use_global", "always_open", "login_required", "never_display"]).optional(),
+  profilePatch: z.object({
+    name: z.string().trim().min(1).max(160).optional(),
+    specialization: z.string().trim().max(240).optional(),
+    languages: z.string().trim().max(500).optional(),
+    bio: z.string().trim().max(5000).optional(),
+    experience: z.number().int().min(0).max(100).optional(),
+  }).optional(),
 });
 const sensitiveActions = new Set<z.infer<typeof actionSchema>>(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable",
-  "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate"]);
+  "booking_disable", "verify", "revoke_verification", "archive", "restore", "suspend", "reactivate", "update_profile", "set_location"]);
 const bulkActions = new Set(["publish", "unpublish", "directory_show", "directory_hide", "search_enable", "search_disable", "booking_enable", "booking_disable", "verify",
   "revoke_verification", "archive", "restore"]);
 
@@ -74,7 +81,7 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
     if (status === "archived") where.push(eq(pandits.archived, true));
     if (status === "published") where.push(sql`exists (select 1 from pandit_storefronts sf where sf.pandit_id = ${pandits.id} and sf.is_published = true and sf.status = 'published')`);
     if (status === "unpublished") where.push(sql`not exists (select 1 from pandit_storefronts sf where sf.pandit_id = ${pandits.id} and sf.is_published = true and sf.status = 'published')`);
-    const validIssues = new Set(["", "incomplete", "location", "contact", "discovery"]);
+    const validIssues = new Set(["", "incomplete", "location", "contact", "discovery", "directory_hidden", "search_ineligible", "unpublished", "unverified", "on_leave", "archived"]);
     if (!validIssues.has(issue)) return res.status(400).json({ message: "Invalid governance issue filter" });
     const needsDiagnosticFilter = ["complete", "incomplete", "booking_eligible", "booking_ineligible"].includes(status) || !!issue;
     const globalRows = await db.select({ count: sql<number>`count(*)::int` }).from(pandits);
@@ -126,7 +133,13 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
     if (issue === "incomplete") items = items.filter(x => x.completeness.missing.length > 0);
     if (issue === "location") items = items.filter(x => !x.location.canonical);
     if (issue === "contact") items = items.filter(x => !x.contact.hasPhone && !x.contact.hasWhatsapp);
-    if (issue === "discovery") items = items.filter(x => !x.publication.published || !x.publication.directoryVisible || !x.verified || x.archived);
+    if (issue === "discovery") items = items.filter(x => !x.publication.published || !x.publication.directoryVisible || !x.publication.searchEligible || !x.verified || x.archived || x.onLeave);
+    if (issue === "directory_hidden") items = items.filter(x => !x.publication.directoryVisible);
+    if (issue === "search_ineligible") items = items.filter(x => !x.publication.searchEligible);
+    if (issue === "unpublished") items = items.filter(x => !x.publication.published);
+    if (issue === "unverified") items = items.filter(x => !x.verified);
+    if (issue === "on_leave") items = items.filter(x => x.onLeave);
+    if (issue === "archived") items = items.filter(x => x.archived);
     const total = needsDiagnosticFilter ? items.length : Number(totalRows[0]?.count || 0);
     const pagedItems = needsDiagnosticFilter ? items.slice((page - 1) * pageSize, page * pageSize) : items;
     res.json({ items: pagedItems, pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) }, summary: { scope: "global", total: Number(globalRows[0]?.count || 0), filteredTotal: total } });
@@ -143,6 +156,10 @@ export function registerPanditGovernanceRoutes(app: Express, adminAuthMiddleware
     else if (input.action === "archive") change = { archived: true }; else if (input.action === "restore") change = { archived: false };
     else if (input.action === "suspend") change = { accountStatus: "suspended", moderationReason: input.reason }; else if (input.action === "reactivate") change = { accountStatus: "active", suspendedUntil: null };
     else if (input.action === "start_leave") change = { onLeave: true, leaveStartedAt: new Date() }; else if (input.action === "end_leave") change = { onLeave: false, leaveStartedAt: null, leaveNote: null };
+    else if (input.action === "update_profile") {
+      if (!input.profilePatch || Object.keys(input.profilePatch).length === 0) throw new Error("profilePatch is required");
+      change = input.profilePatch;
+    }
     else if (input.action === "set_indexing") { if (!input.indexingMode) throw new Error("indexingMode is required"); change = { indexingMode: input.indexingMode }; }
     else if (input.action === "set_location") {
       if (!input.stateId || !input.cityId) throw new Error("stateId and cityId are required");
