@@ -4,6 +4,9 @@ import {
   CalendarDays,
   Check,
   Flame,
+  Flower2,
+  Gem,
+  Home,
   Laptop,
   MapPin,
   MoonStar,
@@ -24,13 +27,14 @@ const providerIcons: Record<string, LucideIcon> = {
 };
 
 const benefitIcons: LucideIcon[] = [UsersRound, Laptop, Sparkles, Package];
-const opportunityIcons: LucideIcon[] = [UsersRound, Flame, Laptop, CalendarDays];
+const opportunityIcons: LucideIcon[] = [UsersRound, Gem, Laptop, CalendarDays];
+const statIcons: LucideIcon[] = [UsersRound, Home, Flower2, MapPin];
 const opportunityFill = [8, 9, 8, 7];
 
 function SegmentedGauge({ filled, label }: { filled: number; label: string }) {
   return (
     <div
-      className="flex gap-1"
+      className="flex gap-[3px]"
       role="img"
       aria-label={label}
       data-testid="partner-capability-gauge"
@@ -38,12 +42,44 @@ function SegmentedGauge({ filled, label }: { filled: number; label: string }) {
       {Array.from({ length: 10 }, (_, index) => (
         <span
           key={index}
-          className={`h-2 flex-1 rounded-[2px] ${
-            index < filled ? "bg-[#7c1f2e]" : "bg-[#d9d5d0]"
+          className={`h-3 flex-1 rounded-[2px] ${
+            index < filled ? "bg-[#8b1527]" : "bg-[#d9d8d4]"
           }`}
           aria-hidden="true"
         />
       ))}
+    </div>
+  );
+}
+
+function LeafCluster({ side }: { side: "left" | "right" }) {
+  return (
+    <div
+      className={`pointer-events-none absolute z-0 ${
+        side === "left"
+          ? "-left-11 top-44 h-44 w-32 -rotate-[18deg] sm:-left-16 sm:top-56"
+          : "-right-20 top-16 h-72 w-64 rotate-[11deg] opacity-60 sm:-right-12 sm:top-20"
+      }`}
+      aria-hidden="true"
+    >
+      <span className="absolute left-4 top-16 h-24 w-12 -rotate-[34deg] rounded-[100%_0_100%_0] bg-[#8b9b70]/55 blur-[1px]" />
+      <span className="absolute left-10 top-5 h-28 w-14 -rotate-[7deg] rounded-[100%_0_100%_0] bg-[#a8b88b]/45" />
+      <span className="absolute left-20 top-20 h-24 w-11 rotate-[31deg] rounded-[0_100%_0_100%] bg-[#7f9365]/38" />
+      <span className="absolute left-8 top-28 h-16 w-9 rotate-[12deg] rounded-[100%_0_100%_0] bg-[#667a54]/35" />
+      <span className="absolute left-16 top-2 h-48 w-px rotate-[25deg] bg-[#76865e]/35" />
+    </div>
+  );
+}
+
+function BottomDiyaDecoration() {
+  return (
+    <div className="pointer-events-none absolute bottom-0 left-[-24px] z-0 h-36 w-64 opacity-80 sm:left-[-8px]" aria-hidden="true">
+      <div className="absolute bottom-0 left-0 h-20 w-44 rounded-[48%_52%_8%_8%] bg-gradient-to-br from-[#9f6927]/35 via-[#e4bd60]/35 to-[#8d5527]/20 blur-[1px]" />
+      <div className="absolute bottom-8 left-14 h-14 w-28 rounded-[50%] border-4 border-[#9d6b2e]/35 bg-[#b98738]/15 shadow-[0_8px_12px_rgba(101,67,29,0.14)]" />
+      <Flame className="absolute bottom-20 left-[6.4rem] h-9 w-9 fill-[#d69d39]/35 text-[#a2612a]" strokeWidth={1.2} />
+      <Flower2 className="absolute bottom-3 left-36 h-12 w-12 text-[#8b9b70]/60" strokeWidth={1.1} />
+      <Flower2 className="absolute bottom-1 left-8 h-9 w-9 text-[#b87965]/45" strokeWidth={1.1} />
+      <span className="absolute bottom-0 left-44 h-12 w-24 -rotate-[15deg] rounded-[100%_0_100%_0] bg-[#71875f]/35" />
     </div>
   );
 }
@@ -63,7 +99,7 @@ export default function PartnerPage() {
 
   return (
     <div
-      className="relative isolate overflow-hidden bg-[#fbf6ed] text-[#2e2020]"
+      className="relative isolate min-h-full overflow-hidden bg-[#faf5eb] text-[#302426]"
       data-testid="partner-entry-page"
     >
       <PageSeo
@@ -73,18 +109,21 @@ export default function PartnerPage() {
       />
 
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-        <div className="absolute -left-28 top-56 h-72 w-72 rounded-full bg-[#d7e0c6]/50 blur-3xl" />
-        <div className="absolute -right-36 top-16 h-[34rem] w-[34rem] rounded-full border border-[#a8823b]/10" />
-        <div className="absolute -right-20 top-32 h-[27rem] w-[27rem] rounded-full border border-[#a8823b]/10" />
-        <div className="absolute bottom-0 left-1/2 h-72 w-[44rem] -translate-x-1/2 rounded-[50%] bg-[#e8d8bf]/30 blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-px bg-[#a8823b]/30" />
+        <div className="absolute inset-x-0 top-0 h-px bg-[#b79358]/45" />
+        <div className="absolute -left-28 top-72 h-80 w-80 rounded-full bg-[#dfe7d2]/45 blur-3xl" />
+        <div className="absolute right-[-10rem] top-20 h-[34rem] w-[34rem] rounded-full border border-[#a6895c]/15" />
+        <div className="absolute right-[-6rem] top-28 h-[27rem] w-[27rem] rounded-full border border-[#a6895c]/10" />
+        <div className="absolute bottom-0 left-1/2 h-80 w-[46rem] -translate-x-1/2 rounded-[50%] bg-[#eadcc8]/35 blur-3xl" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1180px] px-4 pb-8 pt-5 sm:px-6 sm:pb-12 sm:pt-7 lg:px-8">
+      <LeafCluster side="left" />
+      <LeafCluster side="right" />
+
+      <div className="relative z-10 mx-auto w-full max-w-[1120px] px-5 pb-6 pt-3 sm:px-8 sm:pb-10 sm:pt-5 lg:px-10">
         <button
           type="button"
           onClick={handleBack}
-          className="group inline-flex min-h-10 items-center gap-2 rounded-full px-2 text-sm font-medium text-[#6b5546] transition-colors hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fbf6ed]"
+          className="group inline-flex min-h-9 items-center gap-1.5 rounded-full px-1 text-[12px] font-medium text-[#735b45] transition-colors hover:text-[#8b1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf5eb]"
           aria-label={copy.backAria}
           data-testid="button-partner-back"
         >
@@ -92,230 +131,254 @@ export default function PartnerPage() {
           {copy.back}
         </button>
 
-        <div>
-          <section className="relative pb-9 pt-7 text-center sm:pb-11 sm:pt-10 lg:pt-12" aria-labelledby="partner-page-heading">
-            <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.34em] text-[#98762f] sm:text-[11px]">
+        <section className="relative mx-auto mt-2 max-w-[920px] pb-4 pt-4 sm:mt-3 sm:pb-6 sm:pt-5" aria-labelledby="partner-page-heading">
+          <div className="pointer-events-none absolute right-0 top-4 hidden w-24 text-left text-[13px] font-serif italic leading-[1.05] text-[#987b50] min-[520px]:block sm:right-1 sm:w-28 sm:text-[15px]">
+            <span className="mb-2 block h-px w-8 bg-[#987b50]/70" />
+            Tradition
+            <br />
+            Empowers
+            <br />
+            Together
+            <span className="mt-2 block h-px w-8 bg-[#987b50]/70" />
+          </div>
+
+          <div className="mx-auto max-w-[560px] text-left min-[720px]:text-center">
+            <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.34em] text-[#8a724c] min-[520px]:text-[9px]">
               {copy.eyebrow}
             </p>
             <h1
               id="partner-page-heading"
-              className="mx-auto max-w-3xl font-serif text-[clamp(2.45rem,6vw,4.75rem)] font-semibold leading-[0.98] tracking-[-0.055em] text-[#741f31]"
+              className="font-serif text-[clamp(2rem,6vw,3.55rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-[#791a2b]"
             >
               {copy.heading}
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-7 text-[#66564d] sm:text-base">
+            <p className="mt-3 max-w-[510px] text-[13px] leading-[1.35] text-[#554a43] min-[720px]:mx-auto sm:text-[15px]">
               {copy.intro}
             </p>
-            <div className="mx-auto mt-6 h-px w-16 bg-[#b9924b]/60" aria-hidden="true" />
-          </section>
+          </div>
+        </section>
 
-          <section className="grid gap-4 lg:grid-cols-2 lg:gap-5" aria-labelledby="provider-options-heading">
-            <h2 id="provider-options-heading" className="sr-only">
-              {language === "hi" ? "प्रदाता विकल्प" : "Provider options"}
+        <section className="grid grid-cols-1 gap-2.5 min-[520px]:grid-cols-2 min-[520px]:gap-3" aria-labelledby="provider-options-heading">
+          <h2 id="provider-options-heading" className="sr-only">
+            {language === "hi" ? "प्रदाता विकल्प" : "Provider options"}
+          </h2>
+          {partnerProviders.map((provider) => {
+            const isActive = provider.active && Boolean(provider.destination);
+            const providerCopy = copy.providers[provider.id];
+            const ProviderIcon = providerIcons[provider.id];
+
+            return (
+              <article
+                key={provider.id}
+                className={`group relative flex min-h-[228px] flex-col overflow-hidden rounded-[11px] border p-4 shadow-[0_8px_20px_rgba(93,64,40,0.08)] transition-shadow sm:min-h-[246px] sm:p-5 ${
+                  isActive
+                    ? "border-[#bb914b]/75 bg-[#fffaf2] hover:shadow-[0_12px_28px_rgba(93,64,40,0.14)]"
+                    : "border-[#c9c7c2]/75 bg-[#f0efec]/90"
+                }`}
+                aria-labelledby={`provider-${provider.id}-title`}
+                aria-describedby={`provider-${provider.id}-description`}
+                aria-disabled={!isActive}
+                data-testid={`partner-provider-card-${provider.id}`}
+              >
+                <div className={`absolute inset-x-0 top-0 h-px ${isActive ? "bg-[#b3863c]" : "bg-[#c2c0bc]"}`} aria-hidden="true" />
+
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`grid h-[58px] w-[58px] shrink-0 place-items-center rounded-full border ${
+                      isActive
+                        ? "border-[#d2b275]/45 bg-[#f5e7cf] text-[#94631d]"
+                        : "border-[#cac8c4] bg-[#deddd9] text-[#94918c]"
+                    }`}
+                    aria-label={providerCopy.iconLabel}
+                  >
+                    <ProviderIcon className="h-8 w-8" strokeWidth={1.35} aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3
+                        id={`provider-${provider.id}-title`}
+                        className={`font-serif text-[25px] font-semibold leading-none tracking-[-0.035em] ${
+                          isActive ? "text-[#791a2b]" : "text-[#817e79]"
+                        }`}
+                      >
+                        {providerCopy.title}
+                      </h3>
+                      <span
+                        className={`mt-0.5 shrink-0 rounded-full px-2 py-1 text-[8px] font-bold leading-none ${
+                          isActive
+                            ? "bg-[#e4efd8] text-[#568048]"
+                            : "bg-[#d5d3ce] text-[#78746e]"
+                        }`}
+                        aria-label={isActive ? copy.statusActiveAria : copy.statusUnavailableAria}
+                        data-testid={`partner-provider-status-${provider.id}`}
+                      >
+                        {providerCopy.status}
+                      </span>
+                    </div>
+                    <p
+                      id={`provider-${provider.id}-description`}
+                      className="mt-2 max-w-[250px] font-serif text-[12px] leading-[1.2] text-[#584c44]"
+                    >
+                      {providerCopy.description}
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="mt-4 space-y-2">
+                  {providerCopy.benefits.map((benefit) => (
+                    <li key={benefit} className="flex items-start gap-2 text-[11px] leading-[1.2] text-[#5c5047]">
+                      <span
+                        className={`mt-[-1px] grid h-4 w-4 shrink-0 place-items-center rounded-full ${
+                          isActive ? "bg-[#c08b31] text-white" : "bg-[#c3c2be] text-white"
+                        }`}
+                      >
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" />
+                      </span>
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {isActive ? (
+                  <Link
+                    href={provider.destination || "/pandit/login"}
+                    className="group/cta mt-auto flex min-h-9 w-full items-center justify-center gap-3 rounded-[6px] bg-[#94182b] px-4 text-[12px] font-medium text-[#fff9ef] shadow-[0_6px_14px_rgba(148,24,43,0.18)] transition-all hover:bg-[#791324] hover:shadow-[0_9px_18px_rgba(148,24,43,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf2]"
+                    data-testid="link-partner-pandit-login"
+                  >
+                    <span>{providerCopy.cta}</span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <div
+                    className="mt-auto flex min-h-9 w-full items-center justify-center rounded-[6px] bg-[#d1d0cd] px-4 text-[12px] font-medium text-[#807b75]"
+                    aria-hidden="true"
+                  >
+                    {providerCopy.cta}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </section>
+
+        <section className="mt-5 sm:mt-8" aria-labelledby="partner-benefits-heading">
+          <div className="text-center">
+            <h2 id="partner-benefits-heading" className="font-serif text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#791a2b] sm:text-3xl">
+              {copy.benefitsHeading}
             </h2>
-            {partnerProviders.map((provider) => {
-              const isActive = provider.active && Boolean(provider.destination);
-              const providerCopy = copy.providers[provider.id];
-              const ProviderIcon = providerIcons[provider.id];
-
+            <p className="mt-1 text-[12px] font-serif text-[#64574e] sm:text-sm">{copy.benefitsIntro}</p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 min-[620px]:gap-2.5">
+            {copy.benefits.map((benefit, index) => {
+              const BenefitIcon = benefitIcons[index];
               return (
                 <article
-                  key={provider.id}
-                  className={`group relative overflow-hidden rounded-[1.25rem] border p-5 shadow-[0_18px_50px_rgba(83,54,40,0.09)] transition-shadow sm:p-7 ${
-                    isActive
-                      ? "border-[#b9924b]/65 bg-[#fffaf2] hover:shadow-[0_22px_58px_rgba(83,54,40,0.14)]"
-                      : "border-[#b8b2ab]/45 bg-[#f0efec]/85 opacity-75"
-                  }`}
-                  aria-labelledby={`provider-${provider.id}-title`}
-                  aria-describedby={`provider-${provider.id}-description`}
-                  aria-disabled={!isActive}
-                  data-testid={`partner-provider-card-${provider.id}`}
+                  key={benefit.title}
+                  className="flex min-h-[166px] flex-col items-center rounded-[7px] border border-white/70 bg-[#fffaf4]/85 px-2 py-3 text-center shadow-[0_7px_18px_rgba(93,64,40,0.06)] sm:min-h-[178px] sm:px-3"
                 >
-                  <div className={`absolute inset-x-0 top-0 h-1 ${isActive ? "bg-gradient-to-r from-[#9c6f21] via-[#e6c66d] to-[#9c6f21]" : "bg-[#b4afa9]"}`} aria-hidden="true" />
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`grid h-16 w-16 shrink-0 place-items-center rounded-full border ${
-                          isActive
-                            ? "border-[#c59a45]/45 bg-[#f3e4c8] text-[#8b641e]"
-                            : "border-[#c2c0bc] bg-[#deddd9] text-[#888783]"
-                        }`}
-                        aria-label={providerCopy.iconLabel}
-                      >
-                        <ProviderIcon className="h-8 w-8" strokeWidth={1.3} aria-hidden="true" />
-                      </div>
-                      <div>
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${
-                            isActive
-                              ? "bg-[#e5efd9] text-[#547047]"
-                              : "bg-[#d8d6d2] text-[#77746f]"
-                          }`}
-                          aria-label={isActive ? copy.statusActiveAria : copy.statusUnavailableAria}
-                          data-testid={`partner-provider-status-${provider.id}`}
-                        >
-                          {providerCopy.status}
-                        </span>
-                        <h3
-                          id={`provider-${provider.id}-title`}
-                          className={`mt-2 font-serif text-3xl font-semibold tracking-[-0.035em] ${
-                            isActive ? "text-[#741f31]" : "text-[#77736d]"
-                          }`}
-                        >
-                          {providerCopy.title}
-                        </h3>
-                      </div>
-                    </div>
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-[#f2e5ce] text-[#a4762e]">
+                    <BenefitIcon className="h-5 w-5" strokeWidth={1.55} aria-hidden="true" />
                   </div>
-
-                  <p
-                    id={`provider-${provider.id}-description`}
-                    className="mt-5 max-w-lg text-sm leading-6 text-[#655950]"
-                  >
-                    {providerCopy.description}
+                  <h3 className="mt-3 max-w-[10rem] font-serif text-[13px] font-semibold leading-[1.05] text-[#791a2b] sm:text-[15px]">
+                    {benefit.title}
+                  </h3>
+                  <p className="mt-2 max-w-[11rem] font-serif text-[10px] leading-[1.2] text-[#51453d] sm:text-[11px]">
+                    {benefit.descriptor}
                   </p>
-
-                  <ul className="mt-5 space-y-2.5">
-                    {providerCopy.benefits.map((benefit) => (
-                      <li key={benefit} className="flex items-start gap-2.5 text-sm leading-5 text-[#63554d]">
-                        <span
-                          className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full ${
-                            isActive ? "bg-[#bd8a32] text-white" : "bg-[#bdbcb8] text-white"
-                          }`}
-                        >
-                          <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" />
-                        </span>
-                        <span>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {isActive ? (
-                    <Link
-                      href={provider.destination || "/pandit/login"}
-                      className="group/cta mt-7 flex min-h-12 w-full items-center justify-between rounded-xl bg-[#861e30] px-5 text-sm font-bold text-[#fff9ef] shadow-[0_10px_22px_rgba(134,30,48,0.18)] transition-all hover:bg-[#6f1727] hover:shadow-[0_14px_28px_rgba(134,30,48,0.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf2]"
-                      data-testid="link-partner-pandit-login"
-                    >
-                      <span>{providerCopy.cta}</span>
-                      <span className="grid h-8 w-8 place-items-center rounded-full border border-[#f4d790]/60">
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover/cta:translate-x-0.5" aria-hidden="true" />
-                      </span>
-                    </Link>
-                  ) : (
-                    <div
-                      className="mt-7 flex min-h-12 w-full items-center justify-center rounded-xl bg-[#d3d0cc] px-5 text-sm font-semibold text-[#817d77]"
-                      aria-hidden="true"
-                    >
-                      {providerCopy.cta}
-                    </div>
-                  )}
+                  <p className="mt-0.5 max-w-[11rem] font-serif text-[10px] leading-[1.2] text-[#6e6159] sm:text-[11px]">
+                    {benefit.description}
+                  </p>
+                  <span className="mt-auto rounded-full bg-[#f1e3c9] px-2.5 py-1 text-[8px] font-bold tracking-[0.08em] text-[#916721] sm:text-[9px]">
+                    {benefit.badge}
+                  </span>
                 </article>
               );
             })}
-          </section>
+          </div>
+        </section>
 
-          <section className="mt-14 sm:mt-16" aria-labelledby="partner-benefits-heading">
-            <div className="text-center">
-              <h2 id="partner-benefits-heading" className="font-serif text-3xl font-semibold tracking-[-0.04em] text-[#741f31] sm:text-4xl">
-                {copy.benefitsHeading}
-              </h2>
-              <p className="mt-2 text-sm text-[#6d5b51] sm:text-base">{copy.benefitsIntro}</p>
-            </div>
-            <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-              {copy.benefits.map((benefit, index) => {
-                const BenefitIcon = benefitIcons[index];
-                return (
-                  <article
-                    key={benefit.title}
-                    className="flex min-h-[218px] flex-col items-center rounded-xl border border-[#eadfce] bg-[#fffaf4]/80 px-3 py-5 text-center shadow-[0_12px_34px_rgba(83,54,40,0.05)] sm:px-4"
-                  >
-                    <div className="grid h-12 w-12 place-items-center rounded-full border border-[#d4ad58]/35 bg-[#f5e9d2] text-[#9a6d21]">
-                      <BenefitIcon className="h-5 w-5" strokeWidth={1.6} aria-hidden="true" />
-                    </div>
-                    <h3 className="mt-4 max-w-[12rem] font-serif text-base font-semibold leading-tight text-[#741f31] sm:text-lg">
-                      {benefit.title}
-                    </h3>
-                    <p className="mt-2 max-w-[13rem] text-xs font-medium leading-5 text-[#55483f]">
-                      {benefit.descriptor}
-                    </p>
-                    <p className="mt-1 max-w-[13rem] text-xs leading-5 text-[#766960]">
-                      {benefit.description}
-                    </p>
-                    <span className="mt-auto rounded-full bg-[#f3e5c7] px-3 py-1.5 text-[9px] font-bold tracking-[0.1em] text-[#8d651f]">
-                      {benefit.badge}
-                    </span>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
+        <section className="mt-6 sm:mt-9" aria-labelledby="partner-opportunities-heading">
+          <div className="text-center">
+            <h2 id="partner-opportunities-heading" className="font-serif text-[24px] font-semibold leading-none tracking-[-0.04em] text-[#791a2b] sm:text-3xl">
+              {copy.opportunityHeading}
+            </h2>
+            <p className="mt-1 text-[12px] font-serif text-[#64574e] sm:text-sm">{copy.opportunityIntro}</p>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 min-[620px]:gap-2.5">
+            {copy.opportunities.map((opportunity, index) => {
+              const OpportunityIcon = opportunityIcons[index];
+              return (
+                <article
+                  key={opportunity.title}
+                  className="rounded-[7px] border border-white/70 bg-[#fffaf4]/78 p-2.5 shadow-[0_7px_18px_rgba(93,64,40,0.055)] sm:p-3"
+                  aria-label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
+                >
+                  <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#4f443d]">
+                    <OpportunityIcon className="h-4 w-4 shrink-0 text-[#9b7025]" strokeWidth={1.65} aria-hidden="true" />
+                    <span>{opportunity.title}</span>
+                  </div>
+                  <div className="mt-3">
+                    <SegmentedGauge
+                      filled={opportunityFill[index]}
+                      label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
+                    />
+                  </div>
+                  <p className="mt-2 font-serif text-[13px] font-semibold leading-[1.05] text-[#4b3331] sm:text-[15px]">
+                    {opportunity.gaugeLabel}
+                  </p>
+                  <p className="mt-1.5 font-serif text-[10px] leading-[1.2] text-[#665850] sm:text-[11px]">
+                    {opportunity.description}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
-          <section className="mt-14 sm:mt-16" aria-labelledby="partner-opportunities-heading">
-            <div className="text-center">
-              <h2 id="partner-opportunities-heading" className="font-serif text-3xl font-semibold tracking-[-0.04em] text-[#741f31] sm:text-4xl">
-                {copy.opportunityHeading}
-              </h2>
-              <p className="mt-2 text-sm text-[#6d5b51] sm:text-base">{copy.opportunityIntro}</p>
-            </div>
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-              {copy.opportunities.map((opportunity, index) => {
-                const OpportunityIcon = opportunityIcons[index];
-                return (
-                  <article
-                    key={opportunity.title}
-                    className="rounded-xl border border-[#eadfce] bg-[#fffaf4]/75 p-4 shadow-[0_12px_34px_rgba(83,54,40,0.045)]"
-                    aria-label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
-                  >
-                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[#5c4b42]">
-                      <OpportunityIcon className="h-4 w-4 text-[#997025]" strokeWidth={1.7} aria-hidden="true" />
-                      <span>{opportunity.title}</span>
-                    </div>
-                    <div className="mt-4">
-                      <SegmentedGauge
-                        filled={opportunityFill[index]}
-                        label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
-                      />
-                    </div>
-                    <p className="mt-3 font-serif text-lg font-semibold leading-tight text-[#4b3331]">
-                      {opportunity.gaugeLabel}
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-[#6e6058]">{opportunity.description}</p>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="mt-11 border-y border-[#bea06b]/30 py-6 sm:mt-14 sm:py-7" aria-label={language === "hi" ? "प्लेटफ़ॉर्म तथ्य" : "Platform facts"}>
-            <div className="grid grid-cols-2 divide-x divide-[#bea06b]/35 sm:grid-cols-4">
-              {copy.stats.map((stat) => (
-                <div key={stat.label} className="px-3 text-center first:pl-0 last:pr-0">
-                  <p className="font-serif text-2xl font-semibold leading-none text-[#7c1f2e] sm:text-3xl">{stat.value}</p>
-                  <p className="mt-2 text-[10px] font-medium uppercase tracking-[0.12em] text-[#786459] sm:text-xs">{stat.label}</p>
+        <section className="relative mt-5 border-y border-[#bda06d]/45 py-3 sm:mt-8 sm:py-4" aria-label={language === "hi" ? "प्लेटफ़ॉर्म तथ्य" : "Platform facts"}>
+          <div className="grid grid-cols-4 divide-x divide-[#bda06d]/45">
+            {copy.stats.map((stat, index) => {
+              const StatIcon = statIcons[index];
+              return (
+                <div key={stat.label} className="flex items-center justify-center gap-1.5 px-1 text-center">
+                  <StatIcon className="hidden h-6 w-6 shrink-0 text-[#a4772b] min-[520px]:block" strokeWidth={1.45} aria-hidden="true" />
+                  <div>
+                    <p className="font-serif text-[17px] font-semibold leading-none text-[#791a2b] sm:text-2xl">{stat.value}</p>
+                    <p className="mt-1 text-[8px] font-medium leading-[1.05] text-[#77665b] sm:text-[10px]">{stat.label}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
+              );
+            })}
+          </div>
+        </section>
 
-          <p className="mx-auto mt-8 max-w-2xl text-center font-serif text-base italic leading-7 text-[#80654d] sm:text-lg">
-            {copy.closing}
-          </p>
-        </div>
+        <p className="mx-auto mt-4 max-w-[600px] text-center font-serif text-[13px] italic leading-5 text-[#886b4e] sm:mt-5 sm:text-base">
+          {copy.closing}
+        </p>
 
-        <footer className="mt-8 flex items-center justify-center gap-3 text-xs text-[#78695e]">
-          <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/privacy-policy">
-            {copy.footer.privacy}
-          </Link>
-          <span aria-hidden="true">|</span>
-          <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/terms-conditions">
-            {copy.footer.terms}
-          </Link>
-          <span aria-hidden="true">|</span>
-          <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/contact">
-            {copy.footer.help}
-          </Link>
+        <footer className="relative mt-3 flex flex-col items-center justify-center gap-2 pb-8 text-[9px] text-[#76675c] sm:mt-5 sm:pb-10">
+          <div className="flex items-center gap-3">
+            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/privacy-policy">
+              {copy.footer.privacy}
+            </Link>
+            <span aria-hidden="true">|</span>
+            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/terms-conditions">
+              {copy.footer.terms}
+            </Link>
+            <span aria-hidden="true">|</span>
+            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/contact">
+              {copy.footer.help}
+            </Link>
+          </div>
+          <div className="flex items-center gap-3 text-[8px] uppercase tracking-[0.28em] text-[#9a7b4c]">
+            <span className="h-px w-8 bg-[#b3925d]/65" />
+            <span>{language === "hi" ? "एक अधिक आध्यात्मिक कल" : "A more spiritual tomorrow"}</span>
+            <span className="h-px w-8 bg-[#b3925d]/65" />
+          </div>
         </footer>
       </div>
+
+      <BottomDiyaDecoration />
     </div>
   );
 }

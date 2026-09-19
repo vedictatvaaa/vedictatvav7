@@ -74,7 +74,7 @@ const englishCopy: PartnerCopy = {
       iconLabel: "Puja diya",
     },
     astrologer: {
-      status: "CURRENTLY UNAVAILABLE",
+      status: "Currently Unavailable",
       title: "Astrologer",
       description: "Offer astrology consultations and guidance to devotees.",
       benefits: [
