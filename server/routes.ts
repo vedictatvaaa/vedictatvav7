@@ -10108,6 +10108,67 @@ Return JSON: {"description": "your optimized HTML description here"}` }
   // ---- Application Forms (Pandit & Astrologer) ----
   // Pandit applications go into pandit_applications table with status="pending".
   // An admin reviews and approves, which promotes the entry into the public pandits table.
+  const panditBioAiLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 2,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+    message: { message: "You have used both AI bio drafts. Please finish your bio manually." },
+  });
+  app.post("/api/pandit-applications/generate-bio", panditBioAiLimiter, async (req, res) => {
+    try {
+      const parsed = z.object({
+        fullName: z.string().trim().max(160).optional().default(""),
+        experience: z.string().trim().max(80).optional().default(""),
+        specializations: z.string().trim().max(1200).optional().default(""),
+        education: z.string().trim().max(600).optional().default(""),
+        languages: z.string().trim().max(400).optional().default(""),
+        serviceArea: z.string().trim().max(400).optional().default(""),
+        regionalOrigin: z.string().trim().max(400).optional().default(""),
+        currentBio: z.string().trim().max(500).optional().default(""),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Please check the profile details and try again." });
+      if (!isAiProviderConfigured()) return res.status(503).json({ message: "AI bio writing is currently unavailable." });
+
+      const profile = parsed.data;
+      const ai = createAiClient({ task: "pandit_registration_bio" });
+      const completion = await ai.chat.completions.create({
+        model: getAiProviderConfig().model,
+        temperature: 0.65,
+        max_tokens: 260,
+        messages: [
+          {
+            role: "system",
+            content: "You write warm, trustworthy professional bios for verified Hindu pandits. Return only the bio text, with no heading, quotation marks, claims you cannot support, emojis, or contact details. Use plain English and preserve the pandit's tradition and dignity.",
+          },
+          {
+            role: "user",
+            content: `Write a polished first-person bio of 70–110 words for this Panditji registration:
+Name: ${profile.fullName || "Panditji"}
+Years of experience: ${profile.experience || "Not provided"}
+Services: ${profile.specializations || "Traditional Vedic ceremonies"}
+Education/training: ${profile.education || "Traditional Vedic training"}
+Languages: ${profile.languages || "Not provided"}
+Service area: ${profile.serviceArea || "India"}
+Regional tradition: ${profile.regionalOrigin || "Not provided"}
+Existing draft, if any: ${profile.currentBio || "None"}
+Do not invent qualifications, locations, services, or guarantees. Improve the existing draft when it is useful.`,
+          },
+        ],
+      });
+      const bio = String(completion.choices[0]?.message?.content || "")
+        .replace(/^["']|["']$/g, "")
+        .trim()
+        .slice(0, 500);
+      if (!bio) return res.status(502).json({ message: "AI did not return a usable bio. Please write it manually." });
+      res.json({ bio });
+    } catch (error: any) {
+      console.error("[pandit-bio-ai] generation failed:", error?.message || error);
+      res.status(502).json({ message: "AI bio writing failed. Please write your bio manually." });
+    }
+  });
+
   app.post("/api/pandit-applications/upload-photo", upload.single("photo"), async (req: any, res) => {
     if (!req.file) return res.status(400).json({ message: "A valid profile photo is required" });
     const url = `/uploads/${req.file.filename}`;
