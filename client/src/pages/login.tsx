@@ -300,9 +300,9 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
         noindex
       />
 
-      <div className="relative min-h-[calc(100dvh-5rem)] overflow-hidden bg-[#f5efe5] text-[#2b2020]">
+      <div className="relative min-h-[calc(100dvh-5rem)] overflow-hidden bg-[#f6f0e9] text-[#2b2020]">
         <style>{`
-          @keyframes vt-auth-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes vt-auth-rise { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
           .vt-auth-enter { animation: vt-auth-rise 620ms cubic-bezier(.22,1,.36,1) both; }
           .vt-auth-delay { animation-delay: 100ms; }
           @media (prefers-reduced-motion: reduce) { .vt-auth-enter { animation: none; } }
@@ -312,54 +312,17 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
           aria-hidden="true"
           style={{
             background:
-              "radial-gradient(circle at 15% 8%, rgba(183,145,73,0.14), transparent 30%), radial-gradient(circle at 90% 75%, rgba(109,43,53,0.10), transparent 32%)",
+              "radial-gradient(circle at 12% 5%, rgba(224,177,104,0.24), transparent 30%), radial-gradient(circle at 92% 68%, rgba(163,91,105,0.16), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.34), transparent 50%)",
           }}
         />
-        <div className="pointer-events-none absolute -right-28 top-16 hidden h-[560px] w-[560px] text-[#8f6d36]/20 lg:block">
+        <div className="pointer-events-none absolute -right-28 top-16 h-[420px] w-[420px] text-[#8f6d36]/15 opacity-70 sm:h-[560px] sm:w-[560px]">
           <VedicSeal className="h-full w-full" />
         </div>
-        <div className="pointer-events-none absolute bottom-0 left-0 hidden h-64 w-full opacity-25 lg:block" aria-hidden="true">
-          <svg viewBox="0 0 1200 240" className="h-full w-full" preserveAspectRatio="none">
-            <path d="M0 205h1200M0 220h1200M80 205V90h1040v115M180 205V55h840v150M285 205V25h630v180M390 205V80h420v125" fill="none" stroke="#8d2230" strokeWidth="1" />
-            <path d="m600 25 22 30h-44zM520 55l80-30 80 30M440 80l160-55 160 55" fill="none" stroke="#b9944d" strokeWidth="1" />
-          </svg>
-        </div>
 
-        <main className="relative mx-auto grid w-full max-w-[1220px] grid-cols-1 gap-8 px-4 pb-10 pt-7 sm:px-8 sm:pb-16 sm:pt-12 lg:grid-cols-[minmax(280px,0.72fr)_minmax(460px,0.95fr)] lg:items-center lg:gap-20 lg:px-14 lg:py-16">
-          <aside className="hidden min-h-[560px] flex-col justify-between border-l border-[#b9944d]/45 pl-9 lg:flex">
-            <div>
-              <div className="flex items-center gap-3 text-[#6d2b35]">
-                <div className="grid h-11 w-11 place-items-center rounded-full border border-[#b9944d] bg-[#f5efe5]">
-                  <VedicSeal className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="font-serif text-xl tracking-[0.08em]">VEDIC TATVA</p>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-[#8b671f]">A trusted spiritual house</p>
-                </div>
-              </div>
-              <p className="mt-20 max-w-sm font-serif text-[clamp(42px,4.5vw,70px)] leading-[.96] tracking-[-.04em] text-[#6d2b35]">
-                Begin where<br /><em className="text-[#9b7534]">meaning</em> lives.
-              </p>
-              <p className="mt-7 max-w-xs text-sm leading-7 text-[#705f58]">
-                Trusted objects, living traditions and guidance for the everyday devotee — gathered with care.
-              </p>
-            </div>
-            <div className="flex items-end justify-between border-t border-[#b9944d]/35 pt-5 text-[10px] uppercase tracking-[0.22em] text-[#8b671f]">
-              <span>Est. 2018 · India</span>
-              <span className="font-mono tracking-normal">01 / 04</span>
-            </div>
-          </aside>
-
+        <main className="relative mx-auto flex w-full max-w-[760px] flex-col px-4 pb-10 pt-8 sm:px-8 sm:pb-16 sm:pt-12 lg:py-16">
           <div className="mx-auto w-full max-w-[620px]">
-          <header className="vt-auth-enter mx-auto max-w-lg text-center lg:text-left">
-            <div className="mb-6 flex items-center justify-center gap-2 lg:hidden">
-              <VedicSeal className="h-7 w-7 text-[#8f6d36]" />
-              <span className="font-serif text-sm tracking-[0.18em] text-[#6d2b35]">VEDIC TATVA</span>
-            </div>
-            <div className="mb-5 flex items-center justify-center gap-3 lg:justify-start">
-              <span className="block h-px w-10 bg-[#B9944D]" aria-hidden="true" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#8b671f]">Devotee access</span>
-            </div>
+          <header className="vt-auth-enter mx-auto max-w-lg text-center">
+            <div className="mx-auto mb-5 h-px w-12 bg-[#B9944D]/75" aria-hidden="true" />
             <h1 className="font-serif text-[38px] font-semibold leading-[1.02] tracking-[-0.035em] text-[#20191A] sm:text-[50px]">
               {copy.title}
             </h1>
@@ -377,7 +340,7 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
             )}
           </header>
 
-          <section className="vt-auth-enter vt-auth-delay mt-7 rounded-[4px] border border-[#d8cbbb] bg-[#fbf8f2]/90 px-5 py-6 shadow-[0_24px_70px_rgba(78,49,39,0.12)] backdrop-blur-md sm:mt-9 sm:px-8 sm:py-8">
+          <section className="vt-auth-enter vt-auth-delay mt-7 rounded-[24px] border border-white/75 bg-white/55 px-5 py-6 shadow-[0_24px_70px_rgba(109,43,53,0.13),inset_0_1px_0_rgba(255,255,255,.85)] backdrop-blur-xl sm:mt-9 sm:px-8 sm:py-8">
             {(view === "forgot" || view === "forgot-sent") && (
               <button
                 type="button"
