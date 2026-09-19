@@ -608,7 +608,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                   {mode === "signup" ? <UserRound className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
                 </div>
                 <div>
-                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">{copy.workspace}</p>
+                  <p className="mb-1 text-[11px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">{copy.workspace}</p>
                   {mode === "signup" && (
                     <h1 className="font-serif text-[2rem] font-semibold leading-[1.04] tracking-[-.04em] text-[#4A1A22]" data-testid="text-pandit-login-title">
                       {copy.signupTitle}
