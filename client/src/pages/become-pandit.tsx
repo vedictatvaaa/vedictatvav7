@@ -1499,6 +1499,11 @@ export type FormState = {
   regionalOrigin: string; membership: string; agreeTerms: boolean; servicesConfirmed: boolean; masterServiceIds: number[];
 };
 
+const PANDIT_LANGUAGE_OPTIONS = [
+  "Hindi", "Sanskrit", "English", "Tamil", "Telugu", "Kannada", "Malayalam",
+  "Marathi", "Bengali", "Gujarati", "Punjabi", "Odia", "Assamese",
+];
+
 export function RegistrationSection({
   form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, servicesError, applicationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
 }: {
@@ -1665,7 +1670,26 @@ export function RegistrationSection({
                       </Field>
                     </div>
                     <Field label="Languages Known *" id="languages">
-                      <Input id="languages" name="languages" value={form.languages} onChange={onChange} placeholder="Hindi, Sanskrit, English..." required data-testid="input-languages" style={{ borderColor: `${C.maroon}25` }} />
+                      <select
+                        id="languages"
+                        name="languages"
+                        multiple
+                        size={5}
+                        value={form.languages ? form.languages.split(",").map((value) => value.trim()).filter(Boolean) : []}
+                        onChange={(event) => setForm((current) => ({
+                          ...current,
+                          languages: Array.from(event.target.selectedOptions, (option) => option.value).join(", "),
+                        }))}
+                        required
+                        className="w-full rounded-md bg-white px-3 py-2 text-sm"
+                        style={{ border: `1px solid ${C.maroon}25` }}
+                        data-testid="select-languages"
+                      >
+                        {PANDIT_LANGUAGE_OPTIONS.map((language) => (
+                          <option key={language} value={language}>{language}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs" style={{ color: C.brownSoft }}>Hold Ctrl/Cmd to choose more than one language.</p>
                     </Field>
                     <Field label="Sevas You Perform" id="specializations">
                       <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder="Satyanarayan Katha, Griha Pravesh, Rudra Abhishek..." required className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
