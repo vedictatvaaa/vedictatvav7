@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tiro+Devanagari+Sanskrit:ital@0;1&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -25,6 +25,10 @@
 }
 
 @custom-variant dark (&:is(.dark *));
+
+.font-vedic {
+  font-family: "Tiro Devanagari Sanskrit", "Noto Serif Devanagari", Georgia, serif;
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

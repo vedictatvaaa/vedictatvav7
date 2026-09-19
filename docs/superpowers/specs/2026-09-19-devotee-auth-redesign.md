@@ -49,7 +49,7 @@ Devotee password signup requires a full name, an exact 10-digit mobile number, a
 
 The authentication surface uses a modern sanctuary direction with a premium glass treatment. Atmospheric ivory, maroon, muted rose, and amber light form the background, with abstract Vedic geometry floating quietly behind translucent surfaces. The interface should feel luminous, contemporary, welcoming, and spiritually grounded without relying on deity photography or ornamental excess.
 
-The authentication form uses a restrained translucent panel with clear contrast, soft backdrop blur, subtle borders, and controlled depth. Brand messaging is concise, typography is contemporary, and decorative elements remain secondary to the task. On mobile, the composition condenses so the form stays immediately accessible without horizontal overflow or excessive introductory content.
+The authentication form uses a restrained translucent panel with clear contrast, soft backdrop blur, subtle borders, and controlled depth. Brand messaging is concise. Display headings use a lighter, inscription-inspired Sanskrit typeface at restrained sizes, while body text and form controls retain a clean sans-serif face for readability. Decorative elements remain secondary to the task. On mobile, the composition condenses so the form stays immediately accessible without horizontal overflow or excessive introductory content.
 
 The guest action is labeled **“Continue as guest”**. Login, signup, email verification, referrals, redirects, password recovery, Google sign-in, validation, keyboard operation, reduced-motion behavior, and screen-reader semantics remain functionally unchanged.
 

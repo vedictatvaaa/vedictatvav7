@@ -323,7 +323,7 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
           <div className="mx-auto w-full max-w-[620px]">
           <header className="vt-auth-enter mx-auto max-w-lg text-center">
             <div className="mx-auto mb-5 h-px w-12 bg-[#B9944D]/75" aria-hidden="true" />
-            <h1 className="font-serif text-[38px] font-semibold leading-[1.02] tracking-[-0.035em] text-[#20191A] sm:text-[50px]">
+            <h1 className="font-vedic text-[34px] font-normal leading-[1.08] tracking-[-0.025em] text-[#20191A] sm:text-[42px]">
               {copy.title}
             </h1>
             <p className="mt-3 text-[15px] leading-6 text-[#726863] sm:text-base">
@@ -354,7 +354,7 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
             )}
 
             <div className="text-center">
-              <h2 className="font-serif text-[25px] font-semibold leading-tight text-[#6D2B35] sm:text-[28px]">
+              <h2 className="font-vedic text-[22px] font-normal leading-tight text-[#6D2B35] sm:text-[25px]">
                 {copy.panelTitle}
               </h2>
               <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-5 text-[#756A66] sm:text-sm">
