@@ -687,7 +687,6 @@ function Router() {
   const hideChrome = isBackOffice || isImmersive;
   const isDevoteeAuth = lowerLoc === "/login" || lowerLoc === "/register";
   const isPartnerEntry = lowerLoc === "/partner" || lowerLoc === "/hi/partner";
-  const isPartnerReference = lowerLoc === "/partner";
   const suppressGlobalPageChrome = hideChrome || isDevoteeAuth || isPartnerEntry;
   return (
     <div className="flex flex-col min-h-screen">
@@ -705,7 +704,7 @@ function Router() {
       >
         Skip to main content
       </a>
-      {!hideChrome && <Navbar hidePromo={isPartnerEntry} partnerMode={isPartnerReference} />}
+      {!hideChrome && <Navbar hidePromo={isPartnerEntry} />}
       {!suppressGlobalPageChrome && <TithiToolRibbon />}
       <main id="main-content" tabIndex={-1} className={suppressGlobalPageChrome ? "flex-grow" : "flex-grow pb-20 lg:pb-0"}>
         <Suspense fallback={
