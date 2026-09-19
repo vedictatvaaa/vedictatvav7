@@ -40,6 +40,7 @@ import durgaDeityImg from "@assets/generated_images/durga-deity.png";
 import saraswatiDeityImg from "@assets/generated_images/saraswati-deity.png";
 import mahalakshmiDeityImg from "@assets/generated_images/mahalakshmi-deity.png";
 import hanumanDeityImg from "@assets/generated_images/hanuman-deity.png";
+import rudrakshaJapaOrbImg from "@assets/generated_images/rudraksha-japa-orb.png";
 
 type Mantra = {
   id: string;
@@ -2047,10 +2048,22 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 onPointerCancel={handleOrbPointerEnd}
                 disabled={autoChanting || (audioLocked && syncTapsToAudio)}
                 aria-busy={(autoChanting || (audioLocked && syncTapsToAudio)) || undefined}
-                className={`absolute inset-7 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg flex flex-col items-center justify-center text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
+                className={`absolute inset-7 overflow-hidden rounded-full bg-gradient-to-br from-[#6D2B35] to-[#4a1a22] shadow-lg text-center text-[#FFFAEC] transition-transform focus:outline-none focus:ring-4 focus:ring-[#D4AF37]/50 ${fullMalaBloom !== null ? "animate-japa-full-mala-pulse " : ""}${autoChanting || (audioLocked && syncTapsToAudio) ? "opacity-80 cursor-wait" : "active:scale-[0.97]"}`}
                 aria-label={autoMode && !autoChanting ? "Tap to start auto-chant" : autoChanting ? "Auto-chant is playing — press Stop to chant manually" : (audioLocked && syncTapsToAudio ? "Mantra audio playing — please wait" : "Count one japa")}
                 data-testid="btn-tap"
               >
+                 <img
+                   src={rudrakshaJapaOrbImg}
+                   alt=""
+                   aria-hidden="true"
+                   draggable={false}
+                   className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover object-center"
+                 />
+                 <div
+                   className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(38,12,8,0.18),rgba(38,12,8,0.58)_72%,rgba(20,5,4,0.78))]"
+                   aria-hidden="true"
+                 />
+                 <div className="relative z-10 flex h-full flex-col items-center justify-center">
                 {autoMode && !autoChanting ? (
                   <>
                     {mantra.sanskrit && (
@@ -2082,6 +2095,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                     <div className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-[#D4AF37]">of {target}</div>
                   </>
                 )}
+                 </div>
               </button>
               {/* Pace pulse — gentle gold ring flash when tapping faster than a chant cycle. */}
               {paceHint && (
@@ -3297,7 +3311,19 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
             beadR={1.0}
             guruR={1.7}
           />
-          <div className="absolute inset-[10%] rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-2xl flex flex-col items-center justify-center text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30">
+          <div className="absolute inset-[10%] overflow-hidden rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-2xl text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30">
+            <img
+              src={rudrakshaJapaOrbImg}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
+            />
+            <div
+              className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(38,12,8,0.18),rgba(38,12,8,0.58)_72%,rgba(20,5,4,0.78))]"
+              aria-hidden="true"
+            />
+            <div className="relative z-10 flex h-full flex-col items-center justify-center">
             {p.paceHint && (
               <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-[#D4AF37]/70 animate-pulse" aria-hidden="true" data-testid="ring-fs-pace-hint" />
             )}
@@ -3311,6 +3337,7 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
                 {formatDhyana(p.sessionElapsedMs)}
               </div>
             )}
+            </div>
           </div>
           {/* Quarter-mala milestone bloom (27 / 54 / 81). */}
           {p.milestoneFlash !== null && p.milestoneFlash !== undefined && (
