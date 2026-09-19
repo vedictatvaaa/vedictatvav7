@@ -512,7 +512,11 @@ export default function Navbar() {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <Link href="/" className="flex items-center flex-shrink-0 gap-2 min-w-0" data-testid="link-home">
+          <Link
+            href="/"
+            className="absolute left-1/2 z-10 flex min-w-0 -translate-x-1/2 items-center gap-2 whitespace-nowrap lg:static lg:z-auto lg:translate-x-0"
+            data-testid="link-home"
+          >
             {settings?.logoUrl ? (
               <img
                 src={settings.logoUrl}
@@ -535,7 +539,7 @@ export default function Navbar() {
             </span>
             {festival && (
               <span
-                className="hidden lg:inline-flex items-center gap-1 ml-2.5 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide whitespace-nowrap"
+                className="absolute left-full ml-2.5 hidden items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide whitespace-nowrap lg:static lg:inline-flex"
                 style={{
                   background: `${festAccent}15`,
                   color: festival.palette.from,
@@ -551,7 +555,7 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop nav: 4 clean links + More ── */}
-          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0">
+          <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
             <div className="flex items-center gap-1">
               {[
                 { href: "/online-pandit-booking", label: "Pandits" },
@@ -564,7 +568,7 @@ export default function Navbar() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`relative text-[13px] font-medium tracking-wide transition-colors duration-200 px-4 py-2 whitespace-nowrap rounded-full ${
+                    className={`relative whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors duration-200 ${
                       isActive
                         ? "text-[#6D2B35]"
                         : "text-[#5a4a3a]/65 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60"
@@ -587,7 +591,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => { setMoreOpen(!moreOpen); setSearchOpen(false); }}
-                  className={`relative flex items-center gap-1.5 text-[13px] font-medium tracking-wide transition-colors duration-200 px-4 py-2 rounded-full whitespace-nowrap ${
+                  className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium tracking-wide transition-colors duration-200 ${
                     moreOpen
                       ? "text-[#6D2B35] bg-[#F5F0E6]/80"
                       : "text-[#5a4a3a]/65 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/60"
