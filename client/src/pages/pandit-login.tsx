@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,10 @@ import {
   Mail,
   Phone,
   PlayCircle,
+  CalendarCheck,
+  Globe,
+  Monitor,
+  ShieldCheck,
   Sparkles,
   UserRound,
 } from "lucide-react";
@@ -89,12 +93,29 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     newTo: hindi ? "Vedic Tatva में नए हैं?" : "New to Vedic Tatva?",
     applyAs: hindi ? "पंडितजी के रूप में आवेदन करें" : "Apply as a Panditji",
     privacy: hindi ? "जारी रखकर आप Vedic Tatva की कार्य-नीतियों और गोपनीयता शर्तों से सहमत हैं।" : "By continuing, you agree to the Vedic Tatva practice guidelines and privacy terms.",
+    benefitsEyebrow: hindi ? "पंडितजी का डिजिटल कार्यक्षेत्र" : "PANDITJI DIGITAL WORKSPACE",
+    benefitsTitle: hindi ? "अपनी साधना को सम्मान के साथ आगे बढ़ाएं।" : "Grow your practice with dignity.",
+    benefitsDescription: hindi
+      ? "सत्यापित प्रोफ़ाइल, नियमित बुकिंग और ऐसे टूल जो आपकी सेवा को सरल रखते हैं।"
+      : "A verified profile, steady bookings, and tools that keep your practice focused on seva.",
+    benefitVerified: hindi ? "सत्यापित पहचान" : "Verified identity",
+    benefitBookings: hindi ? "बुकिंग संभालें" : "Manage bookings",
+    benefitTools: hindi ? "स्मार्ट टूल्स" : "Smart tools",
+    exploreDemo: hindi ? "लाइव डेमो देखें" : "Explore the live demo",
+    fullStory: hindi ? "पूरी जानकारी देखें" : "See the full Panditji story",
   };
 
   const fillDemo = () => {
     setMode("login");
     setPhone(DEMO_PHONE);
     setPassword(DEMO_PASS);
+  };
+
+  const openDemo = () => {
+    setMode("login");
+    window.requestAnimationFrame(() => {
+      document.getElementById("pandit-demo")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   };
 
   const submit = async () => {
@@ -167,7 +188,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
           backgroundImage: "radial-gradient(circle at 12% 0%, rgba(215,167,55,.18), transparent 28%), radial-gradient(circle at 100% 100%, rgba(109,43,53,.08), transparent 36%)",
         }}
       >
-        <div className="relative mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-[31rem] flex-col">
+        <div className="relative mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
           <header className="flex items-center justify-end px-1 pb-5 text-[10px] font-extrabold tracking-[.16em] text-[#55252D]">
             <button
               type="button"
@@ -180,7 +201,72 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             </button>
           </header>
 
-          <Card className="flex-1 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/70 shadow-[0_22px_65px_rgba(77,40,36,.12)] backdrop-blur">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(25rem,.95fr)] lg:items-start">
+            <section
+              className="relative min-h-[25rem] overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/20 bg-[#4A1A22] shadow-[0_22px_65px_rgba(77,40,36,.16)] lg:min-h-[40rem]"
+              aria-labelledby="pandit-benefits-heading"
+              data-testid="panel-pandit-benefits"
+            >
+              <img
+                src="/attached_assets/heroes/hero-scene-pandit.png"
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#281016] via-[#4A1A22]/75 to-[#4A1A22]/10" />
+              <div className="relative flex min-h-[25rem] flex-col justify-between p-5 text-white sm:p-7 lg:min-h-[40rem]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full border border-[#F0D276]/50 bg-[#2D1117]/45 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#F0D276]">
+                    {copy.benefitsEyebrow}
+                  </span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 backdrop-blur-sm">
+                    <ShieldCheck className="h-4 w-4 text-[#F0D276]" aria-hidden="true" />
+                  </span>
+                </div>
+
+                <div className="mt-16">
+                  <h2 id="pandit-benefits-heading" className="max-w-[28rem] font-serif text-[clamp(2rem,5vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.04em] text-[#FFF8E9]">
+                    {copy.benefitsTitle}
+                  </h2>
+                  <p className="mt-3 max-w-[27rem] text-sm leading-6 text-white/80">
+                    {copy.benefitsDescription}
+                  </p>
+
+                  <div className="mt-6 grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm" data-testid="card-pandit-benefit-verified">
+                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#F0D276]" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-white/90">{copy.benefitVerified}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm" data-testid="card-pandit-benefit-bookings">
+                      <CalendarCheck className="h-4 w-4 shrink-0 text-[#F0D276]" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-white/90">{copy.benefitBookings}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/10 p-3 backdrop-blur-sm" data-testid="card-pandit-benefit-tools">
+                      <Monitor className="h-4 w-4 shrink-0 text-[#F0D276]" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-white/90">{copy.benefitTools}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <button
+                      type="button"
+                      onClick={openDemo}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-full bg-[#F0D276] px-4 text-[11px] font-extrabold text-[#4A1A22] shadow-[0_10px_24px_rgba(0,0,0,.18)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      data-testid="btn-pandit-demo"
+                    >
+                      <PlayCircle className="h-4 w-4" aria-hidden="true" />
+                      {copy.exploreDemo}
+                    </button>
+                    <Link href="/become-pandit" className="inline-flex items-center gap-1 text-[11px] font-bold text-white/75 underline decoration-white/35 underline-offset-4 hover:text-white">
+                      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+                      {copy.fullStory}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          <Card className="overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/70 shadow-[0_22px_65px_rgba(77,40,36,.12)] backdrop-blur lg:self-start">
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-6 sm:p-9">
               <div className="mb-6 flex items-start gap-3.5">
@@ -321,7 +407,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#6F2B38]" />
                     <span><strong className="text-[#4A1A22]">{copy.firstLogin}</strong> {copy.firstLoginDescription}</span>
                   </div>
-                  <div className="mt-5 rounded-[15px] border border-dashed border-[#A67817]/55 bg-gradient-to-br from-[#FFFAF1] to-[#FFF4D9] p-3.5">
+                  <div id="pandit-demo" className="mt-5 rounded-[15px] border border-dashed border-[#A67817]/55 bg-gradient-to-br from-[#FFFAF1] to-[#FFF4D9] p-3.5">
                     <div className="flex items-center gap-2 text-[11px] font-extrabold text-[#4A1A22]"><PlayCircle className="h-4 w-4 text-[#6F2B38]" />{copy.demoTitle}</div>
                     <p className="mt-2 text-[10px] leading-[1.45] text-[#806F5E]">{copy.demoDescription}</p>
                     <div className="my-3 grid grid-cols-2 gap-2">
@@ -336,6 +422,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
               )}
             </CardContent>
           </Card>
+          </div>
           <p className="px-1 pt-3 text-center text-[9px] leading-4 text-[#9B8A7C]">{copy.privacy}</p>
         </div>
       </div>
