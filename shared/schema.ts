@@ -557,6 +557,38 @@ export const panditCityRequests = pgTable("pandit_city_requests", {
   stateIdx: index("pandit_city_requests_state_idx").on(t.stateId),
 }));
 
+export const panditApplicationCorrectionRequests = pgTable("pandit_application_correction_requests", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  applicationId: integer("application_id").notNull().references(() => panditApplications.id),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  requestedFields: text("requested_fields").array().notNull(),
+  explanation: text("explanation").notNull(),
+  status: text("status").notNull().default("open"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  submittedAt: timestamp("submitted_at"),
+}, (t) => ({
+  applicationStatusIdx: index("pandit_application_correction_application_status_idx").on(t.applicationId, t.status),
+  expiresAtIdx: index("pandit_application_correction_expires_at_idx").on(t.expiresAt),
+  statusCheck: check("pandit_application_correction_status_check", sql`${t.status} in ('open', 'submitted', 'expired')`),
+}));
+
+export const panditApplicationCorrectionEvents = pgTable("pandit_application_correction_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  requestId: integer("request_id").notNull().references(() => panditApplicationCorrectionRequests.id),
+  applicationId: integer("application_id").notNull().references(() => panditApplications.id),
+  eventType: text("event_type").notNull(),
+  changedFields: text("changed_fields").array().notNull().default(sql`'{}'::text[]`),
+  actorType: text("actor_type").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (t) => ({
+  requestCreatedIdx: index("pandit_application_correction_event_request_idx").on(t.requestId, t.createdAt),
+  eventTypeCheck: check("pandit_application_correction_event_type_check", sql`${t.eventType} in ('request_created', 'fields_edited', 'resubmitted')`),
+  actorTypeCheck: check("pandit_application_correction_event_actor_check", sql`${t.actorType} in ('admin', 'applicant')`),
+}));
+
 export const franchiseApplications = pgTable("franchise_applications", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   fullName: text("full_name").notNull(),

@@ -40,3 +40,17 @@ export function buildPanditPasswordResetEmail(params: { to: string; fullName: st
   const html = layout("Reset your Panditji Portal password", `<p>${escapeHtml(greeting)}</p><p>Use the secure button below to create a new password.</p><p><a href="${escapeHtml(params.resetUrl)}" style="display:inline-block;background:#7a1f1f;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px">Reset portal password</a></p><p style="font-size:13px;color:#6b6b6b">This link expires in 7 days and can only be used once.</p>`);
   return { to: params.to, subject: "Reset your Vedic Tatva Panditji Portal password", text, html };
 }
+
+export function buildPanditApplicationCorrectionEmail(params: {
+  to: string;
+  fullName: string;
+  correctionUrl: string;
+  explanation: string;
+  requestedFields: string[];
+}): EmailMessage {
+  const greeting = params.fullName ? `Namaste ${params.fullName} ji,` : "Namaste,";
+  const fields = params.requestedFields.join(", ");
+  const text = `${greeting}\n\nYour Vedic Tatva Pandit application needs a few corrections before review.\n\nRequested details: ${fields}\nMessage from our team: ${params.explanation}\n\nPlease use this secure link to correct and resubmit your application:\n${params.correctionUrl}\n\nThe link expires in 7 days. It does not include your address or exact location evidence. You can submit the form again without creating a new application.\n\nनमस्ते,\nआपके आवेदन में समीक्षा से पहले कुछ सुधार आवश्यक हैं। कृपया ऊपर दिए गए सुरक्षित लिंक से केवल मांगी गई जानकारी ठीक करके दोबारा भेजें। लिंक 7 दिनों में समाप्त हो जाएगा।\n\n— Vedic Tatva Team`;
+  const html = layout("A correction is needed for your Pandit application", `<p>${escapeHtml(greeting)}</p><p>Your application needs a few corrections before our team can complete its review.</p><div style="padding:14px;background:#faf7f0;border:1px solid #d9c58d;border-radius:8px"><strong>Requested details:</strong><br>${escapeHtml(fields)}<br><br><strong>Message from our team:</strong><br>${escapeHtml(params.explanation)}</div><p><a href="${escapeHtml(params.correctionUrl)}" style="display:inline-block;background:#7a1f1f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:700">Correct and resubmit application</a></p><p style="font-size:13px;color:#6b6b6b">This secure link expires in 7 days. It does not include your address or exact location evidence. You can correct this application without applying again.</p><hr><p lang="hi">आपके आवेदन में समीक्षा से पहले कुछ सुधार आवश्यक हैं। कृपया सुरक्षित लिंक से केवल मांगी गई जानकारी ठीक करके दोबारा भेजें। लिंक 7 दिनों में समाप्त हो जाएगा।</p>`);
+  return { to: params.to, subject: "Correction needed for your Vedic Tatva Pandit application / आवेदन में सुधार आवश्यक", text, html };
+}

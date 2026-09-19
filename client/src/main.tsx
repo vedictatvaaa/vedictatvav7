@@ -3,7 +3,9 @@ import App from "./App";
 import "./index.css";
 import { registerServiceWorker } from "./lib/pwa";
 import { initializeGoogleConsentMode } from "./lib/consent";
+import { capturePanditCorrectionToken } from "./lib/pandit-correction-token";
 
+capturePanditCorrectionToken();
 const registrationUrl = new URL(window.location.href);
 if (["/pandit/signup", "/become-pandit"].includes(registrationUrl.pathname)) {
   const draftToken = registrationUrl.searchParams.get("draft");

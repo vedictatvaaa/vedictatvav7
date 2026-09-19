@@ -65,7 +65,7 @@ import {
   insertSeoPageSchema, insertMatrimonyProfileSchema, insertBlogPostSchema,
   insertDispatchSchema, insertAbandonedCartSchema, insertPdfKundliOrderSchema,
   insertAdminMantraSchema,
-   products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits,
+   products, pandits, panditReviews, panditServices, adminAuditLogs, panditSlugHistory, panditFunnelEvents, panditFunnelEventNames, panditSessions, panditStorefronts, indianStates, indianCities, astrologers, kathaStorage, users, adminSessions, aiCache, invoices, dispatches, travelBands, masterServices, masterServicePolicyAudits, panditApplicationCorrectionRequests, panditApplicationCorrectionEvents,
    pujaTypes, pujaMuhurats, customerEmailVerificationChallenges,
   type AbandonedCart,
 } from "@shared/schema";
@@ -122,7 +122,7 @@ import { notifyPujaBooking } from "./services/booking-notifications";
 import QRCode from "qrcode";
 import { verifySync, generateSecret, generateURI } from "otplib";
 import { sendEmail, sendEmailAsync, buildPanditRejectionEmail, buildPanditApplicationReceivedEmail, sendAbandonedCartNudge } from "./email";
-import { buildPanditApprovalEmail, buildPanditPasswordResetEmail } from "./pandit-account-emails";
+import { buildPanditApprovalEmail, buildPanditPasswordResetEmail, buildPanditApplicationCorrectionEmail } from "./pandit-account-emails";
 import {
   enqueueWelcomeSeries, dispatchBroadcast, recordUnsubscribe, verifyUnsubscribeToken,
 } from "./email-marketing";
@@ -10560,7 +10560,36 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
     const n = Number(raw);
     return Number.isInteger(n) && n > 0 ? n : null;
   };
-  const ALLOWED_APP_STATUSES = new Set(["pending", "approved", "rejected"]);
+  const ALLOWED_APP_STATUSES = new Set(["pending", "changes_requested", "approved", "rejected"]);
+  const correctionFields = [
+    "fullName", "phone", "email", "registeredAddress", "yearsExperience",
+    "education", "languages", "bio", "serviceArea", "regionalOrigin",
+    "masterServiceIds", "photo",
+  ] as const;
+  const correctionFieldSet = new Set<string>(correctionFields);
+  const correctionTokenHash = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+  const correctionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: ipKeyGenerator,
+    message: { message: "Too many correction requests. Please try again later." },
+  });
+  const correctionTokenFromRequest = (req: any): string =>
+    typeof req.headers["x-pandit-correction-token"] === "string"
+      ? req.headers["x-pandit-correction-token"].trim()
+      : "";
+  const correctionValue = (application: any, field: string): unknown => {
+    if (field === "yearsExperience") return application.yearsExperience;
+    return application[field];
+  };
+  const correctionPublicValues = (application: any, fields: string[]) =>
+    Object.fromEntries(fields.map(field => [field, correctionValue(application, field)]));
+  const correctionExplanationIsSafe = (value: string) =>
+    value.length >= 10 && value.length <= 2000
+      && !/<\s*(script|iframe|img|a)\b/i.test(value)
+      && !/\b(?:latitude|longitude|coordinates?|gps|exact location|location evidence|registered address)\b/i.test(value);
 
   // Admin: list pandit applications, optionally filter by status
   app.get("/api/admin/pandit-applications", adminAuthMiddleware, async (req: any, res) => {
@@ -10593,6 +10622,215 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
     } catch {
       res.status(500).json({ message: "Failed to fetch application" });
     }
+  });
+
+  app.post("/api/admin/pandit-applications/:id/request-corrections", adminAuthMiddleware, async (req: any, res) => {
+    const id = parsePositiveId(req.params.id);
+    if (!id) return res.status(400).json({ message: "Invalid id" });
+    const requestedFields = Array.isArray(req.body?.requestedFields)
+      ? Array.from(new Set(req.body.requestedFields.filter((field: unknown): field is string => typeof field === "string")))
+      : [];
+    const explanation = typeof req.body?.explanation === "string" ? req.body.explanation.trim() : "";
+    if (!requestedFields.length || requestedFields.some(field => !correctionFieldSet.has(field))) {
+      return res.status(400).json({ message: "Choose one or more supported correction fields" });
+    }
+    if (!correctionExplanationIsSafe(explanation)) {
+      return res.status(400).json({ message: "Add a safe explanation between 10 and 2000 characters" });
+    }
+    const token = crypto.randomBytes(32).toString("base64url");
+    const tokenHash = correctionTokenHash(token);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [application] = await tx.select().from(panditApplications).where(eq(panditApplications.id, id)).for("update");
+        if (!application) return { kind: "missing" as const };
+        if (!["pending", "changes_requested"].includes(application.status)) {
+          return { kind: "conflict" as const, status: application.status };
+        }
+        await tx.update(panditApplicationCorrectionRequests).set({ status: "expired", updatedAt: new Date() }).where(and(
+          eq(panditApplicationCorrectionRequests.applicationId, id),
+          eq(panditApplicationCorrectionRequests.status, "open"),
+        ));
+        const [request] = await tx.insert(panditApplicationCorrectionRequests).values({
+          applicationId: id,
+          tokenHash,
+          requestedFields,
+          explanation,
+          status: "open",
+          expiresAt,
+          createdBy: String(req.user?.email || req.admin?.email || "admin").slice(0, 160),
+        }).returning();
+        await tx.insert(panditApplicationCorrectionEvents).values({
+          requestId: request.id,
+          applicationId: id,
+          eventType: "request_created",
+          changedFields: requestedFields,
+          actorType: "admin",
+        });
+        const [updated] = await tx.update(panditApplications).set({
+          status: "changes_requested",
+          adminNote: explanation,
+          reviewedAt: null,
+        }).where(eq(panditApplications.id, id)).returning();
+        return { kind: "ok" as const, request, application: updated };
+      });
+      if (result.kind === "missing") return res.status(404).json({ message: "Application not found" });
+      if (result.kind === "conflict") return res.status(409).json({ message: `Application is ${result.status}; only pending applications can be corrected` });
+      await auditAdmin(req, "pandit_application.corrections_requested", `pandit_application:${id}`, {
+        requestedFields,
+        requestId: result.request.id,
+      });
+      let emailQueued = false;
+      try {
+        const siteUrl = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
+        const queued = await enqueueTransactionalEmail({
+          eventKey: `pandit_application_corrections_requested:${result.request.id}`,
+          kind: "pandit_application_corrections_requested",
+          relatedType: "pandit_application",
+          relatedId: id,
+          recipientName: result.application.fullName,
+          message: buildPanditApplicationCorrectionEmail({
+            to: result.application.email,
+            fullName: result.application.fullName,
+            correctionUrl: `${siteUrl}/pandit/application-corrections#token=${encodeURIComponent(token)}`,
+            explanation,
+            requestedFields,
+          }),
+        });
+        emailQueued = queued.created || queued.row.status === "queued" || queued.row.status === "retrying";
+      } catch (error: any) {
+        console.error("[email] correction request queue failed:", error?.message || error);
+      }
+      return res.status(201).json({ success: true, requestId: result.request.id, status: result.application.status, emailQueued });
+    } catch (error) {
+      console.error("request pandit application corrections error:", error);
+      return res.status(500).json({ message: "Failed to request application corrections" });
+    }
+  });
+
+  const loadCorrectionRequest = async (req: any) => {
+    const token = correctionTokenFromRequest(req);
+    if (!/^[A-Za-z0-9_-]{40,80}$/.test(token)) return null;
+    const [request] = await db.select().from(panditApplicationCorrectionRequests)
+      .where(eq(panditApplicationCorrectionRequests.tokenHash, correctionTokenHash(token))).limit(1);
+    if (!request) return null;
+    if (request.status !== "open" || request.expiresAt <= new Date()) {
+      if (request.status === "open" && request.expiresAt <= new Date()) {
+        await db.update(panditApplicationCorrectionRequests).set({ status: "expired", updatedAt: new Date() })
+          .where(eq(panditApplicationCorrectionRequests.id, request.id));
+      }
+      return null;
+    }
+    const [application] = await db.select().from(panditApplications).where(eq(panditApplications.id, request.applicationId)).limit(1);
+    return application ? { request, application } : null;
+  };
+  app.get("/api/pandit-application-corrections", correctionLimiter, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const loaded = await loadCorrectionRequest(req);
+    if (!loaded) return res.status(401).json({ message: "This correction link is invalid or expired" });
+    return res.json({
+      requestedFields: loaded.request.requestedFields,
+      explanation: loaded.request.explanation,
+      expiresAt: loaded.request.expiresAt,
+      values: correctionPublicValues(loaded.application, loaded.request.requestedFields),
+    });
+  });
+  app.patch("/api/pandit-application-corrections", correctionLimiter, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const loaded = await loadCorrectionRequest(req);
+    if (!loaded) return res.status(401).json({ message: "This correction link is invalid or expired" });
+    const requested = new Set(loaded.request.requestedFields);
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const keys = Object.keys(body);
+    if (!keys.length || keys.some(field => !requested.has(field))) {
+      return res.status(400).json({ message: "Only the fields requested by the review team may be changed" });
+    }
+    const update: Record<string, unknown> = {};
+    const changedFields: string[] = [];
+    for (const field of keys) {
+      const value = body[field];
+      if (field === "fullName" || field === "education" || field === "languages" || field === "serviceArea" || field === "regionalOrigin") {
+        if (typeof value !== "string" || !value.trim() || value.length > 500) return res.status(400).json({ message: `Invalid ${field}` });
+        update[field] = value.trim();
+      } else if (field === "registeredAddress") {
+        if (typeof value !== "string" || value.trim().length < 10 || value.length > 1000) return res.status(400).json({ message: "Enter a valid registered address" });
+        update[field] = value.trim();
+      } else if (field === "bio") {
+        if (typeof value !== "string" || value.trim().length < 20 || value.length > 4000) return res.status(400).json({ message: "Add a profile biography of at least 20 characters" });
+        update[field] = value.trim();
+      } else if (field === "email") {
+        const parsed = z.string().email().safeParse(value);
+        if (!parsed.success) return res.status(400).json({ message: "Enter a valid email address" });
+        update[field] = parsed.data.trim().toLowerCase();
+      } else if (field === "phone") {
+        if (typeof value !== "string") return res.status(400).json({ message: "Enter a valid phone number" });
+        const normalized = normalizePanditPhone(value);
+        if (!normalized) return res.status(400).json({ message: "Enter a valid 10-digit Indian mobile number" });
+        update[field] = normalized;
+      } else if (field === "yearsExperience") {
+        const years = Number(value);
+        if (!Number.isInteger(years) || years < 0 || years > 80) return res.status(400).json({ message: "Years of experience must be between 0 and 80" });
+        update[field] = years;
+      } else if (field === "masterServiceIds") {
+        if (!Array.isArray(value) || value.length < 5 || value.length > 10 || value.some(item => !Number.isInteger(item) || item < 1)) {
+          return res.status(400).json({ message: "Select between five and ten specialist Pujas" });
+        }
+        const ids = Array.from(new Set(value as number[]));
+        if (ids.length < 5 || ids.length > 10) return res.status(400).json({ message: "Select between five and ten specialist Pujas" });
+        const active = await db.select({ id: masterServices.id }).from(masterServices).where(and(
+          inArray(masterServices.id, ids), eq(masterServices.isActive, true), inArray(masterServices.serviceType, ["puja", "katha", "ritual"]),
+        ));
+        if (active.length !== ids.length) return res.status(400).json({ message: "One or more selected Pujas are invalid or inactive" });
+        update[field] = ids;
+      } else if (field === "photo") {
+        if (typeof value !== "string" || !/^\/uploads\/pandit-application-[A-Za-z0-9._-]+$/.test(value) || !(await isValidStoredProfilePhoto(value, uploadsDir))) {
+          return res.status(400).json({ message: "Upload a valid profile photo before saving" });
+        }
+        update[field] = value;
+      }
+      changedFields.push(field);
+    }
+    if (!changedFields.length) return res.status(400).json({ message: "No supported fields supplied" });
+    const [updated] = await db.update(panditApplications).set(update as any)
+      .where(eq(panditApplications.id, loaded.application.id)).returning();
+    await db.insert(panditApplicationCorrectionEvents).values({
+      requestId: loaded.request.id, applicationId: loaded.application.id,
+      eventType: "fields_edited", changedFields, actorType: "applicant",
+    });
+    return res.json({ success: true, values: correctionPublicValues(updated, loaded.request.requestedFields) });
+  });
+  app.post("/api/pandit-application-corrections/resubmit", correctionLimiter, async (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    const loaded = await loadCorrectionRequest(req);
+    if (!loaded) return res.status(401).json({ message: "This correction link is invalid or expired" });
+    const [editEvent] = await db.select({ id: panditApplicationCorrectionEvents.id })
+      .from(panditApplicationCorrectionEvents)
+      .where(and(
+        eq(panditApplicationCorrectionEvents.requestId, loaded.request.id),
+        eq(panditApplicationCorrectionEvents.eventType, "fields_edited"),
+      ))
+      .limit(1);
+    if (!editEvent) return res.status(400).json({ message: "Save the requested corrections before resubmitting" });
+    const missing = loaded.request.requestedFields.filter(field => correctionValue(loaded.application, field) == null || correctionValue(loaded.application, field) === "");
+    if (missing.length) return res.status(400).json({ message: `Complete the requested fields: ${missing.join(", ")}` });
+    const now = new Date();
+    const result = await db.transaction(async tx => {
+      const [request] = await tx.select().from(panditApplicationCorrectionRequests)
+        .where(and(eq(panditApplicationCorrectionRequests.id, loaded.request.id), eq(panditApplicationCorrectionRequests.status, "open"))).for("update");
+      if (!request || request.expiresAt <= now) return null;
+      const [application] = await tx.update(panditApplications).set({ status: "pending", reviewedAt: null })
+        .where(and(eq(panditApplications.id, loaded.application.id), eq(panditApplications.status, "changes_requested"))).returning();
+      if (!application) return null;
+      await tx.update(panditApplicationCorrectionRequests).set({ status: "submitted", submittedAt: now, updatedAt: now })
+        .where(eq(panditApplicationCorrectionRequests.id, request.id));
+      await tx.insert(panditApplicationCorrectionEvents).values({
+        requestId: request.id, applicationId: application.id, eventType: "resubmitted",
+        changedFields: request.requestedFields, actorType: "applicant",
+      });
+      return application;
+    });
+    if (!result) return res.status(409).json({ message: "This correction request is no longer available" });
+    return res.json({ success: true, status: "pending", message: "Your corrected application was resubmitted for review." });
   });
 
   app.get("/api/admin/pandit-city-requests", adminAuthMiddleware, async (req: any, res) => {

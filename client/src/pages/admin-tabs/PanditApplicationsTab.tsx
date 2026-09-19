@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Phone, Mail, MessageCircle, Type, FileText, Send, ClipboardEdit } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
@@ -21,12 +21,29 @@ import { createFetcher } from "../admin-shared";
 // ============================================================
 const APP_STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
+  changes_requested: "bg-orange-100 text-orange-800",
   approved: "bg-emerald-100 text-emerald-800",
   rejected: "bg-red-100 text-red-800",
 };
 
-const APP_FILTERS: { id: "pending" | "approved" | "rejected" | "all"; label: string }[] = [
+const CORRECTION_FIELDS = [
+  ["fullName", "Full name"],
+  ["phone", "Phone number"],
+  ["email", "Email address"],
+  ["registeredAddress", "Registered address"],
+  ["yearsExperience", "Years of experience"],
+  ["education", "Vedic education or training"],
+  ["languages", "Languages"],
+  ["bio", "Profile biography"],
+  ["serviceArea", "Service area"],
+  ["regionalOrigin", "Regional origin"],
+  ["masterServiceIds", "Specialist Pujas"],
+  ["photo", "Profile photo"],
+] as const;
+
+const APP_FILTERS: { id: "pending" | "changes_requested" | "approved" | "rejected" | "all"; label: string }[] = [
   { id: "pending", label: "Pending" },
+  { id: "changes_requested", label: "Changes requested" },
   { id: "approved", label: "Approved" },
   { id: "rejected", label: "Rejected" },
   { id: "all", label: "All" },
@@ -93,15 +110,16 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const fetcher = createFetcher(adminToken);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [filter, setFilter] = useState<"pending" | "changes_requested" | "approved" | "rejected" | "all">("pending");
 
   const { data: stats } = useQuery<{ pendingPanditApplications: number; approvedPanditApplications: number; rejectedPanditApplications: number; totalPanditApplications: number }>({
     queryKey: ["/api/admin/stats", "pandit-apps-tab"],
     queryFn: () => fetcher("/api/admin/stats"),
   });
-  const pillCount = (id: "pending" | "approved" | "rejected" | "all"): number | null => {
+  const pillCount = (id: "pending" | "changes_requested" | "approved" | "rejected" | "all"): number | null => {
     if (!stats) return null;
     if (id === "pending") return stats.pendingPanditApplications ?? 0;
+    if (id === "changes_requested") return null;
     if (id === "approved") return stats.approvedPanditApplications ?? 0;
     if (id === "rejected") return stats.rejectedPanditApplications ?? 0;
     return stats.totalPanditApplications ?? 0;
@@ -113,6 +131,9 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const [cityRequestReason, setCityRequestReason] = useState("");
   const [sortKey, setSortKey] = useState<"createdAt" | "fullName" | "city" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
+  const [correctionFields, setCorrectionFields] = useState<string[]>([]);
+  const [correctionExplanation, setCorrectionExplanation] = useState("");
 
   const toggleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -187,6 +208,28 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     onError: (error: Error) => toast({ title: "City request failed", description: error.message, variant: "destructive" }),
   });
 
+  const correctionMutation = useMutation({
+    mutationFn: async ({ id, fields, explanation }: { id: number; fields: string[]; explanation: string }) => {
+      const res = await fetch(`/api/admin/pandit-applications/${id}/request-corrections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+        body: JSON.stringify({ requestedFields: fields, explanation }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "Could not request corrections");
+      return body;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pandit-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+      setCorrectionDialogOpen(false);
+      setCorrectionFields([]);
+      setCorrectionExplanation("");
+      toast({ title: "Correction request sent", description: "The applicant can now update only the requested fields." });
+    },
+    onError: (error: Error) => toast({ title: "Correction request failed", description: error.message, variant: "destructive" }),
+  });
+
   const decisionMutation = useMutation({
     mutationFn: async ({ id, action, note }: { id: number; action: "approve" | "reject"; note: string }) => {
       const res = await fetch(`/api/admin/pandit-applications/${id}/${action}`, {
@@ -243,6 +286,7 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const counts = {
     total: apps?.length || 0,
     pending: (apps || []).filter(a => a.status === "pending").length,
+    changes_requested: (apps || []).filter(a => (a as any).status === "changes_requested").length,
     approved: (apps || []).filter(a => a.status === "approved").length,
     rejected: (apps || []).filter(a => a.status === "rejected").length,
   };
@@ -575,8 +619,24 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                     </div>
 
                     <DialogFooter className="gap-2 flex-wrap">
-                      {selected.status === "pending" ? (
+                      {selected.status === "pending" || (selected as any).status === "changes_requested" ? (
                         <>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setCorrectionFields([]);
+                              setCorrectionExplanation("");
+                              setCorrectionDialogOpen(true);
+                            }}
+                            disabled={correctionMutation.isPending}
+                            data-testid="btn-request-corrections"
+                            className="border-orange-200 text-orange-700"
+                          >
+                            <ClipboardEdit className="w-4 h-4 mr-1.5" /> Request changes
+                          </Button>
+                          {(selected as any).status === "changes_requested" && <span className="basis-full text-xs text-orange-700">Waiting for the applicant to resubmit the requested corrections.</span>}
+                          {selected.status === "pending" && (
+                          <>
                           <Button
                             variant="outline"
                             onClick={() => decisionMutation.mutate({ id: selected.id, action: "reject", note: adminNote })}
@@ -595,6 +655,8 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                             <CheckCircle className="w-4 h-4 mr-1.5" /> Approve & Publish
                           </Button>
                           {approvalBlockReason && <p className="basis-full text-xs text-amber-700" role="status">{approvalBlockReason}</p>}
+                          </>
+                          )}
                         </>
                       ) : (
                         <div className="text-sm text-muted-foreground">
@@ -608,6 +670,56 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
               })()}
             </>
           )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={correctionDialogOpen} onOpenChange={setCorrectionDialogOpen}>
+        <DialogContent className="max-w-xl" data-testid="request-corrections-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-primary">Request applicant changes</DialogTitle>
+            <DialogDescription>Select only the fields that need correction. The applicant will receive a secure, single-use link and cannot edit other details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">Requested fields</legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {CORRECTION_FIELDS.map(([value, label]) => (
+                  <label key={value} className="flex items-start gap-2 rounded-md border border-border p-2.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={correctionFields.includes(value)}
+                      onChange={() => setCorrectionFields(current => current.includes(value) ? current.filter(field => field !== value) : [...current, value])}
+                      className="mt-1 accent-primary"
+                      data-testid={`checkbox-correction-${value}`}
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="space-y-2">
+              <Label htmlFor="correction-explanation">Message to applicant <span className="text-destructive">*</span></Label>
+              <Textarea
+                id="correction-explanation"
+                value={correctionExplanation}
+                onChange={(event) => setCorrectionExplanation(event.target.value)}
+                placeholder="Explain clearly what needs to be corrected and what good information should include."
+                className="min-h-28"
+                data-testid="input-correction-explanation"
+              />
+              <p className="text-xs text-muted-foreground">Do not include exact coordinates or private location evidence.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCorrectionDialogOpen(false)}>Cancel</Button>
+            <Button
+              type="button"
+              disabled={!selected || correctionFields.length === 0 || !correctionExplanation.trim() || correctionMutation.isPending}
+              onClick={() => selected && correctionMutation.mutate({ id: selected.id, fields: correctionFields, explanation: correctionExplanation.trim() })}
+              data-testid="btn-submit-correction-request"
+            >
+              {correctionMutation.isPending ? "Sending…" : "Send correction request"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
