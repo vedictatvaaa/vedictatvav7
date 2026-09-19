@@ -245,7 +245,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       ? "अगले चरण में सटीक स्थान, पाँच पूजाएँ और प्रोफ़ाइल फ़ोटो जोड़कर सत्यापन पूरा होगा।"
       : "Next, add exact location, five Pujas, and a profile photo to complete verification.",
     keepClose: hindi ? "अपना कार्यक्षेत्र पास रखें" : "Keep your practice close",
-    installDescription: hindi ? "एक टैप में पहुँचने के लिए होम स्क्रीन पर जोड़ें।" : "Add Panditji to your home screen for one-tap access.",
+    installDescription: hindi ? "एक टैप में पहुँचने के लिए होम स्क्रीन पर जोड़ें।" : "Download Panditji app to your home screen for one-tap access.",
     registered: hindi ? "पंजीकृत मोबाइल" : "Registered phone",
     password: hindi ? "पासवर्ड" : "Password",
     forgot: hindi ? "पासवर्ड भूल गए?" : "Forgot password?",
