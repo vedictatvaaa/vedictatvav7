@@ -183,7 +183,11 @@ function getResultImage(result: SearchResult): string | null {
   return null;
 }
 
-export default function Navbar() {
+type NavbarProps = {
+  hidePromo?: boolean;
+};
+
+export default function Navbar({ hidePromo = false }: NavbarProps) {
   const [location, setLocation] = useLocation();
   const { totalItems } = useCart();
   const { user, logout } = useAuth();
@@ -489,7 +493,7 @@ export default function Navbar() {
   return (
     <>
       <div className="sticky top-0 z-50">
-      <PromoBar />
+      {!hidePromo && <PromoBar />}
 
       <nav className={`w-full transition-all duration-300 ${
         scrolled

@@ -686,6 +686,8 @@ function Router() {
   const isImmersive = lowerLoc.startsWith("/experience");
   const hideChrome = isBackOffice || isImmersive;
   const isDevoteeAuth = lowerLoc === "/login" || lowerLoc === "/register";
+  const isPartnerEntry = lowerLoc === "/partner";
+  const suppressGlobalPageChrome = hideChrome || isDevoteeAuth || isPartnerEntry;
   return (
     <div className="flex flex-col min-h-screen">
       <ScrollToTop />
@@ -702,9 +704,9 @@ function Router() {
       >
         Skip to main content
       </a>
-      {!hideChrome && <Navbar />}
-      {!hideChrome && !isDevoteeAuth && <TithiToolRibbon />}
-      <main id="main-content" tabIndex={-1} className={hideChrome || isDevoteeAuth ? "flex-grow" : "flex-grow pb-20 lg:pb-0"}>
+      {!hideChrome && <Navbar hidePromo={isPartnerEntry} />}
+      {!suppressGlobalPageChrome && <TithiToolRibbon />}
+      <main id="main-content" tabIndex={-1} className={suppressGlobalPageChrome ? "flex-grow" : "flex-grow pb-20 lg:pb-0"}>
         <Suspense fallback={
           <div className="min-h-[60vh] flex items-center justify-center">
             <div className="animate-spin h-8 w-8 border-4 border-[#6D2B35] border-t-transparent rounded-full" />
@@ -900,11 +902,11 @@ function Router() {
         </Switch>
         </Suspense>
       </main>
-      {!hideChrome && !isDevoteeAuth && <Footer />}
-      {!hideChrome && !isDevoteeAuth && <MobileBottomNav />}
-      {!hideChrome && !isDevoteeAuth && <PWAInstallBanner />}
+      {!suppressGlobalPageChrome && <Footer />}
+      {!suppressGlobalPageChrome && <MobileBottomNav />}
+      {!suppressGlobalPageChrome && <PWAInstallBanner />}
       <AuthModal />
-      {!hideChrome && !isDevoteeAuth && <DeferredWidgets />}
+      {!suppressGlobalPageChrome && <DeferredWidgets />}
     </div>
   );
 }
