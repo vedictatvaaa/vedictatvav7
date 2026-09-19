@@ -139,6 +139,11 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   const hindi = language === "hi";
 
   useEffect(() => {
+    setMode(initialMode);
+    if (initialMode === "login") setShowForgotPassword(false);
+  }, [initialMode]);
+
+  useEffect(() => {
     let cancelled = false;
     setLocationsLoading(true);
     fetch("/api/locations")

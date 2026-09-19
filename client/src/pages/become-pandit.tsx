@@ -1610,7 +1610,7 @@ export function RegistrationSection({
           </div>
           <p className="mt-4 text-[11px] text-[#806F5E]">
             Already approved?{" "}
-            <Link href="/pandit/login" className="font-extrabold text-[#6D2B35] hover:underline">Sign in to your practice</Link>
+            <a href="/pandit/login" className="font-extrabold text-[#6D2B35] hover:underline">Sign in to your practice</a>
           </p>
         </div>
 
