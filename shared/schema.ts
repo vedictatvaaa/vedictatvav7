@@ -995,6 +995,22 @@ export const siteSettings = pgTable("site_settings", {
   siteName: text("site_name").notNull().default("Vedic Tatva"),
   tagline: text("tagline").notNull().default("Heritage of Nature Wellness & Purity"),
   logoUrl: text("logo_url"),
+  // Unified Brand Studio settings. Defaults preserve the existing text + logo
+  // presentation while allowing older rows to continue rendering unchanged.
+  logoDisplayMode: text("logo_display_mode").notNull().default("both"),
+  logoSizePx: integer("logo_size_px").notNull().default(27),
+  logoScalePercent: integer("logo_scale_percent").notNull().default(100),
+  logoPosition: text("logo_position").notNull().default("left"),
+  logoTextColor: text("logo_text_color").notNull().default("#6D2B35"),
+  taglineVisible: boolean("tagline_visible").notNull().default(false),
+  taglineColor: text("tagline_color").notNull().default("#6B5B52"),
+  taglineSizePx: integer("tagline_size_px").notNull().default(14),
+  logoFontSource: text("logo_font_source").notNull().default("curated"),
+  logoFontFamily: text("logo_font_family").notNull().default("Tiro Devanagari Sanskrit"),
+  customLogoFontUrl: text("custom_logo_font_url"),
+  logoFontWeight: integer("logo_font_weight").notNull().default(400),
+  logoLetterSpacing: integer("logo_letter_spacing").notNull().default(0),
+  brandStudioConfigured: boolean("brand_studio_configured").notNull().default(false),
   heroImageUrl: text("hero_image_url"),
   heroHeading: text("hero_heading").notNull().default("Vedic Tatva"),
   heroSubheading: text("hero_subheading").notNull().default("Connecting you with divine wisdom and authentic spiritual practices."),
@@ -1669,6 +1685,30 @@ export const ribbonItemSchema = z.object({
 export type RibbonItem = z.infer<typeof ribbonItemSchema>;
 
 export const insertSiteSettingsSchema = createInsertSchema(siteSettings, {
+  siteName: z.string().trim().min(1).max(120),
+  tagline: z.string().max(300),
+  logoUrl: z.string().trim().max(1000).nullable().optional().refine(
+    (value) => value == null || value === "" || /^https:\/\//i.test(value) || /^\/uploads\/[A-Za-z0-9._/-]+$/.test(value),
+    { message: "Logo URL must be HTTPS or a managed upload path" },
+  ),
+  logoDisplayMode: z.enum(["text", "image", "both"]),
+  logoSizePx: z.number().int().min(16).max(160),
+  logoScalePercent: z.number().int().min(50).max(200),
+  logoPosition: z.enum(["left", "center", "right"]),
+  logoTextColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Logo text color must be a hex color"),
+  taglineVisible: z.boolean(),
+  taglineColor: z.string().regex(/^#[0-9a-f]{6}$/i, "Tagline color must be a hex color"),
+  taglineSizePx: z.number().int().min(8).max(32),
+  logoFontSource: z.enum(["curated", "custom"]),
+  logoFontFamily: z.enum(["Playfair Display", "Fraunces", "Tiro Devanagari Sanskrit", "Plus Jakarta Sans", "DM Mono"]),
+  customLogoFontUrl: z.string().trim().max(1000).nullable().optional().refine(
+    (value) => value == null || value === "" || /^\/uploads\/[A-Za-z0-9._/-]+$/.test(value),
+    { message: "Custom font must be a managed upload path" },
+  ),
+  logoFontWeight: z.number().int().refine((value) => value === 400 || value === 500 || value === 600, {
+    message: "Logo font weight must be 400, 500, or 600",
+  }),
+  logoLetterSpacing: z.number().int().min(-4).max(20),
   ribbonItems: z.array(ribbonItemSchema).max(20).optional(),
   ribbonRotationMs: z.number().int().min(1500).max(60000).optional(),
   ribbonEnabled: z.boolean().optional(),

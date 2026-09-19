@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings, Search, Plus, Trash2, Calendar, Globe, Phone, Mail, MessageCircle, Image, Type, Tag, Sparkles, BarChart3, Flame, Palette } from "lucide-react";
 
@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Pandit, SiteSettings } from "@shared/schema";
 
 import { createFetcher } from "../admin-shared";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 // ============================================================
 // Site Settings Tab
@@ -35,6 +36,11 @@ function SiteSettingsTab() {
     contactEmail: "", contactPhone: "", whatsappNumber: "",
     socialInstagram: "", socialFacebook: "", socialYoutube: "",
     logoUrl: "", heroImageUrl: "",
+    logoDisplayMode: "both", logoSizePx: 27, logoScalePercent: 100, logoPosition: "left",
+    logoTextColor: "#6D2B35", taglineVisible: false, taglineColor: "#6B5B52", taglineSizePx: 14,
+    logoFontSource: "curated", logoFontFamily: "Tiro Devanagari Sanskrit", customLogoFontUrl: "",
+    logoFontWeight: 400, logoLetterSpacing: 0,
+    brandStudioConfigured: false,
     primaryColor: "hsl(var(--primary))", secondaryColor: "hsl(var(--secondary))", accentColor: "hsl(var(--secondary))",
     backgroundColor: "hsl(var(--muted))", foregroundColor: "#2B1115",
     bodyFont: "Inter", headingFont: "Playfair Display",
@@ -50,10 +56,13 @@ function SiteSettingsTab() {
     panditContactMode: "login_required",
     panditContactUnlockPricePaise: 1000,
   });
+  const [uploadingAsset, setUploadingAsset] = useState<"logo" | "font" | null>(null);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const hasHydrated = useRef(false);
 
   useEffect(() => {
-    if (settings && settings.siteName) {
-      setForm({
+    if (settings && !hasHydrated.current) {
+      const normalized = {
         siteName: settings.siteName || "",
         tagline: settings.tagline || "",
         heroHeading: settings.heroHeading || "",
@@ -66,6 +75,20 @@ function SiteSettingsTab() {
         socialYoutube: settings.socialYoutube || "",
         logoUrl: settings.logoUrl || "",
         heroImageUrl: settings.heroImageUrl || "",
+        logoDisplayMode: (settings as any).logoDisplayMode || "both",
+        logoSizePx: Number((settings as any).logoSizePx) || 27,
+        logoScalePercent: Number((settings as any).logoScalePercent) || 100,
+        logoPosition: (settings as any).logoPosition || "left",
+        logoTextColor: (settings as any).logoTextColor || "#6D2B35",
+        taglineVisible: Boolean((settings as any).taglineVisible),
+        taglineColor: (settings as any).taglineColor || "#6B5B52",
+        taglineSizePx: Number((settings as any).taglineSizePx) || 14,
+        logoFontSource: (settings as any).logoFontSource || "curated",
+        logoFontFamily: (settings as any).logoFontFamily || "Tiro Devanagari Sanskrit",
+        customLogoFontUrl: (settings as any).customLogoFontUrl || "",
+        logoFontWeight: Number((settings as any).logoFontWeight) || 400,
+        logoLetterSpacing: Number((settings as any).logoLetterSpacing) || 0,
+        brandStudioConfigured: Boolean((settings as any).brandStudioConfigured),
         primaryColor: settings.primaryColor || "hsl(var(--primary))",
         secondaryColor: settings.secondaryColor || "hsl(var(--secondary))",
         accentColor: settings.accentColor || "hsl(var(--secondary))",
@@ -91,7 +114,10 @@ function SiteSettingsTab() {
         maintenanceMode: Boolean((settings as any).maintenanceMode),
         panditContactMode: (settings as any).panditContactMode || "login_required",
         panditContactUnlockPricePaise: Number((settings as any).panditContactUnlockPricePaise) || 1000,
-      });
+      };
+      setForm(normalized);
+      setBaseline(JSON.stringify(normalized));
+      hasHydrated.current = true;
     }
   }, [settings]);
 
@@ -110,14 +136,61 @@ function SiteSettingsTab() {
       if (!res.ok) throw new Error(`Save failed (${res.status})`);
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+    onSuccess: (savedSettings) => {
+      setBaseline(JSON.stringify(form));
+      queryClient.setQueryData(["/api/site-settings"], savedSettings);
       toast({ title: "Settings Saved", description: "Site settings have been updated." });
     },
     onError: (e: any) => toast({ title: "Error", description: e?.message || "Failed to save settings.", variant: "destructive" }),
   });
 
   const updateField = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  const updateBrandField = (key: string, value: any) => setForm((f) => ({
+    ...f,
+    [key]: value,
+    brandStudioConfigured: true,
+  }));
+
+  const uploadBrandAsset = async (file: File, kind: "logo" | "font") => {
+    const allowed = kind === "logo"
+      ? ["image/png", "image/jpeg", "image/webp"]
+      : ["font/woff", "font/woff2", "application/font-woff", "application/octet-stream"];
+    if (!allowed.includes(file.type) && !file.name.toLowerCase().match(kind === "logo" ? /\.(png|jpe?g|webp)$/ : /\.woff2?$/)) {
+       toast({ title: "Unsupported file", description: kind === "logo" ? "Use PNG, JPG, or WebP." : "Use a WOFF or WOFF2 font.", variant: "destructive" });
+      return;
+    }
+    if (file.size > (kind === "logo" ? 5 : 2) * 1024 * 1024) {
+      toast({ title: "File is too large", description: `Maximum ${kind === "logo" ? "5 MB" : "2 MB"}.`, variant: "destructive" });
+      return;
+    }
+    const body = new FormData();
+    body.append("file", file);
+    setUploadingAsset(kind);
+    try {
+      const res = await fetch(`/api/site-settings/brand-${kind}`, { method: "POST", headers: { "x-admin-token": adminToken }, body });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload.url) throw new Error(payload.message || `Upload failed (${res.status})`);
+      setForm((current) => ({
+        ...current,
+        [kind === "logo" ? "logoUrl" : "customLogoFontUrl"]: payload.url,
+        ...(kind === "font" ? { logoFontSource: "custom" } : {}),
+        brandStudioConfigured: true,
+      }));
+      toast({ title: `${kind === "logo" ? "Logo" : "Font"} uploaded`, description: "The preview is ready. Save when you are satisfied." });
+    } catch (error: any) {
+      toast({ title: "Upload failed", description: error?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setUploadingAsset(null);
+    }
+  };
+
+  const resetBrandDefaults = () => setForm((f) => ({
+    ...f, logoDisplayMode: "both", logoSizePx: 27, logoScalePercent: 100, logoPosition: "left",
+    logoTextColor: "#6D2B35", taglineVisible: false, taglineColor: "#6B5B52", taglineSizePx: 14,
+    logoFontSource: "curated", logoFontFamily: "Tiro Devanagari Sanskrit", customLogoFontUrl: "",
+    logoFontWeight: 400, logoLetterSpacing: 0,
+    brandStudioConfigured: true,
+  }));
 
   // ----- Ribbon item helpers -----
   const RIBBON_ICON_OPTIONS = [
@@ -162,22 +235,7 @@ function SiteSettingsTab() {
 
   // Baseline snapshot: the form state as it looked right after settings loaded.
   // Any subsequent edit that diverges from this baseline marks the form dirty.
-  const [baseline, setBaseline] = useState<string | null>(null);
-  useEffect(() => {
-    if (settings && baseline === null) {
-      setBaseline(JSON.stringify(form));
-    }
-    // We intentionally only want to capture the baseline once — right after
-    // the settings query resolves — so 'form' is read at that moment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings]);
   const isDirty = baseline !== null && baseline !== JSON.stringify(form);
-
-  // After a successful save, reset the baseline so the form is no longer dirty.
-  useEffect(() => {
-    if (saveMutation.isSuccess) setBaseline(JSON.stringify(form));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveMutation.isSuccess]);
 
   // Attach beforeunload only while actually dirty.
   useEffect(() => {
@@ -199,20 +257,53 @@ function SiteSettingsTab() {
         <p className="text-sm text-muted-foreground">Configure your website appearance and contact information</p>
       </div>
 
+      <fieldset disabled={saveMutation.isPending} className="contents">
       {/* Branding */}
       <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-lg text-primary font-serif flex items-center gap-2"><Type className="w-5 h-5" /> Branding</CardTitle>
+          <CardTitle className="text-lg text-primary font-serif flex items-center gap-2"><Type className="w-5 h-5" /> Logo &amp; Wordmark Studio</CardTitle>
+          <CardDescription>One safe brand system for every header, menu, and footer. Changes stay local until you save.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Site Name</Label>
-              <Input value={form.siteName} onChange={(e) => updateField("siteName", e.target.value)} data-testid="input-site-name" />
+              <Input value={form.siteName} onChange={(e) => updateBrandField("siteName", e.target.value)} data-testid="input-site-name" />
             </div>
             <div className="space-y-2">
               <Label>Tagline</Label>
-              <Input value={form.tagline} onChange={(e) => updateField("tagline", e.target.value)} data-testid="input-tagline" />
+              <Input value={form.tagline} onChange={(e) => updateBrandField("tagline", e.target.value)} data-testid="input-tagline" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="brand-display-mode">Display mode</Label>
+              <select id="brand-display-mode" value={form.logoDisplayMode} onChange={(e) => updateBrandField("logoDisplayMode", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-logo-display-mode">
+                <option value="both">Image + text</option><option value="text">Text only</option><option value="image">Image only</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Logo image URL</Label>
+              <Input value={form.logoUrl} onChange={(e) => updateBrandField("logoUrl", e.target.value)} placeholder="https://..." data-testid="input-logo-url" />
+              <Input type="file" disabled={uploadingAsset !== null} accept="image/png,image/jpeg,image/webp" onChange={(e) => e.target.files?.[0] && uploadBrandAsset(e.target.files[0], "logo")} aria-label="Upload logo image" data-testid="input-logo-upload" />
+              {uploadingAsset === "logo" && <p className="text-xs text-primary" role="status">Uploading logo…</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logo-size">Logo size: {form.logoSizePx}px</Label>
+              <input id="logo-size" type="range" min="16" max="160" value={form.logoSizePx} onChange={(e) => updateBrandField("logoSizePx", Number(e.target.value))} className="w-full accent-primary" data-testid="input-logo-size" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logo-scale">Responsive scale: {form.logoScalePercent}%</Label>
+              <input id="logo-scale" type="range" min="50" max="200" value={form.logoScalePercent} onChange={(e) => updateBrandField("logoScalePercent", Number(e.target.value))} className="w-full accent-primary" data-testid="input-logo-scale" />
+            </div>
+            <div className="space-y-2"><Label>Position</Label><select value={form.logoPosition} onChange={(e) => updateBrandField("logoPosition", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" data-testid="select-logo-position"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div>
+            <div className="space-y-2"><Label>Logo text color</Label><div className="flex gap-2"><input type="color" value={form.logoTextColor} onChange={(e) => updateBrandField("logoTextColor", e.target.value)} className="h-10 w-10" aria-label="Logo text color" /><Input value={form.logoTextColor} onChange={(e) => updateBrandField("logoTextColor", e.target.value)} /></div></div>
+            <div className="flex items-center justify-between rounded-md border border-border p-3"><div><Label>Show tagline</Label><p className="text-xs text-muted-foreground">Keep supporting copy visible below the wordmark.</p></div><Switch checked={form.taglineVisible} onCheckedChange={(v) => updateBrandField("taglineVisible", v)} data-testid="switch-tagline-visible" /></div>
+            <div className="space-y-2"><Label>Tagline color / size</Label><div className="flex gap-2"><Input value={form.taglineColor} onChange={(e) => updateBrandField("taglineColor", e.target.value)} /><Input type="number" min="8" max="32" value={form.taglineSizePx} onChange={(e) => updateBrandField("taglineSizePx", Number(e.target.value))} aria-label="Tagline size in pixels" /></div></div>
+            <div className="space-y-2"><Label>Wordmark font</Label><select value={form.logoFontFamily} onChange={(e) => updateBrandField("logoFontFamily", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option>Playfair Display</option><option>Fraunces</option><option>Tiro Devanagari Sanskrit</option><option>Plus Jakarta Sans</option><option>DM Mono</option></select></div>
+            <div className="space-y-2"><Label>Font source</Label><select value={form.logoFontSource} onChange={(e) => updateBrandField("logoFontSource", e.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="curated">Curated font</option><option value="custom">Uploaded custom font</option></select><Input type="file" disabled={uploadingAsset !== null} accept=".woff,.woff2,font/woff,font/woff2" onChange={(e) => e.target.files?.[0] && uploadBrandAsset(e.target.files[0], "font")} aria-label="Upload WOFF font" data-testid="input-logo-font-upload" />{uploadingAsset === "font" && <p className="text-xs text-primary" role="status">Uploading font…</p>}</div>
+            <div className="space-y-2"><Label>Weight / letter spacing</Label><div className="flex gap-2"><select value={form.logoFontWeight} onChange={(e) => updateBrandField("logoFontWeight", Number(e.target.value))} className="h-10 rounded-md border border-input bg-background px-3 text-sm"><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semi-bold</option></select><Input type="number" min="-4" max="20" value={form.logoLetterSpacing} onChange={(e) => updateBrandField("logoLetterSpacing", Number(e.target.value))} aria-label="Letter spacing in pixels" /></div></div>
+            <div className="md:col-span-2 flex justify-between items-center"><Button type="button" variant="outline" onClick={resetBrandDefaults} data-testid="btn-brand-reset">Reset brand defaults</Button><span className="text-xs text-muted-foreground">Preview updates instantly</span></div>
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg bg-muted/40 p-4">
+              {(["desktop", "mobile", "menu", "footer"] as const).map((placement) => <div key={placement} className="min-h-20 rounded-md border border-border bg-background p-3 flex items-center overflow-hidden"><div><p className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">{placement} preview</p><BrandMark settings={form as any} placement={placement} /></div></div>)}
             </div>
           </div>
         </CardContent>
@@ -232,10 +323,6 @@ function SiteSettingsTab() {
             <div className="space-y-2">
               <Label>Hero Subheading</Label>
               <Input value={form.heroSubheading} onChange={(e) => updateField("heroSubheading", e.target.value)} data-testid="input-hero-subheading" />
-            </div>
-            <div className="space-y-2">
-              <Label>Logo URL</Label>
-              <Input value={form.logoUrl} onChange={(e) => updateField("logoUrl", e.target.value)} data-testid="input-logo-url" />
             </div>
             <div className="space-y-2">
               <Label>Hero Image URL</Label>
@@ -614,6 +701,7 @@ function SiteSettingsTab() {
           {saveMutation.isPending ? "Saving..." : "Save All Settings"}
         </Button>
       </div>
+      </fieldset>
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { getProductUrl } from "@/lib/utils";
 import type { Product } from "@shared/schema";
 import { MotifSVG, useFestivalTheme } from "@/components/festival/FestivalDecor";
 import { useSiteSettings } from "@/lib/site-settings";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 const promoMessages = [
   "Free Shipping on Prepaid Orders Above ₹499",
@@ -517,22 +518,8 @@ export default function Navbar() {
             className="absolute left-1/2 z-10 flex min-w-0 -translate-x-1/2 items-center gap-2 whitespace-nowrap lg:static lg:z-auto lg:translate-x-0"
             data-testid="link-home"
           >
-            {settings?.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.siteName || "Vedic Tatva"}
-                className="h-8 md:h-9 lg:h-10 w-auto object-contain"
-                data-testid="img-site-logo"
-              />
-            ) : null}
-            <span className="flex min-w-0 items-center">
-              <span
-                className="font-vedic text-[22px] font-normal leading-none tracking-[0.015em] text-[#6D2B35] md:text-[24px] lg:text-[27px]"
-                data-testid="text-site-name"
-              >
-                {settings?.siteName || "Vedic Tatva"}
-              </span>
-            </span>
+             <span className="hidden w-[210px] md:inline-flex"><BrandMark settings={settings} placement="desktop" testId="navbar-brand-mark" /></span>
+             <span className="inline-flex w-[170px] md:hidden"><BrandMark settings={settings} placement="mobile" testId="navbar-brand-mark-mobile" /></span>
             {festival && (
               <span
                 className="absolute left-full ml-2.5 hidden items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide whitespace-nowrap lg:static lg:inline-flex"
@@ -1067,9 +1054,7 @@ export default function Navbar() {
               {/* Branded header */}
               <div className="relative shrink-0 px-5 pb-3 pt-4">
                 <div className="pr-10">
-                  <p id="mobile-menu-title" className="font-vedic truncate text-[27px] font-normal leading-none tracking-[0.015em] text-[#6D2B35]" data-testid="text-mobile-brand">
-                    {settings?.siteName || "Vedic Tatva"}
-                  </p>
+                  <BrandMark settings={settings} placement="menu" testId="text-mobile-brand" />
                 </div>
                 <button
                   ref={mobileCloseRef}

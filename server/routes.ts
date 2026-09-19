@@ -187,6 +187,56 @@ const upload = multer({
   },
 });
 
+// Brand uploads intentionally use a separate, narrower policy than the
+// general image uploader: no SVG (which can contain active content), no GIF,
+// and no client-controlled filename.
+const brandUploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `brand-${Date.now()}-${crypto.randomBytes(12).toString("hex")}${ext}`);
+  },
+});
+const brandImageUpload = multer({
+  storage: brandUploadStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed: Record<string, string> = {
+      ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+    };
+    if (!allowed[ext] || file.mimetype.toLowerCase() !== allowed[ext]) {
+      return cb(new Error("Only PNG, JPG, JPEG, and WebP logo files are allowed; SVG is not supported."));
+    }
+    cb(null, true);
+  },
+});
+const brandFontUpload = multer({
+  storage: brandUploadStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed = new Set([".woff", ".woff2"]);
+    const mime = file.mimetype.toLowerCase();
+    const validMime = mime === "font/woff" || mime === "font/woff2"
+      || mime === "application/font-woff" || mime === "application/font-woff2"
+      || mime === "application/octet-stream";
+    if (!allowed.has(ext) || !validMime) return cb(new Error("Only WOFF and WOFF2 font files are allowed."));
+    cb(null, true);
+  },
+});
+
+function hasBrandImageSignature(buffer: Buffer, ext: string): boolean {
+  if (ext === ".png") return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  if (ext === ".jpg" || ext === ".jpeg") return buffer.length >= 3 && buffer.subarray(0, 3).equals(Buffer.from([255, 216, 255]));
+  return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF"
+    && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+}
+
+function hasBrandFontSignature(buffer: Buffer, ext: string): boolean {
+  return buffer.length >= 4 && buffer.subarray(0, 4).toString("ascii") === (ext === ".woff2" ? "wOF2" : "wOFF");
+}
+
 async function stampPanditMembershipCardItems(req: any, items: any[]): Promise<{ items?: any[]; message?: string; status?: number }> {
   const cardItems = items.filter((item) => item.productType === "pandit_membership_card");
   if (!cardItems.length) return { items };
@@ -5474,9 +5524,51 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
         || parsed.data.panditContactUnlockPricePaise > 1_000_000)) {
       return res.status(400).json({ message: "Additional Pandit contact price must be between ₹1 and ₹10,000." });
     }
-    const settings = await storage.upsertSiteSettings(parsed.data as any);
+    const existingSettings = await storage.getSiteSettings();
+    const settings = await storage.upsertSiteSettings({
+      ...parsed.data,
+      brandStudioConfigured: Boolean(existingSettings?.brandStudioConfigured || parsed.data.brandStudioConfigured),
+    } as any);
     await auditAdmin(req, "site-settings.save", "siteSettings", { keys: Object.keys(parsed.data) });
     res.json(settings);
+  });
+
+  app.post("/api/site-settings/brand-logo", adminAuthMiddleware, (req, res) => {
+    brandImageUpload.single("file")(req, res, async (error) => {
+      if (error) return res.status(400).json({ message: error.message || "Invalid logo upload." });
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) return res.status(400).json({ message: "A logo file is required." });
+      const ext = path.extname(file.filename).toLowerCase();
+      try {
+        const bytes = await fs.promises.readFile(file.path);
+        if (!hasBrandImageSignature(bytes, ext)) throw new Error("Logo content does not match its declared image type.");
+        const url = `/uploads/${file.filename}`;
+        await auditAdmin(req, "site-settings.brand-logo.upload", "siteSettings", { path: url, bytes: file.size });
+        return res.json({ url, path: url });
+      } catch (error) {
+        await fs.promises.unlink(file.path).catch(() => undefined);
+        return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid logo upload." });
+      }
+    });
+  });
+
+  app.post("/api/site-settings/brand-font", adminAuthMiddleware, (req, res) => {
+    brandFontUpload.single("file")(req, res, async (error) => {
+      if (error) return res.status(400).json({ message: error.message || "Invalid font upload." });
+      const file = (req as any).file as Express.Multer.File | undefined;
+      if (!file) return res.status(400).json({ message: "A font file is required." });
+      const ext = path.extname(file.filename).toLowerCase();
+      try {
+        const bytes = await fs.promises.readFile(file.path);
+        if (!hasBrandFontSignature(bytes, ext)) throw new Error("Font content does not match WOFF or WOFF2.");
+        const url = `/uploads/${file.filename}`;
+        await auditAdmin(req, "site-settings.brand-font.upload", "siteSettings", { path: url, bytes: file.size });
+        return res.json({ url, path: url });
+      } catch (error) {
+        await fs.promises.unlink(file.path).catch(() => undefined);
+        return res.status(400).json({ message: error instanceof Error ? error.message : "Invalid font upload." });
+      }
+    });
   });
 
   // ---- Admin audit log ----

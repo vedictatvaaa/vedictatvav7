@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/lib/site-settings";
 import { FOOTER_DESTINATIONS } from "@shared/footer-links";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 const complianceBadges = [
   { label: "Secure checkout", sub: "Protected payments" },
@@ -241,14 +242,8 @@ export default function Footer() {
 
             {/* Brand */}
             <div className="md:col-span-4 lg:col-span-4 pb-8 md:pb-0">
-              <Link href="/" className="inline-flex items-center gap-2 mb-3" data-testid="footer-logo">
-                {settings?.logoUrl ? (
-                  <img src={settings.logoUrl} alt={siteName} className="h-8 w-auto object-contain" data-testid="footer-logo-img" />
-                ) : null}
-                <span className="font-serif text-2xl font-bold tracking-tight bg-gradient-to-r from-[#f5d76e] via-[#D4AF37] to-[#f5d76e] bg-clip-text text-transparent" data-testid="footer-site-name">
-                  {siteName}
-                </span>
-                <span className="text-[#D4AF37] text-lg leading-none">ॐ</span>
+              <Link href="/" className="mb-3 flex w-full max-w-[310px] items-center gap-2" data-testid="footer-logo">
+                <BrandMark settings={settings} placement="footer" testId="footer-brand-mark" />
               </Link>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#D4AF37]/70 mb-3">
                 Sanatan · Sacred · Authentic

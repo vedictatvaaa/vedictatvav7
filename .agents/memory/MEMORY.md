@@ -24,3 +24,4 @@
 - [Pandit onboarding accessibility](pandit-onboarding-accessibility.md) — focus the first relevant target and announce one consolidated signup error instead of competing alerts.
 - [Pandit city SEO counts](pandit-city-seo-counts.md) — page descriptions should use live directory totals, separate from the smaller indexed-provider projection.
 - [Mockup preview access](mockup-preview-access.md) — localhost visual companion URLs are container-only; use the canvas with a registered or reserved-port mockup service.
+- [Brand Studio activation](brand-studio-activation.md) — preserve legacy brand rendering until an Admin makes a branding-specific edit; unrelated settings saves must not activate it.
