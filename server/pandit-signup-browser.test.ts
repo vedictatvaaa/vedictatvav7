@@ -206,7 +206,7 @@ test("Pandit signup browser contract keeps requirement errors visible and values
         name: "incorrect Puja count",
         options: { pujaCount: 4, captureLocation: false, confirmServices: true },
         targetId: "masterServiceIds",
-        message: "Select exactly five specialist Pujas (you selected 4).",
+        message: "Select at least five specialist Pujas (you selected 4).",
       },
       {
         name: "missing service confirmation",

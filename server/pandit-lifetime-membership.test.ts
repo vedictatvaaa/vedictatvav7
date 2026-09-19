@@ -115,8 +115,8 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
     const activeServices = await db.select({ id: masterServices.id, serviceType: masterServices.serviceType })
       .from(masterServices)
       .where(eq(masterServices.isActive, true))
-      .then((services) => services.filter((service) => ["puja", "katha", "ritual"].includes(service.serviceType)).slice(0, 6));
-    assert.ok(activeServices.length >= 6, "approval integration requires at least six active specialist Pujas");
+      .then((services) => services.filter((service) => ["puja", "katha", "ritual"].includes(service.serviceType)).slice(0, 11));
+    assert.ok(activeServices.length >= 11, "approval integration requires at least eleven active specialist Pujas");
     const masterServiceIds = activeServices.map((service) => service.id);
 
     const [admin] = await db.insert(users).values({
@@ -209,14 +209,14 @@ approvalIntegration("Pandit application approval publishes one retry-safe profil
       masterServiceIds: masterServiceIds.slice(0, 4),
     }));
     assert.equal(fewerThanFive.status, 400);
-    assert.equal(fewerThanFive.body.message, "Select exactly five specialist Pujas (you selected 4).");
+    assert.equal(fewerThanFive.body.message, "Select at least five specialist Pujas (you selected 4).");
 
-    const moreThanFive = await post("/api/pandit-applications", applicationBody({
+    const moreThanTen = await post("/api/pandit-applications", applicationBody({
       email: `pandit-more-${suffix}@example.invalid`,
-      masterServiceIds,
+      masterServiceIds: masterServiceIds.slice(0, 11),
     }));
-    assert.equal(moreThanFive.status, 400);
-    assert.equal(moreThanFive.body.message, "Select exactly five specialist Pujas (you selected 6).");
+    assert.equal(moreThanTen.status, 400);
+    assert.equal(moreThanTen.body.message, "Select no more than ten specialist Pujas (you selected 11).");
 
     const missingLocationConsent = await post("/api/pandit-applications", applicationBody({
       email: `pandit-no-location-consent-${suffix}@example.invalid`,

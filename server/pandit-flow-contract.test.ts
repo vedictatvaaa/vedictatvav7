@@ -43,7 +43,8 @@ test("Pandit signup returns applicant-safe requirement messages", () => {
   const end = routes.indexOf("// Admin: list pandit applications", start);
   assert.ok(start >= 0 && end > start);
   const signupRoute = routes.slice(start, end);
-  assert.match(signupRoute, /Select exactly five specialist Pujas \(you selected \$\{count\}\)/);
+  assert.match(signupRoute, /Select at least five specialist Pujas \(you selected \$\{count\}\)/);
+  assert.match(signupRoute, /Select no more than ten specialist Pujas \(you selected \$\{count\}\)/);
   assert.match(signupRoute, /Share your exact location before submitting/);
   assert.match(signupRoute, /Confirm that the selected Pujas are services you personally offer/);
   assert.match(signupRoute, /Upload a profile photo before submitting/);

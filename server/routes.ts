@@ -10114,6 +10114,7 @@ Return JSON: {"description": "your optimized HTML description here"}` }
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: ipKeyGenerator,
+    skipFailedRequests: true,
     message: { message: "You have used both AI bio drafts. Please finish your bio manually." },
   });
   app.post("/api/pandit-applications/generate-bio", panditBioAiLimiter, async (req, res) => {

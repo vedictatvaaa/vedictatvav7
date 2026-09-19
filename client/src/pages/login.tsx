@@ -148,9 +148,16 @@ function VedicSeal({ className = "" }: { className?: string }) {
     <svg viewBox="0 0 120 120" className={className} aria-hidden="true">
       <circle cx="60" cy="60" r="47" fill="none" stroke="currentColor" strokeWidth="1" opacity=".7" />
       <circle cx="60" cy="60" r="37" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="2 5" opacity=".7" />
-      <path d="M60 18 69 51 102 60 69 69 60 102 51 69 18 60 51 51Z" fill="none" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M60 31 65 55 89 60 65 65 60 89 55 65 31 60 55 55Z" fill="none" stroke="currentColor" strokeWidth="1" opacity=".8" />
-      <circle cx="60" cy="60" r="4" fill="currentColor" />
+      <text
+        x="60"
+        y="76"
+        fill="currentColor"
+        fontFamily="serif"
+        fontSize="54"
+        textAnchor="middle"
+      >
+        ॐ
+      </text>
     </svg>
   );
 }
