@@ -220,6 +220,7 @@ const TirthYatra = lazy(() => import("@/pages/tirth-yatra"));
 const TirthYatraDetail = lazy(() => import("@/pages/tirth-yatra-detail"));
 const LuckyDraw = lazy(() => import("@/pages/lucky-draw"));
 const PilgrimageCard = lazy(() => import("@/pages/pilgrimage-card"));
+const Partner = lazy(() => import("@/pages/partner"));
 const PanditLogin = lazy(() => import("@/pages/pandit-login"));
 const PanditPortal = lazy(() => import("@/pages/pandit-portal"));
 const PanditStorefront = lazy(() => import("@/pages/pandit-storefront"));
@@ -811,6 +812,7 @@ function Router() {
           <Route path="/tirth-yatra" component={TirthYatra} />
           <Route path="/lucky-draw" component={LuckyDraw} />
           <Route path="/pilgrimage-card" component={PilgrimageCard} />
+          <Route path="/partner" component={Partner} />
           <Route path="/pandit/login">{() => <PanditLogin />}</Route>
           <Route path="/pandit/signup">{() => <PanditLogin initialMode="signup" />}</Route>
           <Route path="/pandit/reset-password" component={PanditResetPassword} />

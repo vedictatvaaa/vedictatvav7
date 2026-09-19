@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck } from "lucide-react";
-import { SiWhatsapp } from "react-icons/si";
+import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck, Headphones, Flower2, Landmark, Sun, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -209,21 +208,13 @@ export default function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [openMobileSection, setOpenMobileSection] = useState<string | null>(null);
   const [paletteQuery, setPaletteQuery] = useState("");
   const moreRef = useRef<HTMLDivElement>(null);
   const localeRef = useRef<HTMLDivElement>(null);
-  const DELIVERY_CITIES = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Varanasi", "Gaya", "Haridwar", "Other"];
-  const [deliveryCity, setDeliveryCity] = useState<string>(() => {
-    if (typeof window === "undefined") return "Mumbai";
-    return localStorage.getItem("vt_city") || "Mumbai";
-  });
-  const handleCityChange = (next: string) => {
-    setDeliveryCity(next);
-    try {
-      localStorage.setItem("vt_city", next);
-      window.dispatchEvent(new CustomEvent("vt:cityChanged", { detail: next }));
-    } catch {}
-  };
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -245,6 +236,47 @@ export default function Navbar() {
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [moreOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => mobileCloseRef.current?.focus());
+
+    const handleMobileKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !mobileMenuRef.current) return;
+      const focusable = Array.from(
+        mobileMenuRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.tabIndex >= 0 && !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleMobileKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleMobileKeyDown);
+      window.requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+    };
+  }, [mobileOpen]);
 
   const { data: searchData, isFetching: searchLoading } = useQuery<SearchResponse>({
     queryKey: ["/api/search", debouncedQuery],
@@ -346,76 +378,6 @@ export default function Navbar() {
     { href: "/today-panchang", label: t.nav.panchang, icon: Calendar },
   ];
 
-  const navSections: { title: string; items: { href: string; label: string; icon: any; comingSoon?: boolean }[] }[] = [
-    {
-      title: "Shop",
-      items: [
-        { href: "/puja-samagri-online", label: "Puja Essentials", icon: ShoppingBag },
-        { href: "/category/home-essentials", label: "Home Essentials", icon: Package, comingSoon: true },
-        { href: "/category/hair-skin-care", label: "Hair & Skin Care", icon: Sparkles, comingSoon: true },
-        { href: "/category/grains-pulses", label: "Grains & Pulses", icon: Package, comingSoon: true },
-        { href: "/category/dry-fruits", label: "Dry Fruits", icon: Package, comingSoon: true },
-      ],
-    },
-    {
-      title: "Puja & Pandit",
-      items: [
-        { href: "/online-pandit-booking", label: t.nav.bookPandit, icon: Users },
-        { href: "/online-puja-booking", label: t.nav.bookPuja, icon: Flame },
-        { href: "/virtual-puja", label: "Virtual Puja", icon: Sunrise },
-        { href: "/online-pind-daan", label: "Pind Daan", icon: Flame },
-      ],
-    },
-    {
-      title: "Astrology",
-      items: [
-        { href: "/astrology", label: t.nav.astrology, icon: Sparkles },
-        { href: "/ai-kundli", label: "AI Kundli", icon: Star },
-        { href: "/ai-baby-names", label: "Baby Names", icon: Heart },
-        { href: "/ai-palm-reading", label: "Palm Reading", icon: Wand2 },
-        { href: "/daily-rashifal", label: t.nav.zodiac, icon: Star },
-      ],
-    },
-    {
-      title: "Calendar & Remedies",
-      items: [
-        { href: "/today-panchang", label: t.nav.panchang, icon: Calendar },
-        { href: "/muhurat-finder", label: "Muhurat Finder", icon: Calendar },
-        { href: "/vastu-compass", label: "Vastu Compass", icon: MapPin },
-      ],
-    },
-    {
-      title: "Wisdom",
-      items: [
-        { href: "/scripture-search", label: "Scripture Search", icon: BookOpen },
-        { href: "/kathas", label: "Kathas", icon: BookOpen },
-      ],
-    },
-    {
-      title: "Yatra & Membership",
-      items: [
-        { href: "/tirth-yatra", label: "Free Tirth Yatra", icon: MapPin },
-        { href: "/lucky-draw", label: "Lucky Draw — Win a Yatra", icon: TicketCheck },
-        { href: "/pilgrimage-card", label: "Pilgrimage Card", icon: Crown },
-      ],
-    },
-    {
-      title: "Travel",
-      items: [
-        { href: "/temple-tourism", label: "Temple Tourism", icon: Globe },
-        { href: "/route-planner", label: "Route Planner", icon: MapPin },
-      ],
-    },
-    {
-      title: "Community",
-      items: [
-        { href: "/matrimony", label: "Matrimony", icon: Heart },
-        { href: "/membership", label: "Membership", icon: Crown },
-        { href: "/donations", label: "Donations", icon: Heart },
-      ],
-    },
-  ];
-
   type AcctLink = { href: string; label: string; icon: any; action?: "login" | "signup" };
   const accountLinks: AcctLink[] = user ? [
     { href: "/dashboard", label: "My Dashboard", icon: LayoutDashboard },
@@ -429,6 +391,90 @@ export default function Navbar() {
     { href: "/return-ticket", label: t.nav.returns, icon: TicketCheck },
     { href: "/admin", label: t.nav.adminDashboard, icon: Shield },
   ] : [];
+
+  const navSections: { title: string; icon: any; items: { href: string; label: string; icon: any }[] }[] = [
+    {
+      title: "Shop",
+      icon: ShoppingBag,
+      items: [
+        { href: "/puja-samagri-online", label: "Puja Essentials", icon: ShoppingBag },
+      ],
+    },
+    {
+      title: "Puja & Seva",
+      icon: Flower2,
+      items: [
+        { href: "/online-puja-booking", label: "Book a Puja", icon: Flame },
+        { href: "/virtual-puja", label: "Virtual Puja", icon: Sunrise },
+        { href: "/online-pind-daan", label: "Pind Daan", icon: Flame },
+      ],
+    },
+    {
+      title: "Find an Expert",
+      icon: Users,
+      items: [
+        { href: "/book-pandit-online", label: "Pandits", icon: Users },
+        { href: "/astrology", label: "Astrology Consultations", icon: Sparkles },
+      ],
+    },
+    {
+      title: "Astrology",
+      icon: Sun,
+      items: [
+        { href: "/astrology", label: t.nav.astrology, icon: Sparkles },
+        { href: "/ai-kundli", label: "AI Kundli", icon: Star },
+        { href: "/daily-rashifal", label: "Horoscope / Rashifal", icon: Star },
+        { href: "/ai-baby-names", label: "Baby Names", icon: Heart },
+        { href: "/ai-palm-reading", label: "Palm Reading", icon: Wand2 },
+      ],
+    },
+    {
+      title: "Yatra",
+      icon: Landmark,
+      items: [
+        { href: "/temple-tourism", label: "Temple Tourism", icon: Globe },
+        { href: "/tirth-yatra", label: "Tirth Yatra", icon: MapPin },
+        { href: "/route-planner", label: "Route Planner", icon: MapPin },
+        { href: "/pilgrimage-card", label: "Pilgrimage Card", icon: Crown },
+      ],
+    },
+    {
+      title: "Community",
+      icon: Users,
+      items: [
+        { href: "/matrimony", label: "Matrimony", icon: Heart },
+        { href: "/membership", label: "Membership", icon: Crown },
+        { href: "/donations", label: "Donations", icon: Heart },
+      ],
+    },
+    {
+      title: "Resources",
+      icon: BookOpen,
+      items: [
+        { href: "/today-panchang", label: t.nav.panchang, icon: Calendar },
+        { href: "/muhurat-finder", label: "Muhurat Finder", icon: Calendar },
+        { href: "/scripture-search", label: "Scripture Search", icon: BookOpen },
+        { href: "/kathas", label: "Kathas", icon: BookOpen },
+        { href: "/puja-guide", label: "Puja Guides", icon: BookOpen },
+        { href: "/blog", label: "Spiritual Articles", icon: BookOpen },
+      ],
+    },
+    {
+      title: "Account",
+      icon: UserCircle,
+      items: accountLinks,
+    },
+    {
+      title: "Help & Support",
+      icon: Headphones,
+      items: [
+        { href: "/contact", label: "Contact Us", icon: Headphones },
+        { href: "/track-order", label: "Track Order", icon: Truck },
+        { href: "/return-ticket", label: "Returns", icon: TicketCheck },
+        { href: "/refund-policy", label: "Refund Policy", icon: Shield },
+      ],
+    },
+  ];
 
   const festival = useFestivalTheme();
   const festAccent = festival ? festival.palette.accent : "#D4AF37";
@@ -451,10 +497,13 @@ export default function Navbar() {
       >
         <div className="container mx-auto px-3 sm:px-4 h-12 md:h-14 flex items-center justify-between relative gap-2">
           <button
+            ref={mobileTriggerRef}
             onClick={() => { setMobileOpen(!mobileOpen); setSearchOpen(false); setAccountOpen(false); }}
             className="md:hidden w-9 h-9 flex items-center justify-center rounded-md text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors -ml-1"
             data-testid="btn-menu-mobile"
-            aria-label="Open menu"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation-drawer"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -602,8 +651,6 @@ export default function Navbar() {
                                   className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition-all duration-150 ${
                                     isItemActive
                                       ? "bg-[#6D2B35] text-white"
-                                      : item.comingSoon
-                                      ? "opacity-40 pointer-events-none text-[#5a4a3a]/70"
                                       : "text-[#3a2a1a]/80 hover:bg-[#FBF7EE] hover:text-[#6D2B35]"
                                   }`}
                                   data-testid={`palette-link-${item.href.replace(/\//g, "-")}`}
@@ -615,9 +662,8 @@ export default function Navbar() {
                                   </span>
                                   <span className="truncate leading-tight">
                                     {item.label}
-                                    {item.comingSoon && <span className="block text-[9px] font-normal opacity-60">Coming soon</span>}
                                   </span>
-                                  {!item.comingSoon && !isItemActive && (
+                                  {!isItemActive && (
                                     <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-30 transition-opacity shrink-0" />
                                   )}
                                 </Link>
@@ -996,245 +1042,220 @@ export default function Navbar() {
 
       {mobileOpen && (
         <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-40 md:hidden" onClick={() => setMobileOpen(false)} />
-          <div className="fixed top-[72px] left-0 bottom-[80px] w-[284px] max-w-[88%] z-50 md:hidden" data-testid="mobile-menu">
-            <div className="bg-white border-r border-y border-[#D4AF37]/25 h-full flex flex-col w-full overflow-hidden shadow-[6px_0_24px_-12px_rgba(109,43,53,0.25)]">
+          <div
+            className="fixed inset-0 z-[70] bg-[#2D171B]/55 backdrop-blur-[2px] md:hidden"
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            ref={mobileMenuRef}
+            id="mobile-navigation-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-menu-title"
+            className="fixed left-0 top-[72px] bottom-[80px] z-[80] w-[304px] max-w-[88%] md:hidden"
+            data-testid="mobile-menu"
+          >
+            <div className="h-full w-full overflow-hidden border-r border-y border-[#E6D8CB] bg-[#FCF8F1] shadow-[8px_0_30px_-14px_rgba(70,24,34,0.38)] flex flex-col">
 
               {/* Branded header */}
-              <div
-                className="relative shrink-0 px-4 pt-3 pb-3.5 text-white"
-                style={{ background: "linear-gradient(135deg, #4a1a22 0%, #6D2B35 55%, #8B3A47 100%)" }}
-              >
-                <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent opacity-70" aria-hidden="true" />
-                <div className="flex items-center">
-                  <p className="font-serif text-[16px] font-bold leading-none tracking-tight text-white truncate" data-testid="text-mobile-brand">
+              <div className="relative shrink-0 px-5 pb-3 pt-4">
+                <div className="pr-10">
+                  <p id="mobile-menu-title" className="truncate font-serif text-[25px] font-bold leading-none tracking-[-0.035em] text-[#731F2B]" data-testid="text-mobile-brand">
                     {settings?.siteName || "Vedic Tatva"}
                   </p>
+                  <p className="mt-1.5 text-[10px] leading-3.5 text-[#67544B]">
+                    Heritage of Nature, Wellness &amp; Purity.
+                  </p>
                 </div>
-
-                {/* Inline city switcher */}
-                <label className="mt-3 flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/25 rounded-md pl-2.5 pr-1.5 h-8 transition-colors cursor-pointer">
-                  <MapPin className="h-3.5 w-3.5 text-[#D4AF37] shrink-0" strokeWidth={2.2} />
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-white/75 leading-none font-semibold">Deliver to</span>
-                  <select
-                    value={deliveryCity}
-                    onChange={(e) => handleCityChange(e.target.value)}
-                    className="ml-auto bg-transparent text-[12px] font-semibold text-white outline-none cursor-pointer pr-0.5 appearance-none"
-                    data-testid="select-mobile-city"
-                    aria-label="Select your delivery city"
-                  >
-                    {DELIVERY_CITIES.map(c => (
-                      <option key={c} value={c} className="text-[#5a4a3a] bg-white">{c}</option>
-                    ))}
-                  </select>
-                  <ChevronRight className="h-3 w-3 text-[#D4AF37] rotate-90 shrink-0" strokeWidth={2.2} aria-hidden="true" />
-                </label>
+                <button
+                  ref={mobileCloseRef}
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full text-[#211819] transition-colors hover:bg-[#F1E4D8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C2733]/35"
+                  aria-label="Close menu"
+                  data-testid="btn-close-mobile-menu"
+                >
+                  <X className="h-5 w-5" strokeWidth={1.6} />
+                </button>
               </div>
 
               {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto overscroll-contain bg-white">
-                {user && (
-                  <div className="mx-3 mt-3 mb-1 p-2.5 rounded-md border border-[#D4AF37]/30 bg-gradient-to-br from-[#FBF7EE] to-white">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#6D2B35] to-[#8B3A47] text-[#D4AF37] flex items-center justify-center font-serif font-bold text-sm shrink-0 shadow-sm">
-                        {(user.name || "U").trim().charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-serif font-semibold text-[#6D2B35] leading-tight truncate" data-testid="text-mobile-user-name">{user.name}</p>
-                        <p className="text-[10px] text-[#5a4a3a]/60 leading-tight truncate mt-0.5">{user.email}</p>
-                      </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#FCF8F1]" data-lenis-prevent>
+                <div className="mx-3 mb-2 rounded-xl bg-[#F8EEE6] p-3 shadow-[0_5px_18px_rgba(92,48,40,0.06)]">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0DFC3] text-[#8A5B16]">
+                      <UserCircle className="h-5 w-5" strokeWidth={1.6} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-serif text-[14px] font-semibold leading-tight text-[#24191A]" data-testid={user ? "text-mobile-user-name" : undefined}>
+                        {user ? user.name : "Welcome"}
+                      </p>
+                      <p className="mt-0.5 text-[9px] leading-3.5 text-[#6F5B53]">
+                        {user ? user.email : "Choose how you would like to continue with Vedic Tatva."}
+                      </p>
                     </div>
                   </div>
-                )}
-
-                {navSections.map((section) => (
-                  <div key={section.title} className="mb-1">
-                    <div className="px-3 pt-3 pb-1 flex items-center gap-2">
-                      <span className="h-px w-3 bg-[#D4AF37]" />
-                      <p className="text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold whitespace-nowrap">{section.title}</p>
-                      <span className="h-px flex-1 bg-[#D4AF37]/20" />
+                  {!user && (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileOpen(false)}
+                        className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#861F2B] px-3 text-[11px] font-bold text-white shadow-sm transition-colors hover:bg-[#6D1722] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B89047]"
+                        data-testid="mobile-audience-devotee"
+                      >
+                        Devotee
+                      </Link>
+                      <Link
+                        href="/partner"
+                        onClick={() => setMobileOpen(false)}
+                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[#8C2733]/55 bg-[#FFFDF9] px-3 text-[11px] font-bold text-[#6D1F2A] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B89047]"
+                        data-testid="mobile-audience-partner"
+                      >
+                        Partner
+                      </Link>
                     </div>
-                    <div className="px-1.5 pt-0.5">
-                      {section.items.map((link) => {
-                        const isActive = location === link.href;
-                        const LinkIcon = link.icon;
-                        const testId = `mobile-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`;
-
-                        if (link.comingSoon) {
-                          return (
-                            <div
-                              key={link.href}
-                              aria-disabled="true"
-                              className="relative flex items-center justify-between gap-3 pl-4 pr-2 h-9 rounded-md text-[13px] font-semibold whitespace-nowrap text-[#5a4a3a]/55 cursor-not-allowed select-none"
-                              data-testid={testId}
-                            >
-                              <span className="flex items-center gap-2.5 min-w-0">
-                                <LinkIcon className="h-3.5 w-3.5 shrink-0 text-[#6D2B35]/35" strokeWidth={1.8} />
-                                <span className="truncate">{link.label}</span>
-                              </span>
-                              <span className="shrink-0 text-[9px] uppercase tracking-[0.15em] font-semibold text-[#D4AF37] bg-[#FBF7EE] border border-[#D4AF37]/30 rounded px-1.5 py-0.5 leading-none">
-                                Soon
-                              </span>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            onClick={() => setMobileOpen(false)}
-                            className={`relative flex items-center justify-between gap-3 pl-4 pr-2 h-9 rounded-md text-[13px] font-semibold transition-colors whitespace-nowrap ${
-                              isActive
-                                ? "bg-[#FBF7EE] text-[#6D2B35]"
-                                : "text-[#5a4a3a] hover:bg-[#FBF7EE]/70 hover:text-[#6D2B35]"
-                            }`}
-                            data-testid={testId}
-                          >
-                            {isActive && (
-                              <span className="absolute left-1 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#D4AF37] via-[#6D2B35] to-[#D4AF37]" aria-hidden="true" />
-                            )}
-                            <span className="flex items-center gap-2.5 min-w-0">
-                              <LinkIcon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-[#6D2B35]" : "text-[#6D2B35]/55"}`} strokeWidth={1.8} />
-                              <span className="truncate">{link.label}</span>
-                            </span>
-                            <ChevronRight className={`h-3 w-3 shrink-0 ${isActive ? "text-[#D4AF37]" : "text-[#D4AF37]/40"}`} strokeWidth={1.8} />
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Account section in body */}
-                <div className="mb-3 mt-1">
-                  <div className="px-3 pt-3 pb-1 flex items-center gap-2">
-                    <span className="h-px w-3 bg-[#D4AF37]" />
-                    <p className="text-[9px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold whitespace-nowrap">{t.nav.account}</p>
-                    <span className="h-px flex-1 bg-[#D4AF37]/20" />
-                  </div>
-                  <div className="px-1.5 pt-0.5">
-                    {accountLinks.map((link) => {
-                      const AccIcon = link.icon;
-                      const isActive = location === link.href;
-                      const testId = `mobile-account-${link.label.toLowerCase().replace(/\s+/g, "-")}`;
-                      return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileOpen(false)}
-                          className={`relative w-full flex items-center justify-between pl-4 pr-2 h-9 rounded-md text-[12px] font-semibold transition-colors ${
-                            isActive ? "bg-[#FBF7EE] text-[#6D2B35]" : "text-[#5a4a3a] hover:bg-[#FBF7EE]/70 hover:text-[#6D2B35]"
-                          }`}
-                          data-testid={testId}
-                        >
-                          {isActive && (
-                            <span className="absolute left-1 top-1.5 bottom-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#D4AF37] via-[#6D2B35] to-[#D4AF37]" aria-hidden="true" />
-                          )}
-                          <span className="flex items-center gap-2.5">
-                            <AccIcon className={`h-3.5 w-3.5 ${isActive ? "text-[#6D2B35]" : "text-[#6D2B35]/55"}`} strokeWidth={1.8} />
-                            {link.label}
-                          </span>
-                          <ChevronRight className={`h-3 w-3 ${isActive ? "text-[#D4AF37]" : "text-[#D4AF37]/40"}`} strokeWidth={1.8} />
-                        </Link>
-                      );
-                    })}
-
-                    {/* Language sub-section (nested under account, mobile) */}
-                    {(() => {
-                      const currentLang = languages.find((l) => l.code === language) || languages[0];
-                      return (
-                        <div className="mt-1">
-                          <button
-                            type="button"
-                            onClick={() => setLangOpen(!langOpen)}
-                            className="w-full flex items-center justify-between pl-4 pr-2 h-9 rounded-md text-[12px] font-semibold text-[#5a4a3a] hover:bg-[#FBF7EE]/70 hover:text-[#6D2B35] transition-colors"
-                            data-testid="mobile-btn-account-language"
-                            aria-expanded={langOpen}
-                          >
-                            <span className="flex items-center gap-2.5 min-w-0">
-                              <Globe className="h-3.5 w-3.5 text-[#6D2B35]/55 shrink-0" strokeWidth={1.8} />
-                              <span>Language</span>
-                              <span className="text-[10px] font-normal text-[#5a4a3a]/55 truncate">· {currentLang.flag} {currentLang.nativeLabel}</span>
-                            </span>
-                            <ChevronRight className={`h-3 w-3 text-[#D4AF37]/40 transition-transform shrink-0 ${langOpen ? "rotate-90" : ""}`} strokeWidth={1.8} />
-                          </button>
-                          {langOpen && (
-                            <div className="mt-1 pl-3 pr-1 max-h-56 overflow-y-auto rounded-md bg-[#FBF7EE]/50 border border-[#D4AF37]/15" data-testid="mobile-account-language-list">
-                              {languages.map((lang) => (
-                                <button
-                                  key={lang.code}
-                                  type="button"
-                                  onClick={() => { switchLanguageWithUrl(lang.code); setLangOpen(false); setMobileOpen(false); }}
-                                  className={`w-full flex items-center gap-3 pl-6 pr-3 py-1.5 text-[11px] rounded-sm transition-colors ${
-                                    language === lang.code
-                                      ? "text-[#6D2B35] font-semibold"
-                                      : "text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#FBF7EE]"
-                                  }`}
-                                  data-testid={`mobile-lang-${lang.code}`}
-                                >
-                                  <span className="text-sm">{lang.flag}</span>
-                                  <span>{lang.nativeLabel}</span>
-                                  {language === lang.code && <span className="ml-auto text-[#D4AF37]">✦</span>}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
+                  )}
                 </div>
+
+                <nav className="px-3 py-1" aria-label="Mobile navigation">
+                  {navSections.map((section) => {
+                    const isOpen = openMobileSection === section.title;
+                    const SectionIcon = section.icon;
+                    const sectionId = `mobile-section-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+                    const hasActiveItem = section.items.some((item) => location === item.href);
+                    return (
+                      <div key={section.title} className="border-b border-[#E8DDD3] last:border-b-0">
+                        <button
+                          type="button"
+                          onClick={() => setOpenMobileSection(isOpen ? null : section.title)}
+                          className={`flex min-h-[50px] w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C2733]/30 ${
+                            isOpen ? "bg-[#FAEDE6] text-[#6D1F2A]" : hasActiveItem ? "text-[#6D1F2A]" : "text-[#23191A] hover:bg-[#F8EEE6]"
+                          }`}
+                          aria-expanded={isOpen}
+                          aria-controls={sectionId}
+                          data-testid={`mobile-section-${section.title.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                          <SectionIcon className="h-[21px] w-[21px] shrink-0 text-[#7A1E2A]" strokeWidth={1.55} />
+                          <span className="flex-1 font-serif text-[14px] font-semibold">{section.title}</span>
+                          <ChevronRight className={`h-4 w-4 text-[#251A1B] transition-transform duration-200 ${isOpen ? "-rotate-90" : ""}`} strokeWidth={1.5} />
+                        </button>
+                        <div
+                          id={sectionId}
+                          className={`grid transition-[grid-template-rows] duration-200 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                          aria-hidden={!isOpen}
+                        >
+                          <div className="overflow-hidden">
+                            <div className="mx-1 mb-2 rounded-xl bg-[#F9EEE7] py-1.5 pl-8 pr-2">
+                              {section.items.map((link) => {
+                                const isActive = location === link.href;
+                                const LinkIcon = link.icon;
+                                const testId = `mobile-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`;
+                                return (
+                                  <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    onClick={() => setMobileOpen(false)}
+                                    className={`relative flex min-h-9 items-center gap-2.5 rounded-md px-2.5 font-serif text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C2733]/30 ${
+                                      isActive
+                                        ? "bg-white/80 text-[#6D1F2A]"
+                                        : "text-[#3C2D2E] hover:bg-white/60 hover:text-[#6D1F2A]"
+                                    }`}
+                                    aria-current={isActive ? "page" : undefined}
+                                    tabIndex={isOpen ? 0 : -1}
+                                    data-testid={testId}
+                                  >
+                                    <LinkIcon className="h-4 w-4 shrink-0 text-[#8A6726]" strokeWidth={1.55} />
+                                    <span>{link.label}</span>
+                                  </Link>
+                                );
+                              })}
+                              {section.title === "Account" && (() => {
+                                const currentLang = languages.find((item) => item.code === language) || languages[0];
+                                return (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setLangOpen(!langOpen)}
+                                      className="flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 font-serif text-[12px] font-medium text-[#3C2D2E] transition-colors hover:bg-white/60 hover:text-[#6D1F2A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C2733]/30"
+                                      data-testid="mobile-btn-account-language"
+                                      aria-expanded={langOpen}
+                                      aria-controls="mobile-language-list"
+                                      tabIndex={isOpen ? 0 : -1}
+                                    >
+                                      <Globe className="h-4 w-4 shrink-0 text-[#8A6726]" strokeWidth={1.55} />
+                                      <span>Language · {currentLang.nativeLabel}</span>
+                                      <ChevronDown className={`ml-auto h-3.5 w-3.5 transition-transform ${langOpen ? "rotate-180" : ""}`} />
+                                    </button>
+                                    {langOpen && (
+                                      <div id="mobile-language-list" className="my-1 rounded-md bg-white/70 p-1" data-testid="mobile-account-language-list">
+                                        {languages.map((lang) => (
+                                          <button
+                                            key={lang.code}
+                                            type="button"
+                                            onClick={() => { switchLanguageWithUrl(lang.code); setLangOpen(false); setMobileOpen(false); }}
+                                            className={`flex min-h-8 w-full items-center gap-2.5 rounded px-2.5 text-[11px] transition-colors ${
+                                              language === lang.code ? "font-semibold text-[#6D1F2A]" : "text-[#655557] hover:bg-white"
+                                            }`}
+                                            data-testid={`mobile-lang-${lang.code}`}
+                                            tabIndex={isOpen ? 0 : -1}
+                                          >
+                                            <span>{lang.flag}</span>
+                                            <span>{lang.nativeLabel}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {user && (
+                                      <button
+                                        type="button"
+                                        onClick={() => { logout(); setMobileOpen(false); setLocation("/"); }}
+                                        className="flex min-h-9 w-full items-center gap-2.5 rounded-md px-2.5 font-serif text-[12px] font-medium text-[#8B2632] transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C2733]/30"
+                                        data-testid="mobile-btn-logout"
+                                        tabIndex={isOpen ? 0 : -1}
+                                      >
+                                        <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.55} />
+                                        {t.nav.logout}
+                                      </button>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </nav>
               </div>
 
-              {/* Sticky footer CTAs */}
               <div
-                className="shrink-0 border-t border-[#D4AF37]/30 bg-[#faf7f2] px-3 pt-2.5 pb-3 space-y-2"
-                style={{ boxShadow: "0 -6px 16px -10px rgba(109,43,53,0.28)" }}
+                className="shrink-0 border-t border-[#E8DDD3] bg-[#F8F1E8] px-5 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-2.5"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle at 100% 100%, rgba(180,143,67,0.12), transparent 42%), radial-gradient(circle at 0% 0%, rgba(109,43,53,0.04), transparent 35%)",
+                }}
               >
-                {!user ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href="/login"
-                      onClick={() => setMobileOpen(false)}
-                      className="inline-flex h-16 flex-col items-center justify-center gap-1 rounded-lg border border-[#6D2B35]/15 bg-white/80 text-[12px] font-extrabold text-[#6D2B35] transition-colors hover:border-[#D4AF37]/60 hover:bg-[#FFFAF1]"
-                      data-testid="mobile-audience-devotee"
-                    >
-                      <Users className="h-4 w-4 text-[#B98117]" strokeWidth={1.8} />
-                      <span>Devotee</span>
-                    </Link>
-                    <Link
-                      href="/pandit/login"
-                      onClick={() => setMobileOpen(false)}
-                      className="inline-flex h-16 flex-col items-center justify-center gap-1 rounded-lg border border-[#D4AF37]/35 bg-[#FFF8E7] text-[12px] font-extrabold text-[#6D2B35] transition-colors hover:border-[#D4AF37] hover:bg-[#FFF3D2]"
-                      data-testid="mobile-audience-pandit"
-                    >
-                      <UserCircle className="h-4 w-4 text-[#B98117]" strokeWidth={1.8} />
-                      <span>Pandit</span>
-                    </Link>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => { logout(); setMobileOpen(false); setLocation("/"); }}
-                    className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-md text-[12px] font-semibold bg-white text-rose-700 border border-rose-200 hover:bg-rose-50 transition-colors"
-                    data-testid="mobile-btn-logout"
-                  >
-                    <LogOut className="h-3.5 w-3.5" strokeWidth={1.8} /> {t.nav.logout}
-                  </button>
-                )}
-
-                <a
-                  href="https://wa.me/918447844702?text=Namaste%20Vedic%20Tatva%2C%20I%20need%20help."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileOpen(false)}
-                  className="w-full inline-flex items-center justify-center gap-2 h-9 rounded-md text-[12px] font-semibold bg-[#25D366] text-white hover:bg-[#1ebe57] transition-colors shadow-sm"
-                  data-testid="mobile-btn-whatsapp-care"
-                  aria-label="Customer Care on WhatsApp 8447-8447-02"
-                >
-                  <SiWhatsapp className="h-4 w-4" />
-                  <span className="leading-none">Customer Care · 8447-8447-02</span>
-                </a>
+                <div className="space-y-0.5">
+                  <Link href="/about" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
+                    <Globe className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
+                    About Vedic Tatva
+                  </Link>
+                  <Link href="/privacy-policy" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
+                    <Shield className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
+                    Privacy Policy
+                  </Link>
+                  <Link href="/terms-conditions" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
+                    <FileText className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
+                    Terms &amp; Conditions
+                  </Link>
+                </div>
+                <div className="mt-2 flex items-center justify-center gap-2 text-center font-serif text-[9px] italic leading-tight text-[#6C5550]">
+                  <span className="h-px w-8 bg-[#C9AA70]/60" />
+                  <span>A More Spiritual Tomorrow<br />Together</span>
+                  <span className="h-px w-8 bg-[#C9AA70]/60" />
+                </div>
               </div>
 
             </div>

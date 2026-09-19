@@ -90,6 +90,7 @@ export const REGISTERED_SPA_ROUTE_PATTERNS = [
   "/tirth-yatra",
   "/lucky-draw",
   "/pilgrimage-card",
+  "/partner",
   "/pandit/login",
   "/pandit/signup",
   "/pandit/portal",
