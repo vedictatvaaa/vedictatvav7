@@ -1,12 +1,23 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/lib/auth";
-import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  Mail,
+  User as UserIcon,
+} from "lucide-react";
+import PageSeo from "@/components/PageSeo";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Mail, Lock, User as UserIcon, Eye, EyeOff, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 
 declare global { interface Window { google?: any } }
 
@@ -20,8 +31,14 @@ function useRedirectParam() {
 }
 
 function GoogleBtn({
-  view, rememberMe, onSuccess,
-}: { view: "login" | "signup"; rememberMe: boolean; onSuccess: () => void }) {
+  view,
+  rememberMe,
+  onSuccess,
+}: {
+  view: "login" | "signup";
+  rememberMe: boolean;
+  onSuccess: () => void;
+}) {
   const { loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const [enabled, setEnabled] = useState(false);
@@ -31,21 +48,30 @@ function GoogleBtn({
 
   useEffect(() => {
     fetch("/api/auth/google/config")
-      .then(r => r.json())
-      .then(d => { if (d.enabled && d.clientId) { setEnabled(true); setClientId(d.clientId); } })
+      .then((response) => response.json())
+      .then((config) => {
+        if (config.enabled && config.clientId) {
+          setEnabled(true);
+          setClientId(config.clientId);
+        }
+      })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
     const existing = document.getElementById("google-identity-script");
-    if (existing) { setReady(true); return; }
-    const s = document.createElement("script");
-    s.id = "google-identity-script";
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true; s.defer = true;
-    s.onload = () => setReady(true);
-    document.head.appendChild(s);
+    if (existing) {
+      setReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "google-identity-script";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setReady(true);
+    document.head.appendChild(script);
   }, [enabled]);
 
   useEffect(() => {
@@ -53,37 +79,68 @@ function GoogleBtn({
     try {
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: async (resp: { credential: string }) => {
+        callback: async (response: { credential: string }) => {
           try {
-            await loginWithGoogle(resp.credential, rememberMe);
+            await loginWithGoogle(response.credential, rememberMe);
             toast({ title: "Welcome!", description: "Signed in with Google" });
             onSuccess();
-          } catch (e: any) {
-            toast({ title: "Sign-in failed", description: e.message, variant: "destructive" });
+          } catch (error: any) {
+            toast({ title: "Sign-in failed", description: error.message, variant: "destructive" });
           }
         },
       });
       ref.current.innerHTML = "";
-      const w = Math.min(ref.current.offsetWidth || 320, 400);
+      const width = Math.min(ref.current.offsetWidth || 320, 420);
       window.google.accounts.id.renderButton(ref.current, {
-        theme: "outline", size: "large", width: w,
-        text: view === "signup" ? "signup_with" : "signin_with", shape: "pill",
+        theme: "outline",
+        size: "large",
+        width,
+        text: view === "signup" ? "signup_with" : "continue_with",
+        shape: "rectangular",
       });
     } catch {}
   }, [ready, clientId, view, rememberMe, loginWithGoogle, onSuccess, toast]);
 
   if (!enabled) return null;
+
   return (
-    <div className="mb-4">
-      <div ref={ref} className="min-h-[44px] flex justify-center" data-testid="google-signin-button" />
-      <div className="flex items-center gap-3 mt-4">
-        <div className="flex-1 h-px bg-[#6D2B35]/15" />
-        <span className="text-[11px] uppercase tracking-widest text-[#6D2B35]/40">or</span>
-        <div className="flex-1 h-px bg-[#6D2B35]/15" />
+    <div className="mt-5">
+      <div className="mb-4 flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-[#DCD1C7]" />
+        <span className="font-serif text-sm text-[#746861]">or</span>
+        <span className="h-px flex-1 bg-[#DCD1C7]" />
       </div>
+      <div
+        ref={ref}
+        className="flex min-h-[44px] justify-center overflow-hidden rounded-lg"
+        data-testid="google-signin-button"
+      />
     </div>
   );
 }
+
+const viewCopy: Record<View, { title: string; description: string; panelTitle: string }> = {
+  login: {
+    title: "Welcome Back",
+    description: "Sign in to continue your spiritual journey.",
+    panelTitle: "Login as Devotee",
+  },
+  signup: {
+    title: "Join Vedic Tatva",
+    description: "Create your account and begin a more mindful journey.",
+    panelTitle: "Create your Devotee account",
+  },
+  forgot: {
+    title: "Reset Your Password",
+    description: "We will help you return to your spiritual journey.",
+    panelTitle: "Request a reset link",
+  },
+  "forgot-sent": {
+    title: "Check Your Inbox",
+    description: "Your secure password reset instructions are on their way.",
+    panelTitle: "Reset link sent",
+  },
+};
 
 export default function AuthPage({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
   const { login, register, requestPasswordReset, loading, user } = useAuth();
@@ -98,18 +155,27 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
   const [referralCode, setReferralCode] = useState(() => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search).get("ref");
-    return (p || (typeof localStorage !== "undefined" ? localStorage.getItem("vt_referral_code") || "" : "")).toUpperCase();
+    return (
+      p ||
+      (typeof localStorage !== "undefined" ? localStorage.getItem("vt_referral_code") || "" : "")
+    ).toUpperCase();
   });
   const [rememberMe, setRememberMe] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { if (user) setLocation(redirect); }, [user, redirect, setLocation]);
+  useEffect(() => {
+    if (user) setLocation(redirect);
+  }, [user, redirect, setLocation]);
+
+  useEffect(() => {
+    setView(initialMode);
+  }, [initialMode]);
 
   const handleSuccess = () => setLocation(redirect);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setSubmitting(true);
     try {
       if (view === "login") {
@@ -119,18 +185,36 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
       } else if (view === "signup") {
         if (!name.trim()) throw new Error("Please enter your full name");
         if (password.length < 6) throw new Error("Password must be at least 6 characters");
-        await register({ name: name.trim(), email, password, referralCode: referralCode.trim().toUpperCase() || undefined } as any, rememberMe);
-        if (referralCode) try { localStorage.removeItem("vt_referral_code"); } catch {}
+        await register(
+          {
+            name: name.trim(),
+            email,
+            password,
+            referralCode: referralCode.trim().toUpperCase() || undefined,
+          } as any,
+          rememberMe,
+        );
+        if (referralCode) {
+          try {
+            localStorage.removeItem("vt_referral_code");
+          } catch {}
+        }
         toast({ title: "Account created", description: "Welcome to Vedic Tatva" });
         handleSuccess();
       } else if (view === "forgot") {
         await requestPasswordReset(email);
         setView("forgot-sent");
       }
-    } catch (err: any) {
+    } catch (error: any) {
       toast({
-        title: view === "login" ? "Login failed" : view === "signup" ? "Signup failed" : "Could not send link",
-        description: err.message, variant: "destructive",
+        title:
+          view === "login"
+            ? "Login failed"
+            : view === "signup"
+              ? "Signup failed"
+              : "Could not send link",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setSubmitting(false);
@@ -138,235 +222,328 @@ export default function AuthPage({ initialMode = "login" }: { initialMode?: "log
   };
 
   const isBusy = submitting || loading;
+  const copy = viewCopy[view];
+  const isAccountView = view === "login" || view === "signup";
 
   return (
-    <div className="min-h-screen flex" style={{ background: "linear-gradient(135deg, #fdf6e3 0%, #f5e6c8 100%)" }}>
-      {/* Left decorative panel — desktop only */}
-      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 flex-col items-center justify-center relative overflow-hidden"
-        style={{ background: "linear-gradient(160deg, #6D2B35 0%, #4a1a22 60%, #3a1018 100%)" }}>
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: "radial-gradient(circle at 30% 20%, #D4AF37 0%, transparent 50%), radial-gradient(circle at 70% 80%, #D4AF37 0%, transparent 50%)" }} />
-        <div className="relative z-10 text-center px-10 max-w-sm">
-          <div className="text-5xl font-serif text-[#D4AF37] mb-2 select-none">ॐ</div>
-          <h1 className="text-3xl xl:text-4xl font-serif text-white leading-tight mb-4">
-            Vedic Tatva
-          </h1>
-          <p className="text-[#D4AF37]/80 text-[15px] font-medium tracking-wide mb-2">सनातन धर्म</p>
-          <p className="text-white/60 text-sm leading-relaxed mt-4">
-            Your sacred companion for pandits, puja, jyotish, and authentic spiritual products.
-          </p>
-          <div className="mt-10 grid grid-cols-2 gap-3 text-center">
-            {[
-              { num: "50,000+", label: "Devotees" },
-              { num: "1,200+", label: "Verified Pandits" },
-              { num: "5,000+", label: "Pujas Conducted" },
-              { num: "4.9★", label: "App Rating" },
-            ].map(s => (
-              <div key={s.label} className="rounded-lg bg-white/8 border border-white/10 px-3 py-2.5">
-                <div className="text-[#D4AF37] font-bold text-base">{s.num}</div>
-                <div className="text-white/55 text-[11px] mt-0.5">{s.label}</div>
+    <>
+      <PageSeo
+        title={`${copy.title} | Vedic Tatva`}
+        description="Securely sign in to your Vedic Tatva devotee account."
+        canonical={view === "signup" ? "/register" : "/login"}
+        noindex
+      />
+
+      <div className="relative min-h-[calc(100dvh-5rem)] overflow-hidden bg-[#FBF8F2] text-[#231C1D]">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-60"
+          aria-hidden="true"
+          style={{
+            background:
+              "radial-gradient(circle at 15% 8%, rgba(183,145,73,0.08), transparent 30%), radial-gradient(circle at 90% 75%, rgba(109,43,53,0.055), transparent 32%)",
+          }}
+        />
+
+        <main className="relative mx-auto flex w-full max-w-[620px] flex-col px-4 pb-10 pt-9 sm:px-8 sm:pb-16 sm:pt-14">
+          <header className="mx-auto max-w-lg text-center">
+            <span className="mx-auto mb-4 block h-px w-10 bg-[#B9944D]" aria-hidden="true" />
+            <h1 className="font-serif text-[36px] font-semibold leading-[1.05] tracking-[-0.025em] text-[#20191A] sm:text-[44px]">
+              {copy.title}
+            </h1>
+            <p className="mt-2 text-[15px] leading-6 text-[#726863] sm:text-base">
+              {copy.description}
+            </p>
+            {isAccountView && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] tracking-[0.01em] text-[#756B66] sm:text-xs">
+                <span>Sacred Products</span>
+                <span className="h-3 w-px bg-[#CFC1B5]" aria-hidden="true" />
+                <span>Trusted Experts</span>
+                <span className="h-3 w-px bg-[#CFC1B5]" aria-hidden="true" />
+                <span>A More Mindful You</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            )}
+          </header>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-y-auto">
-        {/* Mobile logo */}
-        <div className="lg:hidden text-center mb-6">
-          <Link href="/">
-            <span className="text-2xl font-serif text-[#6D2B35] cursor-pointer">Vedic Tatva</span>
-          </Link>
-          <div className="text-[#D4AF37] text-xs tracking-widest mt-0.5">सनातन धर्म</div>
-        </div>
+          <section className="mt-7 rounded-[22px] border border-white/90 bg-white/65 px-5 py-6 shadow-[0_18px_55px_rgba(78,49,39,0.075)] backdrop-blur-md sm:mt-9 sm:px-8 sm:py-8">
+            {(view === "forgot" || view === "forgot-sent") && (
+              <button
+                type="button"
+                onClick={() => setView("login")}
+                className="mb-4 inline-flex min-h-9 items-center gap-1.5 rounded-md text-xs font-medium text-[#6D2B35] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/35"
+                data-testid="button-back-to-login"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back to sign in
+              </button>
+            )}
 
-        <div className="w-full max-w-md">
-          {/* Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#D4AF37]/20 overflow-hidden">
-            {/* Header */}
-            <div className="px-6 pt-5 pb-4 border-b border-[#D4AF37]/15"
-              style={{ background: "linear-gradient(135deg, #fdf6e3 0%, #f5e6c8 100%)" }}>
-              {(view === "forgot" || view === "forgot-sent") && (
-                <button type="button" onClick={() => setView("login")}
-                  className="flex items-center gap-1.5 text-[12px] text-[#6D2B35]/60 hover:text-[#6D2B35] mb-3 font-medium"
-                  data-testid="button-back-to-login">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
-                </button>
-              )}
-              <h2 className="text-xl font-serif text-[#6D2B35] font-semibold">
-                {view === "login" ? "Welcome back" :
-                 view === "signup" ? "Create your account" :
-                 view === "forgot" ? "Reset your password" :
-                 "Check your inbox"}
+            <div className="text-center">
+              <h2 className="font-serif text-[25px] font-semibold leading-tight text-[#6D2B35] sm:text-[28px]">
+                {copy.panelTitle}
               </h2>
-              <p className="text-[13px] text-[#6D2B35]/60 mt-1">
-                {view === "login" ? "Sign in to continue your sacred journey" :
-                 view === "signup" ? "Begin your spiritual journey with Vedic Tatva" :
-                 view === "forgot" ? "We'll email you a secure reset link" :
-                 "We've sent a reset link to your inbox"}
+              <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-5 text-[#756A66] sm:text-sm">
+                {view === "login"
+                  ? "Access your orders, puja bookings, saved items and more."
+                  : view === "signup"
+                    ? "Save your favourites, manage bookings and track every order."
+                    : view === "forgot"
+                      ? "Enter your account email and we will send you a secure reset link."
+                      : "If an account matches the email below, a reset link has been sent."}
               </p>
             </div>
 
-            {/* Body */}
-            <div className="px-6 py-5">
-              {view === "forgot-sent" ? (
-                <div className="text-center space-y-4 py-2">
-                  <div className="mx-auto h-14 w-14 rounded-full bg-[#FBF7EE] flex items-center justify-center border border-[#D4AF37]/30">
-                    <CheckCircle2 className="h-7 w-7 text-[#6D2B35]" />
-                  </div>
-                  <p className="text-sm text-[#5a4a3a] leading-relaxed">
-                    If an account exists for <span className="font-semibold text-[#6D2B35]">{email}</span>,
-                    we've sent a password reset link. The link expires in 30 minutes.
-                  </p>
-                  <p className="text-[12px] text-[#6D2B35]/50">
-                    Didn't get it? Check your spam folder or try again.
-                  </p>
-                  <Button type="button" onClick={() => setView("login")}
-                    className="w-full bg-[#6D2B35] text-white"
-                    data-testid="button-back-to-login-cta">
-                    Back to sign in
-                  </Button>
+            {view === "forgot-sent" ? (
+              <div className="py-5 text-center">
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-[#B9944D]/30 bg-[#F8F0DF] text-[#6D2B35]">
+                  <CheckCircle2 className="h-7 w-7" strokeWidth={1.6} />
                 </div>
-              ) : (
-                <>
-                  {(view === "login" || view === "signup") && (
-                    <GoogleBtn view={view} rememberMe={rememberMe} onSuccess={handleSuccess} />
-                  )}
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {view === "signup" && (
-                      <>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="auth-name" className="text-[13px] text-[#6D2B35]/80 font-medium">Full Name</Label>
-                          <div className="relative">
-                            <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6D2B35]/40" />
-                            <Input id="auth-name" data-testid="input-name" value={name}
-                              onChange={e => setName(e.target.value)} placeholder="Your full name"
-                              className="pl-9 text-sm" autoComplete="name" required />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="auth-ref" className="text-[13px] text-[#6D2B35]/80 font-medium flex items-center justify-between">
-                            <span>Referral Code <span className="text-[#5a4a3a]/50 font-normal">(optional)</span></span>
-                            {referralCode && <span className="text-[11px] text-emerald-700 font-normal">Bonus points unlocked</span>}
+                <p className="mt-5 text-sm leading-6 text-[#5F5551]">
+                  If an account exists for{" "}
+                  <span className="font-semibold text-[#6D2B35]">{email}</span>, we&apos;ve sent a
+                  password reset link. The link expires in 30 minutes.
+                </p>
+                <p className="mt-2 text-xs text-[#7E736E]">
+                  Didn&apos;t get it? Check your spam folder or try again.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => setView("login")}
+                  className="mt-6 h-12 w-full rounded-lg bg-[#8D2230] font-serif text-base text-white shadow-[0_8px_20px_rgba(109,43,53,0.16)] hover:bg-[#731B27]"
+                  data-testid="button-back-to-login-cta"
+                >
+                  Back to sign in
+                </Button>
+              </div>
+            ) : (
+              <>
+                <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate={false}>
+                  {view === "signup" && (
+                    <>
+                      <AuthField
+                        id="auth-name"
+                        label="Full name"
+                        icon={UserIcon}
+                        value={name}
+                        onChange={setName}
+                        placeholder="Your full name"
+                        autoComplete="name"
+                        testId="input-name"
+                      />
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between gap-3">
+                          <Label htmlFor="auth-ref" className="text-[13px] font-medium text-[#4F4543]">
+                            Referral code <span className="font-normal text-[#8B807B]">(optional)</span>
                           </Label>
-                          <Input id="auth-ref" data-testid="input-referral-code" value={referralCode}
-                            onChange={e => setReferralCode(e.target.value.toUpperCase())}
-                            placeholder="e.g. VEDIC1234" className="text-sm tracking-wider uppercase" maxLength={20} />
-                        </div>
-                      </>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="auth-email" className="text-[13px] text-[#6D2B35]/80 font-medium">Email address</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6D2B35]/40" />
-                        <Input id="auth-email" data-testid="input-email" type="email" value={email}
-                          onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
-                          className="pl-9 text-sm" autoComplete="email" required />
-                      </div>
-                    </div>
-
-                    {view !== "forgot" && (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label htmlFor="auth-password" className="text-[13px] text-[#6D2B35]/80 font-medium">Password</Label>
-                          {view === "login" && (
-                            <button type="button" onClick={() => setView("forgot")}
-                              className="text-[12px] text-[#6D2B35] hover:text-[#D4AF37] font-medium"
-                              data-testid="button-forgot-password">
-                              Forgot password?
-                            </button>
+                          {referralCode && (
+                            <span className="text-[11px] font-medium text-emerald-700">
+                              Bonus points unlocked
+                            </span>
                           )}
                         </div>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6D2B35]/40" />
-                          <Input id="auth-password" data-testid="input-password"
-                            type={showPwd ? "text" : "password"} value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            placeholder={view === "signup" ? "At least 6 characters" : "Your password"}
-                            className="pl-9 pr-10 text-sm"
-                            autoComplete={view === "signup" ? "new-password" : "current-password"} required />
-                          <button type="button" onClick={() => setShowPwd(v => !v)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6D2B35]/40 hover:text-[#6D2B35]"
-                            aria-label={showPwd ? "Hide password" : "Show password"}
-                            data-testid="button-toggle-password">
-                            {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </button>
-                        </div>
+                        <Input
+                          id="auth-ref"
+                          data-testid="input-referral-code"
+                          value={referralCode}
+                          onChange={(event) => setReferralCode(event.target.value.toUpperCase())}
+                          placeholder="e.g. VEDIC1234"
+                          className="h-12 rounded-lg border-[#D8D0CA] bg-white/70 px-4 text-sm uppercase tracking-wider focus-visible:border-[#8D3442] focus-visible:ring-[#8D3442]/15"
+                          maxLength={20}
+                        />
                       </div>
-                    )}
+                    </>
+                  )}
 
-                    {(view === "login" || view === "signup") && (
-                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                        <Checkbox checked={rememberMe} onCheckedChange={v => setRememberMe(Boolean(v))}
-                          className="border-[#6D2B35]/30 data-[state=checked]:bg-[#6D2B35] data-[state=checked]:border-[#6D2B35]"
-                          data-testid="checkbox-remember-me" />
-                        <span className="text-[13px] text-[#5a4a3a]">Keep me signed in on this device</span>
-                      </label>
-                    )}
-
-                    <Button type="submit" className="w-full bg-[#6D2B35] hover:bg-[#5a232b] text-white"
-                      disabled={isBusy} data-testid="button-submit-auth">
-                      {isBusy && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                      {view === "login" ? "Sign In" : view === "signup" ? "Create Account" : "Send reset link"}
-                    </Button>
-                  </form>
+                  <AuthField
+                    id="auth-email"
+                    label="Email address"
+                    icon={Mail}
+                    type="email"
+                    value={email}
+                    onChange={setEmail}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    testId="input-email"
+                  />
 
                   {view !== "forgot" && (
-                    <p className="text-center text-[13px] text-[#6D2B35]/70 mt-4">
-                      {view === "login" ? (
-                        <>New here?{" "}
-                          <button type="button" onClick={() => setView("signup")}
-                            className="text-[#D4AF37] font-semibold hover:underline"
-                            data-testid="button-switch-signup">
-                            Create an account
-                          </button>
-                        </>
-                      ) : (
-                        <>Already have an account?{" "}
-                          <button type="button" onClick={() => setView("login")}
-                            className="text-[#D4AF37] font-semibold hover:underline"
-                            data-testid="button-switch-login">
-                            Sign in
-                          </button>
-                        </>
+                    <div>
+                      <Label htmlFor="auth-password" className="mb-1.5 block text-[13px] font-medium text-[#4F4543]">
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Lock
+                          className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7C7470]"
+                          strokeWidth={1.6}
+                        />
+                        <Input
+                          id="auth-password"
+                          data-testid="input-password"
+                          type={showPwd ? "text" : "password"}
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder={view === "signup" ? "At least 6 characters" : "Enter your password"}
+                          className="h-12 rounded-lg border-[#D8D0CA] bg-white/70 pl-11 pr-12 text-[15px] focus-visible:border-[#8D3442] focus-visible:ring-[#8D3442]/15"
+                          autoComplete={view === "signup" ? "new-password" : "current-password"}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPwd((visible) => !visible)}
+                          className="absolute right-1 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-md text-[#7C7470] hover:bg-[#F5EFE9] hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/30"
+                          aria-label={showPwd ? "Hide password" : "Show password"}
+                          data-testid="button-toggle-password"
+                        >
+                          {showPwd ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {isAccountView && (
+                    <div className="flex items-center justify-between gap-4 pt-0.5">
+                      <label className="flex min-h-9 cursor-pointer select-none items-center gap-2.5">
+                        <Checkbox
+                          checked={rememberMe}
+                          onCheckedChange={(checked) => setRememberMe(Boolean(checked))}
+                          className="border-[#8B7772] data-[state=checked]:border-[#8D2230] data-[state=checked]:bg-[#8D2230]"
+                          data-testid="checkbox-remember-me"
+                        />
+                        <span className="text-[13px] text-[#433A38]">Keep me signed in</span>
+                      </label>
+                      {view === "login" && (
+                        <button
+                          type="button"
+                          onClick={() => setView("forgot")}
+                          className="min-h-9 shrink-0 text-[13px] font-medium text-[#6D2B35] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/30"
+                          data-testid="button-forgot-password"
+                        >
+                          Forgot password?
+                        </button>
                       )}
-                    </p>
+                    </div>
                   )}
 
-                  {view === "login" && (
-                    <a href="/pandit/login"
-                      className="mt-4 flex items-center justify-between gap-2 rounded-md border border-[#D4AF37]/40 bg-gradient-to-r from-[#FBF7EE] to-[#f4ead0] px-3.5 py-3 hover-elevate active-elevate-2"
-                      data-testid="link-pandit-login-callout">
-                      <span className="flex items-center gap-3 min-w-0">
-                        <span className="h-8 w-8 rounded-full bg-[#6D2B35] text-[#D4AF37] flex items-center justify-center text-base font-bold shrink-0">ॐ</span>
-                        <span className="min-w-0">
-                          <span className="block text-[13px] font-semibold text-[#4a1a22] leading-tight">Are you a Panditji?</span>
-                          <span className="block text-[12px] text-[#6D2B35]/70 leading-tight">Sign in to your dedicated portal</span>
-                        </span>
-                      </span>
-                      <span className="text-[12px] font-bold text-[#6D2B35] whitespace-nowrap">Open →</span>
-                    </a>
-                  )}
+                  <Button
+                    type="submit"
+                    className="h-12 w-full rounded-lg bg-[#8D2230] font-serif text-base text-white shadow-[0_8px_20px_rgba(109,43,53,0.16)] hover:bg-[#731B27] focus-visible:ring-[#B9944D] disabled:bg-[#A9868B]"
+                    disabled={isBusy}
+                    data-testid="button-submit-auth"
+                  >
+                    {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {view === "login" ? "Sign In" : view === "signup" ? "Create Account" : "Send reset link"}
+                    {!isBusy && <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.7} />}
+                  </Button>
+                </form>
 
-                  <p className="text-[11px] text-center text-[#6D2B35]/45 leading-snug mt-4">
-                    By continuing, you agree to our{" "}
-                    <Link href="/terms-conditions" className="underline">Terms</Link> &amp;{" "}
-                    <Link href="/privacy-policy" className="underline">Privacy Policy</Link>.
+                {isAccountView && (
+                  <GoogleBtn view={view} rememberMe={rememberMe} onSuccess={handleSuccess} />
+                )}
+
+                {view !== "forgot" && (
+                  <p className="mt-6 text-center text-[14px] text-[#554B48]">
+                    {view === "login" ? (
+                      <>
+                        New to Vedic Tatva?{" "}
+                        <button
+                          type="button"
+                          onClick={() => setView("signup")}
+                          className="inline-flex min-h-8 items-center gap-1 font-medium text-[#6D2B35] underline decoration-[#6D2B35]/35 underline-offset-4 hover:decoration-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/30"
+                          data-testid="button-switch-signup"
+                        >
+                          Create an account <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={() => setView("login")}
+                          className="inline-flex min-h-8 items-center gap-1 font-medium text-[#6D2B35] underline decoration-[#6D2B35]/35 underline-offset-4 hover:decoration-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/30"
+                          data-testid="button-switch-login"
+                        >
+                          Sign in <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
                   </p>
-                </>
-              )}
-            </div>
-          </div>
+                )}
 
-          <div className="text-center mt-5">
-            <Link href="/" className="text-[13px] text-[#6D2B35]/60 hover:text-[#6D2B35] flex items-center justify-center gap-1">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to Vedic Tatva
-            </Link>
-          </div>
-        </div>
+                {isAccountView && (
+                  <div className="mt-3 text-center">
+                    <Link
+                      href="/"
+                      className="inline-flex min-h-10 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium text-[#6D2B35] underline decoration-[#6D2B35]/25 underline-offset-4 transition-colors hover:bg-[#F7F0EA] hover:decoration-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8D3442]/30"
+                      data-testid="link-continue-browsing"
+                    >
+                      Continue browsing without signing in
+                      <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.7} />
+                    </Link>
+                  </div>
+                )}
+
+                <p className="mx-auto mt-5 max-w-sm text-center text-[11px] leading-5 text-[#7B706B]">
+                  By continuing, you agree to Vedic Tatva&apos;s{" "}
+                  <Link href="/terms-conditions" className="underline underline-offset-2 hover:text-[#6D2B35]">
+                    Terms
+                  </Link>{" "}
+                  &amp;{" "}
+                  <Link href="/privacy-policy" className="underline underline-offset-2 hover:text-[#6D2B35]">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              </>
+            )}
+          </section>
+        </main>
+      </div>
+    </>
+  );
+}
+
+function AuthField({
+  id,
+  label,
+  icon: Icon,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  testId,
+}: {
+  id: string;
+  label: string;
+  icon: typeof Mail;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  autoComplete: string;
+  testId: string;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-[#4F4543]">
+        {label}
+      </Label>
+      <div className="relative">
+        <Icon
+          className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7C7470]"
+          strokeWidth={1.6}
+        />
+        <Input
+          id={id}
+          data-testid={testId}
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="h-12 rounded-lg border-[#D8D0CA] bg-white/70 pl-11 pr-4 text-[15px] focus-visible:border-[#8D3442] focus-visible:ring-[#8D3442]/15"
+          autoComplete={autoComplete}
+          required
+        />
       </div>
     </div>
   );
