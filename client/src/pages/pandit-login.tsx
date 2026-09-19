@@ -168,8 +168,9 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
 
   const copy = {
     workspace: hindi ? "पंडितजी पोर्टल" : "Panditji portal",
-    loginTitle: hindi ? "साइन इन करें" : "Sign in",
-    loginDescription: hindi ? "बुकिंग, कैलेंडर, कमाई और संदेशों में साइन इन करें।" : "Sign in to bookings, calendar, earnings and messages.",
+    loginDescription: hindi
+      ? "बुकिंग, कैलेंडर, कमाई, AI टूल्स, संदेशों और कई प्रीमियम सुविधाओं में साइन इन करें।"
+      : "Sign in to bookings, calendar, earnings, AI tools, messages, and many premium features.",
     signIn: hindi ? "साइन इन" : "Sign in",
     apply: hindi ? "जुड़ने के लिए आवेदन" : "Apply to join",
     signupTitle: hindi ? "पंडितजी के रूप में जुड़ें" : "Join as a Panditji",
@@ -608,9 +609,11 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 </div>
                 <div>
                   <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">{copy.workspace}</p>
-                  <h1 className="font-serif text-[2rem] font-semibold leading-[1.04] tracking-[-.04em] text-[#4A1A22]" data-testid="text-pandit-login-title">
-                    {mode === "signup" ? copy.signupTitle : copy.loginTitle}
-                  </h1>
+                  {mode === "signup" && (
+                    <h1 className="font-serif text-[2rem] font-semibold leading-[1.04] tracking-[-.04em] text-[#4A1A22]" data-testid="text-pandit-login-title">
+                      {copy.signupTitle}
+                    </h1>
+                  )}
                   <p className="mt-2 text-xs leading-5 text-[#806F5E]">
                     {mode === "signup" ? copy.signupDescription : copy.loginDescription}
                   </p>
