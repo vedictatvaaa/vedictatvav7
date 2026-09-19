@@ -24,6 +24,7 @@ import {
   sessionMessages,
   sessionRatings,
   freeChatGrants,
+  siteSettings,
 } from "@shared/schema";
 import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 
@@ -33,6 +34,14 @@ const MIN_RECHARGE_PAISE = 5000;       // ₹50 min
 const MAX_RECHARGE_PAISE = 5000000;    // ₹50,000 max
 const ZERO_BALANCE_GRACE_SEC = 30;
 const SESSION_TIMEOUT_WAITING_MS = 5 * 60 * 1000;
+
+async function isAstrologerPartnerAccessEnabled() {
+  const [settings] = await db
+    .select({ enabled: siteSettings.astrologerPartnerAccessEnabled })
+    .from(siteSettings)
+    .limit(1);
+  return settings?.enabled === true;
+}
 
 // In-memory heartbeat for astrologer "online now" — same pattern as pandit-portal.
 const heartbeats = new Map<number, number>();
@@ -632,6 +641,9 @@ export function registerAstroRealtimeRoutes(app: Express) {
   // ============================================================
   app.post("/api/astrologer/auth/login", async (req, res) => {
     try {
+      if (!(await isAstrologerPartnerAccessEnabled())) {
+        return res.status(403).json({ error: "Astrologer partner access is not open yet." });
+      }
       const schema = z.object({ phone: z.string().min(6), password: z.string().min(1) });
       const { phone, password } = schema.parse(req.body);
       const norm = phone.replace(/\D/g, "").slice(-10);

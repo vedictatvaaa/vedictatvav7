@@ -55,6 +55,7 @@ function SiteSettingsTab() {
     maintenanceMode: false,
     panditContactMode: "login_required",
     panditContactUnlockPricePaise: 1000,
+    astrologerPartnerAccessEnabled: false,
   });
   const [uploadingAsset, setUploadingAsset] = useState<"logo" | "font" | null>(null);
   const [baseline, setBaseline] = useState<string | null>(null);
@@ -114,6 +115,7 @@ function SiteSettingsTab() {
         maintenanceMode: Boolean((settings as any).maintenanceMode),
         panditContactMode: (settings as any).panditContactMode || "login_required",
         panditContactUnlockPricePaise: Number((settings as any).panditContactUnlockPricePaise) || 1000,
+        astrologerPartnerAccessEnabled: Boolean((settings as any).astrologerPartnerAccessEnabled),
       };
       setForm(normalized);
       setBaseline(JSON.stringify(normalized));
@@ -533,6 +535,28 @@ function SiteSettingsTab() {
               onChange={(event) => updateField("panditContactUnlockPricePaise", Math.round(Math.max(1, Math.min(10000, Number(event.target.value) || 1)) * 100))}
               data-testid="input-pandit-contact-price" />
             <p className="text-xs text-muted-foreground">Stored in paise; applies only to new paid unlock orders. Default ₹10.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card border-border" data-testid="card-astrologer-partner-access">
+        <CardHeader>
+          <CardTitle className="text-lg text-primary font-serif flex items-center gap-2"><Sparkles className="w-5 h-5" /> Astrologer partner access</CardTitle>
+          <CardDescription>Keep the Astrologer dashboard and application option frozen until the partner workflow is ready.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">Enable Astrologer portal and applications</Label>
+              <p className="text-xs text-muted-foreground">
+                When OFF, both Astrologer entry points remain visible but disabled. When ON, partners can open the portal and apply as an Astrologer.
+              </p>
+            </div>
+            <Switch
+              checked={form.astrologerPartnerAccessEnabled}
+              onCheckedChange={(checked) => updateField("astrologerPartnerAccessEnabled", checked)}
+              data-testid="switch-astrologer-partner-access"
+            />
           </div>
         </CardContent>
       </Card>

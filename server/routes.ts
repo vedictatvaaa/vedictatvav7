@@ -10747,6 +10747,10 @@ Return JSON: {"description": "your optimized HTML description here"}` }
 
   app.post("/api/astrologer-applications", async (req, res) => {
     try {
+      const siteSettings = await storage.getSiteSettings();
+      if (siteSettings?.astrologerPartnerAccessEnabled !== true) {
+        return res.status(403).json({ message: "Astrologer applications are not open yet." });
+      }
       const schema = z.object({
         fullName: z.string().min(1),
         phone: z.string().min(1),

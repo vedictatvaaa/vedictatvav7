@@ -1020,6 +1020,7 @@ export const siteSettings = pgTable("site_settings", {
   // storefronts may only tighten or explicitly override this policy.
   panditContactMode: text("pandit_contact_mode").notNull().default("login_required"),
   panditContactUnlockPricePaise: integer("pandit_contact_unlock_price_paise").notNull().default(1000),
+  astrologerPartnerAccessEnabled: boolean("astrologer_partner_access_enabled").notNull().default(false),
   whatsappNumber: text("whatsapp_number"),
   socialInstagram: text("social_instagram"),
   socialFacebook: text("social_facebook"),

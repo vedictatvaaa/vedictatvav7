@@ -1,8 +1,9 @@
-import { ArrowLeft, ArrowRight, Flame, Flower2, MoonStar, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flame, Flower2, LockKeyhole, MoonStar, type LucideIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import PageSeo from "@/components/PageSeo";
 import { partnerProviders } from "@/lib/partner-providers";
 import { useI18n } from "@/lib/i18n";
+import { useSiteSettings } from "@/lib/site-settings";
 
 const roleIcons: Record<string, LucideIcon> = {
   pandit: Flame,
@@ -23,6 +24,8 @@ export default function PartnerPage() {
   const [, setLocation] = useLocation();
   const { language } = useI18n();
   const hindi = language === "hi";
+  const siteSettings = useSiteSettings();
+  const astrologerAccessEnabled = siteSettings?.astrologerPartnerAccessEnabled === true;
 
   const copy = hindi
     ? {
@@ -37,6 +40,8 @@ export default function PartnerPage() {
         astrologerTitle: "ज्योतिषी पोर्टल",
         astrologerDescription: "कंसल्टेशन, संदेश और कमाई अपने डैशबोर्ड से संभालें।",
         astrologerAction: "ज्योतिषी पोर्टल खोलें",
+        astrologerApply: "ज्योतिषी के रूप में आवेदन करें",
+        frozen: "जल्द उपलब्ध होगा",
         newPartner: "पहली बार जुड़ रहे हैं?",
         apply: "पंडितजी के रूप में आवेदन करें",
         help: "सहायता चाहिए? हमसे संपर्क करें",
@@ -55,6 +60,8 @@ export default function PartnerPage() {
         astrologerTitle: "Astrologer portal",
         astrologerDescription: "Manage consultations, messages and earnings from your dashboard.",
         astrologerAction: "Open astrologer portal",
+        astrologerApply: "Apply as an Astrologer",
+        frozen: "Coming soon",
         newPartner: "New to Vedic Tatva?",
         apply: "Apply as a Panditji",
         help: "Need help? Contact us",
@@ -124,18 +131,15 @@ export default function PartnerPage() {
               const ProviderIcon = roleIcons[provider.id];
               const content = roleContent[provider.id];
               const isPrimary = index === 0;
-
-              return (
-                <Link
-                  key={provider.id}
-                  href={provider.destination || "/"}
-                  className={`group flex min-h-[88px] items-center gap-3 rounded-2xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 ${
-                    isPrimary
-                      ? "border-[#D4AF37]/45 bg-[#FFFDF8] shadow-[0_10px_24px_rgba(77,40,36,.08)] hover:-translate-y-0.5 hover:shadow-[0_15px_30px_rgba(77,40,36,.12)]"
-                      : "border-white/90 bg-white/45 hover:border-[#D4AF37]/35 hover:bg-white/70"
-                  }`}
-                  data-testid={`partner-provider-card-${provider.id}`}
-                >
+              const isAstrologer = provider.id === "astrologer";
+              const isFrozen = isAstrologer && !astrologerAccessEnabled;
+              const cardClass = `group flex min-h-[88px] items-center gap-3 rounded-2xl border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 ${
+                isPrimary
+                  ? "border-[#D4AF37]/45 bg-[#FFFDF8] shadow-[0_10px_24px_rgba(77,40,36,.08)] hover:-translate-y-0.5 hover:shadow-[0_15px_30px_rgba(77,40,36,.12)]"
+                  : "border-white/90 bg-white/45 hover:border-[#D4AF37]/35 hover:bg-white/70"
+              }`;
+              const cardContent = (
+                <>
                   <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border ${
                     isPrimary
                       ? "border-[#D4AF37]/35 bg-[#F1DFB5] text-[#7F5A15]"
@@ -144,13 +148,42 @@ export default function PartnerPage() {
                     <ProviderIcon className="h-6 w-6" strokeWidth={1.35} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-serif text-[17px] font-semibold leading-none text-[#6D2B35]">{content.title}</span>
+                    <span className={`block font-serif text-[17px] font-semibold leading-none ${isFrozen ? "text-[#806F5E]" : "text-[#6D2B35]"}`}>{content.title}</span>
                     <span className="mt-1.5 block text-[11px] leading-[1.35] text-[#6B5B52]">{content.description}</span>
-                    <span className={`mt-1.5 inline-flex text-[9px] font-bold uppercase tracking-[0.08em] ${isPrimary ? "text-[#A67817]" : "text-[#56745B]"}`}>
-                      {content.action}
+                    <span className={`mt-1.5 inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] ${isFrozen ? "text-[#806F5E]" : isPrimary ? "text-[#A67817]" : "text-[#56745B]"}`}>
+                      {isFrozen && <LockKeyhole className="h-3 w-3" aria-hidden="true" />}
+                      {isFrozen ? content.action : content.action}
                     </span>
                   </span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-[#A67817] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  {isFrozen ? (
+                    <LockKeyhole className="h-4 w-4 shrink-0 text-[#806F5E]" aria-hidden="true" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 shrink-0 text-[#A67817] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  )}
+                </>
+              );
+
+              if (isFrozen) {
+                return (
+                  <div
+                    key={provider.id}
+                    className={`${cardClass} cursor-not-allowed opacity-70`}
+                    aria-disabled="true"
+                    data-testid={`partner-provider-card-${provider.id}`}
+                  >
+                    {cardContent}
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={provider.id}
+                  href={provider.destination || "/"}
+                  className={cardClass}
+                  data-testid={`partner-provider-card-${provider.id}`}
+                >
+                  {cardContent}
                 </Link>
               );
             })}
@@ -165,6 +198,26 @@ export default function PartnerPage() {
             >
               {copy.apply}
             </Link>
+            <div className="mt-2">
+              {astrologerAccessEnabled ? (
+                <Link
+                  href="/become-astrologer"
+                  className="inline-flex min-h-8 items-center rounded-full px-3 text-[11px] font-bold text-[#56745B] underline decoration-[#8EA98B]/70 underline-offset-4 transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]"
+                  data-testid="link-partner-astrologer-signup"
+                >
+                  {copy.astrologerApply}
+                </Link>
+              ) : (
+                <span
+                  className="inline-flex min-h-8 cursor-not-allowed items-center gap-1.5 rounded-full px-3 text-[11px] font-bold text-[#806F5E]/75"
+                  aria-disabled="true"
+                  data-testid="link-partner-astrologer-signup-disabled"
+                >
+                  <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+                  {copy.astrologerApply} · {copy.frozen}
+                </span>
+              )}
+            </div>
           </div>
         </section>
 
