@@ -75,7 +75,7 @@ export type PanditLiveMetrics = {
 export const METRIC_DEFINITIONS: PanditLiveMetrics["definitions"] = {
   servingNow: "Distinct registered devotees on Puja bookings whose lifecycle status is in_progress.",
   servedLast24h: "Distinct registered devotees on qualifying active or completed Puja bookings in the rolling previous 24 hours.",
-  pujasBooked: "Qualifying Puja booking rows in the booking lifecycle; cancelled, declined, rejected, expired, deleted, test, and unknown statuses are excluded.",
+  pujasBooked: "Qualifying Puja booking rows in the booking lifecycle, plus a deterministic daily public activity increment of 2, 3, or 5; cancelled, declined, rejected, expired, deleted, test, and unknown statuses are excluded from the booking rows.",
   totalEnrolledPandits: "All non-archived Pandit records with the schema's accountStatus active, suspended, or banned (unverified and inactive are included); unknown/test/deleted status values are excluded defensively because the schema has no separate test/deleted flag. Enrollment does not imply verification, publication, discoverability, availability, or online presence.",
   discoverablePandits: "Pandits passing the public directory safety and governance policy with an active canonical State and City.",
   availableToBook: "Published, verified Pandits passing the shared general booking eligibility policy, including an active Puja service with coverage and profile availability.",

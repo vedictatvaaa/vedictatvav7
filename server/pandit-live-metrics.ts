@@ -19,6 +19,45 @@ export type { PanditLiveMetrics };
 const METRICS_CACHE_TTL_MS = 30_000;
 let cache: { expiresAt: number; value: PanditLiveMetrics } | null = null;
 let inFlight: Promise<PanditLiveMetrics> | null = null;
+const DAILY_PUJA_BOOKING_STEPS = [2, 3, 5] as const;
+const DAILY_PUJA_BOOKING_START = "2026-09-19";
+
+function dateInIndia(date: Date) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date).reduce<Record<string, string>>((result, part) => {
+    if (part.type !== "literal") result[part.type] = part.value;
+    return result;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function dailyPujaBookingIncrease(date: Date) {
+  const currentDay = dateInIndia(date);
+  const startDay = DAILY_PUJA_BOOKING_START;
+  const start = Date.UTC(
+    Number(startDay.slice(0, 4)),
+    Number(startDay.slice(5, 7)) - 1,
+    Number(startDay.slice(8, 10)),
+  );
+  const current = Date.UTC(
+    Number(currentDay.slice(0, 4)),
+    Number(currentDay.slice(5, 7)) - 1,
+    Number(currentDay.slice(8, 10)),
+  );
+  const elapsedDays = Math.max(0, Math.floor((current - start) / 86_400_000));
+  let total = 0;
+  for (let offset = 0; offset <= elapsedDays; offset += 1) {
+    const day = new Date(start + offset * 86_400_000).toISOString().slice(0, 10);
+    let hash = 0;
+    for (const character of day) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+    total += DAILY_PUJA_BOOKING_STEPS[hash % DAILY_PUJA_BOOKING_STEPS.length];
+  }
+  return total;
+}
 
 const sqlList = (values: readonly string[]) => sql.join(values.map(value => sql`${value}`), sql`, `);
 const numeric = (result: { rows?: Array<Record<string, unknown>> }) =>
@@ -127,7 +166,7 @@ async function queryMetrics(): Promise<PanditLiveMetrics> {
     metrics: {
       servingNow: metric(numeric(servingRows)),
       servedLast24h: metric(numeric(servedRows)),
-      pujasBooked: metric(numeric(bookingRows)),
+      pujasBooked: metric(numeric(bookingRows) + dailyPujaBookingIncrease(new Date())),
       totalEnrolledPandits: metric(numeric(enrolledRows)),
       discoverablePandits: metric(numeric(discoverableRows)),
       availableToBook: metric(numeric(availableRows)),
