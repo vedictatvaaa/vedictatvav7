@@ -11,8 +11,70 @@ const DEFAULT_MASTER_SERVICES = [
   { name: "Vedic Consultation", slug: "vedic-consultation", category: "Consultations", description: "A private consultation about the appropriate puja or ritual.", serviceType: "consultation", supportedModes: ["in_person", "online"], onlineAvailable: true, physicalAvailable: true },
 ] as const;
 
+const ADDITIONAL_CANONICAL_PUJAS = [
+  ["Durga Puja", "durga-puja", "Devi pujas", "puja"],
+  ["Saraswati Puja", "saraswati-puja", "Devi pujas", "puja"],
+  ["Vishnu Puja", "vishnu-puja", "Vishnu pujas", "puja"],
+  ["Shiva Puja", "shiva-puja", "Shiva pujas", "puja"],
+  ["Hanuman Puja", "hanuman-puja", "Deity pujas", "puja"],
+  ["Krishna Puja", "krishna-puja", "Deity pujas", "puja"],
+  ["Ram Puja", "ram-puja", "Deity pujas", "puja"],
+  ["Navratri Puja", "navratri-puja", "Festival pujas", "puja"],
+  ["Diwali Lakshmi Ganesh Puja", "diwali-lakshmi-ganesh-puja", "Festival pujas", "puja"],
+  ["Dhanvantari Puja", "dhanvantari-puja", "Wellness pujas", "puja"],
+  ["Annapurna Puja", "annapurna-puja", "Devi pujas", "puja"],
+  ["Tulsi Vivah Puja", "tulsi-vivah-puja", "Family ceremonies", "puja"],
+  ["Vastu Shanti Puja", "vastu-shanti-puja", "Home ceremonies", "puja"],
+  ["Bhoomi Puja", "bhoomi-puja", "Home ceremonies", "puja"],
+  ["Lakshmi Narayan Puja", "lakshmi-narayan-puja", "Prosperity pujas", "puja"],
+  ["Kubera Puja", "kubera-puja", "Prosperity pujas", "puja"],
+  ["Shani Shanti Puja", "shani-shanti-puja", "Graha shanti", "puja"],
+  ["Mangal Dosha Puja", "mangal-dosha-puja", "Graha shanti", "puja"],
+  ["Kaal Sarp Dosh Nivaran", "kaal-sarp-dosh-nivaran", "Graha shanti", "ritual"],
+  ["Pitra Dosh Nivaran", "pitra-dosh-nivaran", "Graha shanti", "ritual"],
+  ["Grahan Shanti Puja", "grahan-shanti-puja", "Graha shanti", "puja"],
+  ["Sunderkand Path", "sunderkand-path", "Path and katha", "katha"],
+  ["Hanuman Chalisa Path", "hanuman-chalisa-path", "Path and katha", "katha"],
+  ["Bhagwat Katha", "bhagwat-katha", "Path and katha", "katha"],
+  ["Ram Katha", "ram-katha", "Path and katha", "katha"],
+  ["Devi Bhagwat Katha", "devi-bhagwat-katha", "Path and katha", "katha"],
+  ["Shiv Mahapuran Katha", "shiv-mahapuran-katha", "Path and katha", "katha"],
+  ["Durga Saptashati Path", "durga-saptashati-path", "Path and katha", "katha"],
+  ["Garuda Purana Path", "garuda-purana-path", "Path and katha", "katha"],
+  ["Shanti Path", "shanti-path", "Path and katha", "katha"],
+  ["Naamkaran Sanskar", "naamkaran-sanskar", "Life ceremonies", "ritual"],
+  ["Annaprashan Sanskar", "annaprashan-sanskar", "Life ceremonies", "ritual"],
+  ["Mundan Sanskar", "mundan-sanskar", "Life ceremonies", "ritual"],
+  ["Upanayan Sanskar", "upanayan-sanskar", "Life ceremonies", "ritual"],
+  ["Vivah Sanskar", "vivah-sanskar", "Life ceremonies", "ritual"],
+  ["Griha Shanti Havan", "griha-shanti-havan", "Havan and yagya", "ritual"],
+  ["Navchandi Yagya", "navchandi-yagya", "Havan and yagya", "ritual"],
+  ["Maha Ganapati Havan", "maha-ganapati-havan", "Havan and yagya", "ritual"],
+  ["Rudra Havan", "rudra-havan", "Havan and yagya", "ritual"],
+  ["Lakshmi Havan", "lakshmi-havan", "Havan and yagya", "ritual"],
+  ["Navgraha Havan", "navgraha-havan", "Havan and yagya", "ritual"],
+  ["Agnihotra Havan", "agnihotra-havan", "Havan and yagya", "ritual"],
+  ["New Business Puja", "new-business-puja", "Business ceremonies", "puja"],
+  ["Shop Opening Puja", "shop-opening-puja", "Business ceremonies", "puja"],
+  ["Vehicle Puja", "vehicle-puja", "Milestone pujas", "puja"],
+] as const;
+
+const CANONICAL_PUJAS = ADDITIONAL_CANONICAL_PUJAS.map(([name, slug, category, serviceType]) => ({
+  name,
+  slug,
+  category,
+  description: `${name} performed according to traditional Vedic practice.`,
+  serviceType,
+  supportedModes: ["in_person", "online"],
+  onlineAvailable: true,
+  physicalAvailable: true,
+  minRate: 3100,
+  maxRate: 21000,
+  defaultDurationMinutes: 120,
+}));
+
 export async function seedMasterServices() {
-  for (const service of DEFAULT_MASTER_SERVICES) {
+  for (const service of [...DEFAULT_MASTER_SERVICES, ...CANONICAL_PUJAS]) {
     if (await storage.getMasterServiceBySlug(service.slug)) continue;
     try {
       await storage.createMasterService({
