@@ -185,9 +185,10 @@ function getResultImage(result: SearchResult): string | null {
 
 type NavbarProps = {
   hidePromo?: boolean;
+  partnerMode?: boolean;
 };
 
-export default function Navbar({ hidePromo = false }: NavbarProps) {
+export default function Navbar({ hidePromo = false, partnerMode = false }: NavbarProps) {
   const [location, setLocation] = useLocation();
   const { totalItems } = useCart();
   const { user, logout } = useAuth();
@@ -495,7 +496,7 @@ export default function Navbar({ hidePromo = false }: NavbarProps) {
       <div className="sticky top-0 z-50">
       {!hidePromo && <PromoBar />}
 
-      <nav className={`w-full transition-all duration-300 ${
+      <nav className={`w-full transition-all duration-300 ${partnerMode ? "max-md:hidden" : ""} ${
         scrolled
           ? "bg-[#faf7f2]/95 backdrop-blur-lg shadow-sm"
           : "bg-[#faf7f2]/90 backdrop-blur-md"

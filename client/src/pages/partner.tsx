@@ -84,6 +84,91 @@ function BottomDiyaDecoration() {
   );
 }
 
+const mobilePartnerReferenceImage =
+  "/attached_assets/WhatsApp_Image_2026-09-19_at_6.31.59_PM_1789822970221.jpeg";
+
+function ExactMobilePartnerReference({
+  copy,
+  onBack,
+}: {
+  copy: ReturnType<typeof getPartnerCopy>;
+  onBack: () => void;
+}) {
+  return (
+    <section
+      className="relative mx-auto w-full max-w-[735px] overflow-hidden bg-[#faf6f0]"
+      aria-labelledby="mobile-partner-reference-heading"
+      data-testid="partner-mobile-reference"
+    >
+      <img
+        src={mobilePartnerReferenceImage}
+        alt=""
+        className="block h-auto w-full select-none"
+        draggable={false}
+      />
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="absolute rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "3.5%", top: "7.25%", width: "18%", height: "3.5%" }}
+        aria-label={copy.backAria}
+        data-testid="button-partner-back"
+      />
+      <Link
+        href="/partner"
+        className="absolute rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "62%", top: "2.35%", width: "7.3%", height: "3.3%" }}
+        aria-label="English"
+        data-testid="partner-mobile-language-en"
+      />
+      <Link
+        href="/hi/partner"
+        className="absolute rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "69.1%", top: "2.35%", width: "7.6%", height: "3.3%" }}
+        aria-label="हिन्दी"
+        data-testid="partner-mobile-language-hi"
+      />
+      <button
+        type="button"
+        className="absolute rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "80.8%", top: "2.15%", width: "8.5%", height: "4%" }}
+        aria-label="Search"
+        data-testid="partner-mobile-search"
+      />
+      <Link
+        href="/cart"
+        className="absolute rounded-full bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "90.5%", top: "1.85%", width: "8.5%", height: "4.5%" }}
+        aria-label="Cart"
+        data-testid="partner-mobile-cart"
+      />
+      <Link
+        href="/pandit/login"
+        className="absolute rounded-[5px] bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8b1527]"
+        style={{ left: "7.7%", top: "36.7%", width: "39%", height: "3.7%" }}
+        aria-label={copy.providers.pandit.cta}
+        data-testid="link-partner-pandit-login"
+      />
+
+      <div className="sr-only" id="mobile-partner-reference-heading">
+        <h1>{copy.heading}</h1>
+        <p>{copy.intro}</p>
+        <article data-testid="partner-provider-card-pandit">
+          <h2>{copy.providers.pandit.title}</h2>
+          <p>{copy.providers.pandit.description}</p>
+          <ul>{copy.providers.pandit.benefits.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul>
+        </article>
+        <article data-testid="partner-provider-card-astrologer" aria-disabled="true">
+          <h2>{copy.providers.astrologer.title}</h2>
+          <p>{copy.providers.astrologer.description}</p>
+          <ul>{copy.providers.astrologer.benefits.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 export default function PartnerPage() {
   const [, setLocation] = useLocation();
   const { language } = useI18n();
@@ -98,8 +183,12 @@ export default function PartnerPage() {
   };
 
   return (
+    <>
+      <div className="md:hidden">
+        {language === "en" ? <ExactMobilePartnerReference copy={copy} onBack={handleBack} /> : null}
+      </div>
     <div
-      className="relative isolate min-h-full overflow-hidden bg-[#faf5eb] text-[#302426]"
+      className={`${language === "hi" ? "block" : "hidden md:block"} relative isolate min-h-full overflow-hidden bg-[#faf5eb] text-[#302426]`}
       data-testid="partner-entry-page"
     >
       <PageSeo
@@ -380,5 +469,6 @@ export default function PartnerPage() {
 
       <BottomDiyaDecoration />
     </div>
+    </>
   );
 }
