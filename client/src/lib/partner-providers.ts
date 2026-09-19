@@ -18,7 +18,8 @@ export const partnerProviders: readonly PartnerProvider[] = [
     id: "astrologer",
     label: "Astrologer",
     description: "Offer astrology consultations and guidance to devotees.",
-    active: false,
+    destination: "/astrologer-portal",
+    active: true,
   },
 ];
 
