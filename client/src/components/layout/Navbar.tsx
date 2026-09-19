@@ -523,7 +523,7 @@ export default function Navbar({ hidePromo = false }: NavbarProps) {
             data-testid="link-home"
           >
              <span className="hidden h-full w-[280px] items-center md:inline-flex"><BrandMark settings={settings} placement="desktop" testId="navbar-brand-mark" /></span>
-             <span className="inline-flex h-full w-[210px] items-center md:hidden"><BrandMark settings={settings} placement="mobile" testId="navbar-brand-mark-mobile" /></span>
+             <span className="relative left-2 inline-flex h-full w-[210px] items-center md:hidden"><BrandMark settings={settings} placement="mobile" testId="navbar-brand-mark-mobile" /></span>
             {festival && (
               <span
                 className="absolute left-full ml-2.5 hidden items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide whitespace-nowrap lg:static lg:inline-flex"
