@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Flame, Flower2, LockKeyhole, MoonStar, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenCheck, Flower2, Gem, LockKeyhole, Orbit, type LucideIcon } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import PageSeo from "@/components/PageSeo";
 import { partnerProviders } from "@/lib/partner-providers";
@@ -6,8 +6,8 @@ import { useI18n } from "@/lib/i18n";
 import { useSiteSettings } from "@/lib/site-settings";
 
 const roleIcons: Record<string, LucideIcon> = {
-  pandit: Flame,
-  astrologer: MoonStar,
+  pandit: BookOpenCheck,
+  astrologer: Orbit,
 };
 
 function DevotionalMark() {
@@ -140,12 +140,31 @@ export default function PartnerPage() {
               }`;
               const cardContent = (
                 <>
-                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border ${
+                  <span className={`relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border ${
                     isPrimary
                       ? "border-[#D4AF37]/35 bg-[#F1DFB5] text-[#7F5A15]"
                       : "border-[#8EA98B]/25 bg-[#DCE8D8]/55 text-[#56745B]"
                   }`}>
-                    <ProviderIcon className="h-6 w-6" strokeWidth={1.35} aria-hidden="true" />
+                    {provider.id === "pandit" ? (
+                      <>
+                        <img
+                          src="/attached_assets/generated_images/sage-partner-card.png"
+                          alt=""
+                          aria-hidden="true"
+                          loading="eager"
+                          decoding="async"
+                          className="absolute inset-0 h-full w-full scale-[2.4] object-cover object-[46%_28%]"
+                        />
+                        <span className="absolute bottom-0 right-0 grid h-5 w-5 place-items-center rounded-full border border-[#FFFDF8] bg-[#F1DFB5] text-[#7F5A15] shadow-sm">
+                          <ProviderIcon className="h-3 w-3" strokeWidth={1.8} aria-hidden="true" />
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Gem className="h-6 w-6 text-[#56745B]" strokeWidth={1.25} aria-hidden="true" />
+                        <Orbit className="absolute h-10 w-10 text-[#A67817]/65" strokeWidth={0.9} aria-hidden="true" />
+                      </>
+                    )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className={`block font-serif text-[17px] font-semibold leading-none ${isFrozen ? "text-[#806F5E]" : "text-[#6D2B35]"}`}>{content.title}</span>
