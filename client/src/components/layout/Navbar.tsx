@@ -525,18 +525,12 @@ export default function Navbar() {
                 data-testid="img-site-logo"
               />
             ) : null}
-            <span className="flex min-w-0 flex-col items-center lg:items-start">
+            <span className="flex min-w-0 items-center">
               <span
                 className="font-vedic text-[22px] font-normal leading-none tracking-[0.015em] text-[#6D2B35] md:text-[24px] lg:text-[27px]"
                 data-testid="text-site-name"
               >
                 {settings?.siteName || "Vedic Tatva"}
-              </span>
-              <span
-                className="mt-0.5 whitespace-nowrap text-[6px] font-medium uppercase leading-none tracking-[0.13em] text-[#806E64] md:text-[6.5px] lg:text-[7px]"
-                data-testid="text-site-tagline"
-              >
-                Heritage of Nature, Wellness &amp; Purity
               </span>
             </span>
             {festival && (
@@ -1073,11 +1067,8 @@ export default function Navbar() {
               {/* Branded header */}
               <div className="relative shrink-0 px-5 pb-3 pt-4">
                 <div className="pr-10">
-                  <p id="mobile-menu-title" className="truncate font-serif text-[25px] font-bold leading-none tracking-[-0.035em] text-[#731F2B]" data-testid="text-mobile-brand">
+                  <p id="mobile-menu-title" className="font-vedic truncate text-[27px] font-normal leading-none tracking-[0.015em] text-[#6D2B35]" data-testid="text-mobile-brand">
                     {settings?.siteName || "Vedic Tatva"}
-                  </p>
-                  <p className="mt-1.5 text-[10px] leading-3.5 text-[#67544B]">
-                    Heritage of Nature, Wellness &amp; Purity.
                   </p>
                 </div>
                 <button
