@@ -99,7 +99,7 @@ export default function PartnerPage() {
 
   return (
     <div
-      className="relative isolate min-h-full overflow-hidden bg-[#faf5eb] text-[#302426]"
+       className="relative isolate min-h-full overflow-hidden bg-[#faf7f2] text-[#5a4a3a]"
       data-testid="partner-entry-page"
     >
       <PageSeo
@@ -109,11 +109,11 @@ export default function PartnerPage() {
       />
 
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-x-0 top-0 h-px bg-[#b79358]/45" />
-        <div className="absolute -left-28 top-72 h-80 w-80 rounded-full bg-[#dfe7d2]/45 blur-3xl" />
-        <div className="absolute right-[-10rem] top-20 h-[34rem] w-[34rem] rounded-full border border-[#a6895c]/15" />
-        <div className="absolute right-[-6rem] top-28 h-[27rem] w-[27rem] rounded-full border border-[#a6895c]/10" />
-        <div className="absolute bottom-0 left-1/2 h-80 w-[46rem] -translate-x-1/2 rounded-[50%] bg-[#eadcc8]/35 blur-3xl" />
+         <div className="absolute inset-x-0 top-0 h-px bg-[#D4AF37]/35" />
+         <div className="absolute -left-28 top-72 h-80 w-80 rounded-full bg-[#F1DFB5]/45 blur-3xl" />
+         <div className="absolute right-[-10rem] top-20 h-[34rem] w-[34rem] rounded-full border border-[#D4AF37]/15" />
+         <div className="absolute right-[-6rem] top-28 h-[27rem] w-[27rem] rounded-full border border-[#D4AF37]/10" />
+         <div className="absolute bottom-0 left-1/2 h-80 w-[46rem] -translate-x-1/2 rounded-[50%] bg-[#F5EBDD]/55 blur-3xl" />
       </div>
 
       <LeafCluster side="left" />
@@ -123,7 +123,7 @@ export default function PartnerPage() {
         <button
           type="button"
           onClick={handleBack}
-          className="group inline-flex min-h-10 items-center gap-1.5 rounded-full px-1 text-[12px] font-medium text-[#735b45] transition-colors hover:text-[#8b1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf5eb] max-[519px]:text-[13px]"
+           className="group inline-flex min-h-10 items-center gap-1.5 rounded-full px-1 text-[12px] font-medium text-[#6B5B52] transition-colors hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf7f2] max-[519px]:text-[13px]"
           aria-label={copy.backAria}
           data-testid="button-partner-back"
         >
@@ -132,27 +132,27 @@ export default function PartnerPage() {
         </button>
 
         <section className="relative mx-auto mt-2 max-w-[920px] pb-4 pt-4 sm:mt-3 sm:pb-6 sm:pt-5 max-[519px]:mt-1 max-[519px]:pb-6 max-[519px]:pt-5" aria-labelledby="partner-page-heading">
-          <div className="pointer-events-none absolute right-0 top-4 hidden w-24 text-left text-[13px] font-serif italic leading-[1.05] text-[#987b50] min-[520px]:block sm:right-1 sm:w-28 sm:text-[15px]">
-            <span className="mb-2 block h-px w-8 bg-[#987b50]/70" />
+           <div className="pointer-events-none absolute right-0 top-4 hidden w-24 text-left text-[13px] font-serif italic leading-[1.05] text-[#A67817] min-[520px]:block sm:right-1 sm:w-28 sm:text-[15px]">
+             <span className="mb-2 block h-px w-8 bg-[#D4AF37]/70" />
             Tradition
             <br />
             Empowers
             <br />
             Together
-            <span className="mt-2 block h-px w-8 bg-[#987b50]/70" />
+             <span className="mt-2 block h-px w-8 bg-[#D4AF37]/70" />
           </div>
 
           <div className="mx-auto max-w-[560px] text-left min-[720px]:text-center max-[519px]:max-w-[340px] max-[519px]:text-center">
-            <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.34em] text-[#8a724c] min-[520px]:text-[9px]">
+             <p className="mb-2 text-[8px] font-bold uppercase tracking-[0.34em] text-[#A67817] min-[520px]:text-[9px]">
               {copy.eyebrow}
             </p>
             <h1
               id="partner-page-heading"
-              className="font-serif text-[clamp(2rem,6vw,3.55rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-[#791a2b] max-[519px]:text-[clamp(2.15rem,10vw,2.7rem)]"
+              className="font-serif text-[clamp(2rem,6vw,3.55rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-[#6D2B35] max-[519px]:text-[clamp(2.15rem,10vw,2.7rem)]"
             >
               {copy.heading}
             </h1>
-            <p className="mt-3 max-w-[510px] text-[13px] leading-[1.35] text-[#554a43] min-[720px]:mx-auto sm:text-[15px] max-[519px]:mx-auto max-[519px]:mt-4 max-[519px]:text-[13px]">
+            <p className="mt-3 max-w-[510px] text-[13px] leading-[1.35] text-[#6B5B52] min-[720px]:mx-auto sm:text-[15px] max-[519px]:mx-auto max-[519px]:mt-4 max-[519px]:text-[13px]">
               {copy.intro}
             </p>
           </div>
@@ -170,24 +170,24 @@ export default function PartnerPage() {
             return (
               <article
                 key={provider.id}
-                className={`group relative flex min-h-[228px] flex-col overflow-hidden rounded-[11px] border p-4 shadow-[0_8px_20px_rgba(93,64,40,0.08)] transition-shadow sm:min-h-[246px] sm:p-5 max-[519px]:min-h-[250px] max-[519px]:rounded-[14px] ${
+                className={`group relative flex min-h-[228px] flex-col overflow-hidden rounded-2xl border p-4 shadow-[0_12px_30px_rgba(77,40,36,.09)] backdrop-blur transition-shadow sm:min-h-[246px] sm:p-5 max-[519px]:min-h-[250px] max-[519px]:rounded-2xl ${
                   isActive
-                    ? "border-[#bb914b]/75 bg-[#fffaf2] hover:shadow-[0_12px_28px_rgba(93,64,40,0.14)]"
-                    : "border-[#c9c7c2]/75 bg-[#f0efec]/90"
+                    ? "border-[#D4AF37]/35 bg-white/75 hover:shadow-[0_18px_36px_rgba(77,40,36,.13)]"
+                    : "border-[#6D2B35]/10 bg-[#F3F1ED]/90"
                 }`}
                 aria-labelledby={`provider-${provider.id}-title`}
                 aria-describedby={`provider-${provider.id}-description`}
                 aria-disabled={!isActive}
                 data-testid={`partner-provider-card-${provider.id}`}
               >
-                <div className={`absolute inset-x-0 top-0 h-px ${isActive ? "bg-[#b3863c]" : "bg-[#c2c0bc]"}`} aria-hidden="true" />
+                 <div className={`absolute inset-x-0 top-0 h-px ${isActive ? "bg-[#D4AF37]" : "bg-[#6D2B35]/15"}`} aria-hidden="true" />
 
                 <div className="flex items-start gap-3 max-[519px]:gap-3.5">
                   <div
                     className={`grid h-[58px] w-[58px] shrink-0 place-items-center rounded-full border max-[519px]:h-12 max-[519px]:w-12 ${
                       isActive
-                        ? "border-[#d2b275]/45 bg-[#f5e7cf] text-[#94631d]"
-                        : "border-[#cac8c4] bg-[#deddd9] text-[#94918c]"
+                         ? "border-[#D4AF37]/35 bg-[#F1DFB5] text-[#7F5A15]"
+                         : "border-[#6D2B35]/10 bg-[#E8E5E0] text-[#806F5E]"
                     }`}
                     aria-label={providerCopy.iconLabel}
                   >
@@ -198,7 +198,7 @@ export default function PartnerPage() {
                       <h3
                         id={`provider-${provider.id}-title`}
                      className={`font-serif text-[25px] font-semibold leading-none tracking-[-0.035em] max-[519px]:text-[27px] ${
-                          isActive ? "text-[#791a2b]" : "text-[#817e79]"
+                          isActive ? "text-[#6D2B35]" : "text-[#806F5E]"
                         }`}
                       >
                         {providerCopy.title}
@@ -217,7 +217,7 @@ export default function PartnerPage() {
                     </div>
                     <p
                       id={`provider-${provider.id}-description`}
-                      className="mt-2 max-w-[250px] font-serif text-[12px] leading-[1.2] text-[#584c44] max-[519px]:max-w-none max-[519px]:text-[13px]"
+                      className="mt-2 max-w-[250px] text-[12px] leading-[1.2] text-[#6B5B52] max-[519px]:max-w-none max-[519px]:text-[13px]"
                     >
                       {providerCopy.description}
                     </p>
@@ -226,10 +226,10 @@ export default function PartnerPage() {
 
                 <ul className="mt-4 space-y-2 max-[519px]:mt-5 max-[519px]:space-y-2.5">
                   {providerCopy.benefits.map((benefit) => (
-                    <li key={benefit} className="flex items-start gap-2 text-[11px] leading-[1.2] text-[#5c5047] max-[519px]:text-[12px]">
+                    <li key={benefit} className="flex items-start gap-2 text-[11px] leading-[1.2] text-[#6B5B52] max-[519px]:text-[12px]">
                       <span
                         className={`mt-[-1px] grid h-4 w-4 shrink-0 place-items-center rounded-full ${
-                          isActive ? "bg-[#c08b31] text-white" : "bg-[#c3c2be] text-white"
+                           isActive ? "bg-[#A67817] text-white" : "bg-[#C6C3BE] text-white"
                         }`}
                       >
                         <Check className="h-2.5 w-2.5" strokeWidth={3} aria-hidden="true" />
@@ -242,7 +242,7 @@ export default function PartnerPage() {
                 {isActive ? (
                   <Link
                     href={provider.destination || "/pandit/login"}
-                     className="group/cta mt-auto flex min-h-9 w-full items-center justify-center gap-3 rounded-[6px] bg-[#94182b] px-4 text-[12px] font-medium text-[#fff9ef] shadow-[0_6px_14px_rgba(148,24,43,0.18)] transition-all hover:bg-[#791324] hover:shadow-[0_9px_18px_rgba(148,24,43,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf2] max-[519px]:min-h-11 max-[519px]:text-[13px]"
+                     className="group/cta mt-auto flex min-h-9 w-full items-center justify-center gap-3 rounded-xl bg-[#6D2B35] px-4 text-[12px] font-semibold text-white shadow-[0_8px_18px_rgba(109,43,53,.18)] transition-all hover:bg-[#55252D] hover:shadow-[0_12px_24px_rgba(109,43,53,.24)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] focus-visible:ring-offset-2 focus-visible:ring-offset-white max-[519px]:min-h-11 max-[519px]:text-[13px]"
                     data-testid="link-partner-pandit-login"
                   >
                     <span>{providerCopy.cta}</span>
@@ -250,7 +250,7 @@ export default function PartnerPage() {
                   </Link>
                 ) : (
                   <div
-                    className="mt-auto flex min-h-9 w-full items-center justify-center rounded-[6px] bg-[#d1d0cd] px-4 text-[12px] font-medium text-[#807b75] max-[519px]:min-h-11 max-[519px]:text-[13px]"
+                     className="mt-auto flex min-h-9 w-full items-center justify-center rounded-xl bg-[#D9D6D1] px-4 text-[12px] font-medium text-[#806F5E] max-[519px]:min-h-11 max-[519px]:text-[13px]"
                     aria-hidden="true"
                   >
                     {providerCopy.cta}
@@ -263,10 +263,10 @@ export default function PartnerPage() {
 
         <section className="mt-5 sm:mt-8 max-[519px]:mt-9" aria-labelledby="partner-benefits-heading">
           <div className="text-center">
-            <h2 id="partner-benefits-heading" className="font-serif text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#791a2b] sm:text-3xl max-[519px]:text-[27px]">
+            <h2 id="partner-benefits-heading" className="font-serif text-[25px] font-semibold leading-none tracking-[-0.04em] text-[#6D2B35] sm:text-3xl max-[519px]:text-[27px]">
               {copy.benefitsHeading}
             </h2>
-            <p className="mt-1 text-[12px] font-serif text-[#64574e] sm:text-sm max-[519px]:text-[13px]">{copy.benefitsIntro}</p>
+            <p className="mt-1 text-[12px] text-[#6B5B52] sm:text-sm max-[519px]:text-[13px]">{copy.benefitsIntro}</p>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 min-[620px]:gap-2.5 max-[519px]:mt-4 max-[519px]:gap-2.5">
             {copy.benefits.map((benefit, index) => {
@@ -274,21 +274,21 @@ export default function PartnerPage() {
               return (
                 <article
                   key={benefit.title}
-                  className="flex min-h-[166px] flex-col items-center rounded-[7px] border border-white/70 bg-[#fffaf4]/85 px-2 py-3 text-center shadow-[0_7px_18px_rgba(93,64,40,0.06)] sm:min-h-[178px] sm:px-3 max-[519px]:min-h-[184px] max-[519px]:px-2.5 max-[519px]:py-3.5"
+                  className="flex min-h-[166px] flex-col items-center rounded-xl border border-[#D4AF37]/20 bg-white/85 px-2 py-3 text-center shadow-[0_10px_24px_rgba(77,40,36,.07)] sm:min-h-[178px] sm:px-3 max-[519px]:min-h-[184px] max-[519px]:px-2.5 max-[519px]:py-3.5"
                 >
-                  <div className="grid h-10 w-10 place-items-center rounded-full bg-[#f2e5ce] text-[#a4762e]">
+                  <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F1DFB5] text-[#7F5A15]">
                     <BenefitIcon className="h-5 w-5" strokeWidth={1.55} aria-hidden="true" />
                   </div>
-                  <h3 className="mt-3 max-w-[10rem] font-serif text-[13px] font-semibold leading-[1.05] text-[#791a2b] sm:text-[15px] max-[519px]:text-[14px]">
+                  <h3 className="mt-3 max-w-[10rem] font-serif text-[13px] font-semibold leading-[1.05] text-[#6D2B35] sm:text-[15px] max-[519px]:text-[14px]">
                     {benefit.title}
                   </h3>
-                  <p className="mt-2 max-w-[11rem] font-serif text-[10px] leading-[1.2] text-[#51453d] sm:text-[11px] max-[519px]:text-[11px]">
+                  <p className="mt-2 max-w-[11rem] text-[10px] leading-[1.2] text-[#6B5B52] sm:text-[11px] max-[519px]:text-[11px]">
                     {benefit.descriptor}
                   </p>
-                  <p className="mt-0.5 max-w-[11rem] font-serif text-[10px] leading-[1.2] text-[#6e6159] sm:text-[11px] max-[519px]:text-[11px]">
+                  <p className="mt-0.5 max-w-[11rem] text-[10px] leading-[1.2] text-[#806F5E] sm:text-[11px] max-[519px]:text-[11px]">
                     {benefit.description}
                   </p>
-                  <span className="mt-auto rounded-full bg-[#f1e3c9] px-2.5 py-1 text-[8px] font-bold tracking-[0.08em] text-[#916721] sm:text-[9px]">
+                  <span className="mt-auto rounded-full bg-[#F1DFB5] px-2.5 py-1 text-[8px] font-bold tracking-[0.08em] text-[#7F5A15] sm:text-[9px]">
                     {benefit.badge}
                   </span>
                 </article>
@@ -299,10 +299,10 @@ export default function PartnerPage() {
 
         <section className="mt-6 sm:mt-9 max-[519px]:mt-10" aria-labelledby="partner-opportunities-heading">
           <div className="text-center">
-            <h2 id="partner-opportunities-heading" className="font-serif text-[24px] font-semibold leading-none tracking-[-0.04em] text-[#791a2b] sm:text-3xl max-[519px]:text-[26px]">
+            <h2 id="partner-opportunities-heading" className="font-serif text-[24px] font-semibold leading-none tracking-[-0.04em] text-[#6D2B35] sm:text-3xl max-[519px]:text-[26px]">
               {copy.opportunityHeading}
             </h2>
-            <p className="mt-1 text-[12px] font-serif text-[#64574e] sm:text-sm max-[519px]:text-[13px]">{copy.opportunityIntro}</p>
+            <p className="mt-1 text-[12px] text-[#6B5B52] sm:text-sm max-[519px]:text-[13px]">{copy.opportunityIntro}</p>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 min-[620px]:grid-cols-4 min-[620px]:gap-2.5 max-[519px]:mt-4 max-[519px]:grid-cols-1 max-[519px]:gap-3">
             {copy.opportunities.map((opportunity, index) => {
@@ -310,11 +310,11 @@ export default function PartnerPage() {
               return (
                 <article
                   key={opportunity.title}
-                  className="rounded-[7px] border border-white/70 bg-[#fffaf4]/78 p-2.5 shadow-[0_7px_18px_rgba(93,64,40,0.055)] sm:p-3 max-[519px]:rounded-[9px] max-[519px]:p-3.5"
+                  className="rounded-xl border border-[#D4AF37]/20 bg-white/80 p-2.5 shadow-[0_10px_24px_rgba(77,40,36,.06)] sm:p-3 max-[519px]:rounded-xl max-[519px]:p-3.5"
                   aria-label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
                 >
-                  <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#4f443d] max-[519px]:text-[9px]">
-                    <OpportunityIcon className="h-4 w-4 shrink-0 text-[#9b7025]" strokeWidth={1.65} aria-hidden="true" />
+                  <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.08em] text-[#6B5B52] max-[519px]:text-[9px]">
+                    <OpportunityIcon className="h-4 w-4 shrink-0 text-[#A67817]" strokeWidth={1.65} aria-hidden="true" />
                     <span>{opportunity.title}</span>
                   </div>
                   <div className="mt-3 max-[519px]:mt-2.5">
@@ -323,10 +323,10 @@ export default function PartnerPage() {
                       label={copy.gaugeAria(opportunity.title, opportunity.descriptor)}
                     />
                   </div>
-                  <p className="mt-2 font-serif text-[13px] font-semibold leading-[1.05] text-[#4b3331] sm:text-[15px] max-[519px]:text-[16px]">
+                  <p className="mt-2 font-serif text-[13px] font-semibold leading-[1.05] text-[#6D2B35] sm:text-[15px] max-[519px]:text-[16px]">
                     {opportunity.gaugeLabel}
                   </p>
-                  <p className="mt-1.5 font-serif text-[10px] leading-[1.2] text-[#665850] sm:text-[11px] max-[519px]:text-[11px]">
+                  <p className="mt-1.5 text-[10px] leading-[1.2] text-[#806F5E] sm:text-[11px] max-[519px]:text-[11px]">
                     {opportunity.description}
                   </p>
                 </article>
@@ -335,16 +335,16 @@ export default function PartnerPage() {
           </div>
         </section>
 
-        <section className="relative mt-5 border-y border-[#bda06d]/45 py-3 sm:mt-8 sm:py-4 max-[519px]:mt-8 max-[519px]:py-4" aria-label={language === "hi" ? "प्लेटफ़ॉर्म तथ्य" : "Platform facts"}>
-          <div className="grid grid-cols-4 divide-x divide-[#bda06d]/45">
+        <section className="relative mt-5 border-y border-[#D4AF37]/30 py-3 sm:mt-8 sm:py-4 max-[519px]:mt-8 max-[519px]:py-4" aria-label={language === "hi" ? "प्लेटफ़ॉर्म तथ्य" : "Platform facts"}>
+          <div className="grid grid-cols-4 divide-x divide-[#D4AF37]/30">
             {copy.stats.map((stat, index) => {
               const StatIcon = statIcons[index];
               return (
                 <div key={stat.label} className="flex items-center justify-center gap-1.5 px-1 text-center max-[519px]:gap-0 max-[519px]:px-0">
-                  <StatIcon className="hidden h-6 w-6 shrink-0 text-[#a4772b] min-[520px]:block" strokeWidth={1.45} aria-hidden="true" />
+                  <StatIcon className="hidden h-6 w-6 shrink-0 text-[#A67817] min-[520px]:block" strokeWidth={1.45} aria-hidden="true" />
                   <div>
-                    <p className="font-serif text-[17px] font-semibold leading-none text-[#791a2b] sm:text-2xl max-[519px]:text-[18px]">{stat.value}</p>
-                    <p className="mt-1 text-[8px] font-medium leading-[1.05] text-[#77665b] sm:text-[10px] max-[519px]:text-[8.5px]">{stat.label}</p>
+                    <p className="font-serif text-[17px] font-semibold leading-none text-[#6D2B35] sm:text-2xl max-[519px]:text-[18px]">{stat.value}</p>
+                    <p className="mt-1 text-[8px] font-medium leading-[1.05] text-[#806F5E] sm:text-[10px] max-[519px]:text-[8.5px]">{stat.label}</p>
                   </div>
                 </div>
               );
@@ -352,28 +352,28 @@ export default function PartnerPage() {
           </div>
         </section>
 
-        <p className="mx-auto mt-4 max-w-[600px] text-center font-serif text-[13px] italic leading-5 text-[#886b4e] sm:mt-5 sm:text-base max-[519px]:mt-6 max-[519px]:text-[14px]">
+        <p className="mx-auto mt-4 max-w-[600px] text-center font-serif text-[13px] italic leading-5 text-[#806F5E] sm:mt-5 sm:text-base max-[519px]:mt-6 max-[519px]:text-[14px]">
           {copy.closing}
         </p>
 
-        <footer className="relative mt-3 flex flex-col items-center justify-center gap-2 pb-8 text-[9px] text-[#76675c] sm:mt-5 sm:pb-10 max-[519px]:mt-4 max-[519px]:pb-12">
+        <footer className="relative mt-3 flex flex-col items-center justify-center gap-2 pb-8 text-[9px] text-[#806F5E] sm:mt-5 sm:pb-10 max-[519px]:mt-4 max-[519px]:pb-12">
           <div className="flex items-center gap-3">
-            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/privacy-policy">
+            <Link className="rounded px-1 underline decoration-[#D4AF37]/60 underline-offset-4 hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]" href="/privacy-policy">
               {copy.footer.privacy}
             </Link>
             <span aria-hidden="true">|</span>
-            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/terms-conditions">
+            <Link className="rounded px-1 underline decoration-[#D4AF37]/60 underline-offset-4 hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]" href="/terms-conditions">
               {copy.footer.terms}
             </Link>
             <span aria-hidden="true">|</span>
-            <Link className="rounded px-1 underline decoration-[#b9924b]/60 underline-offset-4 hover:text-[#7c1f2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b9924b]" href="/contact">
+            <Link className="rounded px-1 underline decoration-[#D4AF37]/60 underline-offset-4 hover:text-[#6D2B35] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37]" href="/contact">
               {copy.footer.help}
             </Link>
           </div>
           <div className="flex items-center gap-3 text-[8px] uppercase tracking-[0.28em] text-[#9a7b4c]">
-            <span className="h-px w-8 bg-[#b3925d]/65" />
+            <span className="h-px w-8 bg-[#D4AF37]/65" />
             <span>{language === "hi" ? "एक अधिक आध्यात्मिक कल" : "A more spiritual tomorrow"}</span>
-            <span className="h-px w-8 bg-[#b3925d]/65" />
+            <span className="h-px w-8 bg-[#D4AF37]/65" />
           </div>
         </footer>
       </div>
