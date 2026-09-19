@@ -1,3 +1,24 @@
+@keyframes vt-mobile-menu-reveal {
+  from {
+    transform: translate3d(-100%, 0, 0);
+    opacity: 0.65;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.vt-mobile-menu-enter {
+  animation: vt-mobile-menu-reveal 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vt-mobile-menu-enter {
+    animation-duration: 1ms;
+  }
+}
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";

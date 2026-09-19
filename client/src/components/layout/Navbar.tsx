@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { ShoppingCart, Search, User, Menu, X, ChevronRight, ChevronDown, Sunrise, Sunset, Moon, Star, Calendar, LogOut, Sparkles, MapPin, BookOpen, Wand2, ArrowRight, Package, Users, Globe, ShoppingBag, Flame, Heart, History, Crown, TicketCheck, Shield, UserCircle, LayoutDashboard, Truck, Headphones, Flower2, Landmark, Sun, FileText } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -475,6 +476,9 @@ export default function Navbar() {
       ],
     },
   ];
+  const mobileNavSections = navSections.filter(
+    (section) => section.title !== "Account" && section.title !== "Help & Support",
+  );
 
   const festival = useFestivalTheme();
   const festAccent = festival ? festival.palette.accent : "#D4AF37";
@@ -499,7 +503,7 @@ export default function Navbar() {
           <button
             ref={mobileTriggerRef}
             onClick={() => { setMobileOpen(!mobileOpen); setSearchOpen(false); setAccountOpen(false); }}
-            className="md:hidden w-9 h-9 flex items-center justify-center rounded-md text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors -ml-1"
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-md text-[#5a4a3a]/80 hover:text-[#6D2B35] hover:bg-[#F5F0E6]/70 transition-colors -ml-1"
             data-testid="btn-menu-mobile"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
@@ -545,7 +549,7 @@ export default function Navbar() {
           </Link>
 
           {/* ── Desktop nav: 4 clean links + More ── */}
-          <div className="hidden md:flex items-center justify-center flex-1 min-w-0">
+          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0">
             <div className="flex items-center gap-1">
               {[
                 { href: "/online-pandit-booking", label: "Pandits" },
@@ -710,7 +714,7 @@ export default function Navbar() {
             {(() => {
               const currentLang = languages.find((l) => l.code === language) || languages[0];
               return (
-                <div className="relative hidden md:block" ref={localeRef}>
+                <div className="relative hidden lg:block" ref={localeRef}>
                   <button
                     type="button"
                     onClick={() => { setLangOpen(!langOpen); setAccountOpen(false); setSearchOpen(false); }}
@@ -1043,7 +1047,7 @@ export default function Navbar() {
       {mobileOpen && (
         <>
           <div
-            className="fixed inset-0 z-[70] bg-[#2D171B]/55 backdrop-blur-[2px] md:hidden"
+            className="fixed inset-0 z-[190] bg-[#261619]/45 backdrop-blur-[5px] lg:hidden"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
@@ -1053,10 +1057,10 @@ export default function Navbar() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-menu-title"
-            className="fixed left-0 top-[72px] bottom-[80px] z-[80] w-[304px] max-w-[88%] md:hidden"
+            className="vt-mobile-menu-enter fixed inset-y-0 left-0 z-[200] h-[100dvh] w-[min(88vw,360px)] lg:hidden"
             data-testid="mobile-menu"
           >
-            <div className="h-full w-full overflow-hidden border-r border-y border-[#E6D8CB] bg-[#FCF8F1] shadow-[8px_0_30px_-14px_rgba(70,24,34,0.38)] flex flex-col">
+            <div className="flex h-full w-full flex-col overflow-hidden border-r border-[#E7DBCF] bg-[#FCF8F1] shadow-[14px_0_45px_rgba(42,17,22,0.22)]">
 
               {/* Branded header */}
               <div className="relative shrink-0 px-5 pb-3 pt-4">
@@ -1082,7 +1086,7 @@ export default function Navbar() {
 
               {/* Scrollable body */}
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#FCF8F1]" data-lenis-prevent>
-                <div className="mx-3 mb-2 rounded-xl bg-[#F8EEE6] p-3 shadow-[0_5px_18px_rgba(92,48,40,0.06)]">
+                <div className="mx-4 mb-2 rounded-xl bg-[#F8EEE6] p-3 shadow-[0_5px_18px_rgba(92,48,40,0.05)]">
                   <div className="flex items-center gap-3">
                     <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0DFC3] text-[#8A5B16]">
                       <UserCircle className="h-5 w-5" strokeWidth={1.6} />
@@ -1118,8 +1122,8 @@ export default function Navbar() {
                   )}
                 </div>
 
-                <nav className="px-3 py-1" aria-label="Mobile navigation">
-                  {navSections.map((section) => {
+                <nav className="px-4 py-2" aria-label="Mobile navigation">
+                  {mobileNavSections.map((section) => {
                     const isOpen = openMobileSection === section.title;
                     const SectionIcon = section.icon;
                     const sectionId = `mobile-section-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
@@ -1228,34 +1232,73 @@ export default function Navbar() {
                     );
                   })}
                 </nav>
-              </div>
 
-              <div
-                className="shrink-0 border-t border-[#E8DDD3] bg-[#F8F1E8] px-5 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-2.5"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle at 100% 100%, rgba(180,143,67,0.12), transparent 42%), radial-gradient(circle at 0% 0%, rgba(109,43,53,0.04), transparent 35%)",
-                }}
-              >
-                <div className="space-y-0.5">
-                  <Link href="/about" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
-                    <Globe className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
-                    About Vedic Tatva
-                  </Link>
-                  <Link href="/privacy-policy" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
-                    <Shield className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
-                    Privacy Policy
-                  </Link>
-                  <Link href="/terms-conditions" onClick={() => setMobileOpen(false)} className="flex min-h-7 items-center gap-3 font-serif text-[10px] text-[#453638] hover:text-[#6D1F2A]">
-                    <FileText className="h-3.5 w-3.5 text-[#6D1F2A]" strokeWidth={1.55} />
-                    Terms &amp; Conditions
-                  </Link>
+                {user && (
+                  <div className="mx-5 mt-5 border-t border-[#E4D7CB] pt-3">
+                    <p className="px-2 pb-1 pt-1 font-serif text-[13px] font-semibold text-[#6D1F2A]">Account</p>
+                    {accountLinks.map((link) => {
+                      const AccIcon = link.icon;
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex min-h-10 items-center gap-3 rounded-lg px-2 font-serif text-[12px] text-[#453638] hover:bg-[#F8EEE6] hover:text-[#6D1F2A]"
+                        >
+                          <AccIcon className="h-4 w-4 text-[#7A1E2A]" strokeWidth={1.55} />
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => { logout(); setMobileOpen(false); setLocation("/"); }}
+                      className="flex min-h-10 w-full items-center gap-3 rounded-lg px-2 font-serif text-[12px] text-[#8B2632] hover:bg-[#F8EEE6]"
+                      data-testid="mobile-btn-logout"
+                    >
+                      <LogOut className="h-4 w-4" strokeWidth={1.55} />
+                      {t.nav.logout}
+                    </button>
+                  </div>
+                )}
+
+                <div className="mx-5 mt-6 border-t border-[#E4D7CB] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+                  <div className="space-y-0.5">
+                    <Link href="/about" onClick={() => setMobileOpen(false)} className="flex min-h-9 items-center gap-3 font-serif text-[11px] text-[#554648] hover:text-[#6D1F2A]">
+                      <Globe className="h-3.5 w-3.5 text-[#7A1E2A]" strokeWidth={1.55} />
+                      About Vedic Tatva
+                    </Link>
+                    <Link href="/privacy-policy" onClick={() => setMobileOpen(false)} className="flex min-h-9 items-center gap-3 font-serif text-[11px] text-[#554648] hover:text-[#6D1F2A]">
+                      <Shield className="h-3.5 w-3.5 text-[#7A1E2A]" strokeWidth={1.55} />
+                      Privacy Policy
+                    </Link>
+                    <Link href="/terms-conditions" onClick={() => setMobileOpen(false)} className="flex min-h-9 items-center gap-3 font-serif text-[11px] text-[#554648] hover:text-[#6D1F2A]">
+                      <FileText className="h-3.5 w-3.5 text-[#7A1E2A]" strokeWidth={1.55} />
+                      Terms &amp; Conditions
+                    </Link>
+                    <Link href="/contact" onClick={() => setMobileOpen(false)} className="flex min-h-9 items-center gap-3 font-serif text-[11px] text-[#554648] hover:text-[#6D1F2A]">
+                      <Headphones className="h-3.5 w-3.5 text-[#7A1E2A]" strokeWidth={1.55} />
+                      Help / Support
+                    </Link>
+                    <a
+                      href="https://wa.me/918447844702?text=Namaste%20Vedic%20Tatva%2C%20I%20need%20help."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMobileOpen(false)}
+                      className="flex min-h-9 items-center gap-3 font-serif text-[11px] text-[#554648] hover:text-[#6D1F2A]"
+                      data-testid="mobile-link-whatsapp"
+                    >
+                      <SiWhatsapp className="h-3.5 w-3.5 text-[#7A1E2A]" />
+                      WhatsApp
+                    </a>
+                  </div>
+                  <div className="mt-4 flex items-center justify-center gap-2 text-center font-serif text-[9px] italic leading-tight text-[#806C66]">
+                    <span className="h-px w-8 bg-[#C9AA70]/60" />
+                    <span>A More Spiritual Tomorrow<br />Together</span>
+                    <span className="h-px w-8 bg-[#C9AA70]/60" />
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center justify-center gap-2 text-center font-serif text-[9px] italic leading-tight text-[#6C5550]">
-                  <span className="h-px w-8 bg-[#C9AA70]/60" />
-                  <span>A More Spiritual Tomorrow<br />Together</span>
-                  <span className="h-px w-8 bg-[#C9AA70]/60" />
-                </div>
+                <div className="h-4" aria-hidden="true" />
               </div>
 
             </div>
