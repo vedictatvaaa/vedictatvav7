@@ -1089,10 +1089,10 @@ export default function Navbar() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-serif text-[14px] font-semibold leading-tight text-[#24191A]" data-testid={user ? "text-mobile-user-name" : undefined}>
-                        {user ? user.name : "Welcome"}
+                        {user ? user.name : "Login / Sign Up"}
                       </p>
                       <p className="mt-0.5 text-[9px] leading-3.5 text-[#6F5B53]">
-                        {user ? user.email : "Choose how you would like to continue with Vedic Tatva."}
+                        {user ? user.email : "Login or sign up to continue with Vedic Tatva."}
                       </p>
                     </div>
                   </div>
