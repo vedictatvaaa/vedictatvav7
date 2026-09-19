@@ -99,9 +99,15 @@ export function BrandMark({ settings, placement = "desktop", className = "", tes
   const scale = Math.max(0.5, Math.min(2, Number(s.logoScalePercent) / 100 || 1));
   const size = Math.max(16, Math.min(160, Number(s.logoSizePx) || 27)) * scale;
   const maxWidth = placement === "mobile" ? 170 : placement === "menu" ? 245 : placement === "footer" ? 310 : 360;
-  const placementCap = placement === "mobile" ? 34 : placement === "desktop" ? 44 : placement === "menu" ? 56 : 64;
-  const renderedSize = Math.min(size, placementCap);
-  const align = s.logoPosition === "center" ? "center" : s.logoPosition === "right" ? "flex-end" : "flex-start";
+  const placementCap = placement === "mobile" ? 34 : placement === "desktop" ? 52 : placement === "menu" ? 56 : 64;
+  const renderedSize = Math.min(placement === "desktop" ? Math.max(size, 44) : size, placementCap);
+  const align = placement === "mobile"
+    ? "center"
+    : s.logoPosition === "center"
+      ? "center"
+      : s.logoPosition === "right"
+        ? "flex-end"
+        : "flex-start";
   const textColor = settings?.logoTextColor || (placement === "footer" ? "#D4AF37" : defaults.logoTextColor);
 
   return (
