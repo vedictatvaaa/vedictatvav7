@@ -26,3 +26,4 @@
 - [Mockup preview access](mockup-preview-access.md) — localhost visual companion URLs are container-only; use the canvas with a registered or reserved-port mockup service.
 - [Brand Studio activation](brand-studio-activation.md) — preserve legacy brand rendering until an Admin makes a branding-specific edit; unrelated settings saves must not activate it.
 - [Partner page site style](partner-page-site-style.md) — Partner UI should reuse the site's maroon/gold tokens, cream surfaces, rounded cards, and lighter sans body copy.
+- [Pandit registration authority](pandit-registration-authority.md) — signup must use the complete existing application contract directly; compact drafts are not the submission path.
