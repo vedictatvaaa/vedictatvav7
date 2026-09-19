@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "wouter";
-import { ChevronDown, Check, Lock, Loader2, Mail, MapPin, Phone, RotateCcw, ShieldCheck, Truck, Package, Box } from "lucide-react";
-import { SiFacebook, SiInstagram, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
+import { ChevronDown, Check, Lock, Loader2, Mail, MapPin, Phone, RotateCcw, ShieldCheck, Truck, Box } from "lucide-react";
+import { SiFacebook, SiInstagram, SiMastercard, SiVisa, SiWhatsapp, SiX, SiYoutube } from "react-icons/si";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ const trustBadges = [
   { icon: Box, label: "Product details", sub: "Check each item" },
 ];
 
-const paymentMethods = ["VISA", "MASTERCARD", "RuPay", "UPI", "NET BANKING"];
+const paymentMethods = ["visa", "mastercard", "rupay", "upi", "netbanking"] as const;
 
 const fallbackSocials = [
   { Icon: SiInstagram, href: "https://instagram.com/vedictatva", label: "Instagram" },
@@ -142,9 +142,14 @@ export default function Footer() {
       </section>
 
       <div className="relative overflow-hidden bg-[#260e15]">
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-[radial-gradient(ellipse_at_92%_100%,rgba(205,155,42,0.24),transparent_28%),linear-gradient(to_top,rgba(15,5,9,0.58),transparent)]" aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-[-30px] right-[6%] hidden h-32 w-48 rounded-[50%] bg-[#8b4c27]/45 blur-[10px] md:block" aria-hidden="true" />
-        <div className="pointer-events-none absolute bottom-[72px] right-[13%] hidden h-28 w-5 rounded-[50%] bg-gradient-to-t from-[#dca62d] via-[#fff1a6] to-transparent opacity-80 blur-[2px] md:block" aria-hidden="true" />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] bg-bottom bg-no-repeat opacity-60"
+          style={{
+            backgroundImage: "linear-gradient(to top, rgba(38,14,21,0.04), rgba(38,14,21,0.36)), url('/footer-photo.jpg')",
+            backgroundSize: "100% 100%",
+          }}
+          aria-hidden="true"
+        />
 
         <div className="relative z-10 mx-auto max-w-6xl px-5 sm:px-8">
           <div className="grid gap-10 border-b border-white/15 py-10 md:grid-cols-[1fr_1.2fr] md:items-start md:py-12">
@@ -183,7 +188,7 @@ export default function Footer() {
             <div>
               <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-[#d4af37]">We accept</p>
               <div className="flex flex-wrap gap-2.5">
-                {paymentMethods.map((method) => <span key={method} className="inline-flex h-8 min-w-[58px] items-center justify-center rounded bg-white px-2 text-[10px] font-black tracking-tight text-[#1f1721] shadow-sm">{method}</span>)}
+                {paymentMethods.map((method) => <PaymentLogo key={method} method={method} />)}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-x-7 gap-y-3 border-l border-white/20 pl-6 text-xs text-white/75">
@@ -221,5 +226,48 @@ function FooterCol({ title, links }: { title: string; links: { href: string; lab
         </div>
       </div>
     </div>
+  );
+}
+
+function PaymentLogo({ method }: { method: typeof paymentMethods[number] }) {
+  const commonClass = "inline-flex h-8 min-w-[58px] items-center justify-center rounded bg-white px-2 shadow-sm";
+
+  if (method === "visa") {
+    return (
+      <span className={commonClass} aria-label="Visa">
+        <SiVisa className="h-5 w-auto text-[#1434CB]" aria-hidden="true" />
+      </span>
+    );
+  }
+
+  if (method === "mastercard") {
+    return (
+      <span className={commonClass} aria-label="Mastercard">
+        <SiMastercard className="h-6 w-auto text-[#eb001b]" aria-hidden="true" />
+      </span>
+    );
+  }
+
+  if (method === "rupay") {
+    return (
+      <span className={`${commonClass} gap-0.5 font-sans text-[12px] font-extrabold tracking-[-0.06em]`} aria-label="RuPay">
+        <span className="text-[#0066a1]">Ru</span><span className="text-[#ef3125]">Pay</span><span className="ml-0.5 text-[11px] text-[#0066a1]" aria-hidden="true">▶</span>
+      </span>
+    );
+  }
+
+  if (method === "upi") {
+    return (
+      <span className={`${commonClass} gap-1 font-sans`} aria-label="UPI">
+        <span className="text-[13px] font-black italic tracking-[-0.08em] text-[#24364b]">UPI</span>
+        <span className="flex flex-col gap-px" aria-hidden="true"><span className="h-[2px] w-3 bg-[#f47920]" /><span className="h-[2px] w-3 bg-[#278b47]" /></span>
+      </span>
+    );
+  }
+
+  return (
+    <span className={`${commonClass} leading-[0.85]`} aria-label="Net Banking">
+      <span className="text-center font-sans text-[8px] font-black tracking-[-0.04em] text-[#26384c]">NET<br /><span className="text-[#23864a]">BANKING</span></span>
+    </span>
   );
 }
