@@ -27,17 +27,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
     env NODE_ENV=development \
         NPM_CONFIG_PRODUCTION=false \
         npm_config_production=false \
-        npm ci --include=dev --ignore-scripts --maxsockets=1 --no-audit --no-fund
-
-# Rebuild native packages in separate npm processes. A single multi-package
-# `npm rebuild` can trigger npm's "Exit handler never called" failure on the
-# constrained Coolify builder even when each package itself is healthy.
-RUN npm rebuild bufferutil --foreground-scripts --jobs=1 --no-audit --no-fund
-RUN npm rebuild esbuild --foreground-scripts --jobs=1 --no-audit --no-fund
-RUN npm rebuild sharp --foreground-scripts --jobs=1 --no-audit --no-fund
-RUN npm rebuild swisseph-v2 --foreground-scripts --jobs=1 --no-audit --no-fund
-
-RUN npm ls --depth=0 --include=dev >/dev/null && \
+        npm ci --include=dev --foreground-scripts --jobs=1 --maxsockets=1 --no-audit --no-fund && \
     test -x node_modules/.bin/tsx && \
     test -x node_modules/.bin/vite && \
     test -x node_modules/.bin/esbuild && \
