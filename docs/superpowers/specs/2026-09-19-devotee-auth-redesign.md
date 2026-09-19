@@ -45,11 +45,11 @@ Signup, password recovery, and reset confirmation use the same visual shell. The
 
 Devotee password signup requires a full name, an exact 10-digit mobile number, an email address, a password, and matching password confirmation. Before registration, the user must verify the email with a single-use six-digit code that expires after 10 minutes. Registration tokens are consumed atomically and cannot be replayed. First-time Google users must complete this required signup flow before Google can be linked to the verified account.
 
-## Editorial Heritage Refinement
+## Warm Sanctuary Glass Refinement
 
-The authentication surface uses an editorial heritage direction with a premium, contemporary finish. On larger screens, the page becomes an asymmetric two-part composition: a branded storytelling area and a focused authentication area. The storytelling area uses abstract architectural and Vedic geometric references rather than deity photography. Warm ivory, deep maroon, and restrained antique-gold details remain the core palette.
+The authentication surface uses a modern sanctuary direction with a premium glass treatment. Atmospheric ivory, maroon, muted rose, and amber light form the background, with abstract Vedic geometry floating quietly behind translucent surfaces. The interface should feel luminous, contemporary, welcoming, and spiritually grounded without relying on deity photography or ornamental excess.
 
-On mobile, the storytelling content condenses into a compact masthead so the form remains immediately accessible. Typography, spacing, field grouping, verification feedback, password guidance, and transitions should feel deliberate and polished without adding friction.
+The authentication form uses a restrained translucent panel with clear contrast, soft backdrop blur, subtle borders, and controlled depth. Brand messaging is concise, typography is contemporary, and decorative elements remain secondary to the task. On mobile, the composition condenses so the form stays immediately accessible without horizontal overflow or excessive introductory content.
 
 The guest action is labeled **“Continue as guest”**. Login, signup, email verification, referrals, redirects, password recovery, Google sign-in, validation, keyboard operation, reduced-motion behavior, and screen-reader semantics remain functionally unchanged.
 
