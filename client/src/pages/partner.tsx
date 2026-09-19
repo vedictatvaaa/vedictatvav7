@@ -273,7 +273,6 @@ export default function PartnerPage() {
               </div>
             );
           })}
-          </div>
         </section>
 
         <section className="mt-10" aria-labelledby="partner-benefits-heading">
