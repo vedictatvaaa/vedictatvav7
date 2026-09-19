@@ -168,7 +168,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
 
   const copy = {
     workspace: hindi ? "पंडितजी पोर्टल" : "Panditji portal",
-    loginTitle: hindi ? "अपनी साधना को बेहतर ढंग से संभालें।" : "Your practice, beautifully managed.",
+    loginTitle: hindi ? "साइन इन करें" : "Sign in",
     loginDescription: hindi ? "बुकिंग, कैलेंडर, कमाई और संदेशों में साइन इन करें।" : "Sign in to bookings, calendar, earnings and messages.",
     signIn: hindi ? "साइन इन" : "Sign in",
     apply: hindi ? "जुड़ने के लिए आवेदन" : "Apply to join",
