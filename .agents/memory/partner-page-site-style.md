@@ -3,8 +3,8 @@ name: Partner page site style
 description: The visual rules that keep the Partner entry page consistent with the main Vedic Tatva website.
 ---
 
-The Partner entry page should use the established Vedic Tatva visual system rather than treating an external reference image as a literal page asset: warm cream surfaces, maroon brand actions and headings, muted gold accents, rounded white cards, soft warm shadows, and sans-serif body copy paired with serif display headings. Provider choices should remain lightweight: compact circular path tabs with one slim detail panel, not two large mobile cards.
+The Partner entry page is a simple access gateway, not a marketing landing page: use the established Vedic Tatva visual system with warm cream surfaces, maroon actions and headings, muted gold accents, one quiet glass card, and concise role entries for Pandit and Astrologer. Keep signup/login routing explicit and avoid benefits, gauges, stats, or promotional sections.
 
-**Why:** A screenshot-driven treatment made the Partner page feel like a separate product and did not inherit the website's existing header, card, button, and typography language. Large provider cards also made the first mobile viewport feel bulky.
+**Why:** The page's job is to get partners into their dashboards quickly. Screenshot-driven marketing treatments and large provider cards obscured that task and made the first mobile viewport feel bulky.
 
-**How to apply:** When changing Partner UI, compare against the site's Navbar and Pandit workspace surfaces first, then reuse their color, radius, border, shadow, and text patterns. Keep the provider selector compact and progressive-disclosure based. Use references for composition only, not as a replacement for semantic UI.
+**How to apply:** When changing Partner UI, compare against the site's Navbar and partner workspace surfaces first, then reuse their color, radius, border, shadow, and text patterns. Keep the first screen focused on choosing a role and continuing. Use `/pandit/login` plus `/pandit/signup` for Pandit access and `/astrologer-portal` for Astrologer access.
