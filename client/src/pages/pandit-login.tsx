@@ -341,11 +341,13 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       toast({ title: "Missing required details", description: message, variant: "destructive" });
       return;
     }
-    if (form.masterServiceIds.length !== 5) {
-      const message = `Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
+    if (form.masterServiceIds.length < 5 || form.masterServiceIds.length > 10) {
+      const message = form.masterServiceIds.length > 10
+        ? `Select no more than ten specialist Pujas (you selected ${form.masterServiceIds.length}).`
+        : `Select at least five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
       setRegistrationServicesError(message);
       setRegistrationApplicationError(message);
-      toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
+      toast({ title: "Choose 5–10 specialist Pujas", description: "Select between five and ten Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
     if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
@@ -573,8 +575,8 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             <div className="min-w-0">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[#D4AF37]/35 bg-[#FFFAF1] px-4 py-3">
                 <div>
-                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Complete registration</p>
-                  <p className="mt-1 text-xs text-[#806F5E]">Submit your full Panditji application from this page.</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Panditji workspace</p>
+                  <p className="mt-1 text-xs text-[#806F5E]">Complete your Panditji profile and application here.</p>
                 </div>
                 <button type="button" onClick={() => setMode("login")} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#6F2B38] hover:underline">
                   <ArrowLeft className="h-3.5 w-3.5" /> {copy.backToLogin}

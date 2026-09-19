@@ -404,11 +404,13 @@ export default function BecomePandit() {
       toast({ title: "Missing required details", description: message, variant: "destructive" });
       return;
     }
-    if (form.masterServiceIds.length !== 5) {
-      const message = `Select exactly five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
+    if (form.masterServiceIds.length < 5 || form.masterServiceIds.length > 10) {
+      const message = form.masterServiceIds.length > 10
+        ? `Select no more than ten specialist Pujas (you selected ${form.masterServiceIds.length}).`
+        : `Select at least five specialist Pujas (you selected ${form.masterServiceIds.length}).`;
       setServicesError(message);
       showApplicationError(message);
-      toast({ title: "Choose five specialist Pujas", description: "Select exactly five Pujas you are fully expert in.", variant: "destructive" });
+      toast({ title: "Choose 5–10 specialist Pujas", description: "Select between five and ten Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
     if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
@@ -1614,22 +1616,39 @@ export function RegistrationSection({
                       <Input id="email" name="email" type="email" value={form.email} onChange={onChange} placeholder="pandit@example.com" required data-testid="input-email" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
                     <Field label="State *" id="stateId">
-                      <select id="stateId" value={form.stateId} required disabled={locationsLoading || locationsError} onChange={e => setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "", proposedCityName: "" }))} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
+                      <select id="stateId" value={form.stateId} required disabled={locationsLoading || locationsError} onChange={e => { setMissingCityMode(false); setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "", proposedCityName: "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
                         <option value="">Select state</option>{activeStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                       {locationsError && <p className="text-xs text-destructive" role="alert">Locations could not be loaded. Please try again.</p>}
                     </Field>
-                    <Field label={missingCityMode ? "Proposed City *" : "City *"} id={missingCityMode ? "proposedCityName" : "cityId"}>
-                      {missingCityMode ? (
-                        <Input id="proposedCityName" name="proposedCityName" value={form.proposedCityName} onChange={onChange} placeholder="Enter your city" required data-testid="input-proposed-city" style={{ borderColor: `${C.maroon}25` }} />
-                      ) : <select id="cityId" value={form.cityId} required disabled={!form.stateId} onChange={e => { const city = activeCities.find(c => String(c.id) === e.target.value); setForm(p => ({ ...p, cityId: e.target.value, city: city?.name || "", proposedCityName: "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-city">
-                        <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>{activeCities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                      }
-                      <button type="button" disabled={!form.stateId} onClick={() => { setMissingCityMode(mode => !mode); setForm(p => missingCityMode ? ({ ...p, proposedCityName: "" }) : ({ ...p, cityId: "", city: "", proposedCityName: "" })); }} className="mt-2 text-xs font-medium underline disabled:opacity-50" style={{ color: C.maroon }} data-testid="btn-toggle-missing-city">
-                        {missingCityMode ? "Choose a listed city instead" : "My city is not listed"}
-                      </button>
-                    </Field>
+                      <Field label={missingCityMode ? "Other city *" : "City *"} id={missingCityMode ? "proposedCityName" : "cityId"}>
+                        <select
+                          id="cityId"
+                          value={missingCityMode ? "__other__" : form.cityId}
+                          required
+                          disabled={!form.stateId}
+                          onChange={e => {
+                            if (e.target.value === "__other__") {
+                              setMissingCityMode(true);
+                              setForm(p => ({ ...p, cityId: "", city: "", proposedCityName: "" }));
+                              return;
+                            }
+                            setMissingCityMode(false);
+                            const city = activeCities.find(c => String(c.id) === e.target.value);
+                            setForm(p => ({ ...p, cityId: e.target.value, city: city?.name || "", proposedCityName: "" }));
+                          }}
+                          className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50"
+                          style={{ border: `1px solid ${C.maroon}25` }}
+                          data-testid="select-application-city"
+                        >
+                          <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>
+                          {activeCities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          <option value="__other__">Other — my city is not listed</option>
+                        </select>
+                        {missingCityMode && (
+                          <Input id="proposedCityName" name="proposedCityName" value={form.proposedCityName} onChange={onChange} placeholder="Enter your city name" required data-testid="input-proposed-city" style={{ borderColor: `${C.maroon}25` }} />
+                        )}
+                      </Field>
                     <Field label="Registered Address *" id="registeredAddress">
                       <Textarea id="registeredAddress" name="registeredAddress" value={form.registeredAddress} onChange={onChange} placeholder="House, street, locality, city, state, PIN" required className="min-h-[80px]" data-testid="input-registered-address" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
@@ -1699,20 +1718,21 @@ export function RegistrationSection({
                     </Field>
                     <fieldset id="masterServiceIds" tabIndex={-1} className="outline-none focus-visible:ring-2 focus-visible:ring-primary">
                       <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
-                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Select exactly five Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/5.</p>
+                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Choose 5–10 Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/10.</p>
                       {servicesError && <p className="mt-2 text-xs text-destructive">{servicesError}</p>}
                       {masterServicesLoading ? (
                         <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
                       ) : masterServicesError ? (
                         <p className="mt-2 text-xs text-destructive" role="alert">The Puja catalogue could not be loaded. Please retry before submitting.</p>
                       ) : (
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div className="mt-3 max-h-72 overflow-y-auto overscroll-contain pr-1" data-lenis-prevent>
+                          <div className="grid gap-2 sm:grid-cols-2">
                           {masterServices.filter(service => ["puja", "katha", "ritual"].includes(service.serviceType)).map(service => (
                             <label key={service.id} className="flex cursor-pointer items-center gap-2 rounded-md border bg-[#FFFAEC]/40 px-3 py-2 text-sm" style={{ borderColor: `${C.maroon}20`, color: C.brown }}>
                               <input
                                 type="checkbox"
                                 checked={form.masterServiceIds.includes(service.id)}
-                                 disabled={!form.masterServiceIds.includes(service.id) && form.masterServiceIds.length >= 5}
+                                 disabled={!form.masterServiceIds.includes(service.id) && form.masterServiceIds.length >= 10}
                                  onChange={event => setForm(current => ({
                                   ...current,
                                   masterServiceIds: event.target.checked
@@ -1723,6 +1743,7 @@ export function RegistrationSection({
                               <span><span className="font-medium">{service.name}</span><span className="block text-[11px]" style={{ color: C.brownSoft }}>{service.category}</span></span>
                             </label>
                           ))}
+                          </div>
                         </div>
                       )}
                       <label id="servicesConfirmed" tabIndex={-1} className="mt-3 flex items-start gap-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.brownSoft }}>
