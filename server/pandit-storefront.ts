@@ -693,38 +693,47 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       const editorial = profile?.pandit?.id
         ? await getPublishedPanditContent(profile.pandit.id).catch(() => null)
         : null;
-      const responseDto = profile
-        ? (() => {
-            const seo = buildPanditProfileSeoHead(
+      const responseDto = (() => {
+        const seo = profile
+          ? buildPanditProfileSeoHead(
               editorial?.publishedProfileIntroduction
                 ? { ...profile, pandit: { ...profile.pandit!, bio: editorial.publishedProfileIntroduction } }
                 : profile,
               siteUrl(req),
-            );
-            if (editorial?.publishedSeoTitle) seo.title = editorial.publishedSeoTitle;
-            if (editorial?.stale) seo.robotsIndex = false;
-            if (editorial?.publishedMetaDescription) {
-              seo.description = editorial.publishedMetaDescription;
-              const person = seo.jsonLd.find((item) => item.id === "pandit-person");
-              if (person) person.payload.description = editorial.publishedMetaDescription;
-            }
-            if (Array.isArray(editorial?.publishedFaqs) && editorial!.publishedFaqs.length) {
-              seo.jsonLd.push({
-                id: "pandit-faq",
-                payload: {
-                  "@context": "https://schema.org",
-                  "@type": "FAQPage",
-                  mainEntity: (editorial!.publishedFaqs as Array<{ question: string; answer: string }>).map((faq) => ({
-                    "@type": "Question",
-                    name: faq.question,
-                    acceptedAnswer: { "@type": "Answer", text: faq.answer },
-                  })),
-                },
-              });
-            }
-            return { ...dto, seo };
-          })()
-        : dto;
+            )
+          : {
+              title: `${dto.pandit.name} — Vedic Pandit | Vedic Tatva`,
+              description: dto.storefront?.tagline || dto.storefront?.bio || dto.pandit.bio || `View services and request a booking with ${dto.pandit.name}.`,
+              canonical: dto.canonicalUrl,
+              ogImage: `/api/og/p/${encodeURIComponent(slug)}.jpg`,
+              ogType: "profile" as const,
+              robotsIndex: true,
+              robotsFollow: true,
+              jsonLd: [],
+            };
+        if (editorial?.publishedSeoTitle) seo.title = editorial.publishedSeoTitle;
+        if (editorial?.stale) seo.robotsIndex = false;
+        if (editorial?.publishedMetaDescription) {
+          seo.description = editorial.publishedMetaDescription;
+          const person = seo.jsonLd.find((item) => item.id === "pandit-person");
+          if (person) person.payload.description = editorial.publishedMetaDescription;
+        }
+        if (Array.isArray(editorial?.publishedFaqs) && editorial!.publishedFaqs.length) {
+          seo.jsonLd.push({
+            id: "pandit-faq",
+            payload: {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: (editorial!.publishedFaqs as Array<{ question: string; answer: string }>).map((faq) => ({
+                "@type": "Question",
+                name: faq.question,
+                acceptedAnswer: { "@type": "Answer", text: faq.answer },
+              })),
+            },
+          });
+        }
+        return { ...dto, seo };
+      })();
       // Server-side attribution: any visit to /p/<slug> (which the SPA loads
       // by hitting this endpoint) stamps the vt_ref cookie for 30 days, so
       // attribution survives even when the browser blocks document.cookie
