@@ -1,31 +1,30 @@
-# Five-Minute Vedic Pre-Chant Warmup
+# Vedic Pre-Chant Warmup
 
 ## Goal
 
-Replace the short pre-chant breathing sequence with a five-minute guided
-warmup that begins with a one-minute introduction and soft Vedic ambient
-background music, then guides three breathing exercises before the first japa
-count is accepted.
+Replace the short pre-chant breathing sequence with a guided warmup that begins
+with a natural recorded introduction and soft Vedic ambient background music,
+then guides three 80-second breathing exercises before the first japa count is
+accepted.
 
 The warmup must remain optional, interruptible, accessible, and safe to leave
 at any point. It must never prevent the devotee from chanting.
 
 ## Approved flow
 
-The first tap on the japa orb opens the warmup instead of counting. The
-unskipped sequence is exactly five minutes:
+The first tap on the japa orb opens the warmup instead of counting:
 
 | Segment | Duration | Content |
 | --- | ---: | --- |
-| Intro | 60 seconds | Prepare for mantra, safety note, ambient Vedic music |
+| Intro | About 9 seconds | “Prepare for your mantra” narration and ambient Vedic music |
 | Nadi Shodhana | 80 seconds | Five 16-second rounds: inhale left, exhale right, inhale right, exhale left |
 | Sama Vritti | 80 seconds | Five 16-second rounds: inhale, hold, exhale, rest |
 | Bhramari | 80 seconds | Eight 10-second rounds: four-second inhale, six-second humming exhale |
 
 The intro has a **Begin breathing** action that advances immediately to the
-first exercise. Waiting through the intro starts the exercise automatically.
-Skipping the intro therefore intentionally shortens the session, just as
-skipping a stage does.
+first exercise. Otherwise, the first exercise starts as soon as the recorded
+introduction ends. A 10-second timer is retained only as a failure fallback
+when audio playback cannot complete normally.
 
 When the final segment completes, the music fades out, the dialog closes, and
 the next tap counts the first mantra repetition. Existing auto-chant behavior
@@ -60,10 +59,10 @@ soft, clear female Indian-English voice. Delivery should be warm and human,
 with relaxed pacing, natural sentence stress, and brief pauses. It must not
 sound robotic, metallic, clipped, or like a basic computer voice.
 
-Create separate clips for the intro, exercise introductions, and reusable
-phase cues. Keeping cues separate allows stage skips and exact phase changes
-to stop or replace the current clip immediately without desynchronizing the
-visual timer.
+Create separate clips for the intro and every reusable phase cue. Exercise
+timers use phase cues only: each recorded inhale, hold, exhale, rest, or hum
+starts at the same boundary as its visual counter. Stage names and descriptions
+remain visible rather than playing a longer introduction over active phases.
 
 The current device speech-synthesis path remains only as an emergency fallback
 when a recorded clip is missing or fails to play. Request `en-IN` and prefer an
@@ -76,7 +75,7 @@ speech nor device speech is available.
 The intro state shows:
 
 - “Prepare for your mantra”
-- A one-minute countdown
+- A short introduction countdown
 - A concise safety note
 - Music toggle
 - Voice toggle
@@ -132,8 +131,11 @@ session warmup as complete, and returns to the existing counting flow.
 4. Confirm music and recorded spoken cues start only from a user gesture.
 5. Listen for audible music loop seams, clipping, harsh synthetic timbres, and
    voice artifacts; the primary guide must sound natural and human.
-6. Confirm the unskipped segment durations total five minutes.
-7. Confirm intro skip, stage skip, full skip, Escape, overlay dismissal, mute,
+6. Confirm the introduction advances immediately when its recording ends and
+   each exercise stage lasts 80 seconds.
+7. Confirm every exercise phase cue starts with its matching visual counter,
+   including the first inhale of each stage.
+8. Confirm intro skip, stage skip, full skip, Escape, overlay dismissal, mute,
    final completion, mantra change, and unmount stop audio cleanly.
-8. Confirm auto-chant waits for warmup completion or skip.
-9. Capture a fresh preview and inspect browser/workflow logs for new errors.
+9. Confirm auto-chant waits for warmup completion or skip.
+10. Capture a fresh preview and inspect browser/workflow logs for new errors.

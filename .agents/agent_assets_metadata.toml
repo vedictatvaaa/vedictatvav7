@@ -1792,3 +1792,108 @@ uri = "file://vedictatva-deploy-20260517-1838.zip"
 type = "unspecified"
 title = "Vedic Tatva — One-Click Coolify Deploy Package"
 logical_id = "06615fda-f9ed-4d03-94df-496e3a23b3ff"
+
+[[outputs]]
+id = "fY7_DgInDdJQAAIglDjkU"
+uri = "file://attached_assets/generated_audio/japa-five-minute-vedic-warmup.mp3"
+type = "audio"
+title = "five minute vedic breathing ambience"
+description = "Generated music: High-fidelity serene Vedic meditation ambience for a pre-mantra breathing warmup. Natural acoustic tanpura drone, sparse expressive bansuri flute, very soft occasional temple bell ac…"
+
+[[outputs]]
+id = "FcBJoTCYcAka_y7J90izo"
+uri = "file://attached_assets/generated_audio/japa-breath-sama-intro.mp3"
+type = "audio"
+title = "japa breathing sama-intro"
+description = "Text-to-speech audio: Now move into Sama Vritti, even box breathing. Keep each part of the breath smooth and comfortable."
+
+[[outputs]]
+id = "CuJAYFgQDlYr56H6Cysb9"
+uri = "file://attached_assets/generated_audio/japa-breath-inhale.mp3"
+type = "audio"
+title = "japa breathing inhale"
+description = "Text-to-speech audio: Inhale slowly and softly through the nose."
+
+[[outputs]]
+id = "VsWqe2G9ewTw0uhEDOprI"
+uri = "file://attached_assets/generated_audio/japa-breath-nadi-intro.mp3"
+type = "audio"
+title = "japa breathing nadi-intro"
+description = "Text-to-speech audio: We begin with Nadi Shodhana, gentle alternate nostril breathing. Keep the breath soft and unforced."
+
+[[outputs]]
+id = "sZWohfMD-F3aBuZkMBUEq"
+uri = "file://attached_assets/generated_audio/japa-breath-bhramari-intro.mp3"
+type = "audio"
+title = "japa breathing bhramari-intro"
+description = "Text-to-speech audio: For the final stage, Bhramari. Breathe in softly, then exhale with a quiet, gentle hum."
+
+[[outputs]]
+id = "fmpnxNhkMdifVcGzrqfte"
+uri = "file://attached_assets/generated_audio/japa-breath-exhale-left.mp3"
+type = "audio"
+title = "japa breathing exhale-left"
+description = "Text-to-speech audio: Exhale softly through the left nostril."
+
+[[outputs]]
+id = "HeUJEHlNYajIXFeRXcY3h"
+uri = "file://attached_assets/generated_audio/japa-breath-hold.mp3"
+type = "audio"
+title = "japa breathing hold"
+description = "Text-to-speech audio: Hold gently, without strain."
+
+[[outputs]]
+id = "QGkEuq0gbZG1UYPODl-mr"
+uri = "file://attached_assets/generated_audio/japa-breath-exhale.mp3"
+type = "audio"
+title = "japa breathing exhale"
+description = "Text-to-speech audio: Exhale slowly and softly."
+
+[[outputs]]
+id = "24_5uKa39io-J_H_Lb-B7"
+uri = "file://attached_assets/generated_audio/japa-breath-inhale-right.mp3"
+type = "audio"
+title = "japa breathing inhale-right"
+description = "Text-to-speech audio: Inhale gently through the right nostril."
+
+[[outputs]]
+id = "f9W3d4U0GkdbqAXd0egDl"
+uri = "file://attached_assets/generated_audio/japa-breath-hum-out.mp3"
+type = "audio"
+title = "japa breathing hum-out"
+description = "Text-to-speech audio: Exhale with a quiet, gentle humming sound."
+
+[[outputs]]
+id = "YAPSXZh8WhcmRHaokEmkI"
+uri = "file://attached_assets/generated_audio/japa-breath-rest.mp3"
+type = "audio"
+title = "japa breathing rest"
+description = "Text-to-speech audio: Rest softly before the next breath."
+
+[[outputs]]
+id = "zzuIk5njyrAVqAPj7fbg_"
+uri = "file://attached_assets/generated_audio/japa-breath-inhale-left.mp3"
+type = "audio"
+title = "japa breathing inhale-left"
+description = "Text-to-speech audio: Inhale gently through the left nostril."
+
+[[outputs]]
+id = "Bh0jrrPyCCz2kJRedmitP"
+uri = "file://attached_assets/generated_audio/japa-breath-exhale-right.mp3"
+type = "audio"
+title = "japa breathing exhale right"
+description = "Text-to-speech audio: Exhale softly through the right nostril."
+
+[[outputs]]
+id = "nvqzY4w-ctAPzzYkqg9ZN"
+uri = "file://attached_assets/generated_audio/japa-breath-intro.mp3"
+type = "audio"
+title = "japa breathing introduction"
+description = "Text-to-speech audio: Namaste. Before mantra chanting, take five gentle minutes to settle the breath and attention. Soft Vedic music will accompany three breathing practices. Keep every breath comfor…"
+
+[[outputs]]
+id = "O4HRHQdK5eIrMHK2r6E94"
+uri = "file://attached_assets/generated_audio/japa-breath-intro_2.mp3"
+type = "audio"
+title = "japa breathing introduction"
+description = "Text-to-speech audio: Prepare for your mantra. Settle your posture and let the music create a quiet space before the breathing practice begins."

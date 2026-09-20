@@ -23,6 +23,17 @@ import omNamoBhagavateAudioUrl from "@assets/108fold-namo_3L0KPc4A_1778251695849
 import mahalaxmiAudioUrl from "@assets/108fold-namo_3L0KPc4A_2_1778252274758.mp3";
 import ganeshAudioUrl from "@assets/ganaepata-tana-oms_SQQ7M0nq_1778252685826.mp3";
 import hanumanAudioUrl from "@assets/hanumate-namah_jaqqzhio_2_1778253761476.mp3";
+import breathWarmupMusicUrl from "@assets/generated_audio/japa-five-minute-vedic-warmup.mp3";
+import breathIntroAudioUrl from "@assets/generated_audio/japa-breath-intro_2.mp3";
+import breathInhaleLeftAudioUrl from "@assets/generated_audio/japa-breath-inhale-left.mp3";
+import breathExhaleRightAudioUrl from "@assets/generated_audio/japa-breath-exhale-right.mp3";
+import breathInhaleRightAudioUrl from "@assets/generated_audio/japa-breath-inhale-right.mp3";
+import breathExhaleLeftAudioUrl from "@assets/generated_audio/japa-breath-exhale-left.mp3";
+import breathInhaleAudioUrl from "@assets/generated_audio/japa-breath-inhale.mp3";
+import breathHoldAudioUrl from "@assets/generated_audio/japa-breath-hold.mp3";
+import breathExhaleAudioUrl from "@assets/generated_audio/japa-breath-exhale.mp3";
+import breathRestAudioUrl from "@assets/generated_audio/japa-breath-rest.mp3";
+import breathHumOutAudioUrl from "@assets/generated_audio/japa-breath-hum-out.mp3";
 import shivaMahamrityunjayaImg from "@assets/generated_images/shiva-mahamrityunjaya.png";
 import shivaBlessingHandImg from "@assets/generated_images/shiva-blessing-hand.png";
 // AI-generated deity portraits for each preset mantra. Used as the
@@ -131,6 +142,7 @@ type BreathPhase = {
   durationMs: number;
   instruction: string;
   speech: string;
+  audioUrl: string;
 };
 
 type BreathStage = {
@@ -142,6 +154,12 @@ type BreathStage = {
   phases: BreathPhase[];
 };
 
+type BreathWarmupStep = "intro" | "exercise";
+
+const BREATH_INTRO_MS = 10000;
+const BREATH_INTRO_SPEECH = "Prepare for your mantra. Settle your posture and let the music create a quiet space before the breathing practice begins.";
+const BREATH_MUSIC_VOLUME = 0.2;
+
 // Gentle, no-force warmup sequence before the first japa. The exercises avoid
 // long holds so the guide remains approachable; a devotee can skip a stage or
 // the whole warmup at any time.
@@ -151,12 +169,12 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Nadi Shodhana",
     sanskrit: "Alternate-nostril breathing",
     description: "Balance the breath gently, without forcing the nostrils or the pace.",
-    rounds: 2,
+    rounds: 5,
     phases: [
-      { label: "Inhale left", durationMs: 4000, instruction: "Inhale gently through the left nostril", speech: "Inhale gently through the left nostril." },
-      { label: "Exhale right", durationMs: 4000, instruction: "Exhale softly through the right nostril", speech: "Exhale softly through the right nostril." },
-      { label: "Inhale right", durationMs: 4000, instruction: "Inhale gently through the right nostril", speech: "Inhale gently through the right nostril." },
-      { label: "Exhale left", durationMs: 4000, instruction: "Exhale softly through the left nostril", speech: "Exhale softly through the left nostril." },
+      { label: "Inhale left", durationMs: 4000, instruction: "Inhale gently through the left nostril", speech: "Inhale gently through the left nostril.", audioUrl: breathInhaleLeftAudioUrl },
+      { label: "Exhale right", durationMs: 4000, instruction: "Exhale softly through the right nostril", speech: "Exhale softly through the right nostril.", audioUrl: breathExhaleRightAudioUrl },
+      { label: "Inhale right", durationMs: 4000, instruction: "Inhale gently through the right nostril", speech: "Inhale gently through the right nostril.", audioUrl: breathInhaleRightAudioUrl },
+      { label: "Exhale left", durationMs: 4000, instruction: "Exhale softly through the left nostril", speech: "Exhale softly through the left nostril.", audioUrl: breathExhaleLeftAudioUrl },
     ],
   },
   {
@@ -164,12 +182,12 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Sama Vritti",
     sanskrit: "Box breathing",
     description: "Keep each side of the breath even and comfortable.",
-    rounds: 2,
+    rounds: 5,
     phases: [
-      { label: "Inhale", durationMs: 4000, instruction: "Breathe in slowly through the nose", speech: "Inhale slowly through the nose." },
-      { label: "Hold", durationMs: 4000, instruction: "Hold gently, without strain", speech: "Hold gently, without strain." },
-      { label: "Exhale", durationMs: 4000, instruction: "Release slowly through the nose", speech: "Exhale slowly." },
-      { label: "Rest", durationMs: 4000, instruction: "Rest softly before the next breath", speech: "Rest softly." },
+      { label: "Inhale", durationMs: 4000, instruction: "Breathe in slowly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
+      { label: "Hold", durationMs: 4000, instruction: "Hold gently, without strain", speech: "Hold gently, without strain.", audioUrl: breathHoldAudioUrl },
+      { label: "Exhale", durationMs: 4000, instruction: "Release slowly through the nose", speech: "Exhale slowly and softly.", audioUrl: breathExhaleAudioUrl },
+      { label: "Rest", durationMs: 4000, instruction: "Rest softly before the next breath", speech: "Rest softly before the next breath.", audioUrl: breathRestAudioUrl },
     ],
   },
   {
@@ -177,10 +195,10 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Bhramari",
     sanskrit: "Humming-bee breath",
     description: "Use a soft hum on the exhale to settle attention before chanting.",
-    rounds: 2,
+    rounds: 8,
     phases: [
-      { label: "Inhale", durationMs: 4000, instruction: "Breathe in softly through the nose", speech: "Inhale softly through the nose." },
-      { label: "Hum out", durationMs: 6000, instruction: "Exhale with a gentle humming sound", speech: "Exhale with a gentle humming sound." },
+      { label: "Inhale", durationMs: 4000, instruction: "Breathe in softly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
+      { label: "Hum out", durationMs: 6000, instruction: "Exhale with a gentle humming sound", speech: "Exhale with a quiet, gentle humming sound.", audioUrl: breathHumOutAudioUrl },
     ],
   },
 ];
@@ -885,85 +903,247 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // Session is process-lifetime (mount → unmount). A fresh page load
   // counts as a new session and the breathwork triggers again.
   const [breathingActive, setBreathingActive] = useState(false);
+  const [breathWarmupStep, setBreathWarmupStep] = useState<BreathWarmupStep>("intro");
   const [breathTick, setBreathTick] = useState(0);
   const [breathStageIndex, setBreathStageIndex] = useState(0);
   const [breathVoiceOn, setBreathVoiceOn] = useState(true);
+  const [breathMusicOn, setBreathMusicOn] = useState(true);
   const breathingDoneThisSessionRef = useRef(false);
+  const breathMusicRef = useRef<HTMLAudioElement | null>(null);
+  const breathMusicFadeRef = useRef<number | null>(null);
+  const breathGuideAudioRef = useRef<HTMLAudioElement | null>(null);
+  const breathGuideGenerationRef = useRef(0);
+  const breathLastGuideCueRef = useRef<string | null>(null);
+  const breathWarmupContextRef = useRef(`${ownerKey}:${mantra.id}`);
   const breathStage = BREATH_STAGES[breathStageIndex] || BREATH_STAGES[0];
   const breathPhase = getBreathPhase(breathStage, breathTick);
+  const breathGuideCueKey = breathWarmupStep === "intro"
+    ? "intro"
+    : `${breathStage.id}:${breathPhase.round}:${breathPhase.phaseIndex}`;
+
+  const startBreathMusic = useCallback(() => {
+    if (typeof Audio === "undefined") return;
+    if (breathMusicFadeRef.current) {
+      window.clearInterval(breathMusicFadeRef.current);
+      breathMusicFadeRef.current = null;
+    }
+    let audio = breathMusicRef.current;
+    if (!audio) {
+      audio = new Audio(breathWarmupMusicUrl);
+      audio.preload = "auto";
+      audio.loop = true;
+      breathMusicRef.current = audio;
+    }
+    audio.volume = BREATH_MUSIC_VOLUME;
+    void audio.play().catch(() => {
+      // Music is an enhancement. The visual + spoken guide remains available
+      // when a browser rejects playback or the asset cannot load.
+    });
+  }, []);
+
+  const stopBreathMusic = useCallback((fade = false) => {
+    if (breathMusicFadeRef.current) {
+      window.clearInterval(breathMusicFadeRef.current);
+      breathMusicFadeRef.current = null;
+    }
+    const audio = breathMusicRef.current;
+    if (!audio) return;
+    const finish = () => {
+      audio.pause();
+      try { audio.currentTime = 0; } catch {}
+      audio.volume = BREATH_MUSIC_VOLUME;
+    };
+    if (!fade || audio.paused) {
+      finish();
+      return;
+    }
+    const initialVolume = audio.volume;
+    let fadeStep = 0;
+    breathMusicFadeRef.current = window.setInterval(() => {
+      fadeStep += 1;
+      audio.volume = Math.max(0, initialVolume * (1 - fadeStep / 10));
+      if (fadeStep >= 10) {
+        if (breathMusicFadeRef.current) window.clearInterval(breathMusicFadeRef.current);
+        breathMusicFadeRef.current = null;
+        finish();
+      }
+    }, 50);
+  }, []);
+
+  const stopRecordedBreathGuide = useCallback(() => {
+    breathGuideGenerationRef.current += 1;
+    const audio = breathGuideAudioRef.current;
+    breathGuideAudioRef.current = null;
+    if (!audio) return;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    try { audio.currentTime = 0; } catch {}
+  }, []);
+
+  const playRecordedBreathGuide = useCallback((
+    audioUrl: string,
+    fallbackText: string,
+    chimeSeed: number,
+    cueKey: string,
+    onEnded?: () => void,
+  ) => {
+    stopRecordedBreathGuide();
+    stopBreathGuide();
+    breathLastGuideCueRef.current = cueKey;
+    if (typeof Audio === "undefined") {
+      if (!speakBreathGuide(fallbackText) && soundOn) bellPlayer.tap(chimeSeed);
+      return;
+    }
+
+    const generation = breathGuideGenerationRef.current;
+    const audio = new Audio(audioUrl);
+    audio.preload = "auto";
+    audio.volume = 0.92;
+    breathGuideAudioRef.current = audio;
+    let fallbackStarted = false;
+    const fallback = () => {
+      if (fallbackStarted || breathGuideGenerationRef.current !== generation) return;
+      fallbackStarted = true;
+      if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
+      if (!speakBreathGuide(fallbackText) && soundOn) bellPlayer.tap(chimeSeed);
+    };
+    audio.onended = () => {
+      if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
+      if (breathGuideGenerationRef.current === generation) onEnded?.();
+    };
+    audio.onerror = fallback;
+    void audio.play().catch(fallback);
+  }, [soundOn, stopRecordedBreathGuide]);
+
+  const completeBreathingWarmup = useCallback((fadeMusic = false) => {
+    stopRecordedBreathGuide();
+    stopBreathGuide();
+    stopBreathMusic(fadeMusic);
+    breathLastGuideCueRef.current = null;
+    breathingDoneThisSessionRef.current = true;
+    setBreathingActive(false);
+    setBreathWarmupStep("intro");
+    setBreathStageIndex(0);
+    setBreathTick(0);
+  }, [stopBreathMusic, stopRecordedBreathGuide]);
+
+  const beginBreathingExercises = useCallback(() => {
+    stopRecordedBreathGuide();
+    stopBreathGuide();
+    setBreathWarmupStep("exercise");
+    setBreathStageIndex(0);
+    setBreathTick(0);
+  }, [stopRecordedBreathGuide]);
 
   useEffect(() => {
     if (!breathingActive) return;
     const start = Date.now();
-    const stage = BREATH_STAGES[breathStageIndex] || BREATH_STAGES[0];
+    const segmentDuration = breathWarmupStep === "intro"
+      ? BREATH_INTRO_MS
+      : breathStageDuration(BREATH_STAGES[breathStageIndex] || BREATH_STAGES[0]);
     const id = setInterval(() => {
       const e = Date.now() - start;
-      if (e >= breathStageDuration(stage)) {
+      if (e >= segmentDuration) {
         clearInterval(id);
+        if (breathWarmupStep === "intro") {
+          beginBreathingExercises();
+          return;
+        }
         if (breathStageIndex < BREATH_STAGES.length - 1) {
           setBreathStageIndex((index) => Math.min(BREATH_STAGES.length - 1, index + 1));
           setBreathTick(0);
         } else {
-          breathingDoneThisSessionRef.current = true;
-          setBreathingActive(false);
-          setBreathStageIndex(0);
-          setBreathTick(0);
-          stopBreathGuide();
+          completeBreathingWarmup(true);
         }
         return;
       }
       setBreathTick(e);
     }, 100);
     return () => clearInterval(id);
-  }, [breathingActive, breathStageIndex]);
+  }, [
+    beginBreathingExercises,
+    breathingActive,
+    breathStageIndex,
+    breathWarmupStep,
+    completeBreathingWarmup,
+  ]);
 
-  // Speak one cue when the phase changes. Speech synthesis is the device-level
-  // fallback when a recorded guide is unavailable; the visual timer remains
-  // authoritative even if the browser has no speech engine.
+  // Recorded guide clips are primary. Device speech is used only when a clip
+  // cannot play, and the short synthesized bell remains the final fallback.
   useEffect(() => {
     if (!breathingActive || !breathVoiceOn) return;
-    const prefix = breathPhase.round === 1 && breathPhase.phaseIndex === 0
-      ? `${breathStage.name}. `
-      : "";
-    if (!speakBreathGuide(`${prefix}${breathPhase.phase.speech}`) && soundOn) {
-      bellPlayer.tap(breathStageIndex + breathPhase.phaseIndex);
+    if (breathLastGuideCueRef.current === breathGuideCueKey) return;
+    if (breathWarmupStep === "intro") {
+      playRecordedBreathGuide(
+        breathIntroAudioUrl,
+        BREATH_INTRO_SPEECH,
+        0,
+        breathGuideCueKey,
+        beginBreathingExercises,
+      );
+      return;
     }
+    playRecordedBreathGuide(
+      breathPhase.phase.audioUrl,
+      breathPhase.phase.speech,
+      breathStageIndex + breathPhase.phaseIndex + 2,
+      breathGuideCueKey,
+    );
   }, [
     breathingActive,
     breathVoiceOn,
-    breathStageIndex,
-    breathStage.name,
-    breathPhase.phaseIndex,
-    breathPhase.round,
-    breathPhase.phase.speech,
-    soundOn,
+    breathGuideCueKey,
+    breathWarmupStep,
+    beginBreathingExercises,
+    playRecordedBreathGuide,
   ]);
 
   useEffect(() => {
-    if (!breathVoiceOn) stopBreathGuide();
-  }, [breathVoiceOn]);
-  useEffect(() => () => stopBreathGuide(), []);
+    if (!breathVoiceOn) {
+      breathLastGuideCueRef.current = null;
+      stopRecordedBreathGuide();
+      stopBreathGuide();
+    }
+  }, [breathVoiceOn, stopRecordedBreathGuide]);
+  useEffect(() => () => {
+    stopRecordedBreathGuide();
+    stopBreathGuide();
+    stopBreathMusic(false);
+  }, [stopBreathMusic, stopRecordedBreathGuide]);
 
   const skipBreathing = useCallback(() => {
-    stopBreathGuide();
-    breathingDoneThisSessionRef.current = true;
-    setBreathingActive(false);
-    setBreathStageIndex(0);
-    setBreathTick(0);
-  }, []);
+    completeBreathingWarmup(false);
+  }, [completeBreathingWarmup]);
 
   const skipBreathingStage = useCallback(() => {
     stopBreathGuide();
+    stopRecordedBreathGuide();
     if (breathStageIndex >= BREATH_STAGES.length - 1) {
-      breathingDoneThisSessionRef.current = true;
-      setBreathingActive(false);
-      setBreathStageIndex(0);
-      setBreathTick(0);
+      completeBreathingWarmup(false);
       return;
     }
     setBreathStageIndex((index) => Math.min(BREATH_STAGES.length - 1, index + 1));
     setBreathTick(0);
-  }, [breathStageIndex]);
+  }, [breathStageIndex, completeBreathingWarmup, stopRecordedBreathGuide]);
+
+  const toggleBreathMusic = useCallback(() => {
+    if (breathMusicOn) {
+      const audio = breathMusicRef.current;
+      if (audio) audio.pause();
+      setBreathMusicOn(false);
+      return;
+    }
+    setBreathMusicOn(true);
+    startBreathMusic();
+  }, [breathMusicOn, startBreathMusic]);
+
+  useEffect(() => {
+    const nextContext = `${ownerKey}:${mantra.id}`;
+    if (breathWarmupContextRef.current === nextContext) return;
+    breathWarmupContextRef.current = nextContext;
+    if (breathingActive) skipBreathing();
+  }, [breathingActive, mantra.id, ownerKey, skipBreathing]);
 
   // — Full-mala bloom: timestamp of the most recent mala completion;
   //   the orb fires a gold radial flash + slow pulse for ~2.4s when
@@ -1625,8 +1805,20 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     // it finishes (or the devotee skips it).
     if (!breathingDoneThisSessionRef.current && !breathingActive) {
       setBreathingActive(true);
+      setBreathWarmupStep("intro");
       setBreathStageIndex(0);
       setBreathTick(0);
+      setBreathMusicOn(true);
+      startBreathMusic();
+      if (breathVoiceOn) {
+        playRecordedBreathGuide(
+          breathIntroAudioUrl,
+          BREATH_INTRO_SPEECH,
+          0,
+          "intro",
+          beginBreathingExercises,
+        );
+      }
       return;
     }
     if (breathingActive) return;
@@ -1646,7 +1838,18 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       return;
     }
     tap();
-  }, [autoMode, soundOn, mantra.id, toast, tap, breathingActive]);
+  }, [
+    autoMode,
+    soundOn,
+    mantra.id,
+    toast,
+    tap,
+    breathingActive,
+    breathVoiceOn,
+    beginBreathingExercises,
+    playRecordedBreathGuide,
+    startBreathMusic,
+  ]);
 
   // Shake-to-count: useShakeToJapa fires this CustomEvent on every clean
   // shake while the devotee is on /japa. We treat it like a manual tap —
@@ -1920,87 +2123,176 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           <div className="relative flex flex-col items-center text-center px-6 py-6 sm:px-8 sm:py-7">
             <DialogTitle className="sr-only">Guided breathing warmup</DialogTitle>
             <DialogDescription className="sr-only">
-              A three-stage breathing warmup before chanting. Stop if any breath or hold feels uncomfortable.
+              A Vedic breathing warmup before chanting. Stop if any breath or hold feels uncomfortable.
             </DialogDescription>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
-              Breath warmup · {breathStageIndex + 1}/3
+            <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {breathWarmupStep === "intro"
+                ? `Warmup introduction. ${Math.max(0, Math.ceil((BREATH_INTRO_MS - breathTick) / 1000))} seconds remaining.`
+                : `${breathStage.name}. Round ${breathPhase.round} of ${breathStage.rounds}. ${breathPhase.phase.label}. ${breathPhase.phaseRemain} seconds.`}
             </div>
-            <div className="mt-2 text-2xl sm:text-3xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-stage">
-              {breathStage.name}
-            </div>
-            <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#FFEBB0]/75">
-              {breathStage.sanskrit} · Round {breathPhase.round}/{breathStage.rounds}
-            </div>
-            <div className="mt-2 max-w-sm text-xs leading-relaxed text-[#FFEBB0]/85">
-              {breathStage.description}
-            </div>
-
-            <div
-              className="relative my-5 w-36 h-36 sm:w-40 sm:h-40 rounded-full flex items-center justify-center"
-              style={{
-                background: "radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.08) 55%, transparent 80%)",
-              }}
-              aria-hidden="true"
-            >
-              <div
-                className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-transform duration-1000 ease-in-out"
-                style={{
-                  transform: `scale(${breathPhase.phase.label.includes("Inhale") ? 1.06 : breathPhase.phase.label.includes("Exhale") || breathPhase.phase.label.includes("Hum") ? 0.86 : 1})`,
-                }}
-              />
-              <div className="relative flex flex-col items-center">
-                <div className="text-lg sm:text-xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
-                  {breathPhase.phase.label}
+            {breathWarmupStep === "intro" ? (
+              <>
+                <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
+                  Vedic warmup
                 </div>
-                <div className="text-5xl sm:text-6xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-0.5" data-testid="text-breath-countdown">
-                  {breathPhase.phaseRemain}
+                <div className="mt-3 text-3xl sm:text-4xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-stage">
+                  Prepare for your mantra
                 </div>
-              </div>
-            </div>
-
-            <div className="min-h-10 text-sm text-[#FFEBB0] max-w-sm leading-snug">
-              {breathPhase.phase.instruction}
-            </div>
-            <div className="mt-3 flex gap-1.5" aria-label={`Warmup stage ${breathStageIndex + 1} of ${BREATH_STAGES.length}`}>
-              {BREATH_STAGES.map((stage, index) => (
-                <span
-                  key={stage.id}
-                  className={`h-1.5 rounded-full transition-all ${index === breathStageIndex ? "w-8 bg-[#D4AF37]" : index < breathStageIndex ? "w-4 bg-[#D4AF37]/70" : "w-4 bg-[#FFEBB0]/25"}`}
+                <div className="mt-2 max-w-sm text-sm leading-relaxed text-[#FFEBB0]/85">
+                  Settle your posture and let the music create a quiet space before the breathing practice begins.
+                </div>
+                <div
+                  className="relative my-6 flex h-40 w-40 items-center justify-center rounded-full"
+                  style={{
+                    background: "radial-gradient(circle, rgba(212,175,55,0.24) 0%, rgba(212,175,55,0.08) 58%, transparent 82%)",
+                  }}
                   aria-hidden="true"
-                />
-              ))}
-            </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setBreathVoiceOn((enabled) => !enabled)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
-                aria-pressed={breathVoiceOn}
-                aria-label={breathVoiceOn ? "Mute breathing voice guide" : "Turn on breathing voice guide"}
-                data-testid="btn-toggle-breath-voice"
-              >
-                {breathVoiceOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                {breathVoiceOn ? "Voice on" : "Voice off"}
-              </button>
-              <button
-                type="button"
-                onClick={skipBreathingStage}
-                className="rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
-                aria-label={`Skip ${breathStage.name}`}
-                data-testid="btn-skip-breath-stage"
-              >
-                Skip stage
-              </button>
-              <button
-                type="button"
-                onClick={skipBreathing}
-                className="rounded-full border border-[#D4AF37]/65 bg-[#D4AF37]/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/20 transition-colors"
-                data-testid="btn-skip-breathing"
-                aria-label="Skip the breathing warmup and begin chanting now"
-              >
-                Skip warmup
-              </button>
-            </div>
+                >
+                  <div className="absolute inset-0 rounded-full border border-[#D4AF37]/40 animate-japa-breath" />
+                  <div className="relative flex flex-col items-center">
+                    <Music2 className="mb-2 h-6 w-6 text-[#D4AF37]" />
+                    <div className="text-5xl sm:text-6xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none" data-testid="text-breath-countdown">
+                      {Math.max(0, Math.ceil((BREATH_INTRO_MS - breathTick) / 1000))}
+                    </div>
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[#FFEBB0]/70">seconds</div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleBreathMusic}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                    aria-pressed={breathMusicOn}
+                    aria-label={breathMusicOn ? "Mute warmup music" : "Turn on warmup music"}
+                    data-testid="btn-toggle-breath-music"
+                  >
+                    {breathMusicOn ? <Music2 className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                    {breathMusicOn ? "Music on" : "Music off"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBreathVoiceOn((enabled) => !enabled)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                    aria-pressed={breathVoiceOn}
+                    aria-label={breathVoiceOn ? "Mute breathing voice guide" : "Turn on breathing voice guide"}
+                    data-testid="btn-toggle-breath-voice"
+                  >
+                    {breathVoiceOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                    {breathVoiceOn ? "Voice on" : "Voice off"}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={beginBreathingExercises}
+                  className="mt-5 rounded-full border border-[#D4AF37] bg-[#D4AF37] px-5 py-2 text-[11px] uppercase tracking-[0.16em] font-bold text-[#3b1218] hover:bg-[#e0c05a] transition-colors"
+                  data-testid="btn-begin-breathing"
+                >
+                  Begin breathing
+                </button>
+                <button
+                  type="button"
+                  onClick={skipBreathing}
+                  className="mt-2 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0]/75 hover:text-[#FFEBB0] transition-colors"
+                  data-testid="btn-skip-breathing"
+                  aria-label="Skip the breathing warmup and begin chanting now"
+                >
+                  Skip warmup
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold">
+                  Breath warmup · {breathStageIndex + 1}/3
+                </div>
+                <div className="mt-2 text-2xl sm:text-3xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-stage">
+                  {breathStage.name}
+                </div>
+                <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#FFEBB0]/75">
+                  {breathStage.sanskrit} · Round {breathPhase.round}/{breathStage.rounds}
+                </div>
+                <div className="mt-2 max-w-sm text-xs leading-relaxed text-[#FFEBB0]/85">
+                  {breathStage.description}
+                </div>
+
+                <div
+                  className="relative my-5 w-36 h-36 sm:w-40 sm:h-40 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "radial-gradient(circle, rgba(212,175,55,0.22) 0%, rgba(212,175,55,0.08) 55%, transparent 80%)",
+                  }}
+                  aria-hidden="true"
+                >
+                  <div
+                    className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-transform duration-1000 ease-in-out"
+                    style={{
+                      transform: `scale(${breathPhase.phase.label.includes("Inhale") ? 1.06 : breathPhase.phase.label.includes("Exhale") || breathPhase.phase.label.includes("Hum") ? 0.86 : 1})`,
+                    }}
+                  />
+                  <div className="relative flex flex-col items-center">
+                    <div className="text-lg sm:text-xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
+                      {breathPhase.phase.label}
+                    </div>
+                    <div className="text-5xl sm:text-6xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-0.5" data-testid="text-breath-countdown">
+                      {breathPhase.phaseRemain}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-h-10 text-sm text-[#FFEBB0] max-w-sm leading-snug">
+                  {breathPhase.phase.instruction}
+                </div>
+                <div className="mt-3 flex gap-1.5" aria-label={`Warmup stage ${breathStageIndex + 1} of ${BREATH_STAGES.length}`}>
+                  {BREATH_STAGES.map((stage, index) => (
+                    <span
+                      key={stage.id}
+                      className={`h-1.5 rounded-full transition-all ${index === breathStageIndex ? "w-8 bg-[#D4AF37]" : index < breathStageIndex ? "w-4 bg-[#D4AF37]/70" : "w-4 bg-[#FFEBB0]/25"}`}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleBreathMusic}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                    aria-pressed={breathMusicOn}
+                    aria-label={breathMusicOn ? "Mute warmup music" : "Turn on warmup music"}
+                    data-testid="btn-toggle-breath-music"
+                  >
+                    {breathMusicOn ? <Music2 className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+                    {breathMusicOn ? "Music on" : "Music off"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBreathVoiceOn((enabled) => !enabled)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                    aria-pressed={breathVoiceOn}
+                    aria-label={breathVoiceOn ? "Mute breathing voice guide" : "Turn on breathing voice guide"}
+                    data-testid="btn-toggle-breath-voice"
+                  >
+                    {breathVoiceOn ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                    {breathVoiceOn ? "Voice on" : "Voice off"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={skipBreathingStage}
+                    className="rounded-full border border-[#D4AF37]/45 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/15 transition-colors"
+                    aria-label={`Skip ${breathStage.name}`}
+                    data-testid="btn-skip-breath-stage"
+                  >
+                    Skip stage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={skipBreathing}
+                    className="rounded-full border border-[#D4AF37]/65 bg-[#D4AF37]/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] font-semibold text-[#FFEBB0] hover:bg-[#D4AF37]/20 transition-colors"
+                    data-testid="btn-skip-breathing"
+                    aria-label="Skip the breathing warmup and begin chanting now"
+                  >
+                    Skip warmup
+                  </button>
+                </div>
+              </>
+            )}
             <div className="mt-4 text-[10px] leading-relaxed text-[#FFEBB0]/60">
               Gentle wellness warmup — stop if uncomfortable. This is not medical advice.
             </div>
