@@ -22,6 +22,9 @@ export type PanditSocialProjection = {
   rating: number | null;
   reviewCount: number;
   tagline: string | null;
+  registrationNo: string | null;
+  experience: number | null;
+  languages: string[];
   revision: string;
 };
 
@@ -46,6 +49,11 @@ function safeSlug(value: string): string {
   return value.toLowerCase().trim().replace(/[^a-z0-9-]/g, "").slice(0, 100);
 }
 
+function publicLanguages(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).map((part) => part.trim()).filter(Boolean).slice(0, 3);
+  return String(value || "").split(",").map((part) => part.trim()).filter(Boolean).slice(0, 3);
+}
+
 export async function resolvePanditSocialProjection(slug: string): Promise<PanditSocialProjection | null> {
   const normalized = safeSlug(slug);
   if (!normalized) return null;
@@ -67,6 +75,9 @@ export async function resolvePanditSocialProjection(slug: string): Promise<Pandi
     tagline,
     rating: pandit.rating == null ? null : Number(pandit.rating),
     reviewCount: Number(pandit.reviewCount || 0),
+    registrationNo: /^\d{10}$/.test(String(pandit.registrationNo || "")) ? String(pandit.registrationNo) : null,
+    experience: Number.isFinite(Number(pandit.experience)) && Number(pandit.experience) > 0 ? Number(pandit.experience) : null,
+    languages: publicLanguages(pandit.languages),
   };
   const revision = crypto.createHash("sha256").update(JSON.stringify(publicFields)).digest("hex").slice(0, 16);
   return {
