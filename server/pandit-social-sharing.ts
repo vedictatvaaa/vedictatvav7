@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import QRCode from "qrcode";
+import puppeteer from "puppeteer";
 import { storage } from "./storage";
 import { getPublishedPanditContent } from "./pandit-storefront-content";
 import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
@@ -24,13 +25,15 @@ export type PanditSocialProjection = {
 };
 
 const CACHE_DIR = "/tmp/vedic-tatva-social";
-const SOCIAL_TEMPLATE_VERSION = "v2";
+const SOCIAL_TEMPLATE_VERSION = "v3";
 const DEFAULT_PUBLIC_ORIGIN = "https://vedictatva.com";
+const STORY_VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3 };
 const IMAGE_HOST_ALLOWLIST = new Set([
   "vedictatva.com", "www.vedictatva.com", "images.unsplash.com",
   "res.cloudinary.com", "ucarecdn.com", "lh3.googleusercontent.com",
   "lh4.googleusercontent.com", "lh5.googleusercontent.com",
 ]);
+let browserPromise: ReturnType<typeof puppeteer.launch> | null = null;
 
 function esc(value: unknown): string {
   return String(value || "").replace(/[<&>"']/g, (c) => ({
@@ -113,10 +116,48 @@ function revisionCachePath(projection: PanditSocialProjection, baseUrl: string, 
   return path.join(CACHE_DIR, `${SOCIAL_TEMPLATE_VERSION}-${format}-${safeSlug(projection.slug)}-${projection.revision}-${originHash}.jpg`);
 }
 
+function captureOrigin(): string {
+  const port = Number(process.env.PORT || 5000);
+  return `http://127.0.0.1:${Number.isFinite(port) && port > 0 ? port : 5000}`;
+}
+
+async function storefrontStoryScreenshot(projection: PanditSocialProjection): Promise<Buffer> {
+  browserPromise ||= puppeteer.launch({
+    headless: true,
+    executablePath: puppeteer.executablePath(),
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+  const browser = await browserPromise;
+  const page = await browser.newPage();
+  await page.setViewport(STORY_VIEWPORT);
+  try {
+    const storefrontUrl = new URL(projection.canonicalPath, `${captureOrigin()}/`).toString();
+    await page.goto(storefrontUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 20_000,
+    });
+    await page.waitForSelector("#overview", { visible: true, timeout: 20_000 });
+    await page.evaluate(async () => {
+      await document.fonts?.ready;
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+    });
+    return Buffer.from(await page.screenshot({
+      type: "jpeg",
+      quality: 90,
+      captureBeyondViewport: false,
+    }));
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
 export async function renderPanditSocialImage(
   projection: PanditSocialProjection,
   baseUrl: string,
   format: "og" | "story",
+  options: { captureStorefront?: boolean } = {},
 ): Promise<{ buffer: Buffer; cacheHit: boolean }> {
   const width = format === "og" ? 1200 : 1080;
   const height = format === "og" ? 630 : 1920;
@@ -124,6 +165,16 @@ export async function renderPanditSocialImage(
   try {
     return { buffer: await fs.readFile(cachePath), cacheHit: true };
   } catch {}
+
+  if (format === "story" && options.captureStorefront) {
+    try {
+      const buffer = await storefrontStoryScreenshot(projection);
+      await fs.mkdir(CACHE_DIR, { recursive: true }).then(() => fs.writeFile(cachePath, buffer)).catch(() => {});
+      return { buffer, cacheHit: false };
+    } catch (error) {
+      console.warn("[social-story] storefront screenshot unavailable; using fallback card:", (error as Error)?.message);
+    }
+  }
 
   const sharp = (await import("sharp")).default;
   const photo = await fetchAsset(baseUrl, projection.image || projection.bannerImage, format === "og" ? 400 : 700);

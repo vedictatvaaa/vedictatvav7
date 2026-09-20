@@ -756,7 +756,12 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
       const slug = String(req.params.slug || "").toLowerCase().trim();
       const projection = await resolvePanditSocialProjection(slug);
       if (!projection) return res.status(404).end();
-      const rendered = await renderPanditSocialImage(projection, socialSiteUrl(req), format);
+      const rendered = await renderPanditSocialImage(
+        projection,
+        socialSiteUrl(req),
+        format,
+        { captureStorefront: format === "story" },
+      );
       res.setHeader("Content-Type", "image/jpeg");
       res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
       res.setHeader("X-Social-Cache", rendered.cacheHit ? "HIT" : "MISS");
