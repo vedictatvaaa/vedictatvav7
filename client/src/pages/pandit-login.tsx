@@ -635,9 +635,9 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             </button>
           </header>
 
-          <div className={mode === "signup" ? "grid gap-4" : "grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(25rem,.95fr)] lg:items-start"}>
+          <div className={mode === "signup" ? "grid gap-4" : "flex flex-col gap-4"}>
             {mode !== "signup" && <section
-              className={`relative overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/20 bg-[#4A1A22] shadow-[0_22px_65px_rgba(77,40,36,.16)] ${mode === "signup" ? "min-h-[16rem] lg:min-h-[18rem]" : "min-h-[25rem] lg:min-h-[40rem]"}`}
+              className="order-2 relative mx-auto min-h-[18rem] w-full max-w-6xl overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/20 bg-[#4A1A22] shadow-[0_22px_65px_rgba(77,40,36,.16)]"
               aria-labelledby="pandit-benefits-heading"
               data-testid="panel-pandit-benefits"
             >
@@ -743,7 +743,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
               />
             </div>
           ) : (
-          <Card className="overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/70 shadow-[0_22px_65px_rgba(77,40,36,.12)] backdrop-blur lg:self-start">
+          <Card className="order-1 mx-auto w-full max-w-2xl overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/70 shadow-[0_22px_65px_rgba(77,40,36,.12)] backdrop-blur">
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-6 sm:p-9">
               <div className="mb-6 flex items-start gap-3.5">
@@ -775,7 +775,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 <button
                   type="button"
                   onClick={() => setLocation("/pandit/signup")}
-                  className={`rounded-[10px] px-2 py-2.5 text-xs font-bold transition-colors ${mode === "signup" ? "bg-[#FFFAF1] text-[#55252D] shadow-sm" : "text-[#806F5E] hover:bg-white/60"}`}
+                  className={`rounded-[10px] border px-2 py-2.5 text-xs font-extrabold transition-colors ${mode === "signup" ? "border-[#B98117] bg-[#F0D276] text-[#55252D] shadow-sm" : "border-[#D4AF37]/45 bg-[#FFF4C7] text-[#7A5A12] shadow-[0_2px_8px_rgba(185,129,23,.12)] hover:bg-[#F9E7A1]"}`}
                   aria-pressed={mode === "signup"}
                 >
                   {copy.apply}
