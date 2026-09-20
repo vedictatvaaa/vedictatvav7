@@ -49,6 +49,8 @@ import { registerSeoSchedulerRoutes, startSeoScheduler } from "./seo-scheduler";
 import { findPublicPujaBySlug, registerContentRoutes } from "./content-routes";
 import { registerSacredLibraryRoutes } from "./sacred-library";
 import { hasAnalyticsConsent } from "./consent";
+import { getDailyThought } from "./japa-daily-thought";
+import { getJapaDevotionalNarration } from "./japa-devotional-narration";
 import { privacyRegionForRequest } from "./privacy-region";
 import { seedPujaLibrary, seedCommunityQa } from "./content-seeds";
 import { registerWave1Routes, startWave1Scheduler, awardPoints, ensureReferralCode } from "./wave1";
@@ -3151,6 +3153,50 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     } catch (err) {
       console.error("mantra-assist error:", err);
       res.status(500).json({ message: "Mantra assistant is resting. Please try again in a moment." });
+    }
+  });
+
+  // ---- Japa: daily positive thought ----
+  // Deliberately accepts no body, query, profile, or counter data.
+  const dailyThoughtLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.ip || "unknown"),
+    message: { message: "Too many daily thought requests. Please try again shortly." },
+  });
+  app.get("/api/japa/daily-thought", dailyThoughtLimiter, async (_req, res) => {
+    try {
+      res.json(await getDailyThought());
+    } catch {
+      // getDailyThought has a curated fallback; retain a safe server error if an
+      // unexpected programming/runtime failure occurs rather than inventing data.
+      res.status(500).json({ message: "Daily thought is temporarily unavailable." });
+    }
+  });
+  const japaNarrationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: req => ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown"),
+  });
+  app.post("/api/japa/devotional-narration", japaNarrationLimiter, async (req, res) => {
+    const parsed = z.object({
+      purpose: z.enum(["mantra_benefit", "completion"]),
+      text: z.string().min(1).max(700).refine((value) => /[\u0900-\u097F]/.test(value), "Hindi narration is required"),
+      cacheKey: z.string().min(1).max(160).regex(/^[a-zA-Z0-9:_-]+$/),
+    }).strict().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid narration request" });
+    try {
+      const audio = await getJapaDevotionalNarration(parsed.data);
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "private, max-age=86400");
+      return res.send(audio);
+    } catch (error: any) {
+      console.warn("[japa-devotional-narration] unavailable:", error?.message || error);
+      return res.status(503).json({ message: "Devotional narration is temporarily unavailable" });
     }
   });
 

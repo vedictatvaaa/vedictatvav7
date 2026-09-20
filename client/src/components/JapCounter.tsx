@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useJapaDevotionalNarration } from "@/hooks/use-japa-devotional-narration";
+import { JapaAchievementShare } from "@/components/japa/JapaAchievementShare";
+import { buildAchievementSnapshot, curatedDailyThought, istDateKey, mantraBenefit, type JapaGuidanceState } from "@/lib/japa-guidance";
 import { useQuery } from "@tanstack/react-query";
 import {
   BellOff, Vibrate, RotateCcw, Plus, Sparkles, Flame,
@@ -150,13 +153,16 @@ type BreathStage = {
   name: string;
   sanskrit: string;
   description: string;
+  benefit: string;
+  introSpeech: string;
   rounds: number;
   phases: BreathPhase[];
 };
 
-type BreathWarmupStep = "intro" | "exercise";
+type BreathWarmupStep = "intro" | "exercise-intro" | "exercise";
 
 const BREATH_INTRO_MS = 10000;
+const BREATH_EXERCISE_INTRO_MS = 9000;
 const BREATH_INTRO_SPEECH = "Prepare for your mantra. Settle your posture and let the music create a quiet space before the breathing practice begins.";
 const BREATH_MUSIC_VOLUME = 0.2;
 
@@ -169,6 +175,8 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Nadi Shodhana",
     sanskrit: "Alternate-nostril breathing",
     description: "Balance the breath gently, without forcing the nostrils or the pace.",
+    benefit: "Helps balance attention and settle the breath.",
+    introSpeech: "Nadi Shodhana. This practice helps balance attention and settle the breath.",
     rounds: 5,
     phases: [
       { label: "Inhale left", durationMs: 4000, instruction: "Inhale gently through the left nostril", speech: "Inhale gently through the left nostril.", audioUrl: breathInhaleLeftAudioUrl },
@@ -182,6 +190,8 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Sama Vritti",
     sanskrit: "Box breathing",
     description: "Keep each side of the breath even and comfortable.",
+    benefit: "An even rhythm helps steady the mind.",
+    introSpeech: "Sama Vritti. Its even rhythm helps steady the mind.",
     rounds: 5,
     phases: [
       { label: "Inhale", durationMs: 4000, instruction: "Breathe in slowly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
@@ -195,6 +205,8 @@ const BREATH_STAGES: BreathStage[] = [
     name: "Bhramari",
     sanskrit: "Humming-bee breath",
     description: "Use a soft hum on the exhale to settle attention before chanting.",
+    benefit: "Gentle humming helps reduce mental noise before chanting.",
+    introSpeech: "Bhramari. Gentle humming helps reduce mental noise before chanting.",
     rounds: 8,
     phases: [
       { label: "Inhale", durationMs: 4000, instruction: "Breathe in softly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
@@ -231,7 +243,7 @@ function getBreathPhase(stage: BreathStage, elapsed: number) {
   return { phase, phaseIndex: stage.phases.length - 1, round: stage.rounds, phaseRemain: 1 };
 }
 
-function speakBreathGuide(text: string) {
+function speakBreathGuide(text: string, onEnded?: () => void) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return false;
   try {
     window.speechSynthesis.cancel();
@@ -246,6 +258,8 @@ function speakBreathGuide(text: string) {
     utterance.pitch = 1.02;
     utterance.volume = 0.86;
     if (indianVoice) utterance.voice = indianVoice;
+    utterance.onend = () => onEnded?.();
+    utterance.onerror = () => onEnded?.();
     window.speechSynthesis.speak(utterance);
     return true;
   } catch {
@@ -908,6 +922,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [breathStageIndex, setBreathStageIndex] = useState(0);
   const [breathVoiceOn, setBreathVoiceOn] = useState(true);
   const [breathMusicOn, setBreathMusicOn] = useState(true);
+  const [guidanceState, setGuidanceState] = useState<JapaGuidanceState>("idle");
+  const [benefitText, setBenefitText] = useState("");
+  const [closingText, setClosingText] = useState("");
+  const [achievementSnapshot, setAchievementSnapshot] = useState<ReturnType<typeof buildAchievementSnapshot> | null>(null);
+  const devotionalNarration = useJapaDevotionalNarration();
+  const completionNarrationRef = useRef<string | null>(null);
+  const benefitNarrationRef = useRef<string | null>(null);
   const breathingDoneThisSessionRef = useRef(false);
   const breathMusicRef = useRef<HTMLAudioElement | null>(null);
   const breathMusicFadeRef = useRef<number | null>(null);
@@ -920,6 +941,21 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const breathGuideCueKey = breathWarmupStep === "intro"
     ? "intro"
     : `${breathStage.id}:${breathPhase.round}:${breathPhase.phaseIndex}`;
+  const pendingCompletionKey = `${STORAGE_PREFIX}:pending-completion:${ownerKey}:${mantra.id}`;
+
+  useEffect(() => {
+    if (persist.count < target) return;
+    completionResetPendingRef.current = true;
+    setMalaCompleteLocked(true);
+    try {
+      const raw = localStorage.getItem(pendingCompletionKey);
+      if (!raw) return;
+      const restored = JSON.parse(raw);
+      if (!restored || restored.mantra !== mantra.label || Number(restored.target) !== target) return;
+      setAchievementSnapshot(buildAchievementSnapshot(restored));
+      setGuidanceState("achievement_share");
+    } catch {}
+  }, [mantra.label, pendingCompletionKey, persist.count, target]);
 
   const startBreathMusic = useCallback(() => {
     if (typeof Audio === "undefined") return;
@@ -1026,12 +1062,35 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     setBreathWarmupStep("intro");
     setBreathStageIndex(0);
     setBreathTick(0);
-  }, [stopBreathMusic, stopRecordedBreathGuide]);
+    if (persistRef.current.count === 0) {
+      const key = `${mantra.id}:${persistRef.current.todayDate}`;
+      setBenefitText(mantraBenefit(mantra.id, mantra.label));
+      setGuidanceState("mantra_benefit_intro");
+      if (benefitNarrationRef.current !== key) {
+        benefitNarrationRef.current = key;
+        const shownAt = Date.now();
+        const finishBenefit = () => {
+          const remaining = Math.max(0, 4000 - (Date.now() - shownAt));
+          window.setTimeout(() => setGuidanceState("chanting_ready"), remaining);
+        };
+        devotionalNarration.play({
+          purpose: "mantra_benefit",
+          text: mantraBenefit(mantra.id, mantra.label),
+          cacheKey: `japa-benefit:${mantra.id}`,
+          onEnded: finishBenefit,
+          onFailed: finishBenefit,
+          onTimedOut: finishBenefit,
+        });
+      }
+    } else {
+      setGuidanceState("chanting_ready");
+    }
+  }, [devotionalNarration, mantra.id, mantra.label, stopBreathMusic, stopRecordedBreathGuide]);
 
   const beginBreathingExercises = useCallback(() => {
     stopRecordedBreathGuide();
     stopBreathGuide();
-    setBreathWarmupStep("exercise");
+    setBreathWarmupStep("exercise-intro");
     setBreathStageIndex(0);
     setBreathTick(0);
   }, [stopRecordedBreathGuide]);
@@ -1041,7 +1100,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     const start = Date.now();
     const segmentDuration = breathWarmupStep === "intro"
       ? BREATH_INTRO_MS
-      : breathStageDuration(BREATH_STAGES[breathStageIndex] || BREATH_STAGES[0]);
+      : breathWarmupStep === "exercise-intro"
+        ? (breathVoiceOn ? BREATH_EXERCISE_INTRO_MS : 1500)
+        : breathStageDuration(BREATH_STAGES[breathStageIndex] || BREATH_STAGES[0]);
     const id = setInterval(() => {
       const e = Date.now() - start;
       if (e >= segmentDuration) {
@@ -1050,8 +1111,14 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           beginBreathingExercises();
           return;
         }
+        if (breathWarmupStep === "exercise-intro") {
+          setBreathWarmupStep("exercise");
+          setBreathTick(0);
+          return;
+        }
         if (breathStageIndex < BREATH_STAGES.length - 1) {
           setBreathStageIndex((index) => Math.min(BREATH_STAGES.length - 1, index + 1));
+          setBreathWarmupStep("exercise-intro");
           setBreathTick(0);
         } else {
           completeBreathingWarmup(true);
@@ -1066,6 +1133,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     breathingActive,
     breathStageIndex,
     breathWarmupStep,
+    breathVoiceOn,
     completeBreathingWarmup,
   ]);
 
@@ -1073,6 +1141,25 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // cannot play, and the short synthesized bell remains the final fallback.
   useEffect(() => {
     if (!breathingActive || !breathVoiceOn) return;
+    if (breathWarmupStep === "exercise-intro") {
+      const introKey = `${breathStage.id}:intro`;
+      if (breathLastGuideCueRef.current !== introKey) {
+        stopRecordedBreathGuide();
+        stopBreathGuide();
+        const generation = breathGuideGenerationRef.current;
+        breathLastGuideCueRef.current = introKey;
+        const advance = () => {
+          if (generation !== breathGuideGenerationRef.current) return;
+          setBreathWarmupStep("exercise");
+          setBreathTick(0);
+        };
+        if (!speakBreathGuide(breathStage.introSpeech, advance)) {
+          if (soundOn) bellPlayer.tap(breathStageIndex + 1);
+          advance();
+        }
+      }
+      return;
+    }
     if (breathLastGuideCueRef.current === breathGuideCueKey) return;
     if (breathWarmupStep === "intro") {
       playRecordedBreathGuide(
@@ -1095,8 +1182,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     breathVoiceOn,
     breathGuideCueKey,
     breathWarmupStep,
+    breathStage.id,
+    breathStage.introSpeech,
+    breathStageIndex,
     beginBreathingExercises,
     playRecordedBreathGuide,
+    soundOn,
+    stopRecordedBreathGuide,
   ]);
 
   useEffect(() => {
@@ -1124,6 +1216,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       return;
     }
     setBreathStageIndex((index) => Math.min(BREATH_STAGES.length - 1, index + 1));
+    setBreathWarmupStep("exercise-intro");
     setBreathTick(0);
   }, [breathStageIndex, completeBreathingWarmup, stopRecordedBreathGuide]);
 
@@ -1600,6 +1693,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   }, []);
 
   const tap = useCallback(() => {
+    if (guidanceState === "mantra_benefit_intro" || guidanceState === "chanting_complete_narration" || guidanceState === "achievement_share") return;
     // Once a mala closes, keep the completed count visible until the devotee
     // explicitly starts the next mala. This prevents stray pointer, keyboard,
     // or shake events from adding beads or firing completion repeatedly.
@@ -1709,7 +1803,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         streak: newStreak, lastDay: t,
       };
     });
-  }, [target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick, scheduleCompletionReset]);
+  }, [guidanceState, target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick, scheduleCompletionReset]);
 
   // — Undo last tap. Long-press the orb (~600ms) and the existing Undo
   //   button both call this. Handles four cases:
@@ -1801,12 +1895,14 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // it falls through to the normal manual tap.
   const handleTapOrAutoStart = useCallback(() => {
     if (completionResetPendingRef.current) return;
+    if (guidanceState === "mantra_benefit_intro" || guidanceState === "chanting_complete_narration") return;
     // Only a genuinely new mala starts pranayama. If the devotee reloads or
     // returns after pausing with a saved mid-mala count, go straight to
     // counting instead of unexpectedly reopening the warmup.
     if (!breathingDoneThisSessionRef.current && !breathingActive) {
       if (persistRef.current.count > 0) {
         breathingDoneThisSessionRef.current = true;
+        setGuidanceState("chanting_ready");
       } else {
       setBreathingActive(true);
       setBreathWarmupStep("intro");
@@ -1844,6 +1940,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     }
     tap();
   }, [
+    guidanceState,
     autoMode,
     soundOn,
     mantra.id,
@@ -1865,6 +1962,66 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     return () => window.removeEventListener("vt:japa-shake-tap", onShake);
   }, [handleTapOrAutoStart]);
 
+  // One authoritative hand-off from the existing completion trigger to the
+  // closing narration and immutable share snapshot. The celebration timestamp
+  // makes rapid callbacks and rerenders idempotent.
+  useEffect(() => {
+    if (!celebration || completionNarrationRef.current === String(celebration.ts)) return;
+    completionNarrationRef.current = String(celebration.ts);
+    setGuidanceState("chanting_complete_narration");
+    const snapshot = buildAchievementSnapshot({
+      mantra: celebration.mantraLabel,
+      target: celebration.target,
+      malas: persist.malas,
+      streak: persist.streak,
+      todayCount: persist.todayCount,
+      lifetimeCount: persist.total,
+      devoteeName,
+    });
+    setAchievementSnapshot(snapshot);
+    try { localStorage.setItem(pendingCompletionKey, JSON.stringify(snapshot)); } catch {}
+    let cancelled = false;
+    const thoughtFallback = curatedDailyThought();
+    const initialClosing = "आपका जप पूर्ण हुआ। ईश्वर की कृपा और शांति आपके साथ रहे। आपका दिन मंगलमय हो।";
+    setClosingText(initialClosing);
+    const thoughtController = new AbortController();
+    const thoughtTimeout = window.setTimeout(() => thoughtController.abort(), 4000);
+    const thoughtPromise = fetch("/api/japa/daily-thought", {
+      credentials: "same-origin",
+      signal: thoughtController.signal,
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => typeof payload?.thought === "string" && payload.thought.trim() ? payload.thought.trim() : thoughtFallback)
+      .catch(() => thoughtFallback)
+      .finally(() => window.clearTimeout(thoughtTimeout));
+    void thoughtPromise.then((thought) => {
+      if (cancelled) return;
+      const script = `${initialClosing} ${thought}`;
+      setClosingText(script);
+      const shownAt = Date.now();
+      const showAchievement = () => {
+        const remaining = Math.max(0, 5000 - (Date.now() - shownAt));
+        window.setTimeout(() => {
+          setCelebration(null);
+          setGuidanceState("achievement_share");
+        }, remaining);
+      };
+      devotionalNarration.play({
+        purpose: "completion",
+        text: script,
+        cacheKey: `japa-completion:${celebration.mantraId}:${istDateKey()}`,
+        onEnded: showAchievement,
+        onFailed: showAchievement,
+        onTimedOut: showAchievement,
+      });
+    });
+    return () => {
+      cancelled = true;
+      thoughtController.abort();
+      window.clearTimeout(thoughtTimeout);
+    };
+  }, [celebration, devoteeName, devotionalNarration, pendingCompletionKey, persist.malas, persist.streak, persist.todayCount, persist.total]);
+
   // Full-mala bloom trigger — when a mala completes (celebration is
   // set by the tap/auto-chant paths), light up the orb with the gold
   // radial flash + slow pulse for 2.4s. Independent of the Tathastu
@@ -1874,32 +2031,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     setFullMalaBloom(celebration.ts);
     const id = setTimeout(() => setFullMalaBloom(null), 2400);
     return () => clearTimeout(id);
-  }, [celebration]);
-
-  // Mala completion → Tathastu blessing. The old celebration fanfare
-  // overlay was retired (it competed with the divine ashirvad for the
-  // moment of completion). Now the aarti chime plays as the count flips,
-  // and ~600 ms later the Tathastu blessing rises — one sacred handoff.
-  // `celebration` lives on purely as the scheduling trigger. The reset timer
-  // is deliberately managed independently so dismissing the celebration
-  // cannot cancel the reset.
-  useEffect(() => {
-    if (!celebration) return;
-    setCelebrationExiting(false);
-    const ashirvadId = setTimeout(() => {
-      setAshirvad({
-        mantraLabel: celebration.mantraLabel,
-        mantraId: celebration.mantraId,
-        ts: Date.now(),
-      });
-    }, 600);
-    const id = setTimeout(() => {
-      setCelebration(null);
-    }, 900);
-    return () => {
-      clearTimeout(id);
-      clearTimeout(ashirvadId);
-    };
   }, [celebration]);
 
   // Share the divine blessing — separate copy from the mantra share so
@@ -2100,6 +2231,56 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
 
   return (
     <div className="space-y-4" data-testid="jap-counter">
+      {guidanceState === "chanting_complete_narration" && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#2d1116]/85 p-4" role="dialog" aria-modal="true" aria-labelledby="japa-closing-title">
+          <div className="w-full max-w-md rounded-2xl border border-[#D4AF37]/50 bg-[#6D2B35] p-6 text-center text-[#FFFAEC] shadow-2xl">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[#FFEBB0]">Japa complete</p>
+            <h2 id="japa-closing-title" className="mt-2 text-2xl font-serif font-bold">आशीर्वाद और आज का शुभ विचार</h2>
+            <p className="mt-4 text-sm leading-relaxed text-[#FFEBB0]" aria-live="polite">
+              {closingText || "आपका जप पूर्ण हुआ। आपका शुभ विचार तैयार हो रहा है।"}
+            </p>
+            <Button className="mt-6 bg-[#D4AF37] text-[#4a1a22] hover:bg-[#e5c65d]" onClick={() => {
+              devotionalNarration.cancel();
+              setCelebration(null);
+              setGuidanceState("achievement_share");
+            }}>
+              Continue to achievement
+            </Button>
+          </div>
+        </div>
+      )}
+      {guidanceState === "mantra_benefit_intro" && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#2d1116]/80 p-4" role="dialog" aria-modal="true" aria-labelledby="japa-benefit-title">
+          <div className="w-full max-w-md rounded-2xl border border-[#D4AF37]/50 bg-[#6D2B35] p-6 text-center text-[#FFFAEC] shadow-2xl">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[#FFEBB0]">Before chanting</p>
+            <h2 id="japa-benefit-title" className="mt-2 text-2xl font-serif font-bold">{mantra.label}</h2>
+            <p className="mt-4 text-sm leading-relaxed text-[#FFEBB0]">{benefitText}</p>
+            <Button className="mt-6 bg-[#D4AF37] text-[#4a1a22] hover:bg-[#e5c65d]" onClick={() => {
+              devotionalNarration.cancel();
+              setGuidanceState("chanting_ready");
+            }}>Continue to chanting</Button>
+          </div>
+        </div>
+      )}
+      <JapaAchievementShare
+        snapshot={guidanceState === "achievement_share" ? achievementSnapshot : null}
+        onDismiss={() => {
+          try { localStorage.removeItem(pendingCompletionKey); } catch {}
+          setGuidanceState("idle");
+          setClosingText("");
+          setCelebration(null);
+          setAchievementSnapshot(null);
+        }}
+        onAnotherMala={() => {
+          try { localStorage.removeItem(pendingCompletionKey); } catch {}
+          setGuidanceState("chanting_ready");
+          setClosingText("");
+          setAchievementSnapshot(null);
+          setCelebration(null);
+          cancelCompletionReset();
+          setPersist((prev) => ({ ...prev, count: 0 }));
+        }}
+      />
       {/* The mala-completion fanfare overlay was retired — the aarti chime
           plays, then the divine Tathastu blessing rises. One sacred moment,
           not two competing notifications. The `celebration` state is kept
@@ -2133,7 +2314,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
               {breathWarmupStep === "intro"
                 ? `Warmup introduction. ${Math.max(0, Math.ceil((BREATH_INTRO_MS - breathTick) / 1000))} seconds remaining.`
-                : `${breathStage.name}. Round ${breathPhase.round} of ${breathStage.rounds}. ${breathPhase.phase.label}. ${breathPhase.phaseRemain} seconds.`}
+                : breathWarmupStep === "exercise-intro"
+                  ? `${breathStage.name}. ${breathStage.benefit}`
+                  : `${breathStage.name}. Round ${breathPhase.round} of ${breathStage.rounds}. ${breathPhase.phase.label}. ${breathPhase.phaseRemain} seconds.`}
             </div>
             {breathWarmupStep === "intro" ? (
               <>
@@ -2213,10 +2396,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   {breathStage.name}
                 </div>
                 <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[#FFEBB0]/75">
-                  {breathStage.sanskrit} · Round {breathPhase.round}/{breathStage.rounds}
+                  {breathStage.sanskrit}{breathWarmupStep === "exercise" ? ` · Round ${breathPhase.round}/${breathStage.rounds}` : " · Benefits"}
                 </div>
                 <div className="mt-2 max-w-sm text-xs leading-relaxed text-[#FFEBB0]/85">
                   {breathStage.description}
+                </div>
+                <div className="mt-1 max-w-sm text-xs font-medium text-[#FFEBB0]">
+                  {breathStage.benefit}
                 </div>
 
                 <div
@@ -2229,15 +2415,17 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   <div
                     className="absolute inset-0 rounded-full border border-[#D4AF37]/40 transition-transform duration-1000 ease-in-out"
                     style={{
-                      transform: `scale(${breathPhase.phase.label.includes("Inhale") ? 1.06 : breathPhase.phase.label.includes("Exhale") || breathPhase.phase.label.includes("Hum") ? 0.86 : 1})`,
+                      transform: `scale(${breathWarmupStep === "exercise-intro" ? 1 : breathPhase.phase.label.includes("Inhale") ? 1.06 : breathPhase.phase.label.includes("Exhale") || breathPhase.phase.label.includes("Hum") ? 0.86 : 1})`,
                     }}
                   />
                   <div className="relative flex flex-col items-center">
                     <div className="text-lg sm:text-xl font-serif font-bold text-[#FFFAEC]" data-testid="text-breath-phase">
-                      {breathPhase.phase.label}
+                      {breathWarmupStep === "exercise-intro" ? "Benefits" : breathPhase.phase.label}
                     </div>
                     <div className="text-5xl sm:text-6xl font-serif font-bold tabular-nums text-[#FFEBB0] leading-none mt-0.5" data-testid="text-breath-countdown">
-                      {breathPhase.phaseRemain}
+                      {breathWarmupStep === "exercise-intro"
+                        ? Math.max(0, Math.ceil((BREATH_EXERCISE_INTRO_MS - breathTick) / 1000))
+                        : breathPhase.phaseRemain}
                     </div>
                   </div>
                 </div>
