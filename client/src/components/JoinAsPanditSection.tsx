@@ -173,7 +173,7 @@ export function JoinAsPanditSection() {
                 )}
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link href="/become-pandit">
+                <Link href="/pandit/signup">
                   <Button size="lg" className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-[#4a1a22] font-bold border-0" data-testid="button-apply-pandit">
                     {t("Apply now", "अभी आवेदन करें")}
                     <ArrowRight className="w-4 h-4 ml-1" />

@@ -603,6 +603,17 @@ const ENTRIES: SeoEntry[] = [
     breadcrumbLabel: "Become a Pandit",
   },
   {
+    pagePath: "/pandit/signup",
+    metaTitle: "Apply to Become a Verified Pandit | Vedic Tatva",
+    metaDescription:
+      "Apply to join Vedic Tatva's verified Pandit network. Share your practice, services, location, and experience through the secure application for traditional Pandits and purohits.",
+    metaKeywords:
+      "pandit registration, become a pandit, apply as pandit, verified pandit network, hindu priest registration, purohit registration, pandit jobs, online puja platform",
+    priority: 0.8,
+    changeFreq: "monthly",
+    breadcrumbLabel: "Apply as a Pandit",
+  },
+  {
     pagePath: "/become-astrologer",
     metaTitle: "Become an Astrologer on Vedic Tatva - Apply to Consult Online",
     metaDescription:

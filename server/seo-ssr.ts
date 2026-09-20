@@ -55,6 +55,12 @@ import {
 } from "./pandit-seo-network/editorial";
 import { queryPanditDirectory } from "./pandit-directory-query";
 import { MANTRA_LIBRARY } from "../shared/mantra-library";
+import {
+  PANDIT_SIGNUP_DESCRIPTION,
+  PANDIT_SIGNUP_KEYWORDS,
+  PANDIT_SIGNUP_PATH,
+  PANDIT_SIGNUP_TITLE,
+} from "../shared/pandit-seo";
 const SKIP_PREFIXES = [
   "/api/", "/assets/", "/uploads/", "/attached_assets/",
   "/sitemap", "/robots.txt", "/llms.txt", "/manifest.webmanifest",
@@ -62,7 +68,7 @@ const SKIP_PREFIXES = [
   "/sw.js", "/service-worker.js", "/__vite", "/@",
   "/admin", "/checkout", "/cart", "/order-confirmation", "/login",
   "/register", "/reset-password", "/my-profile", "/my-bookings",
-  "/pandit/login", "/pandit/signup", "/pandit/portal",
+  "/pandit/login", "/pandit/portal",
 ];
 
 const SITE_NAME = "Vedic Tatva";
@@ -315,6 +321,60 @@ export async function resolvePanditHierarchicalHead(
 }
 async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | null> {
   const staticHeads: Record<string, Head> = {
+    [PANDIT_SIGNUP_PATH]: {
+      title: PANDIT_SIGNUP_TITLE,
+      description: PANDIT_SIGNUP_DESCRIPTION,
+      keywords: PANDIT_SIGNUP_KEYWORDS,
+      canonical: PANDIT_SIGNUP_PATH,
+      ogType: "website",
+      twitterCard: "summary_large_image",
+      jsonLd: [
+        {
+          id: "breadcrumb",
+          payload: {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "@id": `${abs(baseUrl, PANDIT_SIGNUP_PATH)}#breadcrumb`,
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: abs(baseUrl, "/") },
+              { "@type": "ListItem", position: 2, name: "Become a Pandit", item: abs(baseUrl, "/become-pandit") },
+              { "@type": "ListItem", position: 3, name: "Apply as a Pandit", item: abs(baseUrl, PANDIT_SIGNUP_PATH) },
+            ],
+          },
+        },
+        {
+          id: "pandit-signup-service",
+          payload: {
+            "@context": "https://schema.org",
+            "@type": "Service",
+            "@id": `${abs(baseUrl, PANDIT_SIGNUP_PATH)}#service`,
+            name: "Verified Pandit Registration",
+            description: PANDIT_SIGNUP_DESCRIPTION,
+            url: abs(baseUrl, PANDIT_SIGNUP_PATH),
+            serviceType: "Pandit registration and verification",
+            areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+            provider: { "@id": `${baseUrl.replace(/\/+$/, "")}/#organization` },
+          },
+        },
+        {
+          id: "pandit-signup-page",
+          payload: {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": `${abs(baseUrl, PANDIT_SIGNUP_PATH)}#webpage`,
+            url: abs(baseUrl, PANDIT_SIGNUP_PATH),
+            name: PANDIT_SIGNUP_TITLE,
+            description: PANDIT_SIGNUP_DESCRIPTION,
+            isPartOf: { "@id": `${baseUrl.replace(/\/+$/, "")}/#website` },
+            about: { "@id": `${abs(baseUrl, PANDIT_SIGNUP_PATH)}#service` },
+            potentialAction: {
+              "@type": "RegisterAction",
+              target: { "@type": "EntryPoint", urlTemplate: abs(baseUrl, PANDIT_SIGNUP_PATH) },
+            },
+          },
+        },
+      ],
+    },
     "/qa": {
       title: "Spiritual Q&A — Pujas, Mantras, Vedic Wisdom | Vedic Tatva",
       description: "Hundreds of answered questions on Hindu pujas, fasting, festivals, mantras, astrology and dharma — sourced from practising pandits and editorial review.",

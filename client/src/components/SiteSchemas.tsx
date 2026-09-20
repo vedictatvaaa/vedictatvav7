@@ -20,7 +20,7 @@ const PRIMARY_NAV: Array<{ name: string; url: string }> = [
   { name: "AI Kundli", url: "/ai-kundli" },
   { name: "Panchang", url: "/panchang-calendar" },
   { name: "Matrimony", url: "/matrimony" },
-  { name: "Become a Pandit", url: "/become-pandit" },
+  { name: "Become a Pandit", url: "/pandit/signup" },
   { name: "Become an Astrologer", url: "/become-astrologer" },
 ];
 

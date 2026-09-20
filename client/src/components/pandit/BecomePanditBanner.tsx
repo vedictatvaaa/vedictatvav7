@@ -76,7 +76,7 @@ export function BecomePanditBanner({ className = "" }: { className?: string }) {
               ))}
             </ul>
             <div className="flex flex-wrap gap-3 mt-6">
-              <Link href="/become-pandit">
+              <Link href="/pandit/signup">
                 <Button
                   className="bg-[#D4AF37] text-[#3a1518] hover:bg-[#c49d2c] font-semibold rounded-md"
                   data-testid="button-banner-register"

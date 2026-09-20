@@ -302,6 +302,16 @@ const SEED: InsertSeoPage[] = [
     changeFreq: "monthly",
   },
   {
+    pagePath: "/pandit/signup",
+    metaTitle: "Apply to Become a Verified Pandit | Vedic Tatva",
+    metaDescription: "Apply to join Vedic Tatva's verified Pandit network. Share your practice, services, location, and experience through the secure application for traditional Pandits and purohits.",
+    metaKeywords: "pandit registration, become a pandit, apply as pandit, verified pandit network, hindu priest registration, purohit registration, pandit jobs, online puja platform",
+    canonicalUrl: "/pandit/signup",
+    ogType: "website",
+    priority: 0.8,
+    changeFreq: "monthly",
+  },
+  {
     pagePath: "/become-astrologer",
     metaTitle: "Become a Vedic Tatva Astrologer — Apply Online",
     metaDescription: "Join the Vedic Tatva astrologer network. Certified jyotishis with proven expertise are invited to apply.",

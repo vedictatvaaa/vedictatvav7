@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +29,15 @@ import {
 import { panditApi } from "@/lib/panditAuth";
 import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
 import { RegistrationSection, type FormState } from "@/pages/become-pandit";
+import PageSeo from "@/components/PageSeo";
+import { abs, breadcrumbList, service as serviceSchema } from "@/lib/seo-schemas";
+import { useConsentPreferences } from "@/lib/consent";
+import {
+  PANDIT_SIGNUP_DESCRIPTION,
+  PANDIT_SIGNUP_KEYWORDS,
+  PANDIT_SIGNUP_PATH,
+  PANDIT_SIGNUP_TITLE,
+} from "@shared/pandit-seo";
 
 type AuthMode = "login" | "signup";
 type Language = "en" | "hi";
@@ -111,6 +120,8 @@ const registrationInitialState: FormState = {
 export default function PanditLoginPage({ initialMode = "login" }: { initialMode?: AuthMode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const consent = useConsentPreferences();
+  const signupAnalyticsTracked = useRef(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [language, setLanguage] = useState<Language>("en");
   const [phone, setPhone] = useState("");
@@ -146,6 +157,21 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
     setMode(initialMode);
     if (initialMode === "login") setShowForgotPassword(false);
   }, [initialMode]);
+
+  useEffect(() => {
+    if (mode !== "signup" || !consent?.analytics || signupAnalyticsTracked.current) return;
+    signupAnalyticsTracked.current = true;
+    const w = window as any;
+    const eventParams = {
+      signup_path: PANDIT_SIGNUP_PATH,
+      page_location: `${window.location.origin}${PANDIT_SIGNUP_PATH}`,
+    };
+    if (document.getElementById("gtm-loader") && Array.isArray(w.dataLayer)) {
+      w.dataLayer.push({ event: "pandit_signup_start", ...eventParams });
+    } else if (document.getElementById("ga4-loader") && typeof w.gtag === "function") {
+      w.gtag("event", "pandit_signup_start", eventParams);
+    }
+  }, [consent?.analytics, mode]);
 
   useEffect(() => {
     if (initialMode !== "signup") return;
@@ -548,6 +574,48 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#FBF6ED] text-[#2D1B1E]">
+      {mode === "signup" && (
+        <PageSeo
+          title={PANDIT_SIGNUP_TITLE}
+          description={PANDIT_SIGNUP_DESCRIPTION}
+          keywords={PANDIT_SIGNUP_KEYWORDS}
+          canonical={PANDIT_SIGNUP_PATH}
+          ogType="website"
+          twitterCard="summary_large_image"
+          schemas={[
+            breadcrumbList([
+              { name: "Home", url: abs("/") },
+              { name: "Become a Pandit", url: abs("/become-pandit") },
+              { name: "Apply as a Pandit", url: abs(PANDIT_SIGNUP_PATH) },
+            ]),
+            serviceSchema({
+              name: "Verified Pandit Registration",
+              description: PANDIT_SIGNUP_DESCRIPTION,
+              url: abs(PANDIT_SIGNUP_PATH),
+              providerName: "Vedic Tatva",
+              areaServed: ["IN", "US", "GB", "CA", "AU", "SG", "AE"],
+              serviceType: "Pandit registration and verification",
+            }),
+            {
+              id: "pandit-signup-page",
+              payload: {
+                "@context": "https://schema.org",
+                "@type": "WebPage",
+                "@id": `${abs(PANDIT_SIGNUP_PATH)}#webpage`,
+                url: abs(PANDIT_SIGNUP_PATH),
+                name: PANDIT_SIGNUP_TITLE,
+                description: PANDIT_SIGNUP_DESCRIPTION,
+                isPartOf: { "@id": `${window.location.origin}/#website` },
+                about: { "@type": "Service", name: "Verified Pandit Registration" },
+                potentialAction: {
+                  "@type": "RegisterAction",
+                  target: { "@type": "EntryPoint", urlTemplate: abs(PANDIT_SIGNUP_PATH) },
+                },
+              },
+            },
+          ]}
+        />
+      )}
       <div
         className={`relative min-h-screen ${mode === "signup" ? "px-0 py-0 sm:px-2 sm:py-4" : "px-4 py-5 sm:px-6 sm:py-8"}`}
         style={{
