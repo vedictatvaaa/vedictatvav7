@@ -35,11 +35,15 @@ uses the same warmup gate.
 
 ### Background music
 
-Add one generated, instrumental Vedic ambient loop. It should use a tanpura
-drone, restrained bansuri texture, and occasional soft temple-bell accents. It
-must contain no spoken words, no lyrics, and no medical claims. The loop plays
-quietly beneath the breathing guide, repeats without a noticeable gap, and
-fades out when the warmup ends.
+Add one high-quality original Vedic ambient composition. It should use
+natural-sounding tanpura, restrained bansuri, and occasional soft temple-bell
+accents, with a warm mix and no obvious synthetic or repetitive artifacts. It
+must contain no spoken words, no lyrics, and no medical claims. The music plays
+quietly beneath the breathing guide and fades out when the warmup ends.
+
+Prefer a full-duration five-minute composition. If the music generator cannot
+produce five minutes in one render, use a longer high-quality source segment
+and crossfade its loop so there is no audible gap or abrupt restart.
 
 Music is controlled independently from the spoken guide:
 
@@ -51,10 +55,21 @@ Music is controlled independently from the spoken guide:
 
 ### Spoken cues
 
-Keep the current device speech-synthesis path. Request `en-IN`, prefer an
-available female voice, and use the soft, slower delivery already configured.
-Voice mute remains independent from music mute. A short chime remains the
-fallback when speech synthesis is unavailable.
+The normal experience uses prerecorded guide clips generated with a natural,
+soft, clear female Indian-English voice. Delivery should be warm and human,
+with relaxed pacing, natural sentence stress, and brief pauses. It must not
+sound robotic, metallic, clipped, or like a basic computer voice.
+
+Create separate clips for the intro, exercise introductions, and reusable
+phase cues. Keeping cues separate allows stage skips and exact phase changes
+to stop or replace the current clip immediately without desynchronizing the
+visual timer.
+
+The current device speech-synthesis path remains only as an emergency fallback
+when a recorded clip is missing or fails to play. Request `en-IN` and prefer an
+available female voice for that fallback. Voice mute remains independent from
+music mute. A short chime remains the final fallback when neither recorded
+speech nor device speech is available.
 
 ## UI and accessibility
 
@@ -82,9 +97,9 @@ The safety note says: “Stop if uncomfortable. This is not medical advice.”
 
 Keep the sequence state in `client/src/components/JapCounter.tsx` because the
 existing warmup gate, auto-chant start, voice cues, and dialog are colocated
-there. Add only the minimum audio lifecycle helpers needed for the ambient
-music. Do not change mantra audio, tap counting, persistence, or existing sound
-and vibration controls.
+there. Add focused audio lifecycle helpers for the ambient music and recorded
+guide clips. Do not change mantra audio, tap counting, persistence, or existing
+sound and vibration controls.
 
 State transitions:
 
@@ -103,6 +118,7 @@ session warmup as complete, and returns to the existing counting flow.
 ## Failure handling
 
 - Missing or rejected music playback is non-blocking.
+- Missing recorded speech falls back to device speech synthesis.
 - Missing speech synthesis is non-blocking; use the existing chime fallback.
 - Any skip or dismissal cancels active speech and pauses/resets music.
 - Unmount cleanup must clear all timers and release audio resources.
@@ -113,9 +129,11 @@ session warmup as complete, and returns to the existing counting flow.
 1. Build the project and run `git diff --check`.
 2. Restart the application workflow.
 3. Confirm the first tap opens the intro and does not increment the count.
-4. Confirm music and spoken cues start only from a user gesture.
-5. Confirm the unskipped segment durations total five minutes.
-6. Confirm intro skip, stage skip, full skip, Escape, overlay dismissal, mute,
+4. Confirm music and recorded spoken cues start only from a user gesture.
+5. Listen for audible music loop seams, clipping, harsh synthetic timbres, and
+   voice artifacts; the primary guide must sound natural and human.
+6. Confirm the unskipped segment durations total five minutes.
+7. Confirm intro skip, stage skip, full skip, Escape, overlay dismissal, mute,
    final completion, mantra change, and unmount stop audio cleanly.
-7. Confirm auto-chant waits for warmup completion or skip.
-8. Capture a fresh preview and inspect browser/workflow logs for new errors.
+8. Confirm auto-chant waits for warmup completion or skip.
+9. Capture a fresh preview and inspect browser/workflow logs for new errors.
