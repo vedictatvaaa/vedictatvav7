@@ -274,6 +274,15 @@ function speakBreathGuide(text: string, onEnded?: () => void) {
   }
 }
 
+function playBreathFallbackCue(onEnded?: () => void) {
+  // BellPlayer is already synchronized with the user's global sound setting.
+  // This cue is only reached when neither the recorded clip nor speech
+  // synthesis can provide spoken guidance; it is never used as a voice
+  // substitute when either spoken path is available.
+  bellPlayer.tap(0);
+  onEnded?.();
+}
+
 function stopBreathGuide() {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try { window.speechSynthesis.cancel(); } catch {}
@@ -1038,7 +1047,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       if (breathGuideGenerationRef.current === generation) onEnded?.();
     };
     if (typeof Audio === "undefined") {
-      speakBreathGuide(fallbackText, completeCue);
+      if (!speakBreathGuide(fallbackText, completeCue)) playBreathFallbackCue(completeCue);
       return;
     }
 
@@ -1051,7 +1060,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       if (fallbackStarted || breathGuideGenerationRef.current !== generation) return;
       fallbackStarted = true;
       if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
-      speakBreathGuide(fallbackText, completeCue);
+      if (!speakBreathGuide(fallbackText, completeCue)) playBreathFallbackCue(completeCue);
     };
     audio.onended = () => {
       if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
@@ -1147,7 +1156,8 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   ]);
 
   // Recorded guide clips are primary. Device speech is used only when a clip
-  // cannot play, and the short synthesized bell remains the final fallback.
+  // cannot play; a short bell is used only when both spoken paths are
+  // unavailable, while the visual countdown continues regardless.
   useEffect(() => {
     if (!breathingActive || !breathVoiceOn) return;
     if (breathWarmupStep === "exercise-intro") {
