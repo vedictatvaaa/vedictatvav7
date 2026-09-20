@@ -105,6 +105,12 @@ const registrationInitialState: FormState = {
   latitude: null,
   longitude: null,
   locationPermissionGranted: false,
+  coordinateSource: null,
+  coordinateConfidence: null,
+  coordinateAccuracy: null,
+  coordinateCapturedAt: null,
+  coordinatePlaceId: null,
+  coordinateEvidenceToken: null,
   specializations: "",
   education: "",
   languages: "",
@@ -192,6 +198,12 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
           latitude: null,
           longitude: null,
           locationPermissionGranted: false,
+           coordinateSource: null,
+           coordinateConfidence: null,
+           coordinateAccuracy: null,
+           coordinateCapturedAt: null,
+           coordinatePlaceId: null,
+           coordinateEvidenceToken: null,
           agreeTerms: false,
         });
         setRegistrationPhotoFile(null);
@@ -298,9 +310,15 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
         latitude: Number(position.coords.latitude.toFixed(6)),
         longitude: Number(position.coords.longitude.toFixed(6)),
         locationPermissionGranted: true,
+        coordinateSource: "browser:geolocation",
+        coordinateConfidence: position.coords.accuracy <= 100 ? 0.98 : 0.94,
+        coordinateAccuracy: Number.isFinite(position.coords.accuracy) ? Number(position.coords.accuracy.toFixed(1)) : null,
+        coordinateCapturedAt: new Date(position.timestamp || Date.now()).toISOString(),
+        coordinatePlaceId: null,
+        coordinateEvidenceToken: null,
       })),
       () => {
-        const message = "Location access is required to submit your application. Please allow it and try again.";
+        const message = "GPS was unavailable. Choose an address suggestion or retry GPS before submitting.";
         setRegistrationLocationError(message);
         setRegistrationApplicationError(message);
       },
@@ -310,7 +328,16 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
 
   const handleRegistrationChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
-    setRegistrationForm((current) => ({ ...current, [name]: value }));
+    setRegistrationForm((current) => {
+      if (name === "registeredAddress" && current.coordinateSource === "nominatim:address-selection") {
+        return {
+          ...current, registeredAddress: value, latitude: null, longitude: null,
+          coordinateSource: null, coordinateConfidence: null, coordinateAccuracy: null,
+          coordinateCapturedAt: null, coordinatePlaceId: null, coordinateEvidenceToken: null,
+        };
+      }
+      return { ...current, [name]: value };
+    });
   };
 
   const handleRegistrationPhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,6 +366,12 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
         latitude: _latitude,
         longitude: _longitude,
         locationPermissionGranted: _locationPermissionGranted,
+        coordinateSource: _coordinateSource,
+        coordinateConfidence: _coordinateConfidence,
+        coordinateAccuracy: _coordinateAccuracy,
+        coordinateCapturedAt: _coordinateCapturedAt,
+        coordinatePlaceId: _coordinatePlaceId,
+        coordinateEvidenceToken: _coordinateEvidenceToken,
         agreeTerms: _agreeTerms,
         ...draftForm
       } = registrationForm;
@@ -456,11 +489,11 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       toast({ title: "Choose 5–10 specialist Pujas", description: "Select between five and ten Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
-    if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-      const message = "Share your exact location before submitting.";
+    if (form.latitude != null && form.longitude != null && !form.coordinateSource) {
+      const message = "Choose GPS or an address suggestion for the selected location.";
       setRegistrationLocationError(message);
       setRegistrationApplicationError(message);
-      toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
+      toast({ title: "Confirm your location", description: message, variant: "destructive" });
       return;
     }
     if (!form.servicesConfirmed) {

@@ -76,6 +76,7 @@ import { panditApplications, panditApplicationDrafts, panditCityRequests, insert
 import { locationSlug, resolveCityLocation, resolveLocation, resolveLocationName } from "./locations";
 import { isValidStoredProfilePhoto } from "./profile-photo-validation";
 import { normalizePanditPhone } from "./pandit-phone";
+import { findAiCoordinateSuggestion, findVerifiedAddressCoordinate } from "./pandit-coordinate-suggestions";
 import { parseDirectoryQuery, queryPanditDirectory } from "./pandit-directory-query";
 import { effectivePanditContactPolicy } from "./pandit-contact-policy";
 import {
@@ -4129,6 +4130,29 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
     const d: any = partial.data;
     const current = await storage.getPandit(Number(req.params.id));
     if (!current) return res.status(404).json({ message: "Pandit not found" });
+    const coordinateFieldChanged = ["latitude", "longitude", "coordinateSource", "coordinateConfidence", "coordinateAccuracy", "coordinateVerifiedAt"]
+      .some((field) => Object.prototype.hasOwnProperty.call(d, field));
+    if (coordinateFieldChanged) {
+      const hasLatitude = d.latitude != null;
+      const hasLongitude = d.longitude != null;
+      if (hasLatitude !== hasLongitude) return res.status(400).json({ message: "Latitude and longitude must be supplied together" });
+      if (!hasLatitude) {
+        d.latitude = null;
+        d.longitude = null;
+        d.coordinateSource = null;
+        d.coordinateConfidence = null;
+        d.coordinateAccuracy = null;
+        d.coordinateVerifiedAt = null;
+      } else {
+        if (typeof d.coordinateSource !== "string" || !d.coordinateSource.trim()) {
+          return res.status(400).json({ message: "Coordinate source is required for a new location" });
+        }
+        if (typeof d.coordinateConfidence !== "number" || d.coordinateConfidence < 0 || d.coordinateConfidence > 1) {
+          return res.status(400).json({ message: "Coordinate confidence is required and must be between 0 and 1" });
+        }
+        d.coordinateVerifiedAt = d.coordinateVerifiedAt ? new Date(d.coordinateVerifiedAt) : new Date();
+      }
+    }
     if (d.verified === true && !current.verified) {
       return res.status(400).json({ message: "Approve the linked Pandit application to verify and assign registration identity" });
     }
@@ -10354,14 +10378,101 @@ Return JSON: {"description": "your optimized HTML description here"}` }
         signal: AbortSignal.timeout(5_000),
       });
       if (!response.ok) throw new Error(`address provider returned ${response.status}`);
-      const results = await response.json() as Array<{ place_id?: number; display_name?: string }>;
+       const results = await response.json() as Array<{ place_id?: number; display_name?: string; lat?: string; lon?: string; address?: { country_code?: string } }>;
       res.setHeader("Cache-Control", "public, max-age=300");
-      res.json(results
-        .filter((item) => item.display_name)
-        .map((item) => ({ id: String(item.place_id || item.display_name), label: String(item.display_name).slice(0, 300) })));
+       res.json(results
+         .filter((item) => item.display_name && Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lon)))
+         .map((item) => {
+           const payload = Buffer.from(JSON.stringify({
+             latitude: Number(item.lat),
+             longitude: Number(item.lon),
+             placeId: item.place_id != null ? String(item.place_id) : null,
+             expiresAt: Date.now() + 10 * 60 * 1000,
+           })).toString("base64url");
+           const signature = crypto.createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
+           return {
+             id: String(item.place_id || item.display_name),
+             label: String(item.display_name).slice(0, 300),
+             latitude: Number(item.lat),
+             longitude: Number(item.lon),
+             source: "nominatim:address-selection",
+             confidence: 0.92,
+             placeId: item.place_id != null ? String(item.place_id) : undefined,
+             evidenceToken: `${payload}.${signature}`,
+           };
+         }));
     } catch (error: any) {
       console.error("[pandit-address-suggestions] failed:", error?.message || error);
       res.status(502).json({ message: "Address suggestions are temporarily unavailable. You can still type the address manually." });
+    }
+  });
+
+  app.post("/api/admin/pandits/:id/location-suggestion", adminAuthMiddleware, async (req: any, res) => {
+    const id = Number(req.params.id);
+    const parsed = z.object({
+      state: z.string().trim().max(120).optional(),
+      city: z.string().trim().max(120).optional(),
+      locationText: z.string().trim().min(2).max(240),
+    }).safeParse(req.body);
+    if (!Number.isInteger(id) || id < 1 || !parsed.success) {
+      return res.status(400).json({ message: "Enter a valid location to search." });
+    }
+    try {
+      let suggestion = null;
+      try {
+        suggestion = await findVerifiedAddressCoordinate({
+          state: parsed.data.state,
+          city: parsed.data.city,
+          query: parsed.data.locationText,
+        });
+      } catch (error: any) {
+        console.warn("[pandit-location-suggestion] verified lookup unavailable:", error?.message || error);
+      }
+      if (suggestion) return res.json({ suggestion });
+      const aiSuggestion = await findAiCoordinateSuggestion({
+        state: parsed.data.state,
+        city: parsed.data.city,
+        query: parsed.data.locationText,
+      });
+      if (!aiSuggestion) return res.status(404).json({ message: "No safe coordinate suggestion was found. Enter coordinates manually." });
+      res.json({ suggestion: aiSuggestion });
+    } catch (error: any) {
+      console.error("[pandit-location-suggestion] failed:", error?.message || error);
+      res.status(502).json({ message: "Location lookup is temporarily unavailable. Enter coordinates manually." });
+    }
+  });
+
+  app.post("/api/admin/pandit-applications/:id/location-suggestion", adminAuthMiddleware, async (req: any, res) => {
+    const id = parsePositiveId(req.params.id);
+    const parsed = z.object({ locationText: z.string().trim().min(2).max(240) }).safeParse(req.body);
+    if (!id || !parsed.success) return res.status(400).json({ message: "Enter a valid address to search." });
+    const [application] = await db.select({
+      state: panditApplications.state,
+      city: panditApplications.city,
+    }).from(panditApplications).where(eq(panditApplications.id, id)).limit(1);
+    if (!application) return res.status(404).json({ message: "Application not found" });
+    try {
+      let suggestion = null;
+      try {
+        suggestion = await findVerifiedAddressCoordinate({
+          state: application.state ?? undefined,
+          city: application.city ?? undefined,
+          query: parsed.data.locationText,
+        });
+      } catch (error: any) {
+        console.warn("[pandit-application-location-suggestion] verified lookup unavailable:", error?.message || error);
+      }
+      if (suggestion) return res.json({ suggestion });
+      const aiSuggestion = await findAiCoordinateSuggestion({
+        state: application.state ?? undefined,
+        city: application.city ?? undefined,
+        query: parsed.data.locationText,
+      });
+      if (!aiSuggestion) return res.status(404).json({ message: "No safe coordinate suggestion was found. Enter coordinates manually." });
+      return res.json({ suggestion: aiSuggestion });
+    } catch (error: any) {
+      console.error("[pandit-application-location-suggestion] failed:", error?.message || error);
+      return res.status(502).json({ message: "Location lookup is temporarily unavailable." });
     }
   });
 
@@ -10468,9 +10579,15 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         bio: z.string().trim().min(20, "Add a short profile biography"),
         photo: z.string().min(1),
         registeredAddress: z.string().trim().min(10, "A registered address is required"),
-        latitude: z.number().min(-90).max(90),
-        longitude: z.number().min(-180).max(180),
-        locationPermissionGranted: z.literal(true),
+         latitude: z.number().finite().min(-90).max(90).nullable().optional(),
+         longitude: z.number().finite().min(-180).max(180).nullable().optional(),
+         locationPermissionGranted: z.boolean().optional().default(false),
+         coordinateSource: z.enum(["browser:geolocation", "nominatim:address-selection"]).nullable().optional(),
+         coordinateConfidence: z.number().finite().min(0).max(1).nullable().optional(),
+         coordinateAccuracy: z.number().finite().min(0).max(100000).nullable().optional(),
+         coordinateCapturedAt: z.string().datetime().nullable().optional(),
+         coordinatePlaceId: z.string().trim().max(120).nullable().optional(),
+         coordinateEvidenceToken: z.string().max(2000).nullable().optional(),
         servicesConfirmed: z.literal(true),
         termsAccepted: z.literal(true),
         regionalOrigin: z.string().optional(),
@@ -10498,7 +10615,7 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
               : `Select at least five specialist Pujas (you selected ${count}).`;
           }
           if (field === "registeredAddress") return "Enter your registered address.";
-          if (field === "latitude" || field === "longitude" || field === "locationPermissionGranted") return "Share your exact location before submitting.";
+           if (field === "latitude" || field === "longitude" || field === "locationPermissionGranted" || field === "coordinateSource") return "Share your location or choose an address suggestion before submitting.";
           if (field === "servicesConfirmed") return "Confirm that the selected Pujas are services you personally offer.";
           if (field === "photo") return "Upload a profile photo before submitting.";
           if (field === "termsAccepted") return "Accept the terms before submitting.";
@@ -10518,7 +10635,57 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         })));
         return res.status(400).json({ message: messages.join(" ") });
       }
-      const d = parsed.data;
+       const d = parsed.data;
+       const hasLatitude = d.latitude != null;
+       const hasLongitude = d.longitude != null;
+       if (hasLatitude !== hasLongitude) return res.status(400).json({ message: "Latitude and longitude must be supplied together." });
+       let coordinateSource = d.coordinateSource ?? null;
+       let coordinateConfidence = d.coordinateConfidence ?? null;
+       let coordinateAccuracy = d.coordinateAccuracy ?? null;
+       let coordinateCapturedAt = d.coordinateCapturedAt ? new Date(d.coordinateCapturedAt) : null;
+       let coordinatePlaceId = d.coordinatePlaceId ?? null;
+       let latitude = d.latitude ?? null;
+       let longitude = d.longitude ?? null;
+       if (hasLatitude && hasLongitude) {
+         if (coordinateSource === "browser:geolocation") {
+           if (!d.locationPermissionGranted) return res.status(400).json({ message: "Explicit location permission is required for browser location." });
+           if (coordinateAccuracy != null && coordinateAccuracy > 2_000) return res.status(400).json({ message: "That location reading is too inaccurate. Retry GPS or choose an address suggestion." });
+           coordinateConfidence = coordinateConfidence ?? (coordinateAccuracy != null && coordinateAccuracy <= 100 ? 0.98 : 0.94);
+         } else if (coordinateSource === "nominatim:address-selection") {
+           if (!d.coordinateEvidenceToken) return res.status(400).json({ message: "Choose an address suggestion before submitting." });
+           const tokenParts = d.coordinateEvidenceToken.split(".");
+           if (tokenParts.length !== 2) return res.status(400).json({ message: "The selected address has expired. Choose it again." });
+           const expected = crypto.createHmac("sha256", sessionSecret()).update(tokenParts[0]).digest("base64url");
+           const supplied = Buffer.from(tokenParts[1]);
+           const expectedBuffer = Buffer.from(expected);
+           if (supplied.length !== expectedBuffer.length || !crypto.timingSafeEqual(supplied, expectedBuffer)) {
+             return res.status(400).json({ message: "The selected address could not be verified. Choose it again." });
+           }
+           try {
+             const decoded = JSON.parse(Buffer.from(tokenParts[0], "base64url").toString("utf8"));
+             if (!decoded.expiresAt || decoded.expiresAt < Date.now()
+               || Math.abs(Number(decoded.latitude) - latitude!) > 0.000001
+               || Math.abs(Number(decoded.longitude) - longitude!) > 0.000001) {
+               return res.status(400).json({ message: "The selected address has expired. Choose it again." });
+             }
+             latitude = Number(decoded.latitude);
+             longitude = Number(decoded.longitude);
+             coordinatePlaceId = typeof decoded.placeId === "string" ? decoded.placeId : coordinatePlaceId;
+             coordinateConfidence = 0.92;
+           } catch {
+             return res.status(400).json({ message: "The selected address could not be verified. Choose it again." });
+           }
+         } else {
+           return res.status(400).json({ message: "Choose a valid location source before submitting." });
+         }
+         coordinateCapturedAt = coordinateCapturedAt || new Date();
+       } else {
+         coordinateSource = null;
+         coordinateConfidence = null;
+         coordinateAccuracy = null;
+         coordinateCapturedAt = null;
+         coordinatePlaceId = null;
+       }
       const normalizedPhone = normalizePanditPhone(d.phone);
       if (!normalizedPhone) return res.status(400).json({ message: "Enter a valid 10-digit Indian mobile number" });
       if (!(await isValidStoredProfilePhoto(d.photo, uploadsDir))) {
@@ -10561,9 +10728,14 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         originalState: location?.state.name ?? selectedState.name,
         locationReviewStatus: location ? "resolved" : "pending_request",
          registeredAddress: d.registeredAddress.trim(),
-         latitude: d.latitude,
-         longitude: d.longitude,
-         locationPermissionGranted: true,
+          latitude,
+          longitude,
+          locationPermissionGranted: Boolean(d.locationPermissionGranted),
+          coordinateSource,
+          coordinateConfidence,
+          coordinateAccuracy,
+          coordinateCapturedAt,
+          coordinatePlaceId,
          termsAcceptedAt: new Date(),
          serviceArea: d.serviceArea.trim(),
         regionalOrigin: d.regionalOrigin || null,
@@ -10991,6 +11163,13 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
     const parsed = z.object({
       stateId: z.number().int().positive(),
       cityId: z.number().int().positive(),
+      latitude: z.number().finite().min(-90).max(90).nullable().optional(),
+      longitude: z.number().finite().min(-180).max(180).nullable().optional(),
+      coordinateSource: z.string().trim().min(1).max(120).nullable().optional(),
+      coordinateConfidence: z.number().finite().min(0).max(1).nullable().optional(),
+      coordinateAccuracy: z.number().finite().min(0).max(100000).nullable().optional(),
+      coordinateCapturedAt: z.string().datetime().nullable().optional(),
+      coordinatePlaceId: z.string().trim().max(120).nullable().optional(),
     }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "A valid State and City are required" });
 
@@ -11005,14 +11184,30 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         if (governedRequest) return { kind: "governed" as const };
         const location = await resolveLocation(parsed.data.stateId, parsed.data.cityId);
         if (!location) return { kind: "location" as const };
-        const [updated] = await tx.update(panditApplications).set({
+         const hasLatitude = parsed.data.latitude != null;
+         const hasLongitude = parsed.data.longitude != null;
+         if (hasLatitude !== hasLongitude) return { kind: "coordinates" as const };
+         const coordinateUpdate = parsed.data.latitude !== undefined || parsed.data.longitude !== undefined
+           ? {
+             latitude: parsed.data.latitude ?? null,
+             longitude: parsed.data.longitude ?? null,
+             coordinateSource: hasLatitude ? parsed.data.coordinateSource ?? null : null,
+             coordinateConfidence: hasLatitude ? parsed.data.coordinateConfidence ?? null : null,
+             coordinateAccuracy: hasLatitude ? parsed.data.coordinateAccuracy ?? null : null,
+             coordinateCapturedAt: hasLatitude ? (parsed.data.coordinateCapturedAt ? new Date(parsed.data.coordinateCapturedAt) : new Date()) : null,
+             coordinatePlaceId: hasLatitude ? parsed.data.coordinatePlaceId ?? null : null,
+           }
+           : {};
+         if (hasLatitude && (!coordinateUpdate.coordinateSource || coordinateUpdate.coordinateConfidence == null)) return { kind: "coordinates" as const };
+         const [updated] = await tx.update(panditApplications).set({
           stateId: location.state.id,
           cityId: location.city.id,
           state: location.state.name,
           city: location.city.name,
           originalCity: current.originalCity || current.city,
           originalState: current.originalState || current.state,
-          locationReviewStatus: "resolved",
+           locationReviewStatus: "resolved",
+           ...coordinateUpdate,
         }).where(eq(panditApplications.id, id)).returning();
         return { kind: "ok" as const, updated, before: { state: current.state, city: current.city }, after: { state: location.state.name, city: location.city.name } };
       });
@@ -11020,6 +11215,7 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
       if (result.kind === "conflict") return res.status(409).json({ message: "Only pending applications can have their location resolved" });
       if (result.kind === "governed") return res.status(409).json({ message: "Resolve this application through its governed missing-city request" });
       if (result.kind === "location") return res.status(400).json({ message: "Invalid active State/City combination" });
+      if (result.kind === "coordinates") return res.status(400).json({ message: "Coordinates and complete provenance must be supplied together" });
       await auditAdmin(req, "pandit_application.location_resolved", `pandit_application:${id}`, {
         before: result.before,
         after: result.after,
@@ -11052,6 +11248,9 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
         if (pending.status !== "pending") return { kind: "conflict" as const, status: pending.status };
         if (!pending.stateId || !pending.cityId || pending.locationReviewStatus !== "resolved") {
           return { kind: "location" as const };
+        }
+        if (pending.latitude == null || pending.longitude == null || !pending.coordinateSource || pending.coordinateConfidence == null) {
+          return { kind: "coordinate_evidence" as const };
         }
         if (!(await isValidStoredProfilePhoto(pending.photo, uploadsDir))) return { kind: "photo" as const };
         const [location] = await tx.select({ state: indianStates, city: indianCities })
@@ -11091,6 +11290,12 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
           bio: pending.bio || "",
           education: pending.education || "",
           image: pending.photo,
+           latitude: pending.latitude,
+           longitude: pending.longitude,
+           coordinateSource: pending.coordinateSource,
+           coordinateConfidence: pending.coordinateConfidence,
+           coordinateAccuracy: pending.coordinateAccuracy,
+           coordinateVerifiedAt: pending.coordinateCapturedAt || null,
           regionalOrigin: pending.regionalOrigin,
           serviceArea: pending.serviceArea,
           slug,
@@ -11144,6 +11349,7 @@ Do not invent qualifications, locations, services, or guarantees. Improve the ex
       if (outcome.kind === "missing") return res.status(404).json({ message: "Application not found" });
       if (outcome.kind === "conflict") return res.status(409).json({ message: `Application is already ${outcome.status}` });
       if (outcome.kind === "location") return res.status(400).json({ message: "Resolve the application's active State and City request before approval" });
+      if (outcome.kind === "coordinate_evidence") return res.status(400).json({ message: "Resolve and confirm safe coordinate evidence before approval" });
       if (outcome.kind === "photo") return res.status(400).json({ message: "A valid successfully uploaded profile photo is required before approval" });
       const claimed = outcome.application;
       const pandit = outcome.pandit;

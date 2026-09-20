@@ -179,6 +179,12 @@ export default function BecomePandit() {
     latitude: null as number | null,
     longitude: null as number | null,
     locationPermissionGranted: false,
+    coordinateSource: null as string | null,
+    coordinateConfidence: null as number | null,
+    coordinateAccuracy: null as number | null,
+    coordinateCapturedAt: null as string | null,
+    coordinatePlaceId: null as string | null,
+    coordinateEvidenceToken: null as string | null,
     experience: "",
     specializations: "",
     education: "",
@@ -230,6 +236,12 @@ export default function BecomePandit() {
           latitude: null,
           longitude: null,
           locationPermissionGranted: false,
+           coordinateSource: null,
+           coordinateConfidence: null,
+           coordinateAccuracy: null,
+           coordinateCapturedAt: null,
+           coordinatePlaceId: null,
+           coordinateEvidenceToken: null,
           agreeTerms: false,
         }));
         setPhotoFile(null);
@@ -270,13 +282,19 @@ export default function BecomePandit() {
     setLocationError("");
     navigator.geolocation.getCurrentPosition(
       (position) => setForm((current) => ({
-        ...current,
+         ...current,
         latitude: Number(position.coords.latitude.toFixed(6)),
         longitude: Number(position.coords.longitude.toFixed(6)),
         locationPermissionGranted: true,
+         coordinateSource: "browser:geolocation",
+         coordinateConfidence: position.coords.accuracy <= 100 ? 0.98 : 0.94,
+         coordinateAccuracy: Number.isFinite(position.coords.accuracy) ? Number(position.coords.accuracy.toFixed(1)) : null,
+         coordinateCapturedAt: new Date(position.timestamp || Date.now()).toISOString(),
+         coordinatePlaceId: null,
+         coordinateEvidenceToken: null,
       })),
       () => {
-        const message = "Location access is required to submit your application. Please allow it and try again.";
+         const message = "GPS was unavailable. Choose an address suggestion or retry GPS before submitting.";
         setLocationError(message);
         showApplicationError(message);
       },
@@ -286,7 +304,16 @@ export default function BecomePandit() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      if (name === "registeredAddress" && prev.coordinateSource === "nominatim:address-selection") {
+        return {
+          ...prev, registeredAddress: value, latitude: null, longitude: null,
+          coordinateSource: null, coordinateConfidence: null, coordinateAccuracy: null,
+          coordinateCapturedAt: null, coordinatePlaceId: null, coordinateEvidenceToken: null,
+        };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,6 +344,12 @@ export default function BecomePandit() {
         latitude: _latitude,
         longitude: _longitude,
         locationPermissionGranted: _locationPermissionGranted,
+        coordinateSource: _coordinateSource,
+        coordinateConfidence: _coordinateConfidence,
+        coordinateAccuracy: _coordinateAccuracy,
+        coordinateCapturedAt: _coordinateCapturedAt,
+        coordinatePlaceId: _coordinatePlaceId,
+        coordinateEvidenceToken: _coordinateEvidenceToken,
         agreeTerms: _agreeTerms,
         ...draftForm
       } = form;
@@ -389,7 +422,7 @@ export default function BecomePandit() {
         title: "Application Submitted",
         description: "We'll review your details and reach out within 48 hours.",
       });
-       setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", registeredAddress: "", latitude: null, longitude: null, locationPermissionGranted: false, experience: "", specializations: "", education: "", languages: "", bio: "", serviceArea: "", regionalOrigin: "", membership: "free", agreeTerms: false, servicesConfirmed: false, masterServiceIds: [] });
+       setForm({ fullName: "", phone: "", email: "", city: "", stateId: "", cityId: "", proposedCityName: "", registeredAddress: "", latitude: null, longitude: null, locationPermissionGranted: false, coordinateSource: null, coordinateConfidence: null, coordinateAccuracy: null, coordinateCapturedAt: null, coordinatePlaceId: null, coordinateEvidenceToken: null, experience: "", specializations: "", education: "", languages: "", bio: "", serviceArea: "", regionalOrigin: "", membership: "free", agreeTerms: false, servicesConfirmed: false, masterServiceIds: [] });
       setPhotoPreview(null);
       setPhotoFile(null);
       setPhotoError("");
@@ -450,11 +483,11 @@ export default function BecomePandit() {
       toast({ title: "Choose 5–10 specialist Pujas", description: "Select between five and ten Pujas you are fully expert in.", variant: "destructive" });
       return;
     }
-    if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-      const message = "Share your exact location before submitting.";
+    if (form.latitude != null && form.longitude != null && !form.coordinateSource) {
+      const message = "Choose GPS or an address suggestion for the selected location.";
       setLocationError(message);
       showApplicationError(message);
-      toast({ title: "Location Required", description: "Location access is required for onboarding.", variant: "destructive" });
+      toast({ title: "Confirm your location", description: message, variant: "destructive" });
       return;
     }
     if (!form.servicesConfirmed) {
@@ -1542,6 +1575,8 @@ export type FormState = {
   fullName: string; phone: string; email: string; city: string; experience: string;
   stateId: string; cityId: string; proposedCityName: string;
   registeredAddress: string; latitude: number | null; longitude: number | null; locationPermissionGranted: boolean;
+  coordinateSource: string | null; coordinateConfidence: number | null; coordinateAccuracy: number | null;
+  coordinateCapturedAt: string | null; coordinatePlaceId: string | null; coordinateEvidenceToken: string | null;
   specializations: string; education: string; languages: string; bio: string; serviceArea: string;
   regionalOrigin: string; membership: string; agreeTerms: boolean; servicesConfirmed: boolean; masterServiceIds: number[];
 };
@@ -1591,10 +1626,11 @@ const REGISTRATION_COPY = {
     searchingAddresses: "Searching addresses…",
     useAddressSuggestions: "Use address suggestions",
     addressSuggestionsNote: "Suggestions are provided by OpenStreetMap. The address text you type is sent to its search service; you can still enter it manually.",
-    exactLocation: "Exact location access *",
-    exactLocationNote: "Used for onboarding verification. It is not shown publicly.",
+     exactLocation: "Location evidence",
+     exactLocationNote: "Use GPS first, or choose a verified address suggestion. It is not shown publicly.",
     locationCaptured: "Location captured",
-    shareExactLocation: "Share exact location",
+     shareExactLocation: "Use my current location",
+     locationPending: "No location evidence yet. You can submit and our team will review it before your profile can receive bookings.",
     practiceAndTradition: "Practice & Tradition",
     regionalTradition: "Regional Tradition",
     selectTradition: "Select your tradition",
@@ -1692,10 +1728,11 @@ const REGISTRATION_COPY = {
     searchingAddresses: "पते खोजे जा रहे हैं…",
     useAddressSuggestions: "पते के सुझाव इस्तेमाल करें",
     addressSuggestionsNote: "सुझाव OpenStreetMap से दिए जाते हैं। आपके द्वारा लिखा गया पता उसकी खोज सेवा को भेजा जाता है; आप पता स्वयं भी लिख सकते हैं।",
-    exactLocation: "सटीक स्थान की अनुमति *",
-    exactLocationNote: "ऑनबोर्डिंग सत्यापन के लिए उपयोग किया जाता है। इसे सार्वजनिक रूप से नहीं दिखाया जाएगा।",
+     exactLocation: "स्थान प्रमाण",
+     exactLocationNote: "पहले GPS इस्तेमाल करें या सत्यापित पते का सुझाव चुनें। इसे सार्वजनिक रूप से नहीं दिखाया जाएगा।",
     locationCaptured: "स्थान मिल गया",
-    shareExactLocation: "सटीक स्थान साझा करें",
+     shareExactLocation: "मेरा वर्तमान स्थान इस्तेमाल करें",
+     locationPending: "अभी स्थान प्रमाण नहीं है। आप आवेदन भेज सकते हैं; बुकिंग से पहले हमारी टीम इसकी समीक्षा करेगी।",
     practiceAndTradition: "साधना और परंपरा",
     regionalTradition: "क्षेत्रीय परंपरा",
     selectTradition: "अपनी परंपरा चुनें",
@@ -1810,7 +1847,7 @@ export function RegistrationSection({
   const [bioAiLoading, setBioAiLoading] = useState(false);
   const [bioAiError, setBioAiError] = useState("");
   const [stepError, setStepError] = useState("");
-  const [addressSuggestions, setAddressSuggestions] = useState<Array<{ id: string; label: string }>>([]);
+   const [addressSuggestions, setAddressSuggestions] = useState<Array<{ id: string; label: string; latitude: number; longitude: number; source: string; confidence: number; placeId?: string; evidenceToken?: string }>>([]);
   const [addressSuggestionsLoading, setAddressSuggestionsLoading] = useState(false);
   const [addressSuggestionsOpen, setAddressSuggestionsOpen] = useState(false);
   const [addressSuggestionsEnabled, setAddressSuggestionsEnabled] = useState(false);
@@ -1889,10 +1926,6 @@ export function RegistrationSection({
         setStepError(copy.completePersonal);
         return;
       }
-      if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-        setStepError(copy.shareLocationAgain);
-        return;
-      }
     }
     if (currentStep === 2) {
       if (!form.experience || !form.education.trim() || !form.languages.trim() || !form.specializations.trim() || !form.serviceArea.trim()) {
@@ -1920,7 +1953,7 @@ export function RegistrationSection({
   const stepSummaries = [
     {
       label: copy.details,
-      complete: Boolean(form.fullName.trim() && form.phone.trim() && form.email.trim() && form.stateId && (form.cityId || form.proposedCityName.trim()) && form.registeredAddress.trim() && form.locationPermissionGranted),
+      complete: Boolean(form.fullName.trim() && form.phone.trim() && form.email.trim() && form.stateId && (form.cityId || form.proposedCityName.trim()) && form.registeredAddress.trim() && form.coordinateSource),
     },
     {
       label: copy.practice,
@@ -2121,7 +2154,19 @@ export function RegistrationSection({
                                 className="block w-full rounded-lg px-3 py-2 text-left text-xs leading-5 text-[#4A1A22] hover:bg-[#FFF8E7]"
                                 onMouseDown={(event) => event.preventDefault()}
                                 onClick={() => {
-                                  setForm((current) => ({ ...current, registeredAddress: suggestion.label }));
+                                   setForm((current) => ({
+                                     ...current,
+                                     registeredAddress: suggestion.label,
+                                     latitude: suggestion.latitude,
+                                     longitude: suggestion.longitude,
+                                     locationPermissionGranted: false,
+                                     coordinateSource: suggestion.source,
+                                     coordinateConfidence: suggestion.confidence,
+                                     coordinateAccuracy: null,
+                                     coordinateCapturedAt: new Date().toISOString(),
+                                     coordinatePlaceId: suggestion.placeId || null,
+                                     coordinateEvidenceToken: suggestion.evidenceToken || null,
+                                   }));
                                   setAddressSuggestionsOpen(false);
                                 }}
                               >
@@ -2149,9 +2194,11 @@ export function RegistrationSection({
                     </Field>
                     <div id="signup-location" tabIndex={-1} className="rounded-lg border p-3 outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>{copy.exactLocation}</p><p className="text-xs" style={{ color: C.brownSoft }}>{copy.exactLocationNote}</p></div>
+                         <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>{copy.exactLocation}</p><p className="text-xs" style={{ color: C.brownSoft }}>{copy.exactLocationNote}</p></div>
                         <Button type="button" variant="outline" onClick={requestExactLocation} data-testid="button-share-location">{form.locationPermissionGranted ? copy.locationCaptured : copy.shareExactLocation}</Button>
                       </div>
+                       {form.coordinateSource && <p className="mt-2 text-xs font-semibold text-emerald-700">Selected source: {form.coordinateSource === "browser:geolocation" ? "Browser GPS" : "Address suggestion"}{form.coordinateAccuracy != null ? ` · ±${Math.round(form.coordinateAccuracy)}m` : ""}</p>}
+                       {!form.coordinateSource && <p className="mt-2 text-xs text-amber-800">{copy.locationPending}</p>}
                       {locationError && <p className="mt-2 text-xs text-destructive">{locationError}</p>}
                     </div>
                   </div>

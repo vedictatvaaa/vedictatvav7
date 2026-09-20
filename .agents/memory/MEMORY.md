@@ -29,3 +29,4 @@
 - [Pandit registration authority](pandit-registration-authority.md) — signup must use the complete existing application contract directly; compact drafts are not the submission path.
 - [Pandit draft privacy boundary](pandit-draft-privacy.md) — resume links are bearer credentials: hash at rest, never log/cache them, and never persist photos, exact coordinates, or consent.
 - [Pandit correction privacy boundary](pandit-correction-privacy.md) — applicant correction credentials enter through URL fragments and fixed header-authenticated endpoints, never query/path URLs.
+- [Pandit coordinate evidence](pandit-coordinate-evidence.md) — only explicit GPS or signed verified-address evidence can reach approval; AI remains an Admin-confirmed approximate draft.

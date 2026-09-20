@@ -639,8 +639,11 @@ function PanditsTab() {
 // ============================================================
 function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null; onClose: () => void; onSaved: () => void }) {
   const { toast } = useToast();
-  const [form, setForm] = useState<Partial<Pandit & { latitude: number | null; longitude: number | null; stateId: number | null; cityId: number | null }>>({});
+  const [form, setForm] = useState<Record<string, any>>({});
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationSuggestion, setLocationSuggestion] = useState<any>(null);
+  const [locationSearchLoading, setLocationSearchLoading] = useState(false);
   const adminToken = typeof window !== "undefined" ? localStorage.getItem("adminToken") || "" : "";
   const { data: locations = [] } = useQuery<Array<{id:number;name:string;isActive:boolean;cities:Array<{id:number;name:string;isActive:boolean}>}>>({ queryKey:["/api/admin/locations"], queryFn:()=>createFetcher(adminToken)("/api/admin/locations") });
 
@@ -690,9 +693,37 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         availability: pandit.availability ?? "available",
         latitude: (pandit.latitude as number | null) ?? null,
         longitude: (pandit.longitude as number | null) ?? null,
+        coordinateSource: (pandit as any).coordinateSource ?? null,
+        coordinateConfidence: (pandit as any).coordinateConfidence ?? null,
+        coordinateAccuracy: (pandit as any).coordinateAccuracy ?? null,
+        coordinateVerifiedAt: (pandit as any).coordinateVerifiedAt ?? null,
       });
+      setLocationSearch("");
+      setLocationSuggestion(null);
     }
   }, [pandit]);
+
+  const findLocationSuggestion = async () => {
+    if (!pandit || locationSearch.trim().length < 2) return;
+    setLocationSearchLoading(true);
+    setLocationSuggestion(null);
+    try {
+      const state = locations.find((item) => item.id === Number((form as any).stateId))?.name || (pandit as any).state || "";
+      const city = locations.find((item) => item.id === Number((form as any).stateId))?.cities.find((item) => item.id === Number((form as any).cityId))?.name || pandit.city || "";
+      const res = await fetch(`/api/admin/pandits/${pandit.id}/location-suggestion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken },
+        body: JSON.stringify({ state, city, locationText: locationSearch.trim() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "No location suggestion found");
+      setLocationSuggestion(body.suggestion);
+    } catch (error: any) {
+      toast({ title: "Location lookup failed", description: error.message, variant: "destructive" });
+    } finally {
+      setLocationSearchLoading(false);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -717,6 +748,10 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
         availability: form.availability || "available",
         latitude: form.latitude != null ? Number(form.latitude) : null,
         longitude: form.longitude != null ? Number(form.longitude) : null,
+        coordinateSource: form.coordinateSource || null,
+        coordinateConfidence: form.coordinateConfidence != null ? Number(form.coordinateConfidence) : null,
+        coordinateAccuracy: form.coordinateAccuracy != null ? Number(form.coordinateAccuracy) : null,
+        coordinateVerifiedAt: form.coordinateVerifiedAt || null,
       };
       const res = await fetch(`/api/pandits/${pandit.id}`, {
         method: "PATCH",
@@ -737,6 +772,13 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
   });
 
   const update = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+  const updateCoordinate = (k: string, v: any) => setForm(prev => ({
+    ...prev,
+    [k]: v,
+    coordinateSource: "admin:manual",
+    coordinateConfidence: 0.5,
+    coordinateVerifiedAt: new Date().toISOString(),
+  }));
   const hasGps = form.latitude != null && form.longitude != null;
 
   return (
@@ -774,11 +816,43 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
               </Label>
               <div className="flex gap-2">
                 <Input
+                  placeholder="Search address or locality"
+                  value={locationSearch}
+                  onChange={e => setLocationSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void findLocationSuggestion(); } }}
+                  className="flex-1"
+                  data-testid="input-edit-pandit-location-search"
+                />
+                <Button type="button" variant="outline" disabled={locationSearchLoading || locationSearch.trim().length < 2} onClick={() => void findLocationSuggestion()} data-testid="button-find-pandit-location">
+                  {locationSearchLoading ? "Searching…" : "Find coordinates"}
+                </Button>
+              </div>
+              {locationSuggestion && (
+                <div className={`rounded-lg border p-3 text-xs ${locationSuggestion.source === "ai_fallback" ? "border-amber-300 bg-amber-50" : "border-emerald-300 bg-emerald-50"}`}>
+                  <p className="font-semibold">{locationSuggestion.source === "ai_fallback" ? "AI fallback — approximate, review required" : "Verified address result"}</p>
+                  <p className="mt-1">{locationSuggestion.label}</p>
+                  <p className="mt-1 text-muted-foreground">{Number(locationSuggestion.latitude).toFixed(6)}, {Number(locationSuggestion.longitude).toFixed(6)} · confidence {Number(locationSuggestion.confidence).toFixed(2)}</p>
+                  <Button type="button" size="sm" className="mt-2" onClick={() => {
+                    setForm(prev => ({
+                      ...prev,
+                      latitude: Number(locationSuggestion.latitude),
+                      longitude: Number(locationSuggestion.longitude),
+                      coordinateSource: locationSuggestion.source,
+                      coordinateConfidence: Number(locationSuggestion.confidence),
+                      coordinateAccuracy: null,
+                      coordinateVerifiedAt: new Date().toISOString(),
+                    }));
+                    setLocationSuggestion(null);
+                  }} data-testid="button-use-pandit-location">Use this location</Button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
                   placeholder="Latitude (e.g. 28.6139)"
                   type="number"
                   step="any"
                   value={form.latitude ?? ""}
-                  onChange={e => update("latitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                  onChange={e => updateCoordinate("latitude", e.target.value === "" ? null : parseFloat(e.target.value))}
                   className="flex-1"
                   data-testid="input-edit-pandit-latitude"
                 />
@@ -787,7 +861,7 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
                   type="number"
                   step="any"
                   value={form.longitude ?? ""}
-                  onChange={e => update("longitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                  onChange={e => updateCoordinate("longitude", e.target.value === "" ? null : parseFloat(e.target.value))}
                   className="flex-1"
                   data-testid="input-edit-pandit-longitude"
                 />
@@ -795,6 +869,7 @@ function EditPanditDialog({ pandit, onClose, onSaved }: { pandit: Pandit | null;
               <p className="text-[11px] text-muted-foreground">
                 Coordinates must come from verified address-level evidence. A city name is never used as a Pandit coordinate.
               </p>
+              {form.coordinateSource && <p className="text-[11px] font-semibold text-muted-foreground">Source: {String(form.coordinateSource)} · confidence {Number(form.coordinateConfidence ?? 0).toFixed(2)}</p>}
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="edit-pandit-specialization">Specialization / Services</Label>

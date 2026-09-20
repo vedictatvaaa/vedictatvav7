@@ -128,6 +128,9 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
   const [adminNote, setAdminNote] = useState("");
   const [resolutionStateId, setResolutionStateId] = useState("");
   const [resolutionCityId, setResolutionCityId] = useState("");
+  const [coordinateSearch, setCoordinateSearch] = useState("");
+  const [coordinateSuggestion, setCoordinateSuggestion] = useState<any>(null);
+  const [coordinateSearchLoading, setCoordinateSearchLoading] = useState(false);
   const [cityRequestReason, setCityRequestReason] = useState("");
   const [sortKey, setSortKey] = useState<"createdAt" | "fullName" | "city" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -166,15 +169,17 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
       setAdminNote(selected.adminNote || "");
       setResolutionStateId(selected.stateId ? String(selected.stateId) : "");
       setResolutionCityId(selected.cityId ? String(selected.cityId) : "");
+      setCoordinateSearch(selected.registeredAddress || "");
+      setCoordinateSuggestion(null);
     }
   }, [selected]);
 
   const locationMutation = useMutation({
-    mutationFn: async ({ id, stateId, cityId }: { id: number; stateId: number; cityId: number }) => {
+    mutationFn: async ({ id, stateId, cityId, coordinate }: { id: number; stateId: number; cityId: number; coordinate?: any }) => {
       const res = await fetch(`/api/admin/pandit-applications/${id}/location`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
-        body: JSON.stringify({ stateId, cityId }),
+         body: JSON.stringify({ stateId, cityId, ...(coordinate || {}) }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((body as any).message || "Location update failed");
@@ -187,6 +192,25 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
     },
     onError: (error: Error) => toast({ title: "Location update failed", description: error.message, variant: "destructive" }),
   });
+  const findCoordinateSuggestion = async () => {
+    if (!selected || coordinateSearch.trim().length < 2) return;
+    setCoordinateSearchLoading(true);
+    setCoordinateSuggestion(null);
+    try {
+      const res = await fetch(`/api/admin/pandit-applications/${selected.id}/location-suggestion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-token": adminToken || "" },
+        body: JSON.stringify({ locationText: coordinateSearch.trim() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "No location suggestion found");
+      setCoordinateSuggestion(body.suggestion);
+    } catch (error: any) {
+      toast({ title: "Location lookup failed", description: error.message, variant: "destructive" });
+    } finally {
+      setCoordinateSearchLoading(false);
+    }
+  };
   const cityRequestMutation = useMutation({
     mutationFn: async ({ id, body }: { id: number; body: { action: "map"; cityId: number } | { action: "create"; name: string } | { action: "reject"; reason: string } }) => {
       const res = await fetch(`/api/admin/pandit-city-requests/${id}/resolve`, {
@@ -442,6 +466,12 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <DetailField label="Regional Origin" value={selected.regionalOrigin} />
                   <DetailField label="Location Review" value={(selected as any).locationReviewStatus} />
+                  <DetailField
+                    label="Coordinate Evidence"
+                    value={(selected as any).coordinateSource
+                      ? `${(selected as any).coordinateSource}${(selected as any).coordinateAccuracy != null ? ` · ±${Math.round(Number((selected as any).coordinateAccuracy))}m` : ""}`
+                      : "Location pending — not bookable until resolved"}
+                  />
                   <DetailField label="Service Area" value={selected.serviceArea} />
                   <DetailField label="Gotra" value={selected.gotra} />
                   <DetailField label="Parampara" value={selected.parampara} />
@@ -450,6 +480,19 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                   <DetailField label="Education" value={selected.education} />
                   <DetailField label="Certificates" value={selected.certificates} />
                 </div>
+                {(selected as any).coordinateSource && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900" data-testid="coordinate-evidence-panel">
+                    <p className="font-semibold">Location evidence available for Admin review</p>
+                    <p className="mt-1">Coordinates are visible only in this protected review view and are not published to devotees.</p>
+                    <p className="mt-1 font-mono">{Number((selected as any).latitude).toFixed(6)}, {Number((selected as any).longitude).toFixed(6)}</p>
+                  </div>
+                )}
+                {!(selected as any).coordinateSource && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900" data-testid="coordinate-pending-panel">
+                    <p className="font-semibold">Coordinate evidence is still pending</p>
+                    <p className="mt-1">This application may remain under review, but it must not become bookable until Admin adds safe coordinate evidence from the Pandit profile editor.</p>
+                  </div>
+                )}
                 {selected.status === "approved" && (selected as any).registrationNo && (
                   <DetailField label="Registration Number" value={(selected as any).registrationNo} />
                 )}
@@ -493,6 +536,59 @@ function PanditApplicationsTab({ adminToken }: { adminToken?: string }) {
                         Reject request
                       </Button>
                     </div>
+                  </div>
+                )}
+
+                {selected.status === "pending" && (
+                  <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 space-y-3" data-testid="coordinate-resolution-panel">
+                    <div className="flex items-start gap-2 text-sky-950">
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium">Coordinate evidence</p>
+                        <p className="text-xs">Verified address lookup runs first. If it cannot resolve the address, an AI result is only a labeled draft and is saved only after you choose “Use this location”.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={coordinateSearch}
+                        onChange={(event) => setCoordinateSearch(event.target.value)}
+                        onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void findCoordinateSuggestion(); } }}
+                        placeholder="Search the registered address"
+                        data-testid="input-application-coordinate-search"
+                      />
+                      <Button type="button" variant="outline" disabled={coordinateSearchLoading || coordinateSearch.trim().length < 2} onClick={() => void findCoordinateSuggestion()} data-testid="button-find-application-coordinate">
+                        {coordinateSearchLoading ? "Searching…" : "Find"}
+                      </Button>
+                    </div>
+                    {coordinateSuggestion && (
+                      <div className={`rounded-lg border p-3 text-xs ${coordinateSuggestion.source === "ai_fallback" ? "border-amber-300 bg-amber-50 text-amber-950" : "border-emerald-300 bg-emerald-50 text-emerald-950"}`}>
+                        <p className="font-semibold">{coordinateSuggestion.source === "ai_fallback" ? "AI fallback — approximate draft" : "Verified address result"}</p>
+                        <p className="mt-1">{coordinateSuggestion.label}</p>
+                        <p className="mt-1 font-mono">{Number(coordinateSuggestion.latitude).toFixed(6)}, {Number(coordinateSuggestion.longitude).toFixed(6)}</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-2"
+                          disabled={!selected.stateId || !selected.cityId || locationMutation.isPending}
+                          onClick={() => locationMutation.mutate({
+                            id: selected.id,
+                            stateId: Number(selected.stateId),
+                            cityId: Number(selected.cityId),
+                            coordinate: {
+                              latitude: Number(coordinateSuggestion.latitude),
+                              longitude: Number(coordinateSuggestion.longitude),
+                              coordinateSource: String(coordinateSuggestion.source),
+                              coordinateConfidence: Number(coordinateSuggestion.confidence),
+                              coordinateCapturedAt: new Date().toISOString(),
+                              coordinatePlaceId: coordinateSuggestion.placeId || null,
+                            },
+                          })}
+                          data-testid="button-use-application-coordinate"
+                        >
+                          Use this location and save
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
