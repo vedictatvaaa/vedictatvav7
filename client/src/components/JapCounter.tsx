@@ -2090,7 +2090,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                         {mantra.sanskrit}
                       </div>
                     )}
-                    <div className="text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Mala</div>
+                     <div className="text-[11px] sm:text-xs uppercase tracking-[0.28em] text-[#D4AF37] font-semibold">Bead</div>
                     <div className="text-5xl sm:text-6xl font-bold font-serif tabular-nums text-[#FFFAEC]" data-testid="text-count">{persist.count}</div>
                     <div className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-[#D4AF37]">of {target}</div>
                   </>
@@ -3401,7 +3401,7 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
             {p.paceHint && (
               <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-[#D4AF37]/70 animate-pulse" aria-hidden="true" data-testid="ring-fs-pace-hint" />
             )}
-            <div className="text-[11px] uppercase tracking-[0.3em] text-[#D4AF37]/85">Tap to count</div>
+             <div className="text-[11px] uppercase tracking-[0.3em] text-[#D4AF37]/85">Bead</div>
             <div className="font-serif font-bold tabular-nums leading-none mt-3" style={{ fontSize: "clamp(5rem, 22vmin, 14rem)" }} data-testid="text-fs-count">
               {p.count}
             </div>
