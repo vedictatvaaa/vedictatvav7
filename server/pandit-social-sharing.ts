@@ -29,7 +29,7 @@ export type PanditSocialProjection = {
 };
 
 const CACHE_DIR = "/tmp/vedic-tatva-social";
-const SOCIAL_TEMPLATE_VERSION = "v4";
+const SOCIAL_TEMPLATE_VERSION = "v5";
 const DEFAULT_PUBLIC_ORIGIN = "https://vedictatva.com";
 const STORY_VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3 };
 const IMAGE_HOST_ALLOWLIST = new Set([

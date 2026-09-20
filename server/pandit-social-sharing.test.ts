@@ -17,6 +17,9 @@ const projection: PanditSocialProjection = {
   rating: 4.8,
   reviewCount: 12,
   tagline: "Traditional ceremonies with care",
+  registrationNo: "1234567890",
+  experience: 12,
+  languages: ["Hindi", "Sanskrit"],
   revision: "test-revision",
 };
 
