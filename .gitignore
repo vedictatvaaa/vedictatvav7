@@ -47,6 +47,8 @@ attached_assets/*
 !attached_assets/brass_copperware/
 !attached_assets/category_cards/
 !attached_assets/dhoti_kurta/
+!attached_assets/generated_audio/
+!attached_assets/generated_audio/**
 !attached_assets/generated_images/
 !attached_assets/havan_samagri/
 !attached_assets/heroes/
