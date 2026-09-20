@@ -40,7 +40,7 @@ import durgaDeityImg from "@assets/generated_images/durga-deity.png";
 import saraswatiDeityImg from "@assets/generated_images/saraswati-deity.png";
 import mahalakshmiDeityImg from "@assets/generated_images/mahalakshmi-deity.png";
 import hanumanDeityImg from "@assets/generated_images/hanuman-deity.png";
-import rudrakshaJapaOrbImg from "@assets/generated_images/rudraksha-japa-orb.png";
+import rudrakshaSingleBeadImg from "@assets/generated_images/rudraksha-single-bead.png";
 
 type Mantra = {
   id: string;
@@ -2011,16 +2011,14 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   </span>
                 </div>
               )}
-              {/* 108-bead mala garland (with breath-pacing aura). */}
-              <MalaGarland
+              {/* A single bead remains the visual anchor; the thin outline carries progress. */}
+              <JapaProgressRing
                 count={persist.count}
                 target={target}
                 fillColor={getMantraTheme(mantra.id).accent}
                 restColor="#E9DEC3"
                 withBreathAura={!autoChanting}
                 viewBoxSize={RING_SIZE}
-                beadR={3.5}
-                guruR={6.5}
               />
               <button
                 type="button"
@@ -2044,14 +2042,14 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 data-testid="btn-tap"
               >
                  <img
-                   src={rudrakshaJapaOrbImg}
+                    src={rudrakshaSingleBeadImg}
                    alt=""
                    aria-hidden="true"
                    draggable={false}
-                   className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover object-center"
+                    className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover object-center"
                  />
                  <div
-                   className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(38,12,8,0.18),rgba(38,12,8,0.58)_72%,rgba(20,5,4,0.78))]"
+                    className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.08),rgba(38,12,8,0.24)_72%,rgba(20,5,4,0.42))]"
                    aria-hidden="true"
                  />
                  <div className="relative z-10 flex h-full flex-col items-center justify-center">
@@ -2686,11 +2684,70 @@ function LotusPondSilhouette({ accent }: { accent: string }) {
 
 const MALA_TOTAL_BEADS = 108;
 
-// 108-bead mala garland — replaces the plain progress arc with the
-// iconic visual: 108 beads arranged in a circle, filling with the
-// mantra's accent gold as the count progresses. Bead 0 is the "guru
-// bead" (meru) — slightly larger, deep maroon with a gold rim.
-// SVG uses width/height 100% + viewBox so it scales to any container.
+// Thin circular progress outline around the single-bead tap target.
+// The count remains visually meaningful without rendering a crowded mala.
+function JapaProgressRing({
+  count, target, fillColor, restColor, withBreathAura, viewBoxSize = 280,
+}: {
+  count: number; target: number;
+  fillColor: string; restColor: string;
+  withBreathAura?: boolean;
+  viewBoxSize?: number;
+}) {
+  const center = viewBoxSize / 2;
+  const radius = center - Math.max(5, viewBoxSize / 22);
+  const circumference = 2 * Math.PI * radius;
+  const progress = target > 0 ? Math.min(1, Math.max(0, count / target)) : 0;
+  const offset = circumference * (1 - progress);
+
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
+      className="pointer-events-none absolute inset-0 block"
+      aria-hidden="true"
+    >
+      {withBreathAura && (
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke={fillColor}
+          strokeWidth={Math.max(0.7, viewBoxSize / 420)}
+          opacity="0.16"
+          className="animate-japa-breath"
+        />
+      )}
+      <circle
+        cx={center}
+        cy={center}
+        r={radius}
+        fill="none"
+        stroke={restColor}
+        strokeWidth={Math.max(1, viewBoxSize / 155)}
+        opacity="0.48"
+      />
+      <circle
+        cx={center}
+        cy={center}
+        r={radius}
+        fill="none"
+        stroke={fillColor}
+        strokeWidth={Math.max(1.4, viewBoxSize / 125)}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${center} ${center})`}
+        style={{ transition: "stroke-dashoffset 320ms ease" }}
+      />
+    </svg>
+  );
+}
+
+// Legacy 108-bead SVG kept below for compatibility with older focused layouts.
+// The active counter uses JapaProgressRing so the visual stays single-bead.
 function MalaGarland({
   count, target, fillColor, restColor, withBreathAura,
   beadR = 3.5, guruR = 6.5, viewBoxSize = 280,
@@ -3306,27 +3363,25 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
               50%      { opacity: 0.85; transform: scale(1.08); }
             }
           `}</style>
-          {/* 108-bead mala garland (with breath-pacing aura). */}
-          <MalaGarland
+          {/* A single bead remains the visual anchor; the thin outline carries progress. */}
+          <JapaProgressRing
             count={p.count}
             target={p.target}
             fillColor={getMantraTheme(p.mantra.id).accent}
             restColor="rgba(212,175,55,0.18)"
             withBreathAura={!p.autoChanting}
             viewBoxSize={100}
-            beadR={1.0}
-            guruR={1.7}
           />
           <div className="absolute inset-[10%] overflow-hidden rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-2xl text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30">
             <img
-              src={rudrakshaJapaOrbImg}
+              src={rudrakshaSingleBeadImg}
               alt=""
               aria-hidden="true"
               draggable={false}
               className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
             <div
-              className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(38,12,8,0.18),rgba(38,12,8,0.58)_72%,rgba(20,5,4,0.78))]"
+              className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.08),rgba(38,12,8,0.24)_72%,rgba(20,5,4,0.42))]"
               aria-hidden="true"
             />
             <div className="relative z-10 flex h-full flex-col items-center justify-center">
