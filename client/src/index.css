@@ -486,25 +486,17 @@
   will-change: transform, opacity;
 }
 
-/* A successful bead tap gives the natural bead a brief, tactile turn.
+/* A successful bead tap gives the natural bead one swift, complete turn.
    The image is animated independently from the text layer, so the mantra
    caption and count stay anchored and readable while the bead moves. */
 @keyframes japa-bead-press-rotate {
   0% {
-    transform: rotate(0deg) scale(1);
+    transform: rotate(0deg);
   }
-  28% {
-    transform: rotate(10deg) scale(1.025);
-  }
-  62% {
-    transform: rotate(-7deg) scale(1.012);
-  }
-  100% {
-    transform: rotate(0deg) scale(1);
-  }
+  100% { transform: rotate(360deg); }
 }
 .japa-bead-press-rotate {
-  animation: japa-bead-press-rotate 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: japa-bead-press-rotate 360ms linear both;
   transform-origin: center;
   will-change: transform;
 }
