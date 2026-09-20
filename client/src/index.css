@@ -486,6 +486,29 @@
   will-change: transform, opacity;
 }
 
+/* A successful bead tap gives the natural bead a brief, tactile turn.
+   The image is animated independently from the text layer, so the mantra
+   caption and count stay anchored and readable while the bead moves. */
+@keyframes japa-bead-press-rotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  28% {
+    transform: rotate(10deg) scale(1.025);
+  }
+  62% {
+    transform: rotate(-7deg) scale(1.012);
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+.japa-bead-press-rotate {
+  animation: japa-bead-press-rotate 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: center;
+  will-change: transform;
+}
+
 /* Full-mala completion bloom — gold radial flash that swells out
    from the orb when a 108 mala closes. Bigger / longer than the
    quarter-mala milestone bloom so 108 feels meaningfully different. */
@@ -516,6 +539,7 @@
   .animate-japa-lotus,
   .animate-japa-milestone,
   .animate-japa-orb-enter,
+  .japa-bead-press-rotate,
   .animate-japa-full-mala-bloom,
   .animate-japa-full-mala-pulse { animation: none; }
 }

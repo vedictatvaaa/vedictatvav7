@@ -40,7 +40,7 @@ import durgaDeityImg from "@assets/generated_images/durga-deity.png";
 import saraswatiDeityImg from "@assets/generated_images/saraswati-deity.png";
 import mahalakshmiDeityImg from "@assets/generated_images/mahalakshmi-deity.png";
 import hanumanDeityImg from "@assets/generated_images/hanuman-deity.png";
-import rudrakshaSingleBeadImg from "@assets/generated_images/rudraksha-single-bead.png";
+import rudrakshaSingleBeadImg from "@assets/generated_images/rudraksha-single-bead-transparent.png";
 
 type Mantra = {
   id: string;
@@ -1028,6 +1028,11 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     if (paceTimerRef.current) window.clearTimeout(paceTimerRef.current);
   }, []);
 
+  // Incremented only after a real manual count tap passes the completion,
+  // debounce, and sync-audio gates. The image uses this tick as a remount key
+  // so its press animation reliably replays on rapid consecutive taps.
+  const [beadRotationTick, setBeadRotationTick] = useState(0);
+
   // Auto-chant has two states:
   //   • autoMode      — the devotee has armed hands-free mode (toggle on)
   //   • autoChanting  — the chant loop is actively running
@@ -1265,6 +1270,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     // (default off). Default behaviour: every tap counts, audio is just
     // feedback — exactly like a physical mala bead never refusing to advance.
     if (syncRef.current && audioLockedRef.current) return;
+
+    // The visual press animation belongs to a successful manual count, not
+    // to breathing, auto-chant arming, blocked taps, or long-press undo.
+    setBeadRotationTick((tick) => tick + 1);
 
     // Compute mala completion synchronously to fire haptics + audio inside
     // the user-gesture stack BEFORE handing off to React's setState.
@@ -1890,6 +1899,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
           onShare={shareMantra}
           petals={petals}
           milestoneFlash={milestoneFlash}
+           beadRotationTick={beadRotationTick}
           sessionElapsedMs={sessionTickMs}
           meaning={meaningInfo}
           allMantras={ALL_MANTRAS}
@@ -2042,17 +2052,18 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 data-testid="btn-tap"
               >
                  <img
+                     key={beadRotationTick}
                     src={rudrakshaSingleBeadImg}
                    alt=""
                    aria-hidden="true"
                    draggable={false}
-                    className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover object-center"
+                     className={`pointer-events-none absolute inset-0 h-full w-full rounded-full object-contain object-center ${beadRotationTick > 0 ? "japa-bead-press-rotate" : ""}`}
                  />
                  <div
-                    className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.08),rgba(38,12,8,0.24)_72%,rgba(20,5,4,0.42))]"
+                    className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.06),rgba(38,12,8,0.3)_72%,rgba(20,5,4,0.5))]"
                    aria-hidden="true"
                  />
-                 <div className="relative z-10 flex h-full flex-col items-center justify-center">
+                  <div className="relative z-10 flex h-full flex-col items-center justify-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 {autoMode && !autoChanting ? (
                   <>
                     {mantra.sanskrit && (
@@ -2386,6 +2397,7 @@ type FullscreenOverlayProps = {
   audioLocked?: boolean;
   syncTapsToAudio?: boolean;
   paceHint?: boolean;
+  beadRotationTick?: number;
   onToggleSyncAudio?: () => void;
   autoChanting?: boolean;
   autoMode?: boolean;
@@ -3374,17 +3386,18 @@ function FullscreenOverlay(p: FullscreenOverlayProps) {
           />
           <div className="absolute inset-[10%] overflow-hidden rounded-full bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] shadow-2xl text-center text-[#FFFAEC] ring-1 ring-[#D4AF37]/30">
             <img
+               key={p.beadRotationTick ?? 0}
               src={rudrakshaSingleBeadImg}
               alt=""
               aria-hidden="true"
               draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
+               className={`pointer-events-none absolute inset-0 h-full w-full object-contain object-center ${(p.beadRotationTick ?? 0) > 0 ? "japa-bead-press-rotate" : ""}`}
             />
             <div
-              className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.08),rgba(38,12,8,0.24)_72%,rgba(20,5,4,0.42))]"
+               className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_42%,rgba(255,236,190,0.06),rgba(38,12,8,0.3)_72%,rgba(20,5,4,0.5))]"
               aria-hidden="true"
             />
-            <div className="relative z-10 flex h-full flex-col items-center justify-center">
+             <div className="relative z-10 flex h-full flex-col items-center justify-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.82)]">
             {p.paceHint && (
               <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-[#D4AF37]/70 animate-pulse" aria-hidden="true" data-testid="ring-fs-pace-hint" />
             )}
