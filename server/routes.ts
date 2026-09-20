@@ -730,6 +730,10 @@ export async function registerRoutes(
     // Japa counter — consolidate ranking signal on /digital-japa-counter.
     "/jap": "/digital-japa-counter",
     "/japa-counter": "/digital-japa-counter",
+    // Pandit recruitment links now open the actual application form. Keep
+    // both historical slugs working for old messages and shared links.
+    "/become-pandit": "/pandit/signup",
+    "/become-a-pandit": "/pandit/signup",
     // Puja booking — canonical URL is /online-puja-booking. Old /puja
     // permalink consolidates here so we don't fragment ranking signal.
     "/puja": "/online-puja-booking",
@@ -783,9 +787,6 @@ export async function registerRoutes(
     } catch (error) {
       return next(error);
     }
-  });
-  app.get("/become-a-pandit", (req, res) => {
-    res.redirect(301, redirectTargetWithQuery("/become-pandit", req.originalUrl));
   });
   app.get(/^\/pandits\/([^/]+)$/, async (req, res, next) => {
     try {

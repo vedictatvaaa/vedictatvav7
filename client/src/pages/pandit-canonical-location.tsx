@@ -158,7 +158,7 @@ function CityEnrichment({
           <h2 className="mt-4 font-serif text-3xl font-semibold">Are you a qualified Pandit serving {cityName}?</h2>
           <p className="mt-3 max-w-2xl text-[#FBF7EE]/75">Apply to join Vedic Tatva. Every application is reviewed, and registration does not guarantee approval, publication, or bookings.</p>
         </div>
-        <Link href="/become-a-pandit"><Button className="bg-[#E9C96A] text-[#5A2029] hover:bg-[#F2D989]">Start Pandit registration <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+        <Link href="/pandit/signup"><Button className="bg-[#E9C96A] text-[#5A2029] hover:bg-[#F2D989]">Start Pandit registration <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
       </div>
     </section>
 

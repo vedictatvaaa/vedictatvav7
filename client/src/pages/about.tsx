@@ -249,7 +249,7 @@ export default function About() {
             testIdPrefix="cta"
           />
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 mt-6">
-            <Link href="/become-pandit">
+            <Link href="/pandit/signup">
               <button className={primaryBtn} data-testid="btn-become-pandit">
                 Become a pandit partner <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.8} />
               </button>

@@ -37,7 +37,7 @@ export const FOOTER_DESTINATIONS = {
     { href: "/contact", testid: "footer-link-contact" },
     { href: "/careers", testid: "footer-link-careers" },
     { href: "/franchise", testid: "footer-link-franchise" },
-    { href: "/become-pandit", testid: "footer-link-become-pandit" },
+    { href: "/pandit/signup", testid: "footer-link-become-pandit" },
     { href: "/become-astrologer", testid: "footer-link-become-astrologer" },
   ] satisfies FooterDestination[],
   policies: [

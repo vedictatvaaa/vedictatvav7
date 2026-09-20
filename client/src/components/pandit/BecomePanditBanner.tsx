@@ -1,7 +1,7 @@
 // =====================================================================
 // CTA banner inviting Pandits to register on Vedic Tatva.
 // Used across /book-pandit-online, /pandits/:city, /pandits/:city/:puja so any
-// visiting Pandit (or someone who knows one) lands on /become-pandit.
+// visiting Pandit (or someone who knows one) lands on the signup form.
 //
 // Two variants:
 //   • <BecomePanditStrip />  — slim top-of-page acknowledgement strip
@@ -24,7 +24,7 @@ export function BecomePanditStrip({ className = "" }: { className?: string }) {
             Are you a Vedic Pandit? Earn ₹50,000+/mo with verified bookings on Vedic Tatva.
           </span>
         </p>
-        <Link href="/become-pandit">
+        <Link href="/pandit/signup">
           <Button
             size="sm"
             className="bg-[#D4AF37] text-[#3a1518] hover:bg-[#c49d2c] h-8 rounded-md text-[12px] font-semibold"
@@ -84,7 +84,7 @@ export function BecomePanditBanner({ className = "" }: { className?: string }) {
                   Start Free Registration <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
-              <Link href="/become-pandit#how-it-works">
+              <Link href="/pandit/signup">
                 <Button
                   variant="outline"
                   className="border-[#D4AF37]/50 bg-transparent text-[#FBE9B7] hover:bg-[#FBE9B7]/10 rounded-md"

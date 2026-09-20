@@ -691,7 +691,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                       <PlayCircle className="h-4 w-4" aria-hidden="true" />
                       {copy.exploreDemo}
                     </button>
-                    <Link href="/become-pandit" className="inline-flex items-center gap-1 text-[11px] font-bold text-white/75 underline decoration-white/35 underline-offset-4 hover:text-white">
+                    <Link href="/pandit/signup" className="inline-flex items-center gap-1 text-[11px] font-bold text-white/75 underline decoration-white/35 underline-offset-4 hover:text-white">
                       <Globe className="h-3.5 w-3.5" aria-hidden="true" />
                       {copy.fullStory}
                     </Link>
