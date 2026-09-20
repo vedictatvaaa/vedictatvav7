@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { panditApi } from "@/lib/panditAuth";
 import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
-import { savePanditAccessHandoff } from "@/lib/panditAccessHandoff";
 import { RegistrationSection, type FormState } from "@/pages/become-pandit";
 
 type AuthMode = "login" | "signup";
@@ -184,33 +183,6 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       cancelled = true;
     };
   }, [initialMode]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLocationsLoading(true);
-    fetch("/api/locations")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Unable to load the location catalogue");
-        const data: unknown = await response.json();
-        if (!Array.isArray(data)) throw new Error("Invalid location catalogue");
-        return data as LocationState[];
-      })
-      .then((data) => {
-        if (cancelled) return;
-        setLocations(data.filter((state) => state.isActive));
-        setLocationsError("");
-      })
-      .catch((error: Error) => {
-        if (cancelled) return;
-        setLocationsError(error.message || "Unable to load locations");
-      })
-      .finally(() => {
-        if (!cancelled) setLocationsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const activeStates = locations.filter((state) => state.isActive);
   const selectedState = activeStates.find((state) => String(state.id) === signup.stateId);
@@ -571,26 +543,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
       return;
     }
 
-    const saved = savePanditAccessHandoff({
-      fullName: signup.fullName.trim(),
-      phone: signup.phone.trim(),
-      email: signup.email.trim(),
-      stateId: selectedState.id,
-      cityId: selectedCity.id,
-      stateName: selectedState.name,
-      cityName: selectedCity.name,
-      languages: signup.languages.join(", "),
-      experience: signup.experience.trim(),
-    });
-    if (!saved) {
-      toast({
-        title: hindi ? "आवेदन शुरू नहीं हो सका" : "Could not start application",
-        description: hindi ? "कृपया ब्राउज़र स्टोरेज की अनुमति देकर फिर प्रयास करें।" : "Please allow browser storage and try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLocation("/become-pandit#apply");
+    setLocation("/pandit/signup");
   };
 
   return (

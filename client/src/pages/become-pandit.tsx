@@ -52,7 +52,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { clearPanditAccessHandoff, readPanditAccessHandoff } from "@/lib/panditAccessHandoff";
 
 const BECOME_PANDIT_FAQS = [
   { q: "Who can become a Vedic Tatva pandit?", a: "Traditional pandits and purohits trained in any recognised sampradaya (Smartha, Madhva, Shri Vaishnava, Gaudiya, Shaiva, Shakta and others) who actively perform sevas — Satyanarayan, Griha Pravesh, Rudra Abhishek, Navagraha shanti, weddings, samskaras, antyeshti and more. Both full-time professional pandits and respected community purohits are welcome to apply." },
@@ -260,68 +259,6 @@ export default function BecomePandit() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [errorTargetId, errorFocusRequest]);
-
-  useEffect(() => {
-    const handoff = readPanditAccessHandoff();
-    if (!handoff) return;
-    let cancelled = false;
-
-    fetch("/api/locations")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Unable to validate signup location");
-        const data: unknown = await response.json();
-        if (!Array.isArray(data)) throw new Error("Invalid signup location catalogue");
-        return data as Array<{
-          id: number;
-          name: string;
-          isActive: boolean;
-          cities: Array<{ id: number; name: string; isActive: boolean }>;
-        }>;
-      })
-      .then((locations) => {
-        if (cancelled) return;
-        const state = locations.find((item) => item.isActive && item.id === handoff.stateId);
-        const city = state?.cities.find((item) => item.isActive && item.id === handoff.cityId);
-        if (!state || !city) {
-          clearPanditAccessHandoff();
-          return;
-        }
-
-        setForm((current) => {
-          const hasUserInput = Boolean(
-            current.fullName.trim()
-            || current.phone.trim()
-            || current.email.trim()
-            || current.stateId
-            || current.cityId
-            || current.languages.trim(),
-          );
-          if (hasUserInput) return current;
-          return {
-            ...current,
-            fullName: handoff.fullName,
-            phone: handoff.phone,
-            email: handoff.email,
-            city: city.name,
-            stateId: String(state.id),
-            cityId: String(city.id),
-            languages: handoff.languages,
-            experience: handoff.experience,
-          };
-        });
-        clearPanditAccessHandoff();
-        window.requestAnimationFrame(() => {
-          document.getElementById("apply")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      })
-      .catch(() => {
-        clearPanditAccessHandoff();
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const requestExactLocation = () => {
     if (!navigator.geolocation) {
