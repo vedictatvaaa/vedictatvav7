@@ -1551,6 +1551,213 @@ const PANDIT_LANGUAGE_OPTIONS = [
   "Marathi", "Bengali", "Gujarati", "Punjabi", "Odia", "Assamese",
 ];
 
+type RegistrationLanguage = "en" | "hi";
+
+const REGISTRATION_COPY = {
+  en: {
+    languageToggleLabel: "Form language",
+    english: "English",
+    hindi: "हिंदी",
+    eyebrow: "Panditji registration",
+    title: "Begin your practice, beautifully.",
+    description: "Share the details devotees need to find you. Your profile preview updates as you build it, and our team will guide you through verification.",
+    details: "Your details",
+    practice: "Your practice",
+    verification: "Verification",
+    alreadyApproved: "Already approved?",
+    signInPractice: "Sign in to your practice",
+    livePreview: "Your Pandit ID — Live Preview",
+    previewLabel: "A preview, not a promise.",
+    previewDescription: "This is a preview of your verified card. The actual card is issued after onboarding.",
+    application: "Your application",
+    practicePrompt: "Tell us about your practice",
+    stepOf: (step: number) => `Step ${step} of 3`,
+    progressLabel: "Registration progress",
+    personalDetails: "Personal Details",
+    fullName: "Full Name *",
+    fullNamePlaceholder: "Pandit Ramesh Sharma",
+    phone: "Phone *",
+    email: "Email *",
+    state: "State *",
+    selectState: "Select state",
+    city: "City *",
+    otherCity: "Other city *",
+    selectCity: "Select city",
+    selectStateFirst: "Select a state first",
+    otherCityOption: "Other — my city is not listed",
+    cityPlaceholder: "Enter your city name",
+    registeredAddress: "Registered Address *",
+    addressPlaceholder: "Start typing house, street, or locality",
+    searchingAddresses: "Searching addresses…",
+    useAddressSuggestions: "Use address suggestions",
+    addressSuggestionsNote: "Suggestions are provided by OpenStreetMap. The address text you type is sent to its search service; you can still enter it manually.",
+    exactLocation: "Exact location access *",
+    exactLocationNote: "Used for onboarding verification. It is not shown publicly.",
+    locationCaptured: "Location captured",
+    shareExactLocation: "Share exact location",
+    practiceAndTradition: "Practice & Tradition",
+    regionalTradition: "Regional Tradition",
+    selectTradition: "Select your tradition",
+    yearsExperience: "Years of Experience *",
+    experiencePlaceholder: "e.g., 5",
+    education: "Vedic Education *",
+    educationPlaceholder: "Gurukul, Sanskrit University...",
+    languagesKnown: "Languages Known *",
+    languagesHint: "Hold Ctrl/Cmd to choose more than one language.",
+    sevas: "Sevas You Perform",
+    sevasPlaceholder: "Satyanarayan Katha, Griha Pravesh, Rudra Abhishek...",
+    serviceArea: "Service Area *",
+    serviceAreaPlaceholder: "New Delhi and nearby areas",
+    canonicalPujas: "Canonical Pujas you offer",
+    choosePujas: "Choose 5–10 Pujas you are fully expert in.",
+    selected: "Selected",
+    loadingCatalogue: "Loading Puja catalogue…",
+    catalogueError: "The Puja catalogue could not be loaded. Please retry before submitting.",
+    confirmServices: "I confirm these are services I personally offer and can accept bookings for.",
+    membershipTier: "Membership Tier",
+    free: "Free",
+    silver: "Silver",
+    gold: "Gold",
+    guruElite: "Guru Elite",
+    selectedLabel: "Selected",
+    selectTier: (label: string) => `Select ${label} membership tier`,
+    aboutYou: "About You",
+    profilePhoto: "Profile Photo *",
+    changePhoto: "Change photo",
+    chooseFile: "Choose file",
+    photoPreview: "Preview",
+    remove: "Remove",
+    photoNote: "JPG, PNG, or WebP; maximum 5 MB. Your photo uploads securely when you submit.",
+    briefBio: "Brief Bio",
+    writingBio: "Writing…",
+    aiDraftsUsed: "AI drafts used",
+    writeBio: (left: number) => `Write better bio with AI (${left} left)`,
+    bioPlaceholder: "Tell devotees about your sampradaya and approach...",
+    completionSummary: "Completion summary",
+    complete: "complete",
+    needsAttention: "needs attention",
+    draftPrivacy: "Your exact coordinates and photo are never stored in your resumable draft.",
+    terms: "I agree to the Terms & Conditions and confirm all information provided is accurate.",
+    back: "Back",
+    saving: "Saving…",
+    updateDraft: "Update saved draft",
+    saveDraft: "Save and continue later",
+    copyResume: "Copy resume link",
+    continue: "Continue",
+    submitting: "Submitting...",
+    submit: "Submit Application",
+    freeToJoin: "Free to join",
+    noUpfrontFees: "No upfront fees",
+    verifiedIn48: "Verified in 48 hrs",
+    completePersonal: "Complete your name, contact details, city, and registered address before continuing.",
+    shareLocationAgain: "Share your exact location again before continuing. It is used only for onboarding verification.",
+    completePractice: "Complete your experience, education, languages, services, and service area before continuing.",
+    chooseFiveToTen: "Choose 5–10 specialist Pujas and confirm that you personally offer them.",
+    availableUntil: (date: string) => `Available until ${date}.`,
+  },
+  hi: {
+    languageToggleLabel: "फॉर्म की भाषा",
+    english: "English",
+    hindi: "हिंदी",
+    eyebrow: "पंडितजी पंजीकरण",
+    title: "अपनी साधना को सुंदर ढंग से शुरू करें।",
+    description: "भक्तों को आपको खोजने के लिए आवश्यक जानकारी साझा करें। आपकी प्रोफ़ाइल का पूर्वावलोकन साथ-साथ अपडेट होगा और हमारी टीम सत्यापन में आपका मार्गदर्शन करेगी।",
+    details: "आपकी जानकारी",
+    practice: "आपकी साधना",
+    verification: "सत्यापन",
+    alreadyApproved: "पहले से स्वीकृत हैं?",
+    signInPractice: "अपने अभ्यास में साइन इन करें",
+    livePreview: "आपका पंडित ID — लाइव पूर्वावलोकन",
+    previewLabel: "यह पूर्वावलोकन है, वादा नहीं।",
+    previewDescription: "यह आपके सत्यापित कार्ड का पूर्वावलोकन है। वास्तविक कार्ड ऑनबोर्डिंग के बाद जारी किया जाएगा।",
+    application: "आपका आवेदन",
+    practicePrompt: "अपनी साधना के बारे में बताएं",
+    stepOf: (step: number) => `चरण ${step} / 3`,
+    progressLabel: "पंजीकरण प्रगति",
+    personalDetails: "व्यक्तिगत जानकारी",
+    fullName: "पूरा नाम *",
+    fullNamePlaceholder: "उदाहरण: पंडित रमेश शर्मा",
+    phone: "फ़ोन *",
+    email: "ईमेल *",
+    state: "राज्य *",
+    selectState: "राज्य चुनें",
+    city: "शहर *",
+    otherCity: "अन्य शहर *",
+    selectCity: "शहर चुनें",
+    selectStateFirst: "पहले राज्य चुनें",
+    otherCityOption: "अन्य — मेरा शहर सूची में नहीं है",
+    cityPlaceholder: "अपने शहर का नाम लिखें",
+    registeredAddress: "पंजीकृत पता *",
+    addressPlaceholder: "घर, सड़क या इलाके का नाम लिखना शुरू करें",
+    searchingAddresses: "पते खोजे जा रहे हैं…",
+    useAddressSuggestions: "पते के सुझाव इस्तेमाल करें",
+    addressSuggestionsNote: "सुझाव OpenStreetMap से दिए जाते हैं। आपके द्वारा लिखा गया पता उसकी खोज सेवा को भेजा जाता है; आप पता स्वयं भी लिख सकते हैं।",
+    exactLocation: "सटीक स्थान की अनुमति *",
+    exactLocationNote: "ऑनबोर्डिंग सत्यापन के लिए उपयोग किया जाता है। इसे सार्वजनिक रूप से नहीं दिखाया जाएगा।",
+    locationCaptured: "स्थान मिल गया",
+    shareExactLocation: "सटीक स्थान साझा करें",
+    practiceAndTradition: "साधना और परंपरा",
+    regionalTradition: "क्षेत्रीय परंपरा",
+    selectTradition: "अपनी परंपरा चुनें",
+    yearsExperience: "अनुभव के वर्ष *",
+    experiencePlaceholder: "उदाहरण: 5",
+    education: "वैदिक शिक्षा *",
+    educationPlaceholder: "गुरुकुल, संस्कृत विश्वविद्यालय...",
+    languagesKnown: "ज्ञात भाषाएं *",
+    languagesHint: "एक से अधिक भाषा चुनने के लिए Ctrl/Cmd दबाकर रखें।",
+    sevas: "आप कौन-सी सेवाएं करते हैं",
+    sevasPlaceholder: "सत्यनारायण कथा, गृह प्रवेश, रुद्र अभिषेक...",
+    serviceArea: "सेवा क्षेत्र *",
+    serviceAreaPlaceholder: "नई दिल्ली और आसपास के क्षेत्र",
+    canonicalPujas: "आपके द्वारा कराई जाने वाली प्रमाणित पूजाएं",
+    choosePujas: "5–10 ऐसी पूजाएं चुनें जिनमें आपको पूरा अनुभव हो।",
+    selected: "चयनित",
+    loadingCatalogue: "पूजा सूची लोड हो रही है…",
+    catalogueError: "पूजा सूची लोड नहीं हो सकी। आवेदन भेजने से पहले फिर से प्रयास करें।",
+    confirmServices: "मैं पुष्टि करता/करती हूं कि मैं ये सेवाएं स्वयं करता/करती हूं और इनके बुकिंग अनुरोध स्वीकार कर सकता/सकती हूं।",
+    membershipTier: "सदस्यता स्तर",
+    free: "निःशुल्क",
+    silver: "सिल्वर",
+    gold: "गोल्ड",
+    guruElite: "गुरु एलीट",
+    selectedLabel: "चयनित",
+    selectTier: (label: string) => `${label} सदस्यता स्तर चुनें`,
+    aboutYou: "आपके बारे में",
+    profilePhoto: "प्रोफ़ाइल फ़ोटो *",
+    changePhoto: "फ़ोटो बदलें",
+    chooseFile: "फ़ाइल चुनें",
+    photoPreview: "पूर्वावलोकन",
+    remove: "हटाएं",
+    photoNote: "JPG, PNG या WebP; अधिकतम 5 MB। आवेदन भेजते समय आपकी फ़ोटो सुरक्षित रूप से अपलोड होगी।",
+    briefBio: "संक्षिप्त परिचय",
+    writingBio: "लिखा जा रहा है…",
+    aiDraftsUsed: "AI ड्राफ्ट पूरे हो गए",
+    writeBio: (left: number) => `AI से बेहतर परिचय लिखें (${left} शेष)`,
+    bioPlaceholder: "भक्तों को अपनी संप्रदाय परंपरा और सेवा के तरीके के बारे में बताएं...",
+    completionSummary: "पूरा होने का सारांश",
+    complete: "पूरा",
+    needsAttention: "ध्यान आवश्यक",
+    draftPrivacy: "आपके सटीक निर्देशांक और फ़ोटो सेव किए जा सकने वाले ड्राफ्ट में कभी संग्रहीत नहीं होते।",
+    terms: "मैं नियम और शर्तों से सहमत हूं और पुष्टि करता/करती हूं कि दी गई सभी जानकारी सही है।",
+    back: "वापस",
+    saving: "सेव हो रहा है…",
+    updateDraft: "सेव किए गए ड्राफ्ट को अपडेट करें",
+    saveDraft: "बाद में जारी रखने के लिए सेव करें",
+    copyResume: "फिर से शुरू करने का लिंक कॉपी करें",
+    continue: "जारी रखें",
+    submitting: "जमा हो रहा है...",
+    submit: "आवेदन जमा करें",
+    freeToJoin: "जुड़ना निःशुल्क है",
+    noUpfrontFees: "कोई अग्रिम शुल्क नहीं",
+    verifiedIn48: "48 घंटे में सत्यापन",
+    completePersonal: "आगे बढ़ने से पहले अपना नाम, संपर्क विवरण, शहर और पंजीकृत पता पूरा करें।",
+    shareLocationAgain: "आगे बढ़ने से पहले अपना सटीक स्थान फिर से साझा करें। इसका उपयोग केवल ऑनबोर्डिंग सत्यापन के लिए होता है।",
+    completePractice: "आगे बढ़ने से पहले अपना अनुभव, शिक्षा, भाषाएं, सेवाएं और सेवा क्षेत्र पूरा करें।",
+    chooseFiveToTen: "5–10 विशेषज्ञ पूजाएं चुनें और पुष्टि करें कि आप उन्हें स्वयं कराते हैं।",
+    availableUntil: (date: string) => `${date} तक उपलब्ध।`,
+  },
+} satisfies Record<RegistrationLanguage, Record<string, unknown>>;
+
 export function RegistrationSection({
   form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, servicesError, applicationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
   currentStep, setCurrentStep, onSaveDraft, draftSaving, draftMessage, draftExpiresAt, hasDraft, onCopyDraftLink, standalone = false,
@@ -1597,6 +1804,8 @@ export function RegistrationSection({
   }, [masterServices]);
   const activeStates = locations.filter(s => s.isActive);
   const activeCities = activeStates.find(s => String(s.id) === form.stateId)?.cities.filter(c => c.isActive) || [];
+  const [language, setLanguage] = useState<RegistrationLanguage>("en");
+  const copy = REGISTRATION_COPY[language];
   const [bioAiUses, setBioAiUses] = useState(0);
   const [bioAiLoading, setBioAiLoading] = useState(false);
   const [bioAiError, setBioAiError] = useState("");
@@ -1677,21 +1886,21 @@ export function RegistrationSection({
     setStepError("");
     if (currentStep === 1) {
       if (!form.fullName.trim() || !form.phone.trim() || !form.email.trim() || !form.stateId || (!form.cityId && !form.proposedCityName.trim()) || !form.registeredAddress.trim()) {
-        setStepError("Complete your name, contact details, city, and registered address before continuing.");
+        setStepError(copy.completePersonal);
         return;
       }
       if (!form.locationPermissionGranted || form.latitude == null || form.longitude == null) {
-        setStepError("Share your exact location again before continuing. It is used only for onboarding verification.");
+        setStepError(copy.shareLocationAgain);
         return;
       }
     }
     if (currentStep === 2) {
       if (!form.experience || !form.education.trim() || !form.languages.trim() || !form.specializations.trim() || !form.serviceArea.trim()) {
-        setStepError("Complete your experience, education, languages, services, and service area before continuing.");
+        setStepError(copy.completePractice);
         return;
       }
       if (form.masterServiceIds.length < 5 || form.masterServiceIds.length > 10 || !form.servicesConfirmed) {
-        setStepError("Choose 5–10 specialist Pujas and confirm that you personally offer them.");
+        setStepError(copy.chooseFiveToTen);
         return;
       }
     }
@@ -1710,15 +1919,15 @@ export function RegistrationSection({
 
   const stepSummaries = [
     {
-      label: "Your details",
+      label: copy.details,
       complete: Boolean(form.fullName.trim() && form.phone.trim() && form.email.trim() && form.stateId && (form.cityId || form.proposedCityName.trim()) && form.registeredAddress.trim() && form.locationPermissionGranted),
     },
     {
-      label: "Your practice",
+      label: copy.practice,
       complete: Boolean(form.experience && form.education.trim() && form.languages.trim() && form.specializations.trim() && form.serviceArea.trim() && form.masterServiceIds.length >= 5 && form.masterServiceIds.length <= 10 && form.servicesConfirmed),
     },
     {
-      label: "Verification",
+      label: copy.verification,
       complete: Boolean(photoPreview && form.bio.trim().length >= 20 && form.agreeTerms),
     },
   ];
@@ -1735,23 +1944,23 @@ export function RegistrationSection({
         <div className="mx-auto mb-10 max-w-3xl text-center md:mb-12">
           <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-extrabold uppercase tracking-[.2em]" style={{ color: C.goldDeep }}>
             <span className="h-px w-8" style={{ background: C.gold }} />
-             Panditji registration
+             {copy.eyebrow}
             <span className="h-px w-8" style={{ background: C.gold }} />
           </div>
-          <SectionTitle>Begin your practice, beautifully.</SectionTitle>
+          <SectionTitle>{copy.title}</SectionTitle>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 md:text-base" style={{ color: C.brownSoft }}>
-            Share the details devotees need to find you. Your profile preview updates as you build it, and our team will guide you through verification.
+            {copy.description}
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] font-bold text-[#806F5E]">
-            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#6D2B35] text-[10px] text-[#F1D68E]">1</span> Your details</span>
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#6D2B35] text-[10px] text-[#F1D68E]">1</span> {copy.details}</span>
             <span className="hidden h-px w-8 bg-[#D4AF37]/50 sm:block" />
-            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">2</span> Your practice</span>
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">2</span> {copy.practice}</span>
             <span className="hidden h-px w-8 bg-[#D4AF37]/50 sm:block" />
-            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">3</span> Verification</span>
+            <span className="inline-flex items-center gap-1.5"><span className="grid h-5 w-5 place-items-center rounded-full bg-[#F1DFB5] text-[10px] text-[#7F5A15]">3</span> {copy.verification}</span>
           </div>
           <p className="mt-4 text-[11px] text-[#806F5E]">
-            Already approved?{" "}
-            <a href="/pandit/login" className="font-extrabold text-[#6D2B35] hover:underline">Sign in to your practice</a>
+            {copy.alreadyApproved}{" "}
+            <a href="/pandit/login" className="font-extrabold text-[#6D2B35] hover:underline">{copy.signInPractice}</a>
           </p>
         </div>
 
@@ -1760,13 +1969,13 @@ export function RegistrationSection({
           <div className="lg:col-span-2 lg:order-2 lg:sticky lg:top-24 order-1" data-testid="live-pandit-card-wrap">
             <div className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-[.16em]" style={{ color: C.brownSoft }}>
               <Sparkles className="inline w-3.5 h-3.5 mr-1" style={{ color: C.gold }} />
-              Your Pandit ID — Live Preview
+              {copy.livePreview}
             </div>
             <LivePanditCard form={form} photoPreview={photoPreview} />
             <div className="mx-auto mt-4 max-w-[22rem] rounded-xl border border-[#D4AF37]/25 bg-white/65 px-3.5 py-3 text-center text-[11px] leading-5" style={{ color: C.brownSoft }}>
               <CheckCircle2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" style={{ color: C.goldDeep }} />
-              <span className="font-semibold text-[#4A1A22]">A preview, not a promise.</span>{" "}
-              This is a preview of your verified card. The actual card is issued after onboarding.
+              <span className="font-semibold text-[#4A1A22]">{copy.previewLabel}</span>{" "}
+              {copy.previewDescription}
             </div>
           </div>
 
@@ -1774,16 +1983,38 @@ export function RegistrationSection({
           <Card className="order-2 w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/85 shadow-[0_22px_65px_rgba(77,40,36,.11)] lg:order-1 lg:col-span-3" style={{ backdropFilter: "blur(10px)" }}>
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-5 sm:p-7 md:p-8">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Your application</p>
-                  <h3 className="font-serif text-xl font-semibold tracking-[-.03em] text-[#4A1A22]">Tell us about your practice</h3>
-                </div>
-                <div className="shrink-0 rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] px-3 py-1.5 text-[10px] font-bold text-[#7F5A15]">
-                  Step {currentStep} of 3
+              <div className="mb-5 flex justify-end">
+                <div role="tablist" aria-label={copy.languageToggleLabel} className="inline-flex rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] p-1">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={language === "en"}
+                    onClick={() => setLanguage("en")}
+                    className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold transition-colors ${language === "en" ? "bg-[#6D2B35] text-[#FFF8E7]" : "text-[#7F5A15] hover:bg-white"}`}
+                  >
+                    {copy.english}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={language === "hi"}
+                    onClick={() => setLanguage("hi")}
+                    className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold transition-colors ${language === "hi" ? "bg-[#6D2B35] text-[#FFF8E7]" : "text-[#7F5A15] hover:bg-white"}`}
+                  >
+                    {copy.hindi}
+                  </button>
                 </div>
               </div>
-              <div className="mb-6 grid grid-cols-3 gap-2 border-b border-[#6D2B35]/10 pb-5" aria-label="Registration progress">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">{copy.application}</p>
+                  <h3 className="font-serif text-xl font-semibold tracking-[-.03em] text-[#4A1A22]">{copy.practicePrompt}</h3>
+                </div>
+                <div className="shrink-0 rounded-full border border-[#D4AF37]/35 bg-[#FFF8E7] px-3 py-1.5 text-[10px] font-bold text-[#7F5A15]">
+                  {copy.stepOf(currentStep)}
+                </div>
+              </div>
+              <div className="mb-6 grid grid-cols-3 gap-2 border-b border-[#6D2B35]/10 pb-5" aria-label={copy.progressLabel}>
                 {stepSummaries.map((step, index) => (
                   <button
                     key={step.label}
@@ -1811,28 +2042,28 @@ export function RegistrationSection({
                 {draftMessage && (
                   <div role="status" className="rounded-xl border border-[#D4AF37]/35 bg-[#FFF8E7] p-3.5 text-xs leading-5 text-[#6D2B35]">
                     <p>{draftMessage}</p>
-                    {draftExpiresAt && <p className="mt-1 text-[#806F5E]">Available until {new Date(draftExpiresAt).toLocaleString()}.</p>}
+                    {draftExpiresAt && <p className="mt-1 text-[#806F5E]">{copy.availableUntil(new Date(draftExpiresAt).toLocaleString())}</p>}
                   </div>
                 )}
                 {currentStep === 1 && (
-                <FieldGroup index={1} title="Personal Details">
+                <FieldGroup index={1} title={copy.personalDetails} stepLabel={language === "hi" ? "चरण" : "Step"}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Field label="Full Name *" id="fullName">
-                      <Input id="fullName" name="fullName" value={form.fullName} onChange={onChange} placeholder="Pandit Ramesh Sharma" required data-testid="input-fullname" style={{ borderColor: `${C.maroon}25` }} />
+                    <Field label={copy.fullName} id="fullName">
+                      <Input id="fullName" name="fullName" value={form.fullName} onChange={onChange} placeholder={copy.fullNamePlaceholder} required data-testid="input-fullname" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <Field label="Phone *" id="phone">
+                    <Field label={copy.phone} id="phone">
                       <Input id="phone" name="phone" value={form.phone} onChange={onChange} placeholder="+91 98765 43210" required data-testid="input-phone" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <Field label="Email *" id="email">
+                    <Field label={copy.email} id="email">
                       <Input id="email" name="email" type="email" value={form.email} onChange={onChange} placeholder="pandit@example.com" required data-testid="input-email" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <Field label="State *" id="stateId">
+                    <Field label={copy.state} id="stateId">
                       <select id="stateId" value={form.stateId} required disabled={locationsLoading || locationsError} onChange={e => { setMissingCityMode(false); setForm(p => ({ ...p, stateId: e.target.value, cityId: "", city: "", proposedCityName: "" })); }} className="w-full h-10 rounded-md px-3 text-sm bg-white disabled:opacity-50" style={{ border: `1px solid ${C.maroon}25` }} data-testid="select-application-state">
-                        <option value="">Select state</option>{activeStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        <option value="">{copy.selectState}</option>{activeStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
-                      {locationsError && <p className="text-xs text-destructive" role="alert">Locations could not be loaded. Please try again.</p>}
+                      {locationsError && <p className="text-xs text-destructive" role="alert">{language === "hi" ? "स्थान लोड नहीं हो सके। कृपया फिर से प्रयास करें।" : "Locations could not be loaded. Please try again."}</p>}
                     </Field>
-                      <Field label={missingCityMode ? "Other city *" : "City *"} id={missingCityMode ? "proposedCityName" : "cityId"}>
+                      <Field label={missingCityMode ? copy.otherCity : copy.city} id={missingCityMode ? "proposedCityName" : "cityId"}>
                         <select
                           id="cityId"
                           value={missingCityMode ? "__other__" : form.cityId}
@@ -1852,15 +2083,15 @@ export function RegistrationSection({
                           style={{ border: `1px solid ${C.maroon}25` }}
                           data-testid="select-application-city"
                         >
-                          <option value="">{form.stateId ? "Select city" : "Select a state first"}</option>
+                          <option value="">{form.stateId ? copy.selectCity : copy.selectStateFirst}</option>
                           {activeCities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                          <option value="__other__">Other — my city is not listed</option>
+                          <option value="__other__">{copy.otherCityOption}</option>
                         </select>
                         {missingCityMode && (
-                          <Input id="proposedCityName" name="proposedCityName" value={form.proposedCityName} onChange={onChange} placeholder="Enter your city name" required data-testid="input-proposed-city" style={{ borderColor: `${C.maroon}25` }} />
+                          <Input id="proposedCityName" name="proposedCityName" value={form.proposedCityName} onChange={onChange} placeholder={copy.cityPlaceholder} required data-testid="input-proposed-city" style={{ borderColor: `${C.maroon}25` }} />
                         )}
                       </Field>
-                    <Field label="Registered Address *" id="registeredAddress">
+                    <Field label={copy.registeredAddress} id="registeredAddress">
                       <div className="relative">
                         <Textarea
                           id="registeredAddress"
@@ -1869,7 +2100,7 @@ export function RegistrationSection({
                           onChange={onChange}
                           onFocus={() => addressSuggestionsEnabled && setAddressSuggestionsOpen(true)}
                           onBlur={() => window.setTimeout(() => setAddressSuggestionsOpen(false), 150)}
-                          placeholder="Start typing house, street, or locality"
+                           placeholder={copy.addressPlaceholder}
                           autoComplete="street-address"
                           required
                           className="min-h-[80px]"
@@ -1881,7 +2112,7 @@ export function RegistrationSection({
                         />
                         {addressSuggestionsOpen && (addressSuggestionsLoading || addressSuggestions.length > 0) && (
                           <div id="registered-address-suggestions" role="listbox" className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-[#D4AF37]/35 bg-white p-1 shadow-xl" data-lenis-prevent>
-                            {addressSuggestionsLoading && <p className="px-3 py-2 text-xs text-[#806F5E]">Searching addresses…</p>}
+                            {addressSuggestionsLoading && <p className="px-3 py-2 text-xs text-[#806F5E]">{copy.searchingAddresses}</p>}
                             {!addressSuggestionsLoading && addressSuggestions.map((suggestion) => (
                               <button
                                 key={suggestion.id}
@@ -1910,16 +2141,16 @@ export function RegistrationSection({
                             window.requestAnimationFrame(() => document.getElementById("registeredAddress")?.focus());
                           }}
                         >
-                          Use address suggestions
+                           {copy.useAddressSuggestions}
                         </button>
                       ) : (
-                        <p className="text-xs" style={{ color: C.brownSoft }}>Suggestions are provided by OpenStreetMap. The address text you type is sent to its search service; you can still enter it manually.</p>
+                         <p className="text-xs" style={{ color: C.brownSoft }}>{copy.addressSuggestionsNote}</p>
                       )}
                     </Field>
                     <div id="signup-location" tabIndex={-1} className="rounded-lg border p-3 outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ borderColor: `${C.gold}60`, background: `${C.saffronLight}55` }}>
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>Exact location access *</p><p className="text-xs" style={{ color: C.brownSoft }}>Used for onboarding verification. It is not shown publicly.</p></div>
-                        <Button type="button" variant="outline" onClick={requestExactLocation} data-testid="button-share-location">{form.locationPermissionGranted ? "Location captured" : "Share exact location"}</Button>
+                        <div><p className="text-sm font-semibold" style={{ color: C.maroon }}>{copy.exactLocation}</p><p className="text-xs" style={{ color: C.brownSoft }}>{copy.exactLocationNote}</p></div>
+                        <Button type="button" variant="outline" onClick={requestExactLocation} data-testid="button-share-location">{form.locationPermissionGranted ? copy.locationCaptured : copy.shareExactLocation}</Button>
                       </div>
                       {locationError && <p className="mt-2 text-xs text-destructive">{locationError}</p>}
                     </div>
@@ -1929,9 +2160,9 @@ export function RegistrationSection({
 
                 {currentStep === 2 && (
                 <>
-                <FieldGroup index={2} title="Practice & Tradition">
+                <FieldGroup index={2} title={copy.practiceAndTradition} stepLabel={language === "hi" ? "चरण" : "Step"}>
                   <div className="space-y-4">
-                    <Field label="Regional Tradition" id="regionalOrigin">
+                    <Field label={copy.regionalTradition} id="regionalOrigin">
                       <select
                         id="regionalOrigin"
                         name="regionalOrigin"
@@ -1941,21 +2172,21 @@ export function RegistrationSection({
                         style={{ border: `1px solid ${C.maroon}25` }}
                         data-testid="select-regional-origin"
                       >
-                        <option value="">Select your tradition</option>
+                        <option value="">{copy.selectTradition}</option>
                         {["Bengali","Bihari","Marwari","South Indian","Maharashtrian","Gujarati","Kashmiri","Odia","UP / Awadhi","Punjabi","Nepali"].map(v => (
                           <option key={v} value={v}>{v}</option>
                         ))}
                       </select>
                     </Field>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Years of Experience *" id="experience">
-                        <Input id="experience" name="experience" type="number" min="0" value={form.experience} onChange={onChange} placeholder="e.g., 5" required data-testid="input-experience" style={{ borderColor: `${C.maroon}25` }} />
+                      <Field label={copy.yearsExperience} id="experience">
+                        <Input id="experience" name="experience" type="number" min="0" value={form.experience} onChange={onChange} placeholder={copy.experiencePlaceholder} required data-testid="input-experience" style={{ borderColor: `${C.maroon}25` }} />
                       </Field>
-                      <Field label="Vedic Education *" id="education">
-                        <Input id="education" name="education" value={form.education} onChange={onChange} placeholder="Gurukul, Sanskrit University..." required data-testid="input-education" style={{ borderColor: `${C.maroon}25` }} />
+                      <Field label={copy.education} id="education">
+                        <Input id="education" name="education" value={form.education} onChange={onChange} placeholder={copy.educationPlaceholder} required data-testid="input-education" style={{ borderColor: `${C.maroon}25` }} />
                       </Field>
                     </div>
-                    <Field label="Languages Known *" id="languages">
+                    <Field label={copy.languagesKnown} id="languages">
                       <select
                         id="languages"
                         name="languages"
@@ -1975,22 +2206,22 @@ export function RegistrationSection({
                           <option key={language} value={language}>{language}</option>
                         ))}
                       </select>
-                      <p className="text-xs" style={{ color: C.brownSoft }}>Hold Ctrl/Cmd to choose more than one language.</p>
+                      <p className="text-xs" style={{ color: C.brownSoft }}>{copy.languagesHint}</p>
                     </Field>
-                    <Field label="Sevas You Perform" id="specializations">
-                      <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder="Satyanarayan Katha, Griha Pravesh, Rudra Abhishek..." required className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
+                    <Field label={copy.sevas} id="specializations">
+                      <Textarea id="specializations" name="specializations" value={form.specializations} onChange={onChange} placeholder={copy.sevasPlaceholder} required className="min-h-[80px]" data-testid="input-specializations" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
-                    <Field label="Service Area *" id="serviceArea">
-                      <Input id="serviceArea" name="serviceArea" value={form.serviceArea} onChange={onChange} placeholder="New Delhi and nearby areas" required data-testid="input-service-area" style={{ borderColor: `${C.maroon}25` }} />
+                    <Field label={copy.serviceArea} id="serviceArea">
+                      <Input id="serviceArea" name="serviceArea" value={form.serviceArea} onChange={onChange} placeholder={copy.serviceAreaPlaceholder} required data-testid="input-service-area" style={{ borderColor: `${C.maroon}25` }} />
                     </Field>
                     <fieldset id="masterServiceIds" tabIndex={-1} className="outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                      <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Canonical Pujas you offer</legend>
-                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>Choose 5–10 Pujas you are fully expert in. Selected: {form.masterServiceIds.length}/10.</p>
+                      <legend className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>{copy.canonicalPujas}</legend>
+                      <p className="mt-1 text-xs" style={{ color: C.brownSoft }}>{copy.choosePujas} {copy.selected}: {form.masterServiceIds.length}/10.</p>
                       {servicesError && <p className="mt-2 text-xs text-destructive">{servicesError}</p>}
                       {masterServicesLoading ? (
-                        <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>Loading Puja catalogue…</p>
+                        <p className="mt-2 text-sm" style={{ color: C.brownSoft }}>{copy.loadingCatalogue}</p>
                       ) : masterServicesError ? (
-                        <p className="mt-2 text-xs text-destructive" role="alert">The Puja catalogue could not be loaded. Please retry before submitting.</p>
+                        <p className="mt-2 text-xs text-destructive" role="alert">{copy.catalogueError}</p>
                       ) : (
                         <div className="mt-3 max-h-72 overflow-y-auto overscroll-contain pr-1" data-lenis-prevent>
                           <div className="grid gap-2 sm:grid-cols-2">
@@ -2015,16 +2246,16 @@ export function RegistrationSection({
                       )}
                       <label id="servicesConfirmed" tabIndex={-1} className="mt-3 flex items-start gap-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-primary" style={{ color: C.brownSoft }}>
                         <input type="checkbox" checked={form.servicesConfirmed} onChange={event => setForm(current => ({ ...current, servicesConfirmed: event.target.checked }))} />
-                        <span>I confirm these are services I personally offer and can accept bookings for.</span>
+                         <span>{copy.confirmServices}</span>
                       </label>
                     </fieldset>
                   </div>
                 </FieldGroup>
 
-                <FieldGroup index={3} title="Membership Tier">
+                <FieldGroup index={3} title={copy.membershipTier} stepLabel={language === "hi" ? "चरण" : "Step"}>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {["free", "silver", "gold", "elite"].map((tier) => {
-                      const labels: Record<string, string> = { free: "Free", silver: "Silver", gold: "Gold", elite: "Guru Elite" };
+                      const labels: Record<string, string> = { free: copy.free, silver: copy.silver, gold: copy.gold, elite: copy.guruElite };
                       const selected = form.membership === tier;
                       return (
                         <button
@@ -2038,11 +2269,11 @@ export function RegistrationSection({
                             color: selected ? "white" : C.brown,
                           }}
                           aria-pressed={selected}
-                          aria-label={`Select ${labels[tier]} membership tier`}
+                           aria-label={copy.selectTier(labels[tier])}
                           data-testid={`tier-select-${tier}`}
                         >
                           <div className="text-xs font-semibold" style={{ color: selected ? C.gold : C.maroon }}>{labels[tier]}</div>
-                          {selected && <div className="text-[10px] mt-0.5">Selected</div>}
+                           {selected && <div className="text-[10px] mt-0.5">{copy.selectedLabel}</div>}
                         </button>
                       );
                     })}
@@ -2053,26 +2284,26 @@ export function RegistrationSection({
 
                 {currentStep === 3 && (
                 <>
-                <FieldGroup index={3} title="About You">
+                <FieldGroup index={3} title={copy.aboutYou} stepLabel={language === "hi" ? "चरण" : "Step"}>
                   <div className="space-y-4">
-                    <Field label="Profile Photo *" id="photo">
+                    <Field label={copy.profilePhoto} id="photo">
                       <div id="signup-photo" tabIndex={-1} className="flex items-center gap-4 outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         <label className="flex items-center gap-2 px-4 py-2 border border-dashed rounded-lg cursor-pointer hover:bg-[#F5F0E6] transition-colors" style={{ borderColor: `${C.maroon}40`, color: C.brown }} data-testid="input-photo">
                           <Upload className="w-4 h-4" />
-                          <span className="text-sm">{photoPreview ? "Change photo" : "Choose file"}</span>
+                           <span className="text-sm">{photoPreview ? copy.changePhoto : copy.chooseFile}</span>
                           <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} className="hidden" />
                         </label>
                         {photoPreview && (
-                          <img src={photoPreview} alt="Preview" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: C.gold }} data-testid="img-photo-preview" />
+                           <img src={photoPreview} alt={copy.photoPreview} className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: C.gold }} data-testid="img-photo-preview" />
                         )}
-                        {photoPreview && <Button type="button" variant="ghost" size="sm" onClick={onPhotoRemove}>Remove</Button>}
+                        {photoPreview && <Button type="button" variant="ghost" size="sm" onClick={onPhotoRemove}>{copy.remove}</Button>}
                       </div>
-                      <p className="text-xs" style={{ color: C.brownSoft }}>JPG, PNG, or WebP; maximum 5 MB. Your photo uploads securely when you submit.</p>
+                      <p className="text-xs" style={{ color: C.brownSoft }}>{copy.photoNote}</p>
                       {photoError && <p className="text-xs text-destructive">{photoError}</p>}
                     </Field>
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Label htmlFor="bio" className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>Brief Bio</Label>
+                         <Label htmlFor="bio" className="text-xs font-medium uppercase tracking-wider" style={{ color: C.brownSoft }}>{copy.briefBio}</Label>
                         <Button
                           type="button"
                           variant="outline"
@@ -2083,10 +2314,10 @@ export function RegistrationSection({
                           data-testid="button-ai-write-bio"
                         >
                           <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                          {bioAiLoading ? "Writing…" : bioAiUses >= 2 ? "AI drafts used" : `Write better bio with AI (${2 - bioAiUses} left)`}
+                           {bioAiLoading ? copy.writingBio : bioAiUses >= 2 ? copy.aiDraftsUsed : copy.writeBio(2 - bioAiUses)}
                         </Button>
                       </div>
-                      <Textarea id="bio" name="bio" value={form.bio} onChange={onChange} placeholder="Tell devotees about your sampradaya and approach..." className="min-h-[90px]" maxLength={500} data-testid="input-bio" style={{ borderColor: `${C.maroon}25` }} />
+                      <Textarea id="bio" name="bio" value={form.bio} onChange={onChange} placeholder={copy.bioPlaceholder} className="min-h-[90px]" maxLength={500} data-testid="input-bio" style={{ borderColor: `${C.maroon}25` }} />
                       <p className="text-xs text-right mt-1" style={{ color: C.brownSoft }}>{form.bio.length}/500</p>
                       {bioAiError && <p className="text-xs text-destructive" role="alert">{bioAiError}</p>}
                     </div>
@@ -2095,16 +2326,16 @@ export function RegistrationSection({
 
                 <div className="pt-4 border-t space-y-5" style={{ borderColor: `${C.maroon}10` }}>
                   <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#FFF8E7]/70 p-4">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#A67817]">Completion summary</p>
+                     <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#A67817]">{copy.completionSummary}</p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3">
                       {stepSummaries.map((step) => (
                         <div key={step.label} className="flex items-center gap-2 text-xs text-[#4A1A22]">
                           {step.complete ? <CheckCircle2 className="h-4 w-4 text-[#7F5A15]" /> : <CircleDot className="h-4 w-4 text-[#B04A42]" />}
-                          <span>{step.label}: {step.complete ? "complete" : "needs attention"}</span>
+                           <span>{step.label}: {step.complete ? copy.complete : copy.needsAttention}</span>
                         </div>
                       ))}
                     </div>
-                    <p className="mt-3 text-[11px] leading-5 text-[#806F5E]">Your exact coordinates and photo are never stored in your resumable draft.</p>
+                     <p className="mt-3 text-[11px] leading-5 text-[#806F5E]">{copy.draftPrivacy}</p>
                   </div>
                   <div className="flex items-start gap-3">
                     <input
@@ -2117,7 +2348,7 @@ export function RegistrationSection({
                       data-testid="checkbox-terms"
                     />
                     <Label htmlFor="agreeTerms" className="text-sm cursor-pointer leading-relaxed" style={{ color: C.brown }}>
-                      I agree to the Terms &amp; Conditions and confirm all information provided is accurate.
+                       {copy.terms}
                     </Label>
                   </div>
                 </div>
@@ -2127,20 +2358,20 @@ export function RegistrationSection({
                 <div className="flex flex-col gap-3 border-t border-[#6D2B35]/10 pt-5 sm:flex-row sm:items-center">
                   {currentStep > 1 && (
                     <Button type="button" variant="outline" onClick={() => { setStepError(""); setCurrentStep((step) => Math.max(1, step - 1)); }}>
-                      Back
+                      {copy.back}
                     </Button>
                   )}
                   <Button type="button" variant="outline" onClick={() => onSaveDraft(currentStep)} disabled={draftSaving} data-testid="button-save-registration-draft">
-                    {draftSaving ? "Saving…" : hasDraft ? "Update saved draft" : "Save and continue later"}
+                    {draftSaving ? copy.saving : hasDraft ? copy.updateDraft : copy.saveDraft}
                   </Button>
                   {hasDraft && (
                     <Button type="button" variant="ghost" onClick={onCopyDraftLink} data-testid="button-copy-draft-link">
-                      <Copy className="mr-1.5 h-3.5 w-3.5" /> Copy resume link
+                      <Copy className="mr-1.5 h-3.5 w-3.5" /> {copy.copyResume}
                     </Button>
                   )}
                   {currentStep < 3 ? (
                     <Button type="submit" className="sm:ml-auto" style={{ background: C.maroon, color: "white" }}>
-                      Continue <ArrowRight className="ml-2 h-4 w-4" />
+                      {copy.continue} <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
@@ -2150,16 +2381,16 @@ export function RegistrationSection({
                       style={{ background: `linear-gradient(135deg, ${C.maroon} 0%, ${C.maroonDeep} 100%)`, color: "white" }}
                       data-testid="btn-submit-application"
                     >
-                      {isPending ? "Submitting..." : "Submit Application"}
+                       {isPending ? copy.submitting : copy.submit}
                       {!isPending && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
                   )}
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: C.brownSoft }}>
-                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" style={{ color: C.gold }} /> Free to join</span>
-                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" style={{ color: C.gold }} /> No upfront fees</span>
-                  <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" style={{ color: C.gold }} /> Verified in 48 hrs</span>
+                  <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" style={{ color: C.gold }} /> {copy.freeToJoin}</span>
+                  <span className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" style={{ color: C.gold }} /> {copy.noUpfrontFees}</span>
+                  <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" style={{ color: C.gold }} /> {copy.verifiedIn48}</span>
                 </div>
               </form>
             </CardContent>
@@ -2180,7 +2411,7 @@ function Field({ label, id, children }: { label: string; id: string; children: R
   );
 }
 
-function FieldGroup({ index, title, children }: { index: number; title: string; children: React.ReactNode }) {
+function FieldGroup({ index, title, stepLabel = "Step", children }: { index: number; title: string; stepLabel?: string; children: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-[#6D2B35]/10 bg-[#FFFCF6]/65 p-4 sm:p-5">
       <div className="mb-5 flex items-center gap-3">
@@ -2191,7 +2422,7 @@ function FieldGroup({ index, title, children }: { index: number; title: string; 
           {index}
         </div>
         <div>
-          <p className="text-[9px] font-extrabold uppercase tracking-[.17em]" style={{ color: C.goldDeep }}>Step {index}</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-[.17em]" style={{ color: C.goldDeep }}>{stepLabel} {index}</p>
           <h3 className="font-serif text-base font-semibold tracking-[-.02em]" style={{ color: C.maroon }}>{title}</h3>
         </div>
         <div className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${C.gold}45, transparent)` }} />
