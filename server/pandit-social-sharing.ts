@@ -22,6 +22,7 @@ export type PanditSocialProjection = {
   rating: number | null;
   reviewCount: number;
   tagline: string | null;
+  membershipNo: string | null;
   registrationNo: string | null;
   experience: number | null;
   languages: string[];
@@ -29,7 +30,7 @@ export type PanditSocialProjection = {
 };
 
 const CACHE_DIR = "/tmp/vedic-tatva-social";
-const SOCIAL_TEMPLATE_VERSION = "v5";
+const SOCIAL_TEMPLATE_VERSION = "v6";
 const DEFAULT_PUBLIC_ORIGIN = "https://vedictatva.com";
 const STORY_VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3 };
 const IMAGE_HOST_ALLOWLIST = new Set([
@@ -75,6 +76,8 @@ export async function resolvePanditSocialProjection(slug: string): Promise<Pandi
     tagline,
     rating: pandit.rating == null ? null : Number(pandit.rating),
     reviewCount: Number(pandit.reviewCount || 0),
+    membershipNo: String(pandit.membershipNo || "").trim()
+      || (Number.isInteger(Number(pandit.id)) ? `VT-PND-${String(pandit.id).padStart(5, "0")}` : null),
     registrationNo: /^\d{10}$/.test(String(pandit.registrationNo || "")) ? String(pandit.registrationNo) : null,
     experience: Number.isFinite(Number(pandit.experience)) && Number(pandit.experience) > 0 ? Number(pandit.experience) : null,
     languages: publicLanguages(pandit.languages),
@@ -218,7 +221,7 @@ export async function renderPanditSocialImage(
   const practice = specs || "Vedic puja and ceremony services";
   const languages = projection.languages.join(" · ") || "Hindi · Sanskrit";
   const experience = projection.experience ? `${projection.experience}+ years` : "Experienced practitioner";
-  const membership = projection.registrationNo || "Public profile";
+  const membership = projection.membershipNo || "Public profile";
   const initials = projection.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "VT";
   const bg = format === "og"
     ? `<rect width="1200" height="630" fill="url(#bg)"/><rect x="0" y="0" width="350" height="630" fill="#4B1720"/><rect x="350" y="0" width="850" height="82" fill="#6D2B35"/><circle cx="175" cy="295" r="146" fill="#FFF8E8" stroke="#D4AF37" stroke-width="6"/>`
