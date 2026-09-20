@@ -596,12 +596,12 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#FBF6ED] text-[#2D1B1E]">
       <div
-        className="relative min-h-screen px-4 py-5 sm:px-6 sm:py-8"
+        className={`relative min-h-screen ${mode === "signup" ? "px-0 py-0 sm:px-2 sm:py-4" : "px-4 py-5 sm:px-6 sm:py-8"}`}
         style={{
           backgroundImage: "radial-gradient(circle at 12% 0%, rgba(215,167,55,.18), transparent 28%), radial-gradient(circle at 100% 100%, rgba(109,43,53,.08), transparent 36%)",
         }}
       >
-        <div className="relative mx-auto flex min-h-[calc(100vh-2.5rem)] w-full max-w-6xl flex-col">
+        <div className={`relative mx-auto flex min-h-[calc(100vh-2.5rem)] w-full flex-col ${mode === "signup" ? "max-w-none" : "max-w-6xl"}`}>
           <header className="flex items-center justify-end px-1 pb-5 text-[10px] font-extrabold tracking-[.16em] text-[#55252D]">
             <button
               type="button"
@@ -680,13 +680,13 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
             </section>}
 
           {mode === "signup" ? (
-            <div className="min-w-0">
+            <div className="w-full min-w-0">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[#D4AF37]/35 bg-[#FFFAF1] px-4 py-3">
                 <div>
                   <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#A67817]">Panditji registration</p>
                   <p className="mt-1 text-xs text-[#806F5E]">Complete your Panditji profile and application here.</p>
                 </div>
-                <button type="button" onClick={() => setMode("login")} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#6F2B38] hover:underline">
+                <button type="button" onClick={() => setLocation("/pandit/login")} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#6F2B38] hover:underline">
                   <ArrowLeft className="h-3.5 w-3.5" /> {copy.backToLogin}
                 </button>
               </div>
@@ -718,6 +718,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 draftExpiresAt={registrationDraftExpiresAt}
                 hasDraft={Boolean(registrationDraftToken)}
                 onCopyDraftLink={copyRegistrationDraftLink}
+                standalone
               />
             </div>
           ) : (
@@ -752,7 +753,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode("signup")}
+                  onClick={() => setLocation("/pandit/signup")}
                   className={`rounded-[10px] px-2 py-2.5 text-xs font-bold transition-colors ${mode === "signup" ? "bg-[#FFFAF1] text-[#55252D] shadow-sm" : "text-[#806F5E] hover:bg-white/60"}`}
                   aria-pressed={mode === "signup"}
                 >
@@ -940,7 +941,7 @@ export default function PanditLoginPage({ initialMode = "login" }: { initialMode
                     <Button type="button" variant="outline" onClick={fillDemo} className="h-10 w-full rounded-xl border-[#6F2B38] text-[10px] font-extrabold text-[#6F2B38] hover:bg-[#6F2B38]/5" data-testid="btn-fill-demo"><Copy className="mr-1.5 h-3.5 w-3.5" />{copy.fillDemo}</Button>
                   </div>
                   <div className="mt-5 flex items-center gap-2 text-[10px] leading-4 text-[#806F5E]"><span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-[#6F2B38] text-[10px] text-[#FFF8E9]">✓</span><span>{copy.secure}</span></div>
-                  <p className="mt-5 text-center text-[11px] text-[#806F5E]">{copy.newTo}{" "}<button type="button" onClick={() => setMode("signup")} className="font-extrabold text-[#6F2B38] hover:underline">{copy.applyAs}</button></p>
+                  <p className="mt-5 text-center text-[11px] text-[#806F5E]">{copy.newTo}{" "}<button type="button" onClick={() => setLocation("/pandit/signup")} className="font-extrabold text-[#6F2B38] hover:underline">{copy.applyAs}</button></p>
                 </>
               )}
             </CardContent>

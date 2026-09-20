@@ -1616,7 +1616,7 @@ const PANDIT_LANGUAGE_OPTIONS = [
 
 export function RegistrationSection({
   form, photoPreview, onChange, onPhotoChange, onPhotoRemove, photoError, locationError, servicesError, applicationError, requestExactLocation, missingCityMode, setMissingCityMode, onSubmit, setForm, isPending,
-  currentStep, setCurrentStep, onSaveDraft, draftSaving, draftMessage, draftExpiresAt, hasDraft, onCopyDraftLink,
+  currentStep, setCurrentStep, onSaveDraft, draftSaving, draftMessage, draftExpiresAt, hasDraft, onCopyDraftLink, standalone = false,
 }: {
   form: FormState;
   photoPreview: string | null;
@@ -1641,6 +1641,7 @@ export function RegistrationSection({
   draftExpiresAt: string;
   hasDraft: boolean;
   onCopyDraftLink: () => Promise<void>;
+  standalone?: boolean;
 }) {
   const { data: locations = [], isLoading: locationsLoading, isError: locationsError } = useQuery<Array<{ id: number; name: string; isActive: boolean; cities: Array<{ id: number; name: string; isActive: boolean }> }>>({
     queryKey: ["/api/locations"],
@@ -1793,7 +1794,7 @@ export function RegistrationSection({
         backgroundImage: "radial-gradient(circle at 8% 4%, rgba(215,167,55,.16), transparent 25%), linear-gradient(180deg, #FFFCF5 0%, #FBF7EE 100%)",
       }}
     >
-      <div className="container mx-auto px-4">
+      <div className={`${standalone ? "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8" : "container mx-auto px-4"}`}>
         <div className="mx-auto mb-10 max-w-3xl text-center md:mb-12">
           <div className="mb-4 flex items-center justify-center gap-2 text-[10px] font-extrabold uppercase tracking-[.2em]" style={{ color: C.goldDeep }}>
             <span className="h-px w-8" style={{ background: C.gold }} />
@@ -1817,7 +1818,7 @@ export function RegistrationSection({
           </p>
         </div>
 
-        <div className="mx-auto grid max-w-6xl items-start gap-8 lg:grid-cols-5 lg:gap-12">
+        <div className="mx-auto grid w-full min-w-0 max-w-6xl items-start gap-8 lg:grid-cols-5 lg:gap-12">
           {/* Live Pandit ID Card preview — appears FIRST on mobile so devotees see the live preview while typing; sticky on desktop in 2nd column */}
           <div className="lg:col-span-2 lg:order-2 lg:sticky lg:top-24 order-1" data-testid="live-pandit-card-wrap">
             <div className="mb-3 text-center text-[10px] font-extrabold uppercase tracking-[.16em]" style={{ color: C.brownSoft }}>
@@ -1833,7 +1834,7 @@ export function RegistrationSection({
           </div>
 
           {/* Form — 3 cols */}
-          <Card className="order-2 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/85 shadow-[0_22px_65px_rgba(77,40,36,.11)] lg:order-1 lg:col-span-3" style={{ backdropFilter: "blur(10px)" }}>
+          <Card className="order-2 w-full min-w-0 overflow-hidden rounded-[1.5rem] border border-[#6D2B35]/15 bg-white/85 shadow-[0_22px_65px_rgba(77,40,36,.11)] lg:order-1 lg:col-span-3" style={{ backdropFilter: "blur(10px)" }}>
             <div className="h-1.5 bg-gradient-to-r from-[#B98117] via-[#F0D276] to-[#B98117]" />
             <CardContent className="p-5 sm:p-7 md:p-8">
               <div className="mb-5 flex items-center justify-between gap-3">
