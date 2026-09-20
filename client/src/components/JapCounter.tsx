@@ -37,6 +37,9 @@ import breathHoldAudioUrl from "@assets/generated_audio/japa-breath-hold.mp3";
 import breathExhaleAudioUrl from "@assets/generated_audio/japa-breath-exhale.mp3";
 import breathRestAudioUrl from "@assets/generated_audio/japa-breath-rest.mp3";
 import breathHumOutAudioUrl from "@assets/generated_audio/japa-breath-hum-out.mp3";
+import breathNadiIntroAudioUrl from "@assets/generated_audio/japa-breath-nadi-intro.mp3";
+import breathSamaIntroAudioUrl from "@assets/generated_audio/japa-breath-sama-intro.mp3";
+import breathBhramariIntroAudioUrl from "@assets/generated_audio/japa-breath-bhramari-intro.mp3";
 import shivaMahamrityunjayaImg from "@assets/generated_images/shiva-mahamrityunjaya.png";
 import shivaBlessingHandImg from "@assets/generated_images/shiva-blessing-hand.png";
 // AI-generated deity portraits for each preset mantra. Used as the
@@ -155,6 +158,7 @@ type BreathStage = {
   description: string;
   benefit: string;
   introSpeech: string;
+  introAudioUrl: string;
   rounds: number;
   phases: BreathPhase[];
 };
@@ -177,6 +181,7 @@ const BREATH_STAGES: BreathStage[] = [
     description: "Balance the breath gently, without forcing the nostrils or the pace.",
     benefit: "Helps balance attention and settle the breath.",
     introSpeech: "Nadi Shodhana. This practice helps balance attention and settle the breath.",
+    introAudioUrl: breathNadiIntroAudioUrl,
     rounds: 5,
     phases: [
       { label: "Inhale left", durationMs: 4000, instruction: "Inhale gently through the left nostril", speech: "Inhale gently through the left nostril.", audioUrl: breathInhaleLeftAudioUrl },
@@ -192,6 +197,7 @@ const BREATH_STAGES: BreathStage[] = [
     description: "Keep each side of the breath even and comfortable.",
     benefit: "An even rhythm helps steady the mind.",
     introSpeech: "Sama Vritti. Its even rhythm helps steady the mind.",
+    introAudioUrl: breathSamaIntroAudioUrl,
     rounds: 5,
     phases: [
       { label: "Inhale", durationMs: 4000, instruction: "Breathe in slowly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
@@ -207,6 +213,7 @@ const BREATH_STAGES: BreathStage[] = [
     description: "Use a soft hum on the exhale to settle attention before chanting.",
     benefit: "Gentle humming helps reduce mental noise before chanting.",
     introSpeech: "Bhramari. Gentle humming helps reduce mental noise before chanting.",
+    introAudioUrl: breathBhramariIntroAudioUrl,
     rounds: 8,
     phases: [
       { label: "Inhale", durationMs: 4000, instruction: "Breathe in softly through the nose", speech: "Inhale slowly and softly through the nose.", audioUrl: breathInhaleAudioUrl },
@@ -1020,19 +1027,21 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const playRecordedBreathGuide = useCallback((
     audioUrl: string,
     fallbackText: string,
-    chimeSeed: number,
     cueKey: string,
     onEnded?: () => void,
   ) => {
     stopRecordedBreathGuide();
     stopBreathGuide();
     breathLastGuideCueRef.current = cueKey;
+    const generation = breathGuideGenerationRef.current;
+    const completeCue = () => {
+      if (breathGuideGenerationRef.current === generation) onEnded?.();
+    };
     if (typeof Audio === "undefined") {
-      if (!speakBreathGuide(fallbackText) && soundOn) bellPlayer.tap(chimeSeed);
+      speakBreathGuide(fallbackText, completeCue);
       return;
     }
 
-    const generation = breathGuideGenerationRef.current;
     const audio = new Audio(audioUrl);
     audio.preload = "auto";
     audio.volume = 0.92;
@@ -1042,15 +1051,15 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       if (fallbackStarted || breathGuideGenerationRef.current !== generation) return;
       fallbackStarted = true;
       if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
-      if (!speakBreathGuide(fallbackText) && soundOn) bellPlayer.tap(chimeSeed);
+      speakBreathGuide(fallbackText, completeCue);
     };
     audio.onended = () => {
       if (breathGuideAudioRef.current === audio) breathGuideAudioRef.current = null;
-      if (breathGuideGenerationRef.current === generation) onEnded?.();
+      completeCue();
     };
     audio.onerror = fallback;
     void audio.play().catch(fallback);
-  }, [soundOn, stopRecordedBreathGuide]);
+  }, [stopRecordedBreathGuide]);
 
   const completeBreathingWarmup = useCallback((fadeMusic = false) => {
     stopRecordedBreathGuide();
@@ -1144,19 +1153,15 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     if (breathWarmupStep === "exercise-intro") {
       const introKey = `${breathStage.id}:intro`;
       if (breathLastGuideCueRef.current !== introKey) {
-        stopRecordedBreathGuide();
-        stopBreathGuide();
-        const generation = breathGuideGenerationRef.current;
-        breathLastGuideCueRef.current = introKey;
-        const advance = () => {
-          if (generation !== breathGuideGenerationRef.current) return;
+        playRecordedBreathGuide(
+          breathStage.introAudioUrl,
+          breathStage.introSpeech,
+          introKey,
+          () => {
           setBreathWarmupStep("exercise");
           setBreathTick(0);
-        };
-        if (!speakBreathGuide(breathStage.introSpeech, advance)) {
-          if (soundOn) bellPlayer.tap(breathStageIndex + 1);
-          advance();
-        }
+          },
+        );
       }
       return;
     }
@@ -1165,7 +1170,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       playRecordedBreathGuide(
         breathIntroAudioUrl,
         BREATH_INTRO_SPEECH,
-        0,
         breathGuideCueKey,
         beginBreathingExercises,
       );
@@ -1174,7 +1178,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     playRecordedBreathGuide(
       breathPhase.phase.audioUrl,
       breathPhase.phase.speech,
-      breathStageIndex + breathPhase.phaseIndex + 2,
       breathGuideCueKey,
     );
   }, [
@@ -1183,6 +1186,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     breathGuideCueKey,
     breathWarmupStep,
     breathStage.id,
+    breathStage.introAudioUrl,
     breathStage.introSpeech,
     breathStageIndex,
     beginBreathingExercises,
@@ -1914,7 +1918,6 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         playRecordedBreathGuide(
           breathIntroAudioUrl,
           BREATH_INTRO_SPEECH,
-          0,
           "intro",
           beginBreathingExercises,
         );

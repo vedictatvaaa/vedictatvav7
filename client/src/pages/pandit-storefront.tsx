@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, Copy, Languages,
+  ArrowRight, CalendarDays, Check, CheckCircle2, Clock3, Languages,
   MapPin, MessageCircle, MessagesSquare, Navigation, Package, PhoneCall,
   Share2, ShoppingBag, Star, Video, Zap, X,
   Sparkles,
@@ -19,6 +19,7 @@ import { trackPanditFunnelEvent, trackPanditSeoEvent } from "@/lib/analytics";
 import { bookingContextParams } from "@/lib/puja-service-map";
 import { KnowledgeGraphRelatedContent } from "@/components/KnowledgeGraphRelatedContent";
 import { PanditMembershipCard } from "@/components/pandit/PanditMembershipCard";
+import { PanditSharePanel } from "@/components/pandit/PanditSharePanel";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import templeFallbackImage from "@/assets/images/temple-hero.jpg";
 
@@ -182,7 +183,8 @@ function AvailabilityPanel({ pandit, coverage }: { pandit: StorefrontDto["pandit
 export default function PanditStorefrontPage() {
   const { slug: rawSlug } = useParams<{ slug: string }>(); const slug = (rawSlug || "").toLowerCase(); const [, navigate] = useLocation();
   const { requireAuth, user } = useAuth(); const { toast } = useToast(); const { addToCart } = useCart(); const consent = useConsentPreferences();
-  const [category, setCategory] = useState("all"); const [lightbox, setLightbox] = useState(-1); const [shareOpen, setShareOpen] = useState(false); const [copied, setCopied] = useState(false);
+  const [category, setCategory] = useState("all"); const [lightbox, setLightbox] = useState(-1); const [shareOpen, setShareOpen] = useState(false);
+  const shareTriggerRef = useRef<HTMLElement | null>(null);
   const [contactOpen, setContactOpen] = useState(false); const [contactAction, setContactAction] = useState<"call" | "whatsapp">("call"); const [revealedContact, setRevealedContact] = useState<RevealedContact | null>(null); const [revealBusy, setRevealBusy] = useState(false); const [paymentBusy, setPaymentBusy] = useState(false); const [contactError, setContactError] = useState("");
   const { data, isLoading, isError, refetch } = useQuery<StorefrontDto>({ queryKey: ["/api/storefront", slug], enabled: !!slug, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}`); if (!r.ok) throw new Error("Storefront unavailable"); return r.json(); } });
   const contactStatus = useQuery<ContactStatus>({ queryKey: ["/api/storefront", slug, "contact/status", user?.id || "visitor"], enabled: !!slug && contactOpen, queryFn: async () => { const r = await fetch(`/api/storefront/${encodeURIComponent(slug)}/contact/status`); if (!r.ok) throw new Error("Contact access status is unavailable"); return r.json(); } });
@@ -286,12 +288,10 @@ export default function PanditStorefrontPage() {
     } catch (error: any) { setContactError(error.message || "Paid unlock failed. Please try again."); }
     finally { setPaymentBusy(false); }
   };
-  const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); toast({ title: "Storefront link copied" }); setTimeout(() => setCopied(false), 1800); } catch { toast({ title: "Copy unavailable", description: shareUrl }); } };
-
   return <div className="min-h-[100dvh] overflow-x-hidden bg-[#FCF8F0] pb-20 text-[#422C29] md:pb-0">
     <PageSeo title={data.seo?.title || `${pandit.name} — Vedic Pandit | Vedic Tatva`} description={data.seo?.description || storefront?.tagline || storefront?.bio || pandit.bio || `View services and request a booking with ${pandit.name}.`} canonical={data.seo?.canonical || `/pandit/${slug}`} ogType="profile" ogImage={data.seo?.ogImage || pandit.image || storefront?.bannerImage || undefined} noindex={data.seo ? !data.seo.robotsIndex : false} schemas={data.seo?.jsonLd as any} />
     <main className="mx-auto max-w-[1220px] px-3 sm:px-5 lg:px-7">
-      <div className="hidden items-center gap-2 py-3 text-[11px] text-[#876F61] md:flex">Home <span>/</span> Pandit <span>/</span> {pandit.city || "India"} <span>/</span> <strong className="text-[#531D28]">{pandit.name}</strong><button onClick={() => setShareOpen(v => !v)} className="ml-auto inline-flex items-center gap-1 text-[#531D28]" aria-label="Share storefront"><Share2 className="h-4 w-4" />Share</button></div>
+      <div className="hidden items-center gap-2 py-3 text-[11px] text-[#876F61] md:flex">Home <span>/</span> Pandit <span>/</span> {pandit.city || "India"} <span>/</span> <strong className="text-[#531D28]">{pandit.name}</strong><button onClick={(event) => { shareTriggerRef.current = event.currentTarget; setShareOpen(true); }} className="ml-auto inline-flex items-center gap-1 rounded-full border border-[#E2CDA8] bg-[#FFFDF9] px-3 py-1.5 font-semibold text-[#531D28] shadow-sm transition hover:bg-[#FFF3E0]" aria-label="Share storefront" data-testid="button-share-storefront"><Share2 className="h-4 w-4" />Share</button></div>
       <section id="overview" className="scroll-mt-28 border-b border-[#E9DCC6] py-4 sm:py-6 lg:py-7">
         <div className="grid grid-cols-[108px_minmax(0,1fr)] gap-3 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-5 lg:grid-cols-[178px_minmax(0,1fr)_250px] lg:gap-6 max-[360px]:grid-cols-[92px_minmax(0,1fr)] max-[360px]:gap-2">
           <div className="w-full"><PanditPortrait src={pandit.image || storefront?.bannerImage} name={pandit.name} /></div>
@@ -303,6 +303,7 @@ export default function PanditStorefrontPage() {
           <Button onClick={() => openContact("whatsapp")} className="h-12 rounded-md bg-[#159957] text-xs font-bold text-white shadow-sm hover:bg-[#128049]"><MessageCircle className="mr-2 h-4 w-4" />WhatsApp</Button>
           <Button onClick={() => openContact("call")} variant="outline" className="h-12 rounded-md border-[#E2CDA8] bg-[#FFF7EA] text-xs font-bold text-[#6D3A20] hover:bg-[#F9EBD7]"><PhoneCall className="mr-2 h-4 w-4" />Call Panditji</Button>
           <Button onClick={chat} variant="outline" className="h-12 rounded-md border-[#B8767D] bg-[#FFFDF9] text-xs font-bold text-[#8D2830] hover:bg-[#FFF3F1]"><MessagesSquare className="mr-2 h-4 w-4" />Send Message</Button>
+          <Button onClick={(event) => { shareTriggerRef.current = event.currentTarget; setShareOpen(true); }} variant="outline" className="col-span-2 h-10 rounded-md border-[#D8B878] bg-[#FFF9ED] text-xs font-bold text-[#7B4F1E] hover:bg-[#FFF1D4]" data-testid="button-share-hero"><Share2 className="mr-2 h-4 w-4" />Share this storefront</Button>
         </div>
         <div className="mx-auto mt-4 grid max-w-[820px] grid-cols-4 overflow-hidden rounded-xl border border-[#E6D7C1] bg-[#FFFDF9] shadow-[0_4px_14px_rgba(83,29,40,.05)] lg:mx-0">
           <CapabilityItem icon={Navigation} label="In-person Puja" detail={inPersonDetail} href="#services" />
@@ -324,13 +325,14 @@ export default function PanditStorefrontPage() {
       {storefront?.customPujaEnabled && <section className="mb-7 rounded-xl border border-[#E2CDA8] bg-[#F8EBD7] p-5 sm:flex sm:items-center sm:justify-between sm:gap-5"><div><div className="text-[10px] font-bold uppercase tracking-[.15em] text-[#9A641F]">Have a particular sankalp?</div><h2 className="mt-1 text-xl font-semibold text-[#531D28]">Discuss a custom puja</h2><p className="mt-1 text-xs text-[#735E54]">Share your family’s needs privately inside Vedic Tatva.</p></div><Button onClick={chat} className="mt-4 rounded-md bg-[#8D2830] sm:mt-0">Start private chat <MessageCircle className="ml-2 h-4 w-4" /></Button></section>}
       <div className="pb-5"><KnowledgeGraphRelatedContent type="PANDIT" id={pandit.id} /></div>
     </main>
-    <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 px-1.5 pt-1.5 pb-[calc(.375rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] backdrop-blur md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[#E1CCAE] bg-[#FFFDF8]/95 px-1.5 pt-1.5 pb-[calc(.375rem+env(safe-area-inset-bottom))] shadow-[0_-5px_18px_rgba(83,29,40,.1)] backdrop-blur md:hidden">
       <button onClick={() => book()} disabled={bookingKnownUnavailable} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#8D2830] disabled:opacity-40"><CalendarDays className="h-4 w-4" />Book a Puja</button>
       <button onClick={() => openContact("whatsapp")} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#168A51]"><MessageCircle className="h-4 w-4" />WhatsApp</button>
       <button onClick={() => openContact("call")} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#6D3A20]"><PhoneCall className="h-4 w-4" />Call</button>
       <button onClick={chat} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#8D2830]"><MessagesSquare className="h-4 w-4" />Message</button>
+      <button onClick={(event) => { shareTriggerRef.current = event.currentTarget; setShareOpen(true); }} className="flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md text-[9px] font-bold text-[#531D28]" data-testid="button-share-mobile"><Share2 className="h-4 w-4" />Share</button>
     </div>
-    {shareOpen && <div className="fixed right-3 top-16 z-50 w-64 rounded-xl border border-[#E0CEB5] bg-[#FFFDF9] p-4 shadow-xl"><div className="flex items-center justify-between text-sm font-semibold text-[#531D28]">Share storefront <button onClick={() => setShareOpen(false)} aria-label="Close share menu"><X className="h-4 w-4" /></button></div><p className="mt-2 break-all text-xs text-[#876F61]">{shareUrl}</p><Button onClick={copyLink} className="mt-3 w-full rounded-md bg-[#8D2830]"><Copy className="mr-2 h-3.5 w-3.5" />{copied ? "Copied" : "Copy link"}</Button></div>}
+    <PanditSharePanel open={shareOpen} onOpenChange={setShareOpen} storefrontUrl={shareUrl} storyImageUrl={`/api/story/p/${encodeURIComponent(slug)}.jpg`} panditName={displayName} source="storefront" storyPreviewAlt={`Share Story preview for ${displayName}`} returnFocusRef={shareTriggerRef} />
     {lightbox >= 0 && gallery[lightbox]?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Gallery preview" className="fixed inset-0 z-[60] grid place-items-center bg-[#2D1015]/90 p-5" onClick={() => setLightbox(-1)}><button onClick={() => setLightbox(-1)} aria-label="Close gallery" className="absolute right-5 top-5 text-[#FFF8E8]"><X /></button><img src={gallery[lightbox].mediaUrl} alt={gallery[lightbox].altText || "Gallery preview"} className="max-h-[85vh] max-w-full object-contain" onClick={e => e.stopPropagation()} /></div>}
     <Dialog open={contactOpen} onOpenChange={open => { setContactOpen(open); if (!open) { setContactError(""); setRevealedContact(null); } }}>
       <DialogContent className="max-w-md">

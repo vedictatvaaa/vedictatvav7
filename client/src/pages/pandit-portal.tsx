@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, CalendarDays, Crown, IndianRupee, LayoutDashboard, LogOut, MapPin, Menu, MessageSquare, Settings, Share2, Star, Store, Users, Wallet, Wrench, Music2, Sparkles, Lock, X, Copy, QrCode, ExternalLink } from "lucide-react";
+import { Bell, CalendarDays, Crown, IndianRupee, LayoutDashboard, LogOut, MapPin, Menu, MessageSquare, Settings, Share2, Star, Store, Users, Wallet, Wrench, Music2, Sparkles, Lock, X, QrCode, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import PanditBookingWorkflow from "@/components/pandit/PanditBookingWorkflow";
 import PanditCalendar from "@/components/pandit/PanditCalendar";
 import { PanditSectionHeader, PanditUnavailableState } from "@/components/pandit/PanditSection";
 import PanditPwaInstallButton from "@/components/pandit/PanditPwaInstallButton";
+import { PanditSharePanel } from "@/components/pandit/PanditSharePanel";
+import { canonicalShareUrl } from "@/lib/pandit-share";
 
 type Section = "home" | "bookings" | "calendar" | "messages" | "earnings" | "payments" | "storefront" | "services" | "gallery" | "analytics" | "googleBusiness" | "card" | "referrals" | "tools" | "japa" | "customers" | "reviews" | "membership" | "notifications" | "settings";
 const aliases: Record<string, Section> = { dashboard: "home", requests: "bookings", home: "home", affiliate: "referrals", calendar: "calendar", messages: "messages" };
@@ -110,17 +112,15 @@ export default function PanditPortalPage() {
 }
 function Loading() { return <div className="space-y-4 animate-pulse"><div className="h-44 rounded-[1.35rem] bg-[#e8dcc8]" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[1,2,3,4].map(i => <div key={i} className="h-32 rounded-xl bg-[#e8dcc8]" />)}</div></div>; }
 function StoreActions({ path }: { path: string | null }) {
-  const url = () => path ? `${window.location.origin}${path}` : "";
-  const share = async () => {
-    if (!path) return;
-    const value = url();
-    if (navigator.share) await navigator.share({ title: "My Vedic Tatva storefront", url: value });
-    else { await navigator.clipboard.writeText(value); window.alert("Store link copied"); }
-  };
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareTriggerRef = useRef<HTMLElement | null>(null);
+  const url = path ? canonicalShareUrl(path) : "";
+  const slug = path?.split("/").filter(Boolean).pop() || "";
   return <div className="flex items-center gap-1.5">
-    <Button size="sm" variant="outline" disabled={!path} onClick={() => path && window.open(url(), "_blank", "noopener")} data-testid="button-view-store"><ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">View store</span></Button>
-    <Button size="sm" variant="outline" disabled={!path} onClick={share} data-testid="button-share-store"><Copy className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Share</span></Button>
+    <Button size="sm" variant="outline" disabled={!path} onClick={() => path && window.open(url, "_blank", "noopener")} data-testid="button-view-store"><ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">View store</span></Button>
+    <Button size="sm" variant="outline" disabled={!path} onClick={(event) => { shareTriggerRef.current = event.currentTarget; setShareOpen(true); }} data-testid="button-share-store"><Share2 className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Share</span></Button>
     <Button size="sm" variant="outline" disabled={!path} onClick={() => { if (!path) return; const a = document.createElement("a"); a.href = "/api/pandit/storefront/qr.png"; a.download = "vedic-tatva-storefront-qr.png"; a.click(); }} data-testid="button-download-qr"><QrCode className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">QR</span></Button>
+    {path && <PanditSharePanel open={shareOpen} onOpenChange={setShareOpen} storefrontUrl={url} storyImageUrl={`/api/story/p/${encodeURIComponent(slug)}.jpg`} panditName="My Vedic Tatva" source="portal" returnFocusRef={shareTriggerRef} />}
   </div>;
 }
 function MobileNav({ active, go, onMore, unread }: { active: Section; go: (s: string) => void; onMore: () => void; unread: number }) {

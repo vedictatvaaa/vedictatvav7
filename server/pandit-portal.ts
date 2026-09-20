@@ -24,9 +24,9 @@ import {
   indiaDateKey,
   indiaDayBounds,
   operationalTodayBookingStatuses,
-  storefrontPublicPath,
   storefrontPublicationState,
 } from "./pandit-dashboard";
+import { getPubliclyPublishedPanditBySlug } from "./pandit-public-access";
 import { buildPanditPasswordResetEmail } from "./pandit-account-emails";
 import { enqueueTransactionalEmail } from "./email-outbox";
 import { buildCustomerBookingStatusEmail } from "./email";
@@ -454,6 +454,9 @@ export function registerPanditPortalRoutes(app: Express) {
       if (!pandit) return res.status(404).json({ error: "Pandit not found" });
 
       const storefront = storefrontRows[0] || null;
+      const publicPandit = pandit.slug
+        ? await getPubliclyPublishedPanditBySlug(pandit.slug)
+        : null;
       const services = Number(serviceRows[0]?.count || 0);
       const hasProfile = Boolean(pandit.name && pandit.city && pandit.specialization && pandit.languages && pandit.bio?.trim());
       const hasAvailability = !pandit.onLeave && Boolean(pandit.availability && pandit.availability !== "unavailable");
@@ -472,7 +475,7 @@ export function registerPanditPortalRoutes(app: Express) {
           state: storefrontPublicationState(storefront),
           isPublished: storefront?.isPublished ?? false,
           slug: pandit.slug || null,
-          publicPath: storefrontPublicPath(pandit.slug, storefront),
+          publicPath: publicPandit?.slug ? `/pandit/${encodeURIComponent(publicPandit.slug)}` : null,
         },
         checklist: {
           ...buildChecklistStates({ hasProfile, activeServiceCount: services, hasAvailability }),

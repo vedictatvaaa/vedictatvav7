@@ -118,6 +118,19 @@ export function normalizeAnalyticsSlug(value: unknown): string {
     : "unspecified";
 }
 
+export type PanditShareAction = "open" | "native" | "whatsapp" | "facebook" | "copy" | "story_download" | "story_native";
+
+export function trackPanditShareEvent(
+  action: PanditShareAction,
+  data: { source: "storefront" | "portal"; outcome?: "success" | "error" | "cancel" },
+) {
+  emit("pandit_share", {
+    action,
+    source: data.source,
+    ...(data.outcome ? { outcome: data.outcome } : {}),
+  });
+}
+
 function toGtagItem(p: Product, quantity: number, variant?: string) {
   return {
     item_id: String(p.id),

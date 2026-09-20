@@ -507,6 +507,35 @@ async function resolveHead(reqPath: string, baseUrl: string): Promise<Head | nul
   // rating, and photo.
   const panditMatch = reqPath.match(/^\/pandit\/([a-z0-9-]+)\/?$/);
   if (panditMatch) {
+    // The canonical storefront SEO head is always sourced from the same
+    // published/public gate as its social images. This prevents the optional
+    // SEO-network projection from exposing a profile that is unpublished or
+    // no longer eligible.
+    try {
+      const published = await getPubliclyPublishedPanditBySlug(panditMatch[1]);
+      if (published) {
+        const publicOrigin = (process.env.PUBLIC_SITE_URL || "https://vedictatva.com").replace(/\/$/, "");
+        const ratingPart = published.rating && published.reviewCount
+          ? ` · ${Number(published.rating).toFixed(1)}★ (${published.reviewCount})`
+          : "";
+        const cityPart = published.city ? ` in ${published.city}` : "";
+        const verified = published.verified ? "Verified " : "";
+        const canonicalPath = `/pandit/${encodeURIComponent(panditMatch[1])}`;
+        return {
+          title: `${published.name} — ${verified}Vedic Pandit${cityPart}${ratingPart} · Vedic Tatva`,
+          description: (published.bio?.slice(0, 200))
+            || `Book pujas with ${published.name}${cityPart}. ${verified}by Vedic Tatva.`,
+          canonical: `${publicOrigin}${canonicalPath}`,
+          ogImage: `${publicOrigin}/api/og/p/${encodeURIComponent(panditMatch[1])}.jpg`,
+          ogType: "profile",
+          twitterCard: "summary_large_image",
+          robotsIndex: true,
+          robotsFollow: true,
+        };
+      }
+    } catch (error) {
+      throw new PanditSeoSsrResolutionError(error);
+    }
     try {
       const settings = await storage.getSiteSettings();
       if (isPanditSeoNetworkEnabled(settings)) {

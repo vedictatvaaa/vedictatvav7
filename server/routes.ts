@@ -51,6 +51,7 @@ import { registerSacredLibraryRoutes } from "./sacred-library";
 import { hasAnalyticsConsent } from "./consent";
 import { getDailyThought } from "./japa-daily-thought";
 import { getJapaDevotionalNarration } from "./japa-devotional-narration";
+import { adminPanditProfilePatchSchema } from "./pandit-admin-profile";
 import { privacyRegionForRequest } from "./privacy-region";
 import { seedPujaLibrary, seedCommunityQa } from "./content-seeds";
 import { registerWave1Routes, startWave1Scheduler, awardPoints, ensureReferralCode } from "./wave1";
@@ -4171,7 +4172,7 @@ ${product.variationGroupId ? `      <g:item_group_id>${esc(product.variationGrou
   });
 
   app.patch("/api/pandits/:id", adminAuthMiddleware, async (req, res) => {
-    const partial = insertPanditSchema.partial().safeParse(req.body);
+    const partial = adminPanditProfilePatchSchema.safeParse(req.body);
     if (!partial.success) return res.status(400).json({ message: partial.error.issues.map(i => i.message).join(", ") });
     const d: any = partial.data;
     const current = await storage.getPandit(Number(req.params.id));

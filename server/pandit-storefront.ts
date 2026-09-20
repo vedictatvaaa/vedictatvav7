@@ -47,6 +47,11 @@ import { assertPackagePriceCompliant, assertRateCompliant, modeAllowed } from ".
 import { canonicalBookingMode } from "@shared/puja-booking";
 import { evaluatePanditBookingEligibility } from "./pandit-booking-eligibility";
 import { getPublishedPanditContent } from "./pandit-storefront-content";
+import {
+  renderPanditSocialImage,
+  resolvePanditSocialProjection,
+  socialSiteUrl,
+} from "./pandit-social-sharing";
 
 // Annual price (INR) for each paid pandit tier. Server is the source of
 // truth — any client-side amount is re-checked here on /membership/order.
@@ -744,6 +749,30 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
     }
   });
 
+  // Per-pandit social images use the published/public projection only. Keep
+  // this route before the legacy renderer below while older deployments drain.
+  const serveSocialImage = async (req: Request, res: Response, next: NextFunction, format: "og" | "story") => {
+    try {
+      const slug = String(req.params.slug || "").toLowerCase().trim();
+      const projection = await resolvePanditSocialProjection(slug);
+      if (!projection) return res.status(404).end();
+      const rendered = await renderPanditSocialImage(projection, socialSiteUrl(req), format);
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
+      res.setHeader("X-Social-Cache", rendered.cacheHit ? "HIT" : "MISS");
+      return res.send(rendered.buffer);
+    } catch (error) {
+      console.warn(`[social-${format}] failed:`, (error as Error)?.message);
+      return next(error);
+    }
+  };
+
+  app.get("/api/story/p/:slug.jpg", (req, res, next) => serveSocialImage(req, res, next, "story"));
+  app.get("/api/og/p/:slug.jpg", (req, res, next) => serveSocialImage(req, res, next, "og"));
+
+  // Legacy fallback retained on the same route for hot-reload compatibility.
+  // The public-projection handler above completes all new requests first, so
+  // this block is not exposed as an additional public endpoint.
   // Per-pandit OG share image — 1200x630 JPEG with the pandit's actual
   // photo composited next to brand-styled text (name + city + rating +
   // verified badge). First request renders + caches to
