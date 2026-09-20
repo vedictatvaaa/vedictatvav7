@@ -5,7 +5,7 @@
 
 ## Goal
 
-Help Admin resolve Pandit applications that are not bookable because they have no GPS coordinates, without allowing an AI model to silently publish an inaccurate location.
+Help Admin resolve Pandit applications that are not bookable because they have no GPS coordinates, and improve new Pandit registrations so they capture location evidence at submission time without allowing an AI model to silently publish an inaccurate location.
 
 The existing verified location path remains authoritative. AI is only a fallback for an unresolved typed city/location name, and every AI result requires explicit Admin confirmation before it is saved.
 
@@ -17,6 +17,7 @@ The existing verified location path remains authoritative. AI is only a fallback
 - Public Pandit eligibility and booking rules remain unchanged. A Pandit becomes bookable only when the existing eligibility checks pass after a confirmed save.
 - Coordinate provenance already has database fields for source, confidence, and verification time.
 - Admin requests are authenticated with the existing Admin middleware/token flow.
+- The registration flow already requests browser geolocation and captures latitude/longitude when the applicant grants permission.
 
 ## Recommended approach
 
@@ -38,7 +39,20 @@ The dialog should show the current coordinate status and make the source of a pr
 
 The result is preview-only. `Use this location` copies the proposed latitude and longitude into the form and records the pending source/confidence in local form state. The normal `Save` action is still required.
 
-### 2. Server resolution flow
+### 2. Registration capture
+
+Make applicant location capture GPS-first:
+
+1. The applicant explicitly chooses `Use my current location`.
+2. The browser requests geolocation permission and returns latitude, longitude, accuracy, and timestamp.
+3. The form displays the captured location status and lets the applicant continue or retry.
+4. If permission is denied, unavailable, or the result fails the client/server accuracy validation, the applicant can use address autocomplete instead.
+5. The applicant selects an address/place suggestion; the server-side geocoder returns coordinates and the form displays the selected result for confirmation.
+6. If both methods fail, the application can still be submitted with a clear location-pending state, but it is not bookable until the Admin resolves it.
+
+Browser GPS and address autocomplete are evidence-capture paths, not AI paths. The registration form must not silently use a device location without explicit permission, and a city-only text value must not be promoted to an exact Pandit coordinate.
+
+### 3. Server resolution flow
 
 Add an authenticated, read-only Admin endpoint dedicated to coordinate suggestions. It must:
 
@@ -56,7 +70,9 @@ Add an authenticated, read-only Admin endpoint dedicated to coordinate suggestio
 
 The AI fallback should be capped below the verified-coordinate confidence threshold and returned with an explicit `ai_fallback` source and approximate/address-level scope. It must not be eligible for any existing bulk auto-apply route.
 
-### 3. Save and audit behavior
+Registration submissions should preserve the coordinate source and accuracy metadata when available. The application approval path must retain the existing requirement that unresolved or missing location evidence cannot make the Pandit bookable.
+
+### 4. Save and audit behavior
 
 The existing Pandit update endpoint remains the only write path from this UI. Extend its validation so a coordinate update must include compatible provenance metadata:
 
@@ -68,13 +84,15 @@ The existing Pandit update endpoint remains the only write path from this UI. Ex
 
 Every confirmed coordinate update should be included in the existing Admin audit record with the source, confidence, and whether the source was AI fallback. Existing coordinates should not be overwritten unless the Admin explicitly uses a new suggestion or edits the fields.
 
-### 4. Failure handling
+### 5. Failure handling
 
 - Provider unavailable: show a clear fallback message and leave the form unchanged.
 - Invalid or ambiguous AI output: show that no safe result was found; allow manual entry or retry.
 - Low confidence: show the candidate only as a warning and require explicit use/Save confirmation.
 - Stale result: the suggestion is not persisted server-side, so a changed form cannot accidentally apply an old result.
 - AI fallback must never mark a Pandit bookable by itself.
+- Browser permission denial or unavailable geolocation must offer address autocomplete rather than blocking the applicant without explanation.
+- A registration with neither GPS nor a confirmed address result remains location-pending and is visible to Admin review.
 
 ## Testing
 
@@ -96,11 +114,14 @@ Every confirmed coordinate update should be included in the existing Admin audit
 - Save is still required before the coordinates change on the server.
 - Failed/ambiguous suggestions leave existing coordinates unchanged.
 - Existing manual coordinate editing and clear behavior continue to work.
+- Registration uses explicit browser GPS first and preserves accuracy/source metadata.
+- Registration falls back to address autocomplete after GPS failure or denial.
+- Registration can submit without coordinates only in a location-pending state that cannot pass bookability checks.
 
 ## Scope boundaries
 
 - No automatic bulk coordinate assignment.
 - No AI-only public geocoding endpoint.
-- No changes to public directory, booking, or eligibility rules.
+- No changes to public directory, booking, or eligibility rules beyond preserving the existing requirement that unresolved registration locations remain unbookable.
 - No use of Pandit private identity/contact/address data in AI prompts.
 - No database schema migration is expected because coordinate provenance fields already exist; if the current update schema cannot safely carry them, add the smallest compatible migration rather than weakening validation.
