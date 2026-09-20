@@ -1556,6 +1556,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         const completedMala = nextCount >= target;
         const malaNumberAtTap = persistRef.current.malas + 1;
         vibrate([60, 30, 90], vibrationOn);
+        setBeadRotationTick((tick) => tick + 1);
         commitTick();
         setAudioLocked(true);
         await mantraAudio.play(mantra.id);
@@ -1800,10 +1801,13 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   // it falls through to the normal manual tap.
   const handleTapOrAutoStart = useCallback(() => {
     if (completionResetPendingRef.current) return;
-    // First tap of the session → run pranayama instead of counting.
-    // The breathing overlay calls back into normal tap behaviour once
-    // it finishes (or the devotee skips it).
+    // Only a genuinely new mala starts pranayama. If the devotee reloads or
+    // returns after pausing with a saved mid-mala count, go straight to
+    // counting instead of unexpectedly reopening the warmup.
     if (!breathingDoneThisSessionRef.current && !breathingActive) {
+      if (persistRef.current.count > 0) {
+        breathingDoneThisSessionRef.current = true;
+      } else {
       setBreathingActive(true);
       setBreathWarmupStep("intro");
       setBreathStageIndex(0);
@@ -1820,6 +1824,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         );
       }
       return;
+      }
     }
     if (breathingActive) return;
     if (autoMode && !autoChantingRef.current) {
@@ -2456,8 +2461,8 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                   className={autoMode ? "bg-[#6D2B35] hover:bg-[#6D2B35] text-[#D4AF37]" : ""}
                   onClick={toggleAutoMode}
                   aria-pressed={autoMode}
-                  aria-label={autoMode ? "Stop auto-chant" : "Arm auto-chant"}
-                  title={`Auto-chant: ${autoMode ? "On" : "Off"} — arm hands-free chanting; tap the mala to start.`}
+                  aria-label={autoChanting ? "Switch to manual chanting" : autoMode ? "Stop auto-chant" : "Arm auto-chant"}
+                  title={autoChanting ? "Switch to manual chanting immediately." : `Auto-chant: ${autoMode ? "On" : "Off"} — arm hands-free chanting; tap the mala to start.`}
                   data-testid="btn-toggle-auto-chant"
                 >
                   {autoMode ? <Square className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -2623,6 +2628,18 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 data-testid="btn-start-next-mala"
               >
                 Start next mala
+              </Button>
+            )}
+            {autoChanting && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={toggleAutoMode}
+                className="mt-2 border-[#6D2B35]/40 text-[#6D2B35] hover:bg-[#6D2B35]/10"
+                data-testid="btn-switch-to-manual"
+              >
+                Switch to manual
               </Button>
             )}
 
