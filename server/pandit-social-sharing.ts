@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import QRCode from "qrcode";
@@ -25,7 +26,7 @@ export type PanditSocialProjection = {
 };
 
 const CACHE_DIR = "/tmp/vedic-tatva-social";
-const SOCIAL_TEMPLATE_VERSION = "v3";
+const SOCIAL_TEMPLATE_VERSION = "v4";
 const DEFAULT_PUBLIC_ORIGIN = "https://vedictatva.com";
 const STORY_VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3 };
 const IMAGE_HOST_ALLOWLIST = new Set([
@@ -121,10 +122,24 @@ function captureOrigin(): string {
   return `http://127.0.0.1:${Number.isFinite(port) && port > 0 ? port : 5000}`;
 }
 
+function chromiumExecutablePath(): string {
+  const configured = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (configured && fsSync.existsSync(configured)) return configured;
+  const knownPaths = [
+    "/repl/tools/bin/chromium",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+  ];
+  const knownExecutable = knownPaths.find((candidate) => fsSync.existsSync(candidate));
+  if (knownExecutable) return knownExecutable;
+  return puppeteer.executablePath();
+}
+
 async function storefrontStoryScreenshot(projection: PanditSocialProjection): Promise<Buffer> {
   browserPromise ||= puppeteer.launch({
     headless: true,
-    executablePath: puppeteer.executablePath(),
+    executablePath: chromiumExecutablePath(),
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   const browser = await browserPromise;
