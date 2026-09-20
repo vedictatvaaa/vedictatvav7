@@ -3,7 +3,7 @@ name: Recorded breathing guide voice
 description: The Japa warmup uses bundled recorded Indian-English guidance with guarded browser speech and bell fallback.
 ---
 
-Recorded clips are the primary breathing guide for the warmup. Browser speech synthesis is a compatibility fallback when a clip cannot play, and the existing bell cue is used only when neither spoken path is available. All fallback paths must preserve visual countdowns and stage transitions.
+Recorded clips are the primary breathing guide for the warmup. Browser speech synthesis is a compatibility fallback when a clip cannot play, and the existing bell cue is used only when neither spoken path is available. All fallback paths must preserve visual countdowns and stage transitions. Treat browser speech APIs as unavailable unless their required methods exist; a property can be present with an undefined value on silent or restricted devices.
 
 **Why:** Generated voice delivery is not reliable across providers or devices, while some browsers cannot decode or autoplay the bundled files.
 

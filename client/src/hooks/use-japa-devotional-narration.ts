@@ -30,7 +30,7 @@ export function useJapaDevotionalNarration() {
     abortRef.current = null;
     audioRef.current?.pause();
     audioRef.current = null;
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (typeof window !== "undefined") window.speechSynthesis?.cancel?.();
   }, []);
 
   const play = useCallback((options: Options) => {
@@ -49,7 +49,7 @@ export function useJapaDevotionalNarration() {
       abortRef.current = null;
       if (result !== "ended") {
         audioRef.current?.pause();
-        if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+        if (typeof window !== "undefined") window.speechSynthesis?.cancel?.();
       }
       if (audioRef.current) {
         audioRef.current.onended = null;
@@ -63,7 +63,11 @@ export function useJapaDevotionalNarration() {
     const speak = () => {
       if (fallbackStarted || settled || generation !== generationRef.current) return;
       fallbackStarted = true;
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return finish("failed");
+      if (
+        typeof window === "undefined"
+        || typeof window.speechSynthesis?.speak !== "function"
+        || typeof SpeechSynthesisUtterance !== "function"
+      ) return finish("failed");
       try {
         const utterance = new SpeechSynthesisUtterance(options.text);
         utterance.lang = "hi-IN";
