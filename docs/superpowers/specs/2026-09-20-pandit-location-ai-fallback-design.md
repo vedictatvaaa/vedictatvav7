@@ -18,6 +18,7 @@ The existing verified location path remains authoritative. AI is only a fallback
 - Coordinate provenance already has database fields for source, confidence, and verification time.
 - Admin requests are authenticated with the existing Admin middleware/token flow.
 - The registration flow already requests browser geolocation and captures latitude/longitude when the applicant grants permission.
+- Registration already has a rate-limited address-suggestion endpoint and dropdown, but it currently returns only labels and does not carry selected coordinates into the application.
 
 ## Recommended approach
 
@@ -69,6 +70,15 @@ Add an authenticated, read-only Admin endpoint dedicated to coordinate suggestio
 7. Never write the Pandit row from the suggestion endpoint.
 
 The AI fallback should be capped below the verified-coordinate confidence threshold and returned with an explicit `ai_fallback` source and approximate/address-level scope. It must not be eligible for any existing bulk auto-apply route.
+
+The existing public registration address-suggestion endpoint should be extended rather than duplicated. It should remain rate-limited and geocoder-backed, but return a selected result's latitude, longitude, provider place identifier, and source metadata alongside its display label. The client must send the selected result metadata with the application rather than geocoding or trusting coordinates in the browser.
+
+The application submission contract should accept either of these evidence paths:
+
+- `browser:geolocation`: latitude/longitude captured with explicit browser permission, with browser accuracy when available and `locationPermissionGranted: true`;
+- `nominatim:address-selection` (or the configured geocoder equivalent): latitude/longitude selected from the server response, with `locationPermissionGranted: false`.
+
+If neither path is available, the application may be stored as location-pending for Admin review. Approval and public eligibility must continue to reject it as bookable until valid coordinates are present. Coordinate source, accuracy, and capture metadata should be added to the application record if needed, then copied to the Pandit record during approval.
 
 Registration submissions should preserve the coordinate source and accuracy metadata when available. The application approval path must retain the existing requirement that unresolved or missing location evidence cannot make the Pandit bookable.
 
@@ -124,4 +134,4 @@ Every confirmed coordinate update should be included in the existing Admin audit
 - No AI-only public geocoding endpoint.
 - No changes to public directory, booking, or eligibility rules beyond preserving the existing requirement that unresolved registration locations remain unbookable.
 - No use of Pandit private identity/contact/address data in AI prompts.
-- No database schema migration is expected because coordinate provenance fields already exist; if the current update schema cannot safely carry them, add the smallest compatible migration rather than weakening validation.
+- The Pandit coordinate provenance fields already exist; add only the smallest application-level provenance fields needed to preserve GPS accuracy and address-selection source through approval, rather than weakening validation.
