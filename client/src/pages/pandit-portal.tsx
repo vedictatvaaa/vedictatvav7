@@ -120,7 +120,7 @@ function StoreActions({ path }: { path: string | null }) {
     <Button size="sm" variant="outline" disabled={!path} onClick={() => path && window.open(url, "_blank", "noopener")} data-testid="button-view-store"><ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">View store</span></Button>
     <Button size="sm" variant="outline" disabled={!path} onClick={(event) => { shareTriggerRef.current = event.currentTarget; setShareOpen(true); }} data-testid="button-share-store"><Share2 className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Share</span></Button>
     <Button size="sm" variant="outline" disabled={!path} onClick={() => { if (!path) return; const a = document.createElement("a"); a.href = "/api/pandit/storefront/qr.png"; a.download = "vedic-tatva-storefront-qr.png"; a.click(); }} data-testid="button-download-qr"><QrCode className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">QR</span></Button>
-    {path && <PanditSharePanel open={shareOpen} onOpenChange={setShareOpen} storefrontUrl={url} storyImageUrl={`/api/story/p/${encodeURIComponent(slug)}.jpg`} panditName="My Vedic Tatva" source="portal" returnFocusRef={shareTriggerRef} />}
+    {path && <PanditSharePanel open={shareOpen} onOpenChange={setShareOpen} storefrontUrl={url} storyImageUrl={`/api/story/p/${encodeURIComponent(slug)}.jpg`} previewImageUrl={`/api/og/p/${encodeURIComponent(slug)}.jpg`} panditName="My Vedic Tatva" source="portal" returnFocusRef={shareTriggerRef} />}
   </div>;
 }
 function MobileNav({ active, go, onMore, unread }: { active: Section; go: (s: string) => void; onMore: () => void; unread: number }) {

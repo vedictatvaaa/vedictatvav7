@@ -11,13 +11,14 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   storefrontUrl: string;
   storyImageUrl: string;
+  previewImageUrl?: string;
   panditName: string;
   source: "storefront" | "portal";
   storyPreviewAlt?: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
 };
 
-export function PanditSharePanel({ open, onOpenChange, storefrontUrl, storyImageUrl, panditName, source, storyPreviewAlt, returnFocusRef }: Props) {
+export function PanditSharePanel({ open, onOpenChange, storefrontUrl, storyImageUrl, previewImageUrl, panditName, source, storyPreviewAlt, returnFocusRef }: Props) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState<"native" | "story" | "copy" | null>(null);
   const { toast } = useToast();
@@ -104,8 +105,8 @@ export function PanditSharePanel({ open, onOpenChange, storefrontUrl, storyImage
         </div>
         <div className="space-y-4 p-5">
           <div className="flex items-center gap-3 rounded-xl border border-[#E8DCCB] bg-[#FFF8ED] p-3">
-            <img src={storyImageUrl} alt={storyPreviewAlt || `Story preview for ${panditName}`} className="h-20 w-12 rounded-md object-cover shadow-sm" />
-            <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#9A641F]">Your share link</p><p className="mt-1 truncate text-xs text-[#735E54]">{url}</p><p className="mt-1 text-[11px] text-[#876F61]">Includes a branded Story image for Instagram and WhatsApp.</p></div>
+             <img src={previewImageUrl || storyImageUrl} alt={`Premium share preview for ${panditName}`} className="h-20 w-36 rounded-md object-cover shadow-sm" />
+             <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[.14em] text-[#9A641F]">Your share link</p><p className="mt-1 truncate text-xs text-[#735E54]">{url}</p><p className="mt-1 text-[11px] text-[#876F61]">Uses the premium Panditji card when this storefront link is shared.</p></div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button onClick={nativeShare} disabled={busy !== null || typeof navigator !== "undefined" && !navigator.share} className="h-11 rounded-xl bg-[#8D2830] text-[#FFF8E8] hover:bg-[#6D2028]" data-testid="share-native"><Share2 className="mr-2 h-4 w-4" />Device share</Button>
