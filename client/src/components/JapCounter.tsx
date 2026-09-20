@@ -606,6 +606,54 @@ const MANTRA_AUDIO_URLS: Record<string, string> = {
   "hanuman-mantra": hanumanAudioUrl,
 };
 
+function BreathGuidanceDisclosure({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <div className="mt-4 w-full max-w-sm text-left">
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="flex w-full items-center justify-between rounded-xl border border-[#D4AF37]/35 bg-black/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#FFEBB0] transition-colors hover:bg-[#D4AF37]/15"
+        aria-expanded={open}
+        aria-controls="breath-guidance-transcript"
+        data-testid="btn-toggle-breath-guidance"
+      >
+        <span>Read full guidance</span>
+        {open ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+      </button>
+      {open && (
+        <div
+          id="breath-guidance-transcript"
+          role="region"
+          aria-label="Full breathing warmup guidance"
+          className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[#D4AF37]/25 bg-black/20 p-3 text-xs leading-relaxed text-[#FFF4CC]"
+        >
+          <p className="font-semibold text-[#D4AF37]">Prepare for your mantra</p>
+          <p className="mt-1">{BREATH_INTRO_SPEECH}</p>
+          <div className="mt-3 space-y-3">
+            {BREATH_STAGES.map((stage, index) => (
+              <section key={stage.id} className="border-t border-[#D4AF37]/20 pt-2">
+                <h3 className="font-semibold text-[#D4AF37]">{index + 1}. {stage.name}</h3>
+                <p className="mt-1">{stage.introSpeech}</p>
+                <ul className="mt-1 space-y-0.5 text-[#FFEBB0]/90">
+                  {stage.phases.map((phase) => (
+                    <li key={`${stage.id}-${phase.label}`}>• {phase.speech}</li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function registerMantraAudio(mantraId: string, url: string | null | undefined) {
   if (!mantraId) return;
   if (url && (/^https?:\/\//i.test(url) || url.startsWith("/"))) {
@@ -938,6 +986,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [breathStageIndex, setBreathStageIndex] = useState(0);
   const [breathVoiceOn, setBreathVoiceOn] = useState(true);
   const [breathMusicOn, setBreathMusicOn] = useState(true);
+  const [breathTranscriptOpen, setBreathTranscriptOpen] = useState(false);
   const [guidanceState, setGuidanceState] = useState<JapaGuidanceState>("idle");
   const [benefitText, setBenefitText] = useState("");
   const [closingText, setClosingText] = useState("");
@@ -1154,6 +1203,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     breathVoiceOn,
     completeBreathingWarmup,
   ]);
+  useEffect(() => {
+    if (!breathingActive) setBreathTranscriptOpen(false);
+  }, [breathingActive]);
 
   // Recorded guide clips are primary. Device speech is used only when a clip
   // cannot play; a short bell is used only when both spoken paths are
@@ -2316,7 +2368,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         onOpenChange={(open) => { if (!open) skipBreathing(); }}
       >
         <DialogContent
-          className="w-[min(92vw,30rem)] max-w-none bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] border-[#D4AF37]/40 text-[#FFFAEC] p-0 overflow-hidden rounded-3xl shadow-[0_0_60px_-10px_rgba(212,175,55,0.45)] [&>button]:hidden"
+          className="max-h-[min(90vh,48rem)] w-[min(92vw,30rem)] max-w-none overflow-y-auto bg-gradient-to-br from-[#6D2B35] to-[#2a0d12] border-[#D4AF37]/40 text-[#FFFAEC] p-0 rounded-3xl shadow-[0_0_60px_-10px_rgba(212,175,55,0.45)] [&>button]:hidden"
           data-testid="dialog-pranayama"
         >
           <div className="relative flex flex-col items-center text-center px-6 py-6 sm:px-8 sm:py-7">
@@ -2382,6 +2434,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                     {breathVoiceOn ? "Voice on" : "Voice off"}
                   </button>
                 </div>
+                <BreathGuidanceDisclosure
+                  open={breathTranscriptOpen}
+                  onOpenChange={setBreathTranscriptOpen}
+                />
                 <button
                   type="button"
                   onClick={beginBreathingExercises}
@@ -2446,6 +2502,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
                 <div className="min-h-10 text-sm text-[#FFEBB0] max-w-sm leading-snug">
                   {breathPhase.phase.instruction}
                 </div>
+                <BreathGuidanceDisclosure
+                  open={breathTranscriptOpen}
+                  onOpenChange={setBreathTranscriptOpen}
+                />
                 <div className="mt-3 flex gap-1.5" aria-label={`Warmup stage ${breathStageIndex + 1} of ${BREATH_STAGES.length}`}>
                   {BREATH_STAGES.map((stage, index) => (
                     <span
