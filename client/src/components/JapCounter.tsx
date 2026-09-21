@@ -992,6 +992,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [guidanceState, setGuidanceState] = useState<JapaGuidanceState>("idle");
   const [benefitText, setBenefitText] = useState("");
   const [closingText, setClosingText] = useState("");
+  const [completionWishFinished, setCompletionWishFinished] = useState(false);
   const [achievementSnapshot, setAchievementSnapshot] = useState<ReturnType<typeof buildAchievementSnapshot> | null>(null);
   const devotionalNarration = useJapaDevotionalNarration();
   const completionNarrationRef = useRef<string | null>(null);
@@ -2054,6 +2055,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     if (!celebration || completionNarrationRef.current === String(celebration.ts)) return;
     completionNarrationRef.current = String(celebration.ts);
     setGuidanceState("chanting_complete_narration");
+    setCompletionWishFinished(false);
     const snapshot = buildAchievementSnapshot({
       mantra: celebration.mantraLabel,
       target: celebration.target,
@@ -2071,6 +2073,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     setClosingText(initialClosing);
     const thoughtController = new AbortController();
     const thoughtTimeout = window.setTimeout(() => thoughtController.abort(), 4000);
+    let transitionTimer: number | null = null;
     const thoughtPromise = fetch("/api/japa/daily-thought", {
       credentials: "same-origin",
       signal: thoughtController.signal,
@@ -2085,8 +2088,11 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       setClosingText(script);
       const shownAt = Date.now();
       const showAchievement = () => {
+        if (cancelled) return;
+        setCompletionWishFinished(true);
         const remaining = Math.max(0, 5000 - (Date.now() - shownAt));
-        window.setTimeout(() => {
+        transitionTimer = window.setTimeout(() => {
+          if (cancelled) return;
           setCelebration(null);
           setGuidanceState("achievement_share");
         }, remaining);
@@ -2104,6 +2110,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
       cancelled = true;
       thoughtController.abort();
       window.clearTimeout(thoughtTimeout);
+      if (transitionTimer !== null) window.clearTimeout(transitionTimer);
     };
   }, [celebration, devoteeName, devotionalNarration, pendingCompletionKey, persist.malas, persist.streak, persist.todayCount, persist.total]);
 
@@ -2324,12 +2331,17 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
             <p className="mt-4 text-sm leading-relaxed text-[#FFEBB0]" aria-live="polite">
               {closingText || "आपका जप पूर्ण हुआ। आपका शुभ विचार तैयार हो रहा है।"}
             </p>
-            <Button className="mt-6 bg-[#D4AF37] text-[#4a1a22] hover:bg-[#e5c65d]" onClick={() => {
-              devotionalNarration.cancel();
-              setCelebration(null);
-              setGuidanceState("achievement_share");
-            }}>
-              Continue to achievement
+            <Button
+              className="mt-6 bg-[#D4AF37] text-[#4a1a22] hover:bg-[#e5c65d]"
+              disabled={!completionWishFinished}
+              onClick={() => {
+                if (!completionWishFinished) return;
+                devotionalNarration.cancel();
+                setCelebration(null);
+                setGuidanceState("achievement_share");
+              }}
+            >
+              {completionWishFinished ? "Continue to achievement" : "Your blessing is being read…"}
             </Button>
           </div>
         </div>
