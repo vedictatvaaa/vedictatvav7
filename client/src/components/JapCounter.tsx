@@ -960,7 +960,9 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
   const [ashirvad, setAshirvad] = useState<{ mantraLabel: string; mantraId: string; ts: number } | null>(null);
   const [malaCompleteLocked, setMalaCompleteLocked] = useState(false);
   const completionResetPendingRef = useRef(false);
+  const completionSequenceRef = useRef(0);
   const cancelCompletionReset = useCallback(() => {
+    completionSequenceRef.current += 1;
     completionResetPendingRef.current = false;
     setMalaCompleteLocked(false);
   }, []);
@@ -1656,6 +1658,36 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     });
   }, [target]);
 
+  // The final mantra audio is part of the sacred completion moment. Do not
+  // reveal the wish/narration screen until that recording has ended (or failed
+  // gracefully). The sequence token prevents a reset, undo, or mantra switch
+  // from showing a stale completion after the audio promise resolves.
+  const revealCompletionAfterAudio = useCallback((malaNumber: number) => {
+    const sequence = ++completionSequenceRef.current;
+    const reveal = () => {
+      if (completionSequenceRef.current !== sequence) return;
+      bellPlayer.aarti();
+      vibrate([80, 60, 80, 60, 80, 60, 220], vibrationOn);
+      setCelebration({
+        malaNumber,
+        target,
+        mantraLabel: mantra.label,
+        mantraId: mantra.id,
+        ts: Date.now(),
+      });
+      scheduleCompletionReset();
+    };
+    if (soundOn && mantraAudio.has(mantra.id)) {
+      setAudioLocked(true);
+      void mantraAudio.play(mantra.id).finally(() => {
+        if (completionSequenceRef.current === sequence) setAudioLocked(false);
+        reveal();
+      });
+    } else {
+      reveal();
+    }
+  }, [mantra.id, mantra.label, scheduleCompletionReset, soundOn, target, vibrationOn]);
+
   // Quarter-mala milestone detection. Fires only on increment (ignores
   // undo / reset / mala-completion-flip-to-0). One bloom per crossing.
   useEffect(() => {
@@ -1805,19 +1837,10 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     }
 
     if (completedMala) {
-      // Tathastu fires immediately on the bead that closes the mala.
-      // The chant restart above plays in the background as feedback;
-      // it does NOT block the celebration.
-      bellPlayer.aarti();
-      vibrate([80, 60, 80, 60, 80, 60, 220], vibrationOn);
-      setCelebration({
-        malaNumber: persistRef.current.malas + 1,
-        target,
-        mantraLabel: mantra.label,
-        mantraId: mantra.id,
-        ts: Date.now(),
-      });
-      scheduleCompletionReset();
+      // Keep the final count visible while the final mantra recording plays.
+      // The completion blessing and wish/narration screen are revealed only
+      // from revealCompletionAfterAudio().
+      revealCompletionAfterAudio(persistRef.current.malas + 1);
     } else {
       // Milestone haptics — gives the chanting body a felt sense of
       // progress without any visual interruption. Spec: gentle pulse on
@@ -1869,7 +1892,7 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
         streak: newStreak, lastDay: t,
       };
     });
-  }, [guidanceState, target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick, scheduleCompletionReset]);
+  }, [guidanceState, target, vibrationOn, mantra.label, mantra.id, soundOn, triggerPaceHint, commitTick, revealCompletionAfterAudio]);
 
   // — Undo last tap. Long-press the orb (~600ms) and the existing Undo
   //   button both call this. Handles four cases:
