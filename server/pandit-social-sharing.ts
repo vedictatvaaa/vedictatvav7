@@ -30,7 +30,7 @@ export type PanditSocialProjection = {
 };
 
 const CACHE_DIR = "/tmp/vedic-tatva-social";
-const SOCIAL_TEMPLATE_VERSION = "v6";
+const SOCIAL_TEMPLATE_VERSION = "v7";
 const DEFAULT_PUBLIC_ORIGIN = "https://vedictatva.com";
 const STORY_VIEWPORT = { width: 360, height: 640, deviceScaleFactor: 3 };
 const IMAGE_HOST_ALLOWLIST = new Set([
@@ -206,7 +206,7 @@ export async function renderPanditSocialImage(
   }
 
   const sharp = (await import("sharp")).default;
-  const photo = await fetchAsset(baseUrl, projection.image || projection.bannerImage, format === "og" ? 300 : 700);
+  const photo = await fetchAsset(baseUrl, projection.image || projection.bannerImage, format === "og" ? 300 : 540);
   const qr = await QRCode.toDataURL(`${baseUrl}${projection.canonicalPath}`, {
     width: format === "og" ? 180 : 360,
     margin: 2,
@@ -254,24 +254,29 @@ export async function renderPanditSocialImage(
       <rect x="350" y="585" width="850" height="45" fill="#D4AF37"/>
       <text x="775" y="614" font-family="sans-serif" font-size="14" font-weight="700" fill="#4a1a22" text-anchor="middle">Vedic Tatva · Authentic Vedic Services · View storefront</text>`
     : `
-      <text x="540" y="72" font-family="Georgia,serif" font-size="48" font-weight="700" fill="#D4AF37" text-anchor="middle">Vedic Tatva</text>
-      <text x="540" y="245" font-family="Georgia,serif" font-size="58" font-weight="700" fill="#4a1a22" text-anchor="middle">${esc(projection.name).slice(0, 25)}</text>
-      <text x="540" y="305" font-family="serif" font-size="31" fill="#6D2B35" text-anchor="middle">${esc(city)}</text>
-      <text x="540" y="365" font-family="serif" font-size="26" fill="#5a4a3a" text-anchor="middle">${esc(rating)}</text>
-      <text x="540" y="430" font-family="serif" font-size="25" fill="#5a4a3a" text-anchor="middle">${esc(specs).slice(0, 40)}</text>
-      <text x="540" y="490" font-family="serif" font-size="28" font-weight="700" fill="#4a1a22" text-anchor="middle">Book this Panditji on Vedic Tatva</text>
-      ${projection.tagline ? `<text x="540" y="550" font-family="serif" font-size="23" fill="#5a4a3a" text-anchor="middle">${esc(projection.tagline).slice(0, 58)}</text>` : ""}
-      <image href="${esc(qr)}" x="360" y="1350" width="360" height="360"/>
-      <text x="540" y="1770" font-family="serif" font-size="24" fill="#6D2B35" text-anchor="middle">Scan to view profile</text>
-      <text x="540" y="1830" font-family="serif" font-size="22" fill="#5a4a3a" text-anchor="middle">vedictatva.com${esc(projection.canonicalPath)}</text>
+      <text x="540" y="72" font-family="Arial,sans-serif" font-size="48" font-weight="700" fill="#D4AF37" text-anchor="middle">Vedic Tatva</text>
+      <text x="540" y="108" font-family="Arial,sans-serif" font-size="14" letter-spacing="3" fill="#FFF8E8" text-anchor="middle">PANDITJI STORE</text>
+      <text x="540" y="225" font-family="Georgia,serif" font-size="58" font-weight="700" fill="#4a1a22" text-anchor="middle">${esc(projection.name).slice(0, 25)}</text>
+      ${projection.verified ? `<rect x="390" y="252" width="300" height="42" rx="21" fill="#D4AF37"/><text x="540" y="279" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#4a1a22" text-anchor="middle">✓ VERIFIED PANDIT</text>` : ""}
+      <text x="540" y="350" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="#6D2B35" text-anchor="middle">${esc(practice).slice(0, 44)}</text>
+      <text x="540" y="395" font-family="Arial,sans-serif" font-size="23" fill="#5a4a3a" text-anchor="middle">${esc(city || "India")}</text>
+      <line x1="180" y1="430" x2="900" y2="430" stroke="#DCCAAE" stroke-width="2"/>
+      <text x="540" y="475" font-family="Arial,sans-serif" font-size="13" letter-spacing="2" fill="#9A641F" text-anchor="middle">PRACTISING DETAILS</text>
+      <text x="540" y="510" font-family="Arial,sans-serif" font-size="23" fill="#5a4a3a" text-anchor="middle">${esc(experience)} · ${esc(languages).slice(0, 42)}</text>
+      <text x="540" y="1110" font-family="Arial,sans-serif" font-size="13" letter-spacing="2" fill="#9A641F" text-anchor="middle">VEDIC TATVA MEMBERSHIP</text>
+      <text x="540" y="1150" font-family="Georgia,serif" font-size="30" font-weight="700" fill="#4a1a22" text-anchor="middle">${esc(membership)}</text>
+      <text x="540" y="1200" font-family="Arial,sans-serif" font-size="19" fill="#6D2B35" text-anchor="middle">Contact securely via Vedic Tatva</text>
+      <image href="${esc(qr)}" x="360" y="1250" width="360" height="360"/>
+      <text x="540" y="1665" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#6D2B35" text-anchor="middle">SCAN TO VIEW PROFILE</text>
+      <text x="540" y="1720" font-family="monospace" font-size="20" fill="#5a4a3a" text-anchor="middle">vedictatva.com${esc(projection.canonicalPath)}</text>
       <rect x="0" y="1885" width="1080" height="35" fill="#D4AF37"/>`;
   const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFAEC"/><stop offset="1" stop-color="#F5E9CF"/></linearGradient></defs>
     ${bg}${text}
-    ${format === "og" ? `<text x="175" y="306" font-family="Georgia,serif" font-size="64" font-weight="700" fill="#6D2B35" text-anchor="middle">${esc(initials)}</text>` : `<circle cx="540" cy="820" r="270" fill="#FFFAEC" stroke="#D4AF37" stroke-width="8"/>`}
+    ${format === "og" ? `<text x="175" y="306" font-family="Georgia,serif" font-size="64" font-weight="700" fill="#6D2B35" text-anchor="middle">${esc(initials)}</text>` : `<circle cx="540" cy="790" r="270" fill="#FFFAEC" stroke="#D4AF37" stroke-width="8"/><text x="540" y="812" font-family="Arial,sans-serif" font-size="80" font-weight="700" fill="#6D2B35" text-anchor="middle">${esc(initials)}</text>`}
   </svg>`;
   const composites: { input: Buffer; left?: number; top?: number }[] = [];
-  if (photo) composites.push({ input: photo, left: format === "og" ? 25 : 190, top: format === "og" ? 145 : 550 });
+  if (photo) composites.push({ input: photo, left: format === "og" ? 25 : 270, top: format === "og" ? 145 : 520 });
   const buffer = await sharp(Buffer.from(svg)).composite(composites).jpeg({ quality: 86, mozjpeg: true }).toBuffer();
   await fs.mkdir(CACHE_DIR, { recursive: true }).then(() => fs.writeFile(cachePath, buffer)).catch(() => {});
   return { buffer, cacheHit: false };

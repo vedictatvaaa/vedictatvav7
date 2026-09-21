@@ -769,7 +769,7 @@ export function registerPanditStorefrontRoutes(app: Express, adminAuthMiddleware
         projection,
         socialSiteUrl(req),
         format,
-        { captureStorefront: format === "story" },
+        { captureStorefront: false },
       );
       res.setHeader("Content-Type", "image/jpeg");
       res.setHeader("Cache-Control", "public, max-age=60, must-revalidate");
