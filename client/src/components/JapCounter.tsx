@@ -1824,24 +1824,21 @@ export default function JapCounter({ ownerKey = "guest", title = "Jap Counter", 
     const audioAvailable = soundOn && mantraAudio.has(mantra.id);
     const audioBusy = audioLockedRef.current;
 
-    // Restart the mantra audio on EVERY tap (manual mode). Each bead
-    // = one fresh recitation, just like a physical mala. mantraAudio
-    // .play() calls stop() first, so currentTime resets to 0 even if
-    // a previous chant is still mid-flight. When no chant is recorded
-    // for this mantra, fall back to the bell-tap chime instead.
-    if (audioAvailable) {
-      setAudioLocked(true);
-      mantraAudio.play(mantra.id).then(() => setAudioLocked(false));
-    } else if (!audioBusy) {
-      bellPlayer.tap(nextCount);
-    }
-
     if (completedMala) {
       // Keep the final count visible while the final mantra recording plays.
       // The completion blessing and wish/narration screen are revealed only
       // from revealCompletionAfterAudio().
       revealCompletionAfterAudio(persistRef.current.malas + 1);
     } else {
+      // Restart the mantra audio on every non-final tap. The final tap is
+      // handled by revealCompletionAfterAudio() so the wish screen waits for
+      // that recording to finish.
+      if (audioAvailable) {
+        setAudioLocked(true);
+        mantraAudio.play(mantra.id).then(() => setAudioLocked(false));
+      } else if (!audioBusy) {
+        bellPlayer.tap(nextCount);
+      }
       // Milestone haptics — gives the chanting body a felt sense of
       // progress without any visual interruption. Spec: gentle pulse on
       // every bead, distinct pattern on every 108th lifetime tap, and a
